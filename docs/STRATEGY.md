@@ -397,3 +397,147 @@ personalizations. **API-first beats screen-watching wherever possible.**
 bubble + MediaProjection OCR** as the "ambient widget" once the engine is trusted → iOS via Live Activities +
 API/manual. The recommendation policy is pre-loaded (personalizations set before draft day), so live it's just
 *state-update → greedy conditional-VBD eval → display* — must return in well under your ~30–90s pick clock.
+
+---
+
+## Part 15 — Beyond Alphathena: the structural gaps and the advanced topics that fill them (added 2026-06-29)
+
+**Why this section exists:** Parts 1–14 framed the product through the Alphathena lens — and that lens
+(risk/covariance estimation + optimization against a benchmark + PIT backtest discipline) is the **spine**,
+not the whole skeleton. Anchoring the *entire* model to the internship and the direct-indexing business
+would leave real edge on the table. Fantasy football differs from equity direct-indexing in **five
+structural ways**, and each difference unlocks a body of advanced technique Alphathena never touches.
+
+**Scope decisions (2026-06-29):** product breadth = **season-long co-pilot** (draft + in-season). Going
+**deepest** on the three frontiers flagged below as **[DEEP]**: *live news/NLP, the game-theory draft engine,
+and causal player-in-system.* Betting-market signals and the win-probability objective are **[CORE]** even
+though not flagged, because they're high-impact and free-data-tractable. DFS/dynasty multi-format = roadmap.
+
+| Structural difference (vs Alphathena) | What Alphathena does | What fantasy *additionally* needs | Advanced toolkit |
+|---|---|---|---|
+| It's an **adversarial sequential game** | One-shot optimize vs a benchmark | Plan against opponents over a sequence of picks | Game theory, RL/self-play, opponent modeling, auctions (15.1) |
+| The edge is **informational & behavioral** | Assumes near-efficient market | Exploit *fresh info* and *human bias* | NLP/news, betting markets, behavioral modeling (15.2) |
+| The objective is **win-probability, not variance** | Symmetric tracking-error | Non-linear, tail/threshold objective | Tournament theory, CVaR, leverage (15.3) |
+| It's a **season-long decision stream** | Static allocation + rebalance | ~17+ sequential decisions under a budget | In-season RL, bandits, trade markets (15.4) |
+| Production is **causal/situational** | Correlational factor exposures | Counterfactual "player-in-system" | Causal inference, skill/opportunity decomposition (15.5) |
+
+### 15.1 Adversarial sequential game → game theory, RL, opponent modeling, auctions **[DEEP]**
+Extends the MCTS/CFR note (Part 6, Phase 6) into a real research line:
+- **Self-play RL (AlphaZero-style):** train a value+policy network on millions of *simulated* drafts (your
+  Phase-0 sim is the environment). Learns a draft policy without hand-coding heuristics. Heavy — frontier.
+- **Live opponent modeling (the high-ROI piece):** Bayesian-infer each league-mate's board as picks reveal —
+  a Dirichlet/categorical posterior over their positional & player preferences, updated each pick. Then play
+  **exploitatively** (against your specific league) rather than Nash-optimal. Bootstraps from your league's
+  past-draft history + **mock-draft data** (the mock simulator doubles as a training-data generator).
+- **Cognitive-hierarchy / level-k** reasoning: most drafters are level-0/1 (follow ADP); modeling that lets
+  you anticipate runs and time reaches.
+- **Auction drafts = a separate format Alphathena has nothing for:** nomination strategy, price discovery,
+  budget allocation as a **stochastic knapsack**, the winner's curse, the $1-endgame. Pure auction theory.
+- **Optimal stopping:** "take him now vs. he'll fall back to me" as a secretary/optimal-stopping problem.
+
+### 15.2 Informational & behavioral edge → NLP/news + betting markets **[DEEP for NLP; CORE for markets]**
+- **Live news + NLP/LLM [DEEP].** The freshest information wins, and it arrives as *unstructured text* — where
+  every casual tool fails. Pipeline: scrape/stream **beat writers, injury reports, depth charts, pressers,
+  inactives (90 min pre-kickoff), X/Reddit** → **LLM extraction (use Claude)** into *structured, timestamped*
+  features: role change, projected snap/route share, injury severity & timeline, "coachspeak" decoded. Then:
+  **event studies** (how ADP/props move on news, and the exploitable lag), **entity resolution**, sentiment.
+  This is a *real-time* edge and a season-long one (start/sit, waivers). **Caution:** August hype is mostly
+  noise — every extracted signal must earn its place on the walk-forward before it trades.
+- **Betting markets as a sharp signal [CORE].** Vegas **player props** (receiving yds, rush att, anytime-TD),
+  **game totals**, **spreads**, **season win totals** are a *far more efficient market than ADP* — they price
+  player expectations with real money. Three uses: (1) **features** — de-vig a prop line → a calibrated
+  implied mean/quantile you can feed *directly* into projections; implied team total → opportunity proxy;
+  (2) **calibration/ground-truth** — where your model and the market disagree is either edge or bug: investigate,
+  don't ignore; (3) **closing-line value** as a backtest metric — did your pre-season read beat the closing
+  number? Free-ish data via odds APIs (e.g. the-odds-api free tier) / book scraping. *This is the "borrow a
+  sharper market" move — strictly better information than ADP.*
+- **Behavioral exploitation [CORE].** Model your league-mates' specific biases (recency, name-brand, homerism,
+  positional panic). The **casual-league context is where your edge is largest** — ties directly into 15.1.
+
+### 15.3 Win-probability objective, not variance → tournament theory, tail objectives, leverage **[CORE]**
+Alphathena minimizes *symmetric* tracking error. Fantasy cares about **P(make playoffs / win title)** — a
+non-linear threshold objective depending on your league's scoring distribution, schedule, and the standings.
+- **Optimize the simulator's win-probability directly** (Phase 4), not expected points or variance.
+- **Leverage / contrarian theory (from DFS GPPs), applied season-long:** when you're an underdog in a given
+  week or seeding race, *increase* roster correlation & variance (chase ceiling); when favored, *decrease* it
+  (protect floor). Variance is a **lever to be set by game state**, not a thing to always minimize.
+- **CVaR / downside / quantile objectives** replace mean-variance where the tail is what matters.
+- **Standings/schedule-aware late season:** optimize the specific path to the title, not generic points.
+- (Full **DFS GPP** machinery — ownership-leverage, game stacks, field-relative scoring — is **roadmap**,
+  only if DFS is added.)
+
+### 15.4 Season-long decision stream → in-season RL, bandits, trade markets **[CORE — chosen breadth]**
+The draft is ~1 of 17+ decisions. The co-pilot operationalizes the recurring "harvest" (Part 12):
+- **Waivers/FAAB:** a sequential budget auction → **bandit + auction theory**; bid-shading; the **option value
+  of holding budget** for later breakouts.
+- **Start/sit:** weekly lineup optimization under the win-probability objective + matchup + live news (15.2).
+- **Trade finder:** a two-sided market — value trades by **surplus**, surface **mutually-beneficial** deals
+  (market-making), and flag **buy-low/sell-high** on model-vs-perception gaps.
+- **Streaming (QB/TE/DST/K):** explore/exploit **bandit** over the waiver pool.
+- **Dynamic re-projection:** update player distributions weekly with new data + news (state-space/Kalman flavor).
+
+### 15.5 Causal "player-in-system", not correlation → counterfactual modeling **[DEEP]**
+Factor models say "target share *correlates* with points." The frontier question is **counterfactual**: *how
+would Player X produce in Team Y's offense / role Z?* — the crux of trades, coaching changes, FA moves, and
+rookie landing spots ("is he good, or just in a good spot?").
+- **Skill ÷ opportunity decomposition (the tractable core):** model production as a player-intrinsic latent
+  (skill, sticky, transferable) × a situation/role multiplier (team-conferred, predictable). When the
+  *situation* changes, swap the multiplier and re-project — this is the practical 80% of "player-in-system."
+- **Matching / synthetic control:** find historical comparables of the *same transition* (e.g. WR changing to
+  a high-PROE offense) to estimate the counterfactual.
+- **Causal graphs / do-calculus framing** of "intervene on role"; **college→NFL transport** for rookies as a
+  transfer-learning/causal-transportability problem.
+- **Caution:** observational sports data is confounded everywhere — be humble, validate on held-out transitions,
+  and never present a causal claim you haven't tested out-of-sample.
+
+### 15.6 Cross-cutting modern ML & data layer (independent of any Alphathena habit)
+- **Conformal prediction** — distribution-free, *calibrated* intervals; a principled complement to quantile
+  regression for honest floor/ceiling.
+- **Hierarchical Bayesian state-space models** — latent ability evolving week-to-week (Kalman/particle), vs
+  static seasonal projections.
+- **Survival/hazard models for injury** — time-to-injury & recurrent events with age/usage covariates (beats a
+  flat injury probability); Gaussian processes for age/usage curves with uncertainty.
+- **Ensemble/stack *with the market*** — learn optimal weights to blend your model with ADP + props + expert
+  consensus (Bayesian model averaging); **shrink toward the market by confidence** (don't fight it without a
+  reason). This is the single most reliable way to not lose the Part-11 forecasting fight.
+- **Proper scoring rules** (CRPS, log-loss) and **decision-quality** evaluation — judge *decisions winning*,
+  not just forecast point-accuracy.
+- **Tracking data / Next Gen Stats** (separation, routes, athleticism) — richer features, but **granular
+  tracking is largely paid/gated** (aggregated NGS via nflverse is free) → roadmap/paid.
+- **Infra = the moat:** PIT **feature store**, real-time news/inactives pipeline, experiment tracking, model
+  registry, drift monitoring, reproducibility.
+
+### 15.7 Product/UX beyond the advisor-config model
+- **Explainability** (SHAP, counterfactual "why this pick") — transparency is your differentiator vs paywalled
+  black boxes; trust *is* the product.
+- **Preference learning / revealed preference** — infer user tendencies from their *actual* picks (recommender
+  / active learning), not just stated sliders.
+- **Calibrated uncertainty UI**, **what-if simulators**, **mock-draft simulator** (also feeds 15.1's opponent
+  models), community/network effects.
+
+### 15.8 How this reshapes the roadmap
+| Phase (Part 7) | Additions from Part 15 |
+|---|---|
+| 0 — Data/harness | + betting-odds ingest, + news/NLP ingest (PIT, timestamped), + feature store |
+| 2 — Projections | + props-as-features, + conformal intervals, + state-space dynamics, + **skill/opportunity causal split**, + **ensemble-with-market** |
+| 3–4 — Valuation/sim | + **win-probability/CVaR objective**, + leverage-by-game-state |
+| 5 — App + live | + **opponent modeling**, + game-theory engine (extends MCTS/CFR), + auction support |
+| **NEW Phase 4.5 — In-season co-pilot** | waivers/FAAB bandits, start-sit, **trade finder**, weekly re-projection |
+| Cross-cutting workstreams | **NLP/news**, **causal player-in-system** (run alongside, not after) |
+
+### 15.9 Prioritization (impact × effort × free-data feasibility)
+- **Do first — high ROI, free, tractable now:** betting props as features + calibration; **ensemble-with-the-
+  market**; skill/opportunity causal split; win-probability objective via the sim; conformal intervals;
+  opponent-modeling from league history.
+- **High value, more engineering:** the **NLP/news pipeline** (real-time, ongoing maintenance); the **in-season
+  co-pilot**; survival injury models; state-space dynamics.
+- **Frontier / roadmap (heavy or gated data):** self-play RL; full causal counterfactual engine; tracking-data
+  features (paid); auction engine; DFS/dynasty formats.
+
+**The discipline still rules everything (the Part-11 lesson):** every one of these must clear the
+walk-forward / PIT / **beat-the-market-and-baseline** bar before it ships. Sophistication that doesn't beat
+ADP + props OOS is a *finding*, not a feature. Sequence the heavy frontier items **after** the core proves out.
+
+> **Execution follow-ups (when out of plan mode):** sync this into `docs/STRATEGY.md`; add the **In-season
+> co-pilot** phase + NLP and causal workstreams to `PROJECT.md`/`ROADMAP.md`; add `news/`, `markets/` (odds),
+> and `causal/` packages under `src/fantasy_quant/`; add odds + news source notes to `data/README.md`.

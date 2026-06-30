@@ -1,28 +1,25 @@
-# PLAN.md — the HOW (living workspace)
+# PLAN.md — the HOW (living lab-notebook)
 
-My working notebook: design choices, parameter picks, open questions, dead ends. `PROJECT.md` is the
-fixed WHAT; this is mine to manage. Newest notes at the bottom of each section.
+Working notes only: implementation choices, parameter picks, and dead ends **as they arise during a
+step**. This file does **not** restate the goal, scope, decisions, or phase plan — those live in
+`PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
-- **2026-06-29 — Environment scaffolded.** Repo created at `~/dev/repo/fantasy-quant`; uv + pinned Python
-  3.12; core stack defined in `pyproject.toml`; doc set + `docs/STRATEGY.md` in place; local git. **No
-  modeling code yet.** Next: Phase 0.
+- **2026-06-29** — Environment scaffolded; docs restructured into the granular Phase 0–15 plan (`PROJECT.md`)
+  with Vegas markets promoted to a first-class data source. **No modeling code yet.** Next: Phase 0.2.
 
-## Decisions log
-- Product = shareable league app; metric = layered (PAR → season/playoff sim); data = free/scraped.
-  (See `PROJECT.md` §3.)
-- Tooling = uv + Python 3.12 (not system 3.14) for ML-wheel compatibility. src layout → editable install,
-  no `sys.path` bootstrap.
-- ADP-bias mining promoted to an early, self-contained workstream (reuses intern factor-return regression).
+## Working notes (per step)
+_(empty — populated as each step in `PROJECT.md` §5 is implemented: what was decided, what was tried,
+what to reuse. Canonical decisions go in `PROJECT.md` §3, not here.)_
 
-## Open questions
-- Which ADP source(s) to scrape first and how far back is reconstructable PIT? (FFCalculator historical +
-  Underdog early best-ball are the free starting pair.)
-- Exact "ADP alpha" target definition (finish-rank − ADP-rank vs points − slot-replacement) — decide in the
-  ADP workstream.
-- Replacement-level definition per position for VBD in a 10-team PPR league.
-- How many personalization levers to expose in the v1 app.
-- Season-sim fidelity: how to model bye weeks, injuries (games-missed distribution), and the playoff bracket.
+## Open questions (to resolve at the relevant step)
+- **0.4/0.5 data:** how far back are FFCalculator/Underdog ADP and historical **prop lines** reconstructable
+  PIT? (Historical odds is the likely-paid gap — confirm free coverage before relying on it for backtests.)
+- **0.5 markets:** which de-vig method (proportional / Shin / power) and which books to aggregate.
+- **2.1 VBD:** replacement-level definition per position for 10-team PPR.
+- **6.x ADP-alpha:** target definition — finish-rank − ADP-rank vs points − slot-replacement.
+- **10.x season-sim:** bye-week, injury (games-missed), and playoff-bracket fidelity.
+- **14.2 app:** how many personalization levers to expose in v1.
 
-## Notes / dead ends
+## Dead ends
 - _(none yet)_
