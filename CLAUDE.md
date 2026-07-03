@@ -37,6 +37,10 @@ out-forecasting consensus — see `docs/STRATEGY.md` Parts 11–15.
    calibrated intervals) — the analog of the intern repo's covariance hard gate.
 6. **Document as you go.** Decisions + dead ends → `PLAN.md`; what each step produced/taught → `findings.md`;
    new terms → `glossary.md` (keep it current — see the memory note on glossary maintenance).
+7. **Sub-phase gate — STOP between every sub-step.** After finishing each numbered sub-step (0.2, 0.3, …,
+   1.1, …) deliver a short overview of what was accomplished and **explicitly ask the user for permission
+   before starting the next sub-step.** Never chain sub-steps without that approval. This applies across the
+   **entire** project, every phase. (User instruction, 2026-06-30.)
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them
@@ -55,8 +59,8 @@ phase** — do not pre-create empty trees.
 | Concern | Package | Status |
 |---|---|---|
 | Data ingest (nflverse/PFR/ADP) + DuckDB panel + validation | `src/fantasy_quant/data/` | exists |
-| **Vegas markets** (odds ingest, de-vig, props projection) | `src/fantasy_quant/markets/` | planned |
-| **News/NLP** ingest + LLM extraction + event studies | `src/fantasy_quant/news/` | planned |
+| **Vegas markets** (odds ingest, de-vig, props projection) | `src/fantasy_quant/markets/` | exists |
+| **News/NLP** ingest + LLM extraction + event studies | `src/fantasy_quant/news/` | exists |
 | Feature/exposure engineering (`X`) | `src/fantasy_quant/features/` | exists |
 | Projections (baseline, GBT, age curves, hier-Bayes, quantile, conformal, injury) | `src/fantasy_quant/projections/` | exists |
 | **Causal** player-in-system (decompose, counterfactual, transport) | `src/fantasy_quant/causal/` | planned |

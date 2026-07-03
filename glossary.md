@@ -4,8 +4,7 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-06-29 — added betting-market & advanced (beyond-Alphathena) terms; Vegas markets
-> are now a first-class data source.
+> **Last updated:** 2026-07-03 — added significance terms (1.5); Phase 1 complete.
 
 ## Fantasy / draft terms
 - **ADP (Average Draft Position)** — consensus draft cost of a player; the "market price." Sources differ
@@ -16,10 +15,37 @@ section, not just appended.
   (expectation over the random draft order between your picks). The option-pricing flavor of VBD.
 - **Points-above-replacement (PAR)** — the simpler headline backtest metric: expected starting-lineup
   points above replacement.
-- **Replacement level** — the baseline a position is measured against (last reliably startable player).
+- **Replacement level** — the baseline a position is measured against (the last reliably-started
+  player). Resolved for the 10-team 9-starter league (1.4): league-wide started = `n_teams × slot` with
+  the FLEX split RB/WR/TE ∝ 2:2:1 → replacement ranks QB10 / RB24 / WR24 / TE12 / K10 / DST10.
+- **All-play / expected wins** — a schedule-independent record: each week you "win" the fraction of the
+  league you outscore (ties half). Removes head-to-head schedule luck; the cheap proxy for finish until
+  the Phase-10 season/playoff simulation.
 - **Tier / comparative dropoff** — the gap to the next player at a position; steep dropoffs justify reaching.
 - **Handcuff** — a backup (usually RB) whose value is contingent on the starter's injury — a **real option**.
 - **Stack** — correlated teammates (e.g. QB + WR1) drafted together to raise roster ceiling.
+- **RuleSet / scoring engine** — the configurable league ruleset (per-stat weights) that turns raw
+  counting stats into fantasy points; the backtest scores every method on the *same* ruleset (1.1).
+  Baseline: full-PPR, 4-pt pass TD, −2 INT/fumble, 9-starter QB/2RB/2WR/TE/FLEX+K+DST.
+- **Points-allowed tiers (DST)** — the team-defense scoring band by points surrendered (shutout=10 …
+  35+=−4); combined with sack/INT/fumble-recovery/TD/safety event points for a defense's weekly total.
+- **Kicker distance scoring** — FG points by make distance (0–39=3 / 40–49=4 / 50+=5) + PATs; derived
+  from play-by-play FG/XP events since kickers aren't in the offensive `weekly` table.
+- **Snake draft** — draft order reverses each round (seats 1→N, then N→1), so pick value is roughly
+  symmetric across seats; the simulator's `DraftState` tracks the serpentine order.
+- **ADP-following opponent (baseline)** — opponents draft the lowest-ADP available player + Gaussian
+  noise, respecting soft per-position roster caps; the simplest realistic draft-room model (richer
+  Bayesian board inference is Phase 11.1).
+- **Roster caps (soft)** — per-position ceilings that steer opponents off over-drafting a position
+  while an under-cap alternative exists, but yield to best-available when supply is exhausted.
+- **`rank_fn` (pluggable ranking method)** — the one-argument plug the walk-forward scores: given the
+  PIT board (+ as-of context) it returns a draft-priority per player on the ADP scale (lower = sooner).
+  Baseline = ADP; every later projection/valuation method is just a different `rank_fn`.
+- **Optimal weekly lineup** — the max-scoring legal starting lineup from a roster's realized weekly
+  points (fill each slot with its top scorers, FLEX with the best leftover RB/WR/TE); summed over the
+  season it's the roster's realized value. Greedy is optimal for a single FLEX.
+- **Survivorship guard** — score drafted rosters by LEFT-JOIN to realized points so a drafted-but-DNP
+  bust counts as 0, never silently dropped (dropping flatters the backtest).
 - **Structural alpha** — edge from roster/schedule/variance construction, *orthogonal to projection
   accuracy* — the tax-loss-harvesting analog. See `docs/STRATEGY.md` Part 12.
 - **ADP alpha / ADP-residual** — how much a player out/under-performed their draft cost; the dependent
@@ -30,6 +56,10 @@ section, not just appended.
   dominant predictors).
 - **Air yards / aDOT / WOPR** — depth and weighted-opportunity measures.
 - **YPRR (yards per route run)** — efficiency, relatively sticky for WRs.
+- **YBC / YAC (yards before / after catch)** — splits receiving (and rushing) yardage into scheme/QB-driven
+  (before) vs player-created (after); PFR advanced (0.3), available 2018+.
+- **Broken tackles / drops / drop%** — player-created-value and reliability signals (PFR advanced, 2018+).
+- **Pressure / blitz / hurry rate, on-target %** — QB-context advanced stats (PFR `pfr_pass`, 2018+).
 - **TD-rate regression** — unsustainable TD luck mean-reverts; a key ADP bias.
 - **Age curve (delta method)** — position-specific aging estimated from year-over-year deltas (Tango),
   robust to the selection bias of cross-sectional polynomial fits.
@@ -72,8 +102,29 @@ section, not just appended.
 - **Opponent model** — a live Bayesian posterior over each league-mate's board, updated as picks reveal;
   enables *exploitative* (not Nash) draft play.
 
+## Data-source / identity terms
+- **nflverse / nfl_data_py** — the free, community NFL data ecosystem (play-by-play, weekly/seasonal stats,
+  snaps, NGS, IDs, draft, combine). Our primary source (Phase 0.2).
+- **`gsis_id`** — the NFL's official player ID and our **universal join key**; every source is normalized
+  onto it (weekly/seasonal call it `player_id`, NGS `player_gsis_id`, snaps only carry `pfr_player_id` →
+  mapped via the `player_ids` crosswalk).
+- **`player_ids` (crosswalk)** — the Rosetta-Stone table mapping a player across ID systems (`gsis_id`,
+  `pfr_id`, `sleeper_id`, `espn_id`, …); how sources that don't expose `gsis_id` get joined.
+- **PBP (play-by-play)** — one row per play with rich context (air yards, EPA, personnel); the richest raw
+  source, feeds opportunity/efficiency features.
+- **Snap counts** — per-game offensive/defensive/ST snaps & share; the backbone opportunity measure.
+- **NGS (Next Gen Stats)** — tracking-derived aggregates (separation, cushion, air yards, YAC over expected);
+  the free aggregated tier (granular tracking data is paid).
+- **`pulled_at`** — the ingest timestamp stamped on every store row; the foundation of PIT discipline.
+
 ## Discipline terms
 - **Point-in-time (PIT)** — no post-as-of data may touch an as-of estimate.
 - **Walk-forward / horse-race** — out-of-sample evaluation rolling through past seasons; the only honest test.
 - **Look-ahead bias / survivorship bias** — the two classic backtest-inflators to design out.
 - **Block bootstrap** — resample blocks of the realized-difference series for CIs that respect autocorrelation.
+- **Stationary bootstrap (Politis–Romano)** — a block bootstrap with random geometric block lengths
+  (expected ≈ n^{1/3}); `block=1` degrades to the iid bootstrap, so the two are directly comparable.
+- **Effect size + 95% CI** — report the size of an edge and its uncertainty, not a single-season number;
+  an edge is "real" only when its CI excludes 0 (the ship/no-ship gate vs ADP **and** the market).
+- **Paired comparison** — score two methods in the *same* seeded draft contexts so the difference
+  isolates the method (not draft-slot or opponent luck); the replacement level cancels in the difference.

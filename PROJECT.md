@@ -31,6 +31,10 @@ co-pilot, and the app.
 PIT everywhere · walk-forward never in-sample · **beat ADP *and* the betting market + prior baseline**
 before shipping · reuse before you write · guard every output · log as you go. (Full text: `CLAUDE.md` §3.)
 
+**Sub-phase gate (workflow):** finish a sub-step → summarize what was accomplished → **ask permission
+before starting the next sub-step.** No chaining sub-steps without approval, for the whole project.
+*(User instruction, 2026-06-30; full text `CLAUDE.md` §3.7.)*
+
 ## 5. The phase plan (AlphaThena methodology: one focused file per aspect)
 Each **step → its own module/notebook** (like the intern repo's separate files for wash-sales /
 rebalancing / construction). Target module paths are indicative. Phase-level **Done-when** in bold.

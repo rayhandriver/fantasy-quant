@@ -5,8 +5,8 @@ Legend: ☐ todo · ◐ in progress · ☑ done.
 
 - ☑ **Setup** — env scaffold (uv + Python 3.12, repo, docs, git). *2026-06-29.*
 
-**Phase 0 — Data foundation** ☐ 0.2 nflverse · ☐ 0.3 PFR · ☐ 0.4 ADP · ☐ **0.5 Vegas markets** · ☐ 0.6 news ingest · ☐ 0.7 PIT panel · ☐ 0.8 validation
-**Phase 1 — Backtest harness** ☐ 1.1 scoring · ☐ 1.2 draft sim · ☐ 1.3 walk-forward · ☐ 1.4 PAR metric · ☐ 1.5 significance
+**Phase 0 — Data foundation** ✅ **COMPLETE** — ☑ 0.2 nflverse *(8 tables, weekly↔snaps 0.24% unmatched)* · ☑ 0.3 PFR *(advanced 2018+, reconciles 0.00%)* · ☑ 0.4 ADP *(FFC 2010–2024; top-150 gsis-matched; PIT ✓; homonym-dedup; Underdog deferred)* · ☑ **0.5 Vegas markets** *(game_lines 2014–25 free; de-vig + implied totals ✓; props key-gated)* · ☑ 0.6 news ingest *(injuries/depth 2014+ native-gsis; news_raw RSS pipe; PIT ✓)* · ☑ 0.7 PIT panel *(weekly+preseason grains; leak-assert ✓; 41-col join)* · ☑ 0.8 validation *(9 hard gates PASS; data_health.json; caught+fixed a 0.4 homonym bug)*
+**Phase 1 — Backtest harness** ✅ **COMPLETE** — ☑ **1.1 scoring** *(full-PPR reconstructs nflverse across 57.3k pw @1e-6; K/DST from pbp/game_lines; 9-starter QB/2RB/2WR/TE/FLEX+K+DST; K/DST identity bridge)* · ☑ **1.2 draft sim** *(10×15 snake, ADP+noise opponents, pluggable your_pick_fn, DraftState; ADP-typical + reproducible; adp_asof board)* · ☑ **1.3 walk-forward** *(rank_fn→K drafts→realized optimal-lineup pts, strict PIT; ADP pools 2036 vs worst-first 1458; survivorship LEFT-JOIN; PIT guard trips)* · ☑ **1.4 PAR metric** *(replacement QB10/RB24/WR24/TE12/K10/DST10; PAR ranks elite +818 vs scrub −943; PAR↔exp-wins 0.99)* · ☑ **1.5 significance** *(stationary block-bootstrap CIs; ADP-vs-ADP edge 0 not-sig; worst-first −578/season CI [−714,−438] sig; compare_to_baseline)*
 **Phase 2 — Markets & baselines** ☐ 2.1 VBD · ☐ 2.2 baseline proj · ☐ **2.3 props-implied** · ☐ **2.4 ensemble-with-market**
 **Phase 3 — Features (X)** ☐ 3.1 opportunity · ☐ 3.2 efficiency · ☐ 3.3 player · ☐ 3.4 environment · ☐ 3.5 exposures
 **Phase 4 — Mean projections** ☐ 4.1 GBT · ☐ 4.2 age curves · ☐ 4.3 hier-Bayes · ☐ **4.4 props-shrink** · ☐ 4.5 calibration
@@ -22,5 +22,6 @@ Legend: ☐ todo · ◐ in progress · ☑ done.
 **Phase 14 — App** ☐ 14.1 backend · ☐ 14.2 personalization · ☐ 14.3 frontend · ☐ 14.4 live-draft · ☐ 14.5 explain · ☐ 14.6 widget · ☐ 14.7 mock draft
 **Phase 15 — Multi-format (roadmap)** ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS
 
-**Next up:** Phase 0.2 (nflverse ingest). Phase 6 (ADP-bias) and the cross-cutting workstreams 7 (causal)
-and 12 (NLP) can start alongside the modeling phases — see `PROJECT.md` §5 sequencing.
+**Next up:** Phase 2.1 (replacement levels & VBD baseline) — the first `rank_fn` to backtest through the
+now-complete harness. Phase 6 (ADP-bias) and the cross-cutting workstreams 7 (causal) and 12 (NLP) can
+start alongside modeling — see `PROJECT.md` §5 sequencing.

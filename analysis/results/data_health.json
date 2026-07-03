@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-07-02T03:07:41.952888+00:00",
+  "tables": {
+    "adp_snapshots": 14144,
+    "combine": 4080,
+    "depth_charts": 955989,
+    "draft_picks": 3077,
+    "game_lines": 3295,
+    "injuries": 65866,
+    "news_raw": 109,
+    "ngs": 26723,
+    "pbp": 580005,
+    "pfr_pass": 848,
+    "pfr_rec": 4130,
+    "pfr_rush": 2820,
+    "player_ids": 12465,
+    "seasonal": 6682,
+    "snaps": 300812,
+    "weekly": 59829
+  },
+  "coverage": {
+    "weekly": {
+      "gsis_id": 1.0,
+      "position": 0.9997,
+      "fantasy_points_ppr": 1.0,
+      "target_share": 0.8094
+    },
+    "game_lines": {
+      "spread_line": 1.0,
+      "total_line": 1.0,
+      "home_implied_total": 1.0
+    },
+    "injuries": {
+      "gsis_id": 1.0,
+      "report_status": 0.5578,
+      "date_modified": 0.9079
+    },
+    "adp_snapshots": {
+      "gsis_id": 0.9296
+    }
+  },
+  "gates": [
+    {
+      "gate": "weekly: no negative counting stats",
+      "passed": true,
+      "offending_rows": 0
+    },
+    {
+      "gate": "snaps: offense_pct in [0,1.01]",
+      "passed": true,
+      "offending_rows": 0
+    },
+    {
+      "gate": "game_lines: total_line in [20,80]",
+      "passed": true,
+      "offending_rows": 0
+    },
+    {
+      "gate": "game_lines: implied team totals in [0,45]",
+      "passed": true,
+      "offending_rows": 0
+    },
+    {
+      "gate": "weekly: unique (gsis,season,week,type)",
+      "passed": true,
+      "offending_groups": 0
+    },
+    {
+      "gate": "game_lines: unique game_id",
+      "passed": true,
+      "offending_groups": 0
+    },
+    {
+      "gate": "adp: unique (gsis,season,source,scoring,teams)",
+      "passed": true,
+      "offending_groups": 0
+    },
+    {
+      "gate": "weekly<->snaps gsis match <1%",
+      "passed": true,
+      "unmatched_rate": 0.00243
+    },
+    {
+      "gate": "ADP top-150 gsis match <1%",
+      "passed": true,
+      "unmatched_rate": 0.00075
+    }
+  ],
+  "all_gates_passed": true,
+  "survivorship": {
+    "season_examined": 2022,
+    "drafted_top150_no_weekly_appearance": 0,
+    "examples": [],
+    "weekly_gsis_not_in_player_ids": 77,
+    "note": "Weekly panels contain only players who recorded stats; drafted-but-DNP players must be pulled from ADP to avoid survivorship-flattered backtests."
+  }
+}

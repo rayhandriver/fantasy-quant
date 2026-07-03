@@ -37,3 +37,467 @@ intern-repo's findings log.)
 (uv re-synced + Jupyter kernel re-registered at the new path; `import fantasy_quant` verified). Remote will
 be a **private GitHub** repo only — never Bitbucket.
 
+
+
+## 0.2 — nflverse ingest (2026-06-30)
+
+**Goal:** land the core NFL signal in DuckDB, PIT-stamped, normalized onto `gsis_id`.
+
+**What was built:**
+- `config.py` (env/path resolution), `data/db.py` (DuckDB helpers — `write_df`, `write_parquet_glob`,
+  every row stamped `pulled_at`), `data/sources/nflverse.py` (per-source ingest + orchestration),
+  `steps/phase0_2_nflverse.py` (driver), `tests/test_nflverse_ingest.py` (no-network transform tests).
+- Raw pulls cached to `data/raw/nflverse/*.parquet` (PBP per-season under `pbp/`) so re-runs don't hit
+  the network. `--refresh` forces a re-pull.
+
+**Result (DuckDB tables, stamped `pulled_at`):**
+
+| table | rows | season span |
+|---|---|---|
+| player_ids | 12,465 | (crosswalk, no season) |
+| weekly | 59,829 | 2014–2024 |
+| seasonal | 6,682 | 2014–2024 |
+| snaps | 300,812 | 2014–2025 |
+| ngs | 26,723 | 2016–2025 |
+| draft_picks | 3,077 | 2014–2025 |
+| combine | 4,080 | 2014–2025 |
+| pbp | 580,005 | 2014–2025 |
+
+**Done-criterion — PASS:** weekly↔snaps `gsis_id` join (REG, skill positions) = **0.243% unmatched**
+(135 / 55,517 player-weeks), under the <1% gate. weekly grain clean: **0** duplicate `(gsis_id,season,week)`
+groups, **0** null `gsis_id`. Per-season weekly counts stable (~5.3k–5.7k).
+
+**What it taught / notes:**
+- **2025 coverage is asymmetric**: nflverse already has 2025 **PBP/snaps/draft/combine**, but the
+  aggregated **weekly/seasonal** player tables stop at **2024** (clean 404, auto-skipped by the per-year
+  guard). → usable *fantasy-points* history is **2014–2024 (11 seasons)**; the small-`n` constraint stands.
+- The `gsis_id` join key is solid for weekly/seasonal/ngs (native) and snaps (mapped via `player_ids.pfr_id`).
+  The 135 unmatched snaps are fringe players missing a `pfr_id` in the crosswalk — logged, not dropped.
+- **pytest console-script doesn't spawn under `uv run`** in this env; use `uv run python -m pytest`.
+
+**Next:** 0.3 — Pro-Football-Reference season panels (cross-check + extra features).
+
+
+
+## 0.3 — PFR advanced season panels (2026-06-30)
+
+**Goal:** add the advanced PFR metrics nflverse's base tables lack, + cross-check identity.
+
+**Source decision (documented):** pulled PFR's advanced season tables via
+`nfl_data_py.import_seasonal_pfr` (the **nflverse PFR mirror**) instead of scraping
+pro-football-reference.com directly — same PFR data, but reproducible/cached and respectful of
+PFR's bot-protection. The raw httpx+bs4 scraping stack is held for 0.4 ADP (genuinely needs it).
+
+**What was built:** `data/cache.py` (shared raw-pull caching, reused by 0.3+), `data/sources/pfr.py`
+(`ingest_pfr_seasonal`, `map_pfr_ids`, `match_rate`, `reconcile`), `steps/phase0_3_pfr.py`,
+`tests/test_pfr_ingest.py`, and committed `reference/pfr_id_overrides.csv` (+ `reference/README.md`).
+
+**Result (3 tables, gsis-mapped, `pulled_at`-stamped):**
+
+| table | rows | span | features added |
+|---|---|---|---|
+| pfr_pass | 848 | 2018–2025 | pressures/blitzes/hurries, on-target%, play-action, RPO, scrambles |
+| pfr_rec | 4,130 | 2018–2025 | YBC, YAC, ADOT, broken tackles, drops, drop% |
+| pfr_rush | 2,820 | 2018–2025 | YBC, YAC/att, broken tackles |
+
+**Done-criterion — PASS:** PFR yards vs nflverse `seasonal` (matched, REG, >50 yds):
+rec **median abs % diff = 0.000%** (2,381 player-seasons), rush **0.000%** (1,114). Exact agreement
+confirms the `pfr_id→gsis_id` mapping is correct. gsis match: pass 100%, rush 99.7%, rec 98.2%.
+
+**What it taught / notes:**
+- **PFR advanced stats start in 2018** ("Data not available before 2018"). So these features are
+  usable **2018–2024** (vs 2014 for nflverse base). Models needing pre-2018 history fall back to base.
+- The 85 unmatched `pfr_id`s are mostly **offensive linemen** (Dawkins, Decker, Fant) who appear in
+  PFR tables but aren't skill players — logged to `data/raw/pfr/unmatched_pfr_ids.csv`, not dropped.
+  Genuine skill-player misses can be hand-fixed in `reference/pfr_id_overrides.csv`.
+
+**Next:** 0.4 — ADP ingest (FFCalculator + Underdog), PIT snapshots.
+
+
+
+## 0.4 — ADP ingest (FFCalculator, PIT snapshots) (2026-06-30)
+
+**Goal:** the "market price" — historical ADP, snapshotted PIT, mapped to `gsis_id`.
+
+**What was built:** `data/sources/adp.py` (`ingest_adp`, `normalize_name`, `match_adp_to_gsis`,
+`adp_asof`, `coverage`, `match_rate`), `steps/phase0_4_adp.py`, `tests/test_adp_ingest.py`,
+committed `reference/adp_name_overrides.csv`.
+
+**Source:** Fantasy Football Calculator public JSON API. Pulled the full grid
+**scoring ∈ {standard, ppr, half-ppr} × teams ∈ {10, 12} × 2010–2024**, throttled 0.5s, cached to
+`data/raw/adp/`. FFC's `meta.end_date` (late Aug / early Sep) is the PIT `snapshot_date`.
+
+**Result:** `adp_snapshots` = **14,144 rows**, coverage **2010–2024 (15 seasons)**.
+- ppr/standard: all 15 seasons; **half-ppr only 2018+** (7 seasons — FFC didn't track it earlier).
+
+**Done-criterion — PASS:**
+- Coverage ≥ 2015→present ✓ (2010–2024).
+- `adp_asof(2020, as_of)` PIT: **0 rows** the day *before* the snapshot (no leak), full 203-player
+  board the day *after*; asserts internally that no returned row is future-dated.
+- gsis matching after overrides: **top-150 ADP 0.000% unmatched**, all-skill 0.02%.
+
+**Identity work (the crux):** FFC has no `gsis_id`, only a name. `match_adp_to_gsis` is a 4-tier
+matcher: (1) team+pos+normalized-name, (2) pos+name with **draft-year disambiguation** for same-name
+players across eras (e.g. the two Mike Williamses), (3) name-only, (4) manual nickname overrides.
+Pre-overrides left 8 players unmatched — all nickname/short-form (Hollywood→Marquise Brown, Gabe→
+Gabriel Davis, Chig→Chigoziem Okonkwo, Ben/Benjamin Watson, …); added to
+`reference/adp_name_overrides.csv` → top-150 went to 100%. Remaining 2 unmatched are FFC's
+"Deleted Deleted" placeholder (correctly left null).
+
+**Underdog best-ball — DEFERRED (data gap, open question resolved):** Underdog's public endpoints
+require auth (404/301 unauthenticated); no free *historical* best-ball ADP. The schema is
+format-aware (`source`/`format` columns; FFC = `redraft`) so best-ball slots in later without a
+migration. Logged in `PLAN.md`.
+
+**Notes / reserved words:** `rows` is a DuckDB reserved keyword (quote aliases); DuckDB `.df()`
+returns DATE columns as pandas Timestamps (compare with `pd.Timestamp`, not `datetime.date`).
+
+**Next:** 0.5 — Vegas markets ingest (props / totals / spreads / win totals, de-vig).
+
+
+
+## 0.5 — Vegas markets ingest (de-vig'd) (2026-06-30)
+
+**Goal:** the *sharper* market — spreads/totals/props as features, anchors, calibration.
+
+**What was built:** `markets/` package + `markets/odds_ingest.py` (`ingest_game_lines`,
+`ingest_player_props`, `parse_props_payload`, `devig`, `american_to_prob`, `decimal_to_prob`,
+`fair_two_way`, `implied_team_total`, `odds_asof`, `implied_total_sanity`), `steps/phase0_5_markets.py`,
+`tests/test_markets.py`.
+
+**The free/paid split (confirmed):**
+- **FREE + historical (landed):** game **spreads, totals, moneylines, spread/over odds** via
+  nflverse `import_schedules` → table **`game_lines`** (3,295 games, **2014–2025**), with derived
+  **implied team totals** and de-vig'd fair win probs.
+- **PAID/gated (built, key-gated):** **player props** via the-odds-api are **live-only**; historical
+  prop lines are the paid gap. `ingest_player_props` no-ops with a warning unless `ODDS_API_KEY` is set
+  (it isn't) — but `parse_props_payload` + `devig` are unit-tested so the path is ready for a key.
+- **Win totals DEFERRED:** nflverse `import_win_totals` returns empty ("source in flux"); `import_sc_lines`
+  also empty. Revisit later.
+
+**Done-criteria — ALL PASS:**
+- De-vig'd two-way market sums to 1.0: `max|home_wp + away_wp − 1| = 2.2e-16` (machine epsilon).
+- Implied team totals sane: **median 22.8**, range 9.8–36.2, **100% in [10,40]**.
+- `odds_asof` PIT: 0 rows the day before the first 2020 game, 269 after the season — asserts no
+  future-dated line escapes.
+- Spot-check 2023 wk1 KC/DET (home −4, total 53): KC **28.5** / DET **24.5**, win probs **0.637/0.363**.
+
+**Notes:**
+- **Sign convention** (verified): nflverse `spread_line` = **home** margin (positive ⇒ home favored);
+  `implied_team_total = ((total+spread)/2, (total−spread)/2)`.
+- These are **closing lines** (one per game, dated gameday) — no intra-week line-movement history from
+  this source. `captured_at = gameday`.
+- De-vig is **proportional** (Shin/power noted as alternatives for later).
+
+**Next:** 0.6 — News / injury / depth-chart raw ingest (lay the Phase-12 NLP pipe).
+
+
+
+## 0.6 — News / injury / depth-chart raw ingest (2026-07-01)
+
+**Goal:** lay the *pipe* for the Phase-12 NLP edge — capture timestamped raw signal now (no NLP yet).
+
+**What was built:** `news/` package + `news/ingest.py` (`ingest_injuries`, `ingest_depth_charts`,
+`ingest_news_text`, `parse_rss`, `injuries_asof`), `steps/phase0_6_news.py`, `tests/test_news_ingest.py`.
+
+**Result (3 tables, timestamped):**
+
+| table | rows | span / grain | timestamp | source |
+|---|---|---|---|---|
+| injuries | 65,866 | 2014–2025 | **`date_modified`** (PIT) | nflverse `import_injuries` (native gsis) |
+| depth_charts | 955,989 | 2014–2024 | (season, week) | nflverse `import_depth_charts` (native gsis) |
+| news_raw | 109 | forward-only | `captured_at` | RSS: ESPN 23 / CBS 36 / Yahoo 50 |
+
+**Done-criterion — PASS:** injuries reconstructable as-of a day. `injuries_asof(2023-10-25)` returns
+1,782 reports filed ≤ that date (latest 2023-10-21) and correctly **excludes 3,817 later reports**;
+asserts no returned report is future-dated. injuries carry **0% null gsis_id**.
+
+**What it taught / notes:**
+- **injuries + depth_charts are free & historical** with native `gsis_id` — no name-matching needed.
+  injuries `report_status` ∈ {Out, Questionable, Doubtful, null=no-report}.
+- **`news_raw` is forward-capture only** — news can't be backfilled, so the archive starts now and
+  **accumulates**: `ingest_news_text` appends + de-dupes by `guid` (earliest `captured_at` wins).
+  Re-run periodically (a scheduled job later) to build history. No `gsis_id` yet (entity resolution
+  is Phase 12).
+- **Inactives (90-min list) deferred** — no clean free historical importer; derivable later from
+  snaps==0 or forward-captured.
+
+**Next:** 0.7 — PIT panel / feature-store assembly (the unified join layer).
+
+
+
+## 0.7 — PIT panel / feature-store assembly (2026-07-01)
+
+**Goal:** the unified point-in-time join layer everything downstream reads from.
+
+**What was built:** `data/panel.py` (`build_panel`, `weekly_panel`, `preseason_panel`,
+`assert_panel_pit`), `steps/phase0_7_panel.py`, `tests/test_panel.py`. Materializes to
+`data/processed/panel_{grain}_{season}_{as_of}.parquet`.
+
+**The PIT contract (the crux):** a source contributes a row only if its *known-at* time ≤ `as_of`:
+- weekly stats / snaps / NGS → known at that week's **last gameday** (from `game_lines`);
+- ADP → its `snapshot_date`; injuries → `date_modified`; game context → kickoff.
+`assert_panel_pit` runs on every build and **raises** if any dated field exceeds `as_of`.
+
+**Two grains:**
+- `weekly_panel(season, as_of)` — `(gsis_id, season, week)`; weekly stats + snaps + receiving-NGS +
+  odds/implied-team-total + ADP + injury-status, restricted to weeks finished ≤ as_of. **41 columns.**
+- `preseason_panel(season, as_of)` — the draftable ADP board as-of + identity/age + injury-as-of.
+
+**Done-criteria — ALL PASS:**
+- **Two as-of dates differ:** 2023 as-of Oct-15 = 1,549 rows (weeks 1–5); as-of Dec-10 = 3,825 rows
+  (weeks 1–13). Later strictly includes more.
+- **No field after as_of:** real panels assert clean on build; a **planted future value is caught**.
+- **gsis lines up:** Justin Jefferson 2023 wk5 on one row — pts_ppr 5.8, tgt 6, snap% 0.71,
+  team_implied 24.5, ADP 1.4, NGS separation 3.40 (all six sources joined; the low pts is real — he
+  left wk5 injured).
+- **Preseason board** (2023 as-of Sep-4): 190 players, correct top-5 (Jefferson/CMC/Chase/Hill/Ekeler),
+  ages computed, **Ja'Marr Chase flagged Questionable** (his real preseason status).
+
+**What it taught / notes:**
+- **FFC season-aggregate ADP is dated ~Sep 1** (end of the preseason draft window). A draft as-of
+  *before* that (e.g. Aug 30) correctly yields an **empty board** — PIT working as intended; use a
+  Labor-Day-weekend (≥ snapshot_date) as-of for draft panels.
+- `game_lines.gameday` is stored VARCHAR → `CAST(... AS DATE)` when computing week-end dates.
+- NGS join is receiving-only for now (marquee metrics); full multi-type NGS pivot lands in Phase 3.
+
+**Next:** 0.8 — Data validation & sanity gates (the hard-gate analog).
+
+
+
+## 0.8 — Data validation & sanity gates (2026-07-01) — **PHASE 0 COMPLETE**
+
+**Goal:** the hard-gate analog — bad data fails loudly here instead of poisoning a model later.
+
+**What was built:** `data/validate.py` (`validate_panel` — hard gates that raise; `data_health_report`
+— store-wide report), `steps/phase0_8_validate.py`, `tests/test_validate.py`, and the committed
+`analysis/results/data_health.json`.
+
+**Gates (all PASS):** value ranges (no negative counting stats; offense_pct∈[0,1.01]; total_line∈[20,80];
+implied totals∈[0,45]); uniqueness (weekly `(gsis,season,week,type)`; game_lines `game_id`; adp
+`(gsis,season,source,scoring,teams)`); join rates (weekly↔snaps 0.24%, ADP top-150 0.08%). Panel
+hard-gate validated 5,391 rows (2022 weekly).
+
+**The gate earned its keep — it caught a real 0.4 bug:** the adp-uniqueness gate flagged **14 groups**
+where one `gsis_id` mapped to two ADP rows in a snapshot. Root cause: **homonyms** — two different
+"Mike Williams" (WR) and two "Steve Smith" (WR) in the 2010–11 boards both resolved to the same gsis
+(draft-year proximity favored the same candidate for both). **Fix (in 0.4):** `dedupe_gsis_within_snapshot`
+enforces a gsis maps to ≤1 row per snapshot — keep the lower-ADP (more prominent) row, NULL + log the
+loser. Re-ran ingest → gate clean. (This is exactly the intern `_validate_cov_hard_gate` philosophy paying off.)
+
+**Survivorship documented** in the report: for 2022, **0** top-150 *skill* ADP players had no weekly
+appearance (the earlier "busts" were **kickers** — structurally absent from the offensive `weekly` table,
+so the check now filters to QB/RB/WR/TE). 77 weekly gsis aren't in `player_ids` (minor fringe-player gap).
+Note preserved: weekly panels contain only players who recorded stats — join drafted-but-DNP from ADP to
+avoid survivorship-flattered backtests.
+
+---
+
+### ✅ PHASE 0 — DATA FOUNDATION: COMPLETE (2026-07-01)
+**16 DuckDB tables**, all PIT-stamped, covering nflverse (2014–24), PFR-advanced (2018–24), FFC ADP
+(2010–24), Vegas game lines (2014–25), injuries (2014–25), depth charts (2014–24), and a forward-capture
+news pipe. A **PIT panel layer** (`build_panel`) joins them leak-free in two grains, and a **hard-gate
+validator** with a committed `data_health.json` guards the lot. 26 unit tests; every step's done-criteria
+met. This is the "60% of the edge" groundwork — done slowly and correctly.
+
+**Next:** Phase 1 — the backtest harness (built *before* any modeling): scoring engine, draft simulator,
+walk-forward harness, PAR metric, block-bootstrap significance.
+
+
+
+## 1.1 — League scoring engine (2026-07-03) — **PHASE 1 STARTED**
+
+**Goal:** turn raw stats into fantasy points under a configurable ruleset — the first brick of the
+backtest harness, built *before* any modeling (the intern `min_variance_backtest` discipline).
+
+**League config settled (user decision, 2026-07-03):** 10-team full-PPR, 1-QB, **full 9-starter
+lineup `QB / 2·RB / 2·WR / TE / FLEX + K + DST`** (15 roster spots). Choosing K + DST pulled
+kicker & team-defense scoring into 1.1 — they aren't in the offensive `weekly` table.
+
+**What was built:** `backtest/scoring.py` — pydantic `RuleSet` (`OffenseRules`/`KickingRules`/
+`DstRules`); **pure, unit-tested scorers** `score_offense`, `kick_play_points`, `pa_tier_points`,
+`score_dst`; thin DB wrappers `weekly_points`, `season_points`, `kicker_weekly_points`,
+`dst_weekly_points`; identity resolvers `resolve_kicker_gsis`, `dst_team_from_adp_name`.
+Plus `steps/phase1_1_scoring.py` and `tests/test_scoring.py` (8 tests).
+
+**Done-criteria — ALL PASS:**
+- **Offense (hard gate):** reconstructed full-PPR == nflverse `fantasy_points_ppr` across
+  **57,301 player-weeks (2014–2024)**, worst `|diff| = 2.9e-6` (float32 epsilon), **0** rows over a
+  0.02 tolerance. Default `OffenseRules` reproduce nflverse exactly (pass 0.04 / TD 4, INT −2, rush/rec
+  0.1 / TD 6, reception +1 PPR, ST-TD 6, 2pt +2, fumble-lost −2).
+- **Kickers (pbp-derived):** FG by distance (0–39=3 / 40–49=4 / 50+=5) + PAT from `pbp` FG/XP plays,
+  keyed on `kicker_player_id` (gsis). 2022 leaders Tucker 164 / Carlson 162 / Maher 161 — matches real
+  fantasy-K leaderboards; weekly range 0–23.
+- **DST (pbp + PA-derived):** sacks / INT / fumble-rec / def+return-TD (`td_team = defteam`) / safety +
+  points-allowed tiers from `game_lines` final scores. 2022 leaders NE 177 / DAL 164 / SF 156 / PHI 149
+  — the actual top 2022 fantasy defenses; weekly range −4…26.
+- **Identity (K/DST bridge):** FFC ADP K/DST rows carry **null gsis** (`_NON_GSIS_POS`), so
+  `resolve_kicker_gsis` (name→gsis via `player_ids`, PK/K) and `dst_team_from_adp_name`
+  ("Philadelphia Defense"→PHI, relocations handled) connect them to a scoreable key. 2022 draftable
+  board: **kickers 5/5, defenses 6/6** resolved.
+
+**What it taught / notes:**
+- nflverse's fantasy formula is **exactly reproducible** from `weekly` components — no external
+  reference table needed; the offense scorer *is* its own validation.
+- **K/DST live entirely in `pbp`/`game_lines`, not `weekly`** → their own derivation + identity bridge.
+  `td_team == defteam` cleanly captures defensive *and* kick/punt-return TDs (verified on 2022 plays).
+  DST points-allowed uses the opponent's **final** score. Blocked-kick DST points are **not** derived
+  (documented approximation; `DstRules.block` defined but unused).
+- Kept the arithmetic in pure functions (DB-free) so it unit-tests without network/DB — mirrors the
+  0.7 `assert_panel_pit` pattern.
+
+**Next:** 1.2 — draft simulator (ADP-following opponents) — **pending user approval (sub-phase gate).**
+
+
+
+## 1.2 — Draft simulator (2026-07-03)
+
+**Goal:** simulate a full snake draft vs ADP-following opponents — the second brick of the harness,
+and the `DraftState` that becomes the input to every later draft policy (Phases 9/11).
+
+**What was built:** `draft/simulator.py` — `RosterSlots` (frozen dataclass: 9-starter slots + bench
++ per-position **caps**), `DraftState` (snake geometry, availability, roster counts/needs, pick log),
+`simulate_draft(board, your_pick_fn, n_teams=10, rounds=15, noise, seed)`, pick policies
+`pick_by_adp` (opponents) + `adp_pick_fn` (default your-seat), `canon_pos`, `_prepare_board`.
+Plus `steps/phase1_2_draft.py` and `tests/test_draft.py` (9 tests).
+
+**Done-criteria — ALL PASS (board = `adp_asof(2022, Sep-5)`, 157 players, seed 42, your seat 4):**
+- **10×15 = 150 picks**, snake order verified (R1 seats 0–9, R2 seats 9–0, R3 0–9).
+- **ADP-typical roster:** your pure-ADP roster = RB6/WR5/TE2/QB2 (15, within caps, RB/WR-heavy) —
+  reads like a real ADP draft (J.Taylor R1 … depth WR/TE late).
+- **Reproducible:** same seed → identical pick log; different seed → different.
+
+**What it taught / notes:**
+- **Board source = `adp_asof`, not `preseason_panel`** — the panel filters `gsis_id IS NOT NULL`,
+  which drops the 6 team defenses (null gsis); `adp_asof` keeps them. Kickers *are* gsis-matched in
+  `adp_snapshots`; only DST is null-gsis → `player_key` falls back to the name.
+- **Caps are SOFT:** they steer opponents off over-drafting a position *while an under-cap
+  alternative exists*, but when supply is exhausted a team takes best-available anyway (never a short
+  roster). Tested both ways (ample-supply caps hold; RB/WR-only board forces a documented overflow).
+- **FFC undersupplies K/DST** — its aggregate board lists only ~5 K / ~6 DST, so only ~3–5 of 10 teams
+  draft each. The harness will treat empty K/DST slots as replacement-level (realistic streaming);
+  worth revisiting if K/DST edge matters.
+- **Custom `your_pick_fn`s are not cap-bound** (caps are only the opponent-realism knob) — real
+  policies self-limit via `state.starter_needs()`. Perf: roster counts computed once per pick
+  (an earlier per-available-player version was O(n²), ~54s → ~2s).
+
+**Next:** 1.3 — walk-forward harness (rank_fn → drafts → realized season, strict PIT) — **pending user
+approval (sub-phase gate).**
+
+
+
+## 1.3 — Walk-forward harness (2026-07-03)
+
+**Goal:** the engine — *ranking method → simulated drafts → realized season outcomes*, across seasons,
+strictly PIT. Ties 1.1 (scoring) + 1.2 (draft sim) together; everything in Phases 2–15 plugs in here.
+
+**What was built:** `backtest/walkforward.py` — `rank_by_adp` baseline + the `rank_fn(board, con,
+season, as_of)` contract; pure `optimal_lineup_points` (greedy = optimal for a single FLEX);
+`build_realized`/`Realized` (offense+K by gsis, DST by team — per-season weekly-point pivots);
+`roster_season_points` (survivorship-safe); `draft_date`, `preseason_board` (PIT-asserted), and
+`walk_forward(...) -> WalkForwardResult` (per-draft / per-season / pooled). Small simulator additions:
+`DraftState.draftable_pool`, `value_pick_fn`, a `value` column through `_prepare_board`. Plus
+`steps/phase1_3_walkforward.py` and `tests/test_walkforward.py` (8 tests).
+
+**Done-criteria — ALL PASS (2014–2024, 6 drafts/season, rotating seats):**
+- **One-call end-to-end:** ADP baseline scores every season PIT-clean — pooled **2036 ± 195** starter-pts
+  (per-season 1856–2327). `rank_fn` is fed the PIT board; opponents draft ADP+noise; rosters scored on
+  the season's **actual** weekly results via optimal lineups.
+- **Swapping `rank_fn` = one arg, and the harness discriminates:** a deliberately-bad worst-ADP-first
+  `rank_fn` pools at **1458** — **577 pts below** ADP. The engine can tell a good method from a bad one.
+- **Reproducible:** same seed → identical `per_draft`.
+- **PIT guard:** a planted future-dated ADP snapshot trips `assert_panel_pit` (intern Step 5.1 analog).
+
+**What it taught / notes:**
+- **rank_fn contract:** returns a draft-priority per board row on the **ADP/pick scale** (lower = sooner),
+  NaN → falls back to that player's ADP; `value_pick_fn` drives your seat off it. Baseline returns `adp`,
+  so "you drafting by ADP" ≈ league-average (edge vs ADP is measured in 1.5, not here).
+- **Survivorship guard is structural:** rosters are scored by LEFT-JOIN of drafted players → realized
+  weekly points, so a drafted bust who never played contributes **0** (proven: adding a never-played
+  player doesn't change a roster's total). The `weekly` table only holds players who recorded stats.
+- **Draft date = the FFC ADP snapshot** per season (PIT as-of); `preseason_board` re-asserts no future
+  snapshot leaks. Season score = sum of optimal-lineup points over all REG weeks (fantasy-regular /
+  playoff weighting is a 1.4/2.x refinement).
+- Perf ~0.27s/draft (66-draft baseline ~18s); driver runs baseline+swap+repro+PIT in ~48s.
+
+**Next:** 1.4 — PAR metric scorer (replacement levels + points-above-replacement) — **pending user
+approval (sub-phase gate).**
+
+
+
+## 1.4 — PAR metric scorer (2026-07-03)
+
+**Goal:** the harness's headline number — points-above-replacement of a drafted roster — and the
+per-position replacement levels it needs (the standing PLAN.md open question, resolved here).
+
+**What was built:** `backtest/metrics.py` — `replacement_ranks` (last-starter rank per position with
+FLEX split), `replacement_levels`/`ReplacementLevels` (season-point level per position + a replacement
+roster total), `par(roster, realized, replacement, slots)`, and secondary metrics `expected_wins`
+(all-play win% × weeks — schedule-independent) + `final_standings`. Refactored `walkforward.py` to
+expose `roster_weekly_points`. Plus `steps/phase1_4_metrics.py` and `tests/test_metrics.py` (7 tests).
+
+**Replacement-level definition (resolved):** the "last reliably-started player" per slot in a 10-team
+9-starter league. Dedicated starters league-wide = `n_teams × slot`; the single FLEX is split across
+RB/WR/TE ∝ dedicated demand (2:2:1). → ranks **QB10 / RB24 / WR24 / TE12 / K10 / DST10**; each level =
+that rank's realized season points; FLEX level = best flex-eligible replacement. Adjustable via
+`slots`/`n_teams`. **2023 levels:** QB 274 · RB 191 · WR 219 · TE 143 · K 149 · DST 139 → replacement
+roster **1743 pts**.
+
+**Done-criteria — ALL PASS:**
+- **PAR ranks good above bad:** an elite-starter roster scored **+818 PAR** (2561 pts) vs a ~40th-ranked
+  scrub roster at **−943 PAR** (800 pts) — a 1761-pt gap; good > 0 > bad.
+- **Replacement levels documented** (above) + committed in code.
+- **Secondary metrics align:** across a real 2023 draft, PAR ↔ expected-wins correlate **0.99** and the
+  top-PAR team finishes 1st (all-play standings). Expected wins = all-play (each week, fraction of the
+  league you outscore), so a boom/bust roster can rank slightly differently from raw PAR — as intended.
+
+**What it taught / notes:**
+- Replacement is computed from **realized** season totals — fine because PAR is an *evaluation* metric
+  on realized outcomes (not a PIT projection input). PAR of the 1.3 rosters ≈ starter_points − 1743.
+- Full schedule/playoff simulation is Phase 10; `expected_wins` (all-play) is the cheap, unbiased proxy
+  here — no schedule luck. `final_standings` ranks by it.
+
+**Next:** 1.5 — significance (block-bootstrap CIs, method − ADP/market) — **pending user approval
+(sub-phase gate).**
+
+
+
+## 1.5 — Significance (block-bootstrap CIs) (2026-07-03)
+
+**Goal:** don't declare a winner on noise — put a confidence interval on the method − ADP edge.
+
+**What was built:** `backtest/significance.py` — `block_bootstrap_ci` (stationary bootstrap, expected
+block ≈ n^{1/3}; `expected_block=1` degrades to iid) → point/CI/SE/`significant`; `compare_to_baseline`
+(paired walk-forward method vs baseline → per-season PAR-difference series → 95% CI). Plus
+`steps/phase1_5_significance.py` and `tests/test_significance.py` (7 tests).
+
+**Done-criteria — ALL PASS:**
+- **Recovers known results:** iid bootstrap SE ≈ σ/√n; the CI brackets the observed statistic.
+- **Block, not iid:** on AR(1) φ=0.85, block SE **0.239** ≫ iid SE **0.090** — autocorrelation is respected.
+- **Real comparison:** ADP vs ADP → edge **0**, not significant (no false positive); worst-first vs ADP →
+  edge **−577.6 PAR/season**, 95% CI **[−714, −438]**, SIGNIFICANT (every season negative). Matches the
+  1.3 pooled gap (2036 − 1458 = 578).
+
+**What it taught / notes:**
+- **Paired design** (same seeds → matched opponents/seats) isolates the method; the season's replacement
+  level cancels in the difference, so a PAR difference = a starter-points difference.
+- The **market baseline** plugs in as any `baseline` rank_fn once Phase 2.3 (props-implied) exists — the
+  "beat ADP **and** the market" gate becomes one `compare_to_baseline` call each.
+- Block bootstrap on *iid* data slightly lowers SE with longer blocks (harmless small-sample artifact);
+  the property that matters — wider SE under autocorrelation — holds.
+
+---
+
+### ✅ PHASE 1 — BACKTEST HARNESS: COMPLETE (2026-07-03)
+Five focused modules (AlphaThena "one file per aspect"): **`scoring`** (full-PPR incl. K/DST from
+pbp/game_lines — reconstructs nflverse to 1e-6 over 57.3k player-weeks), **`draft/simulator`**
+(ADP+noise snake draft, pluggable `your_pick_fn`, `DraftState`), **`walkforward`** (rank_fn → K drafts →
+realized optimal-lineup points, strict PIT, survivorship-safe), **`metrics`** (PAR + replacement levels +
+all-play wins), **`significance`** (block-bootstrap CIs). **Any ranking method is now scored end-to-end
+on 2014–2024 drafts, PIT-clean, with 95% CIs vs the ADP baseline, in one `compare_to_baseline` call** —
+the measuring stick built *before* any modeling. **65 unit tests**; every step's done-criteria met.
+
+**Next:** Phase 2 — markets & baselines (VBD · naive opportunity×efficiency · **props-implied** ·
+**ensemble-with-market**): the cheap, strong baselines everything fancy must beat, plugged straight into
+this harness as `rank_fn`s.
+
