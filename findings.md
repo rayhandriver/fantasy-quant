@@ -501,3 +501,61 @@ the measuring stick built *before* any modeling. **65 unit tests**; every step's
 **ensemble-with-market**): the cheap, strong baselines everything fancy must beat, plugged straight into
 this harness as `rank_fn`s.
 
+
+
+## Phase 2 — Markets & baselines (2026-07-04)
+
+The first methods scored through the Phase-1 harness. Architecture: a **projection** → **VBD** → a
+harness **`rank_fn`** (`vbd_rank_fn` in `valuation/vbd.py`), so any projection backtests with a one-line
+wrap. Board rows a projection doesn't cover fall back to ADP (via `value_pick_fn`'s NaN handling).
+
+### 2.1 — VBD baseline → `valuation/vbd.py`
+- **Built:** `vbd(proj, replacement)` (= proj points − positional replacement, reusing 1.4's
+  `replacement_levels`), `vbd_rank_fn(projection_fn)`, `board_key`, `replacement_baseline`.
+- **Done — PASS:** VBD is monotonic in points within a position; the cross-position top board is a sane
+  RB/WR/QB/TE mix. **Note:** naive VBD ranks elite QBs very high (Hurts/Allen top-5) — the classic 1-QB
+  artifact (the market prices QB streaming; the 2.4 ensemble corrects it).
+
+### 2.2 — Naive baseline projection → `projections/baseline.py`
+- **Built:** `baseline_projection(con, season, as_of)` — prior-season (S-1) points-per-game, empirical-
+  Bayes shrunk to the positional mean (weight = weeks/(weeks+6)), ×17 games, light age penalty. Offense
+  + K, keyed by gsis. PIT (only S-1 + as-of ages). Rookies/no-history → NaN → ADP fallback (a last-year
+  model can't forecast rookies; pretending would flatter it).
+- **Done — PASS (board + harness backtest; beating ADP not required):** covers 170/202 of the 2023
+  board. **Backtest 2014–24: pooled 1977 vs ADP 2036 → edge −59 PAR/season, 95% CI [−162, +33], NOT
+  significant.** Honest finding: the naive last-year VBD board is **statistically on par with ADP**
+  (slightly below), dragged by QB over-drafting. (2014 diff is exactly 0 — no 2013 data → projection
+  empty → equals ADP.)
+
+### 2.3 — Props-implied projection → `markets/props_projection.py`
+- **Built + unit-tested:** `props_projection(props, ruleset)` maps de-vig'd **season** prop expectations
+  (rec/rush/pass yds, receptions, TDs, INTs) → fantasy points; `season_props_projection`, `props_available`.
+- **THE DATA GAP (confirmed, documented):** there is **no free historical preseason market signal.**
+  Player props are the-odds-api **live-only** (key-gated, no key); `import_win_totals` is **empty**; and
+  `game_lines` are **gameday-dated closing lines** (earliest 2023 line = Sep 7, after Labor-Day drafts) —
+  so zero pre-draft signal. `season_props_projection` therefore **no-ops to an empty frame → ADP fallback**,
+  and 2.3 **cannot be backtested as a preseason board on free data.** The math is built + tested so
+  `vbd_rank_fn(season_props_projection)` activates the moment a props source (a key or a paid historical
+  archive) is wired in — no code change. This is the confirmed "pay only if it becomes a product" line.
+
+### 2.4 — Ensemble-with-market → `projections/ensemble.py`
+- **Built:** `blend_rank_fn(components, weights)` (weighted blend of rank_fns, each NaN→ADP first),
+  `ensemble_rank_fn(w_baseline)` (baseline-VBD blended with ADP; props slot in as a 3rd component when
+  available), `fit_weight` (grid-search w through the harness).
+- **Done — PASS (ensemble ≥ best single component):** grid-fit finds an **interior optimum at w=0.25**
+  (25% baseline / 75% ADP): pooled **2116 > pure ADP 2041 > pure baseline 1985**. The blend pulls the
+  baseline's aggressive QB ranks back toward the market. Fitted ensemble vs ADP: edge **+80 PAR/season,
+  95% CI [−22, +190], not significant** — so it **matches ADP** (leans positive). Caveat: w was picked
+  **in-sample** on 11 seasons, so +80 is optimistic (a nested CV is Phase 4's job); the CI honestly spans 0.
+
+### ✅ PHASE 2 — MARKETS & BASELINES: COMPLETE (2026-07-04)
+The baselines-to-beat are set and wired into the harness: **VBD** (value transform), the **naive
+projection** (on par with ADP, −59 CI[−162,+33]), the **props-implied** path (built, unit-tested, blocked
+by the documented free-data gap), and the **ensemble** (a little model + mostly market ≥ either alone
+in-sample; matches ADP OOS). **Headline lesson — "don't fight the sharp market":** consensus ADP is a
+strong, hard-to-beat baseline; the naive model adds no *significant* edge yet. Real signal must come from
+Phases 3–5 (opportunity/efficiency features, GBT/hierarchical projections, distributions). 74 unit tests.
+
+**Next:** Phase 3 — feature engineering (the PIT exposure matrix `X`): opportunity, efficiency,
+player-intrinsic, and team/environment factors — the inputs the real projection models consume.
+

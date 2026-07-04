@@ -4,7 +4,7 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-03 — added significance terms (1.5); Phase 1 complete.
+> **Last updated:** 2026-07-04 — added Phase-2 baseline/market terms; Phase 2 complete.
 
 ## Fantasy / draft terms
 - **ADP (Average Draft Position)** — consensus draft cost of a player; the "market price." Sources differ
@@ -88,6 +88,11 @@ section, not just appended.
   opportunity proxy and a `features/environment.py` input.
 - **Closing-line value (CLV)** — did your pre-season/pre-game read beat the market's closing number? A clean edge metric.
 - **Win total / season prop** — season-long market on team wins or a player's season stat; a pre-season projection anchor.
+- **Props-implied projection** — repackage a player's de-vig'd **season** prop lines (rec/rush/pass yds,
+  receptions, TDs) into projected fantasy points via the league ruleset — the market's own forecast in
+  our currency (2.3). Blocked on free data: historical preseason props are the paid gap.
+- **Preseason market-data gap** — the confirmed free-data hole: player props are live-only (paywalled),
+  win totals empty, and game lines are gameday-dated — so there is **no free pre-draft market signal**.
 
 ## Advanced / beyond-Alphathena terms
 - **Ensemble-with-market** — blend your model with ADP + props + expert consensus via learned weights;

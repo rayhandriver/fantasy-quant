@@ -5,9 +5,13 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-04** — **PHASE 2 COMPLETE.** 2.1 VBD, 2.2 naive baseline (on par w/ ADP: −59 PAR/season
+  CI[−162,+33]), 2.3 props (built+tested; **free-data gap** → no-op), 2.4 ensemble (grid-fit w=0.25 →
+  2116 ≥ best component; vs ADP +80 CI[−22,+190] not-sig). Lesson: **don't fight the sharp market.**
+  **Next: Phase 3 — feature engineering (exposure matrix X).**
 - **2026-07-03** — **PHASE 1 COMPLETE.** Phase **1.5 done** (significance: stationary block-bootstrap CIs;
   ADP-vs-ADP edge 0 not-sig; worst-first −577.6/season CI [−714,−438] sig; block SE 0.239 > iid 0.090).
-  Harness scores any rank_fn end-to-end PIT with CIs vs ADP in one call. **Next: Phase 2 — markets & baselines.**
+  Harness scores any rank_fn end-to-end PIT with CIs vs ADP in one call.
 - **2026-07-03** — Phase **1.4 done** (PAR metric: replacement levels QB10/RB24/WR24/TE12/K10/DST10,
   2023 roster 1743; PAR ranks elite +818 vs scrub −943; PAR↔exp-wins corr 0.99).
 - **2026-07-03** — Phase **1.3 done** (walk-forward harness: rank_fn → K drafts → realized optimal-lineup
@@ -129,6 +133,17 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 - `compare_to_baseline` runs a **paired** walk-forward (same seeds → matched opponents/seats) and bootstraps
   the **per-season** PAR-diff series (11 pts). Replacement level cancels → PAR-diff = starter-pts diff.
 - Market baseline = same call with a market `rank_fn` (Phase 2.3). Small-`n` reality: 11 seasons, block ≈ 2.
+
+**Phase 2 markets & baselines:**
+- Architecture: `projection → vbd → vbd_rank_fn` (a one-line wrap to backtest any projection). Board key =
+  gsis (offense/K) else name (DST); uncovered rows → NaN → ADP fallback in `value_pick_fn`.
+- **2.2 baseline** = prior-season ppg, EB-shrunk (weeks/(weeks+6)) to positional mean, ×17, light age.
+  Multi-position players (RB/FB) collapsed to one row per gsis (dedupe `player_key`, else pandas map dies).
+  Naive VBD **overrates QBs** in 1-QB (elite QB VBD ≈ elite RB VBD, but ADP drafts QB rounds later).
+- **2.3 props** = **no free preseason market data** (props live-only/paywalled; win totals empty; game_lines
+  gameday-dated). `season_props_projection` no-ops → ADP. Math built+tested; a key/paid archive activates it.
+- **2.4 ensemble** = `blend_rank_fn` weights component ranks (each NaN→ADP first). `fit_weight` grid-search
+  (endpoints w=0 pure-ADP, w=1 pure-baseline → best ≥ both by construction). w=0.25 best in-sample (caveat).
 
 ## Open questions (to resolve at the relevant step)
 - ~~**0.4 ADP coverage:**~~ RESOLVED — **FFC** goes back to **2010** (free, JSON API; half-ppr only 2018+);
