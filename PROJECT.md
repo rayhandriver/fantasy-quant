@@ -1,19 +1,37 @@
 # PROJECT.md — the WHAT (goal, scope, decisions, the phase plan)
 
 The single source of truth for **what** we're building and **the plan**. The **HOW/lab-notebook** is
-`PLAN.md`; the **WHY/rationale** is `docs/STRATEGY.md`; **status** is `ROADMAP.md`.
+`PLAN.md`; the **WHY/rationale** is `docs/STRATEGY.md` (see its **Part 0 reframe**); **status** is
+`ROADMAP.md`; the **personalization design contract** is `docs/PERSONALIZATION.md`.
+
+> **⟳ STRATEGIC REFRAME (2026-07-04) — supersedes the original objective.** The goal pivots from *"beat
+> ADP"* to a **direct-indexing personalization engine**: build the best team the user wants, and honestly
+> **price what each preference costs** vs the consensus-optimal team. Team strength is now a **tracked
+> benchmark**, not the objective. Rationale + full spec: `docs/REFRAME-2026-07-04.md` and
+> `docs/PERSONALIZATION.md`. **Phases 0–2 stay valid.** §1/§2/§6 below reflect the reframe.
 
 ## 1. Goal
-A **personalized, quant-inspired fantasy football decision engine** — PIT features → distributional
-projections → correlation-aware roster construction → a walk-forward backtest that proves an edge —
-delivered as a **shareable, season-long co-pilot app for my league** (draft + in-season).
+A **personalized, quant-inspired fantasy football decision engine** that builds each user a
+fully-optimized roster from their own constraints and archetype, and **honestly prices the cost of every
+personalization decision** against the consensus-optimal team — delivered as a **shareable, season-long
+co-pilot app for my league** (draft + in-season). Value = **consensus projections → VBD**; availability =
+**ADP + a behavioral opponent model**; risk = **our own distributional layer** (the three signal layers;
+see `docs/PERSONALIZATION.md` §2). Team strength is a **benchmark we track within a tolerance budget**, not
+a fight we try to win.
 
 ## 2. Scope
-**In scope:** data foundation (incl. **Vegas markets**), PIT backtest harness, projections (mean +
-distributional), ADP-bias mining, causal player-in-system, covariance & roster construction, valuation &
-draft policy, season/playoff simulation, a game-theory draft engine, an NLP/news pipeline, an in-season
-co-pilot, and the app.
-**Roadmap (deferred):** self-play RL, paid/tracking data, and multi-format (dynasty / best-ball / DFS).
+**In scope (reframed):** data foundation (incl. **Vegas markets** + a new **consensus-projections
+ingest** for the value signal); PIT backtest harness; a **preference-specification layer** (the constraint
+object); a **constrained draft optimizer**; the **cost-of-personalization report**; a **behavioral
+opponent model** + **per-pick availability** forecasts; a **trimmed distributional layer** for the risk
+dial; covariance & roster construction; season/playoff simulation (championship probability = the tracked
+benchmark + tail objective); an in-season co-pilot; and the **app (Streamlit/Gradio MVP first)**.
+**Reframed roles:** projections lean on **consensus (VBD)**, not an edge-seeking model (+ an explicit
+**rookie model**); ADP-bias mining → **personalization intelligence**; causal → **opportunity-adjusted**
+projection (no counterfactual claims); opponent modeling → **core, Brier-verifiable**.
+**Deferred / roadmap:** **all in-app AI/LLM features** (post-MVP; AI on the edges, deterministic core);
+CFR (**dropped** — a snake draft is near-perfect-information); heavy live MCTS (**deprioritized**);
+self-play RL; paid/tracking data; auctions; multi-format (dynasty / best-ball / DFS).
 
 ## 3. Settled decisions
 - **Product breadth:** **season-long co-pilot** (draft + waivers/FAAB + start-sit + trades). *(2026-06-29)*
@@ -26,10 +44,21 @@ co-pilot, and the app.
   book scraping). Pay only if it becomes a real product. *(2026-06-29)*
 - **League baseline:** 10-team, full-PPR, 1-QB redraft.
 - **Deepest frontier focus:** NLP/news, the game-theory draft engine, and causal player-in-system. *(2026-06-29)*
+- **⟳ Direct-indexing reframe:** personalization is the objective; team strength is a **tracked
+  benchmark**, not a fight to win. "Beat ADP" demoted to optional. *(2026-07-04)*
+- **Three signal layers:** value = **consensus projections → VBD**; availability = **ADP + behavioral
+  model**; variance = **our own distributional layer**. Never one "ADP" input. *(2026-07-04)*
+- **Calibration > edge:** projections must be **well-calibrated**, not ADP-beating. *(2026-07-04)*
+- **AI deferred:** no LLM in the core; all in-app AI is post-MVP (AI on the edges, deterministic core). *(2026-07-04)*
+- **UI = Streamlit/Gradio first**, not FastAPI+Next.js (validate the idea before a production frontend). *(2026-07-04)*
+- **Draft engine:** **drop CFR**, **deprioritize live MCTS**; the opponent model is core & Brier-verifiable. *(2026-07-04)*
+- **Own the contracts:** the human owns the constraint object + projection output shape; delegate interiors. *(2026-07-04)*
 
 ## 4. Ground rules
-PIT everywhere · walk-forward never in-sample · **beat ADP *and* the betting market + prior baseline**
-before shipping · reuse before you write · guard every output · log as you go. (Full text: `CLAUDE.md` §3.)
+PIT everywhere · walk-forward never in-sample · **calibration > edge** (well-calibrated, not ADP-beating) ·
+**track the benchmark, price the cost** · keep a true **lockbox** (freeze recent seasons, evaluate once) ·
+**no LLM in the core** · **own the contracts** · reuse before you write · guard every output · log as you
+go. (Full text: `CLAUDE.md` §3; reframe: `docs/REFRAME-2026-07-04.md`.)
 
 **Sub-phase gate (workflow):** finish a sub-step → summarize what was accomplished → **ask permission
 before starting the next sub-step.** No chaining sub-steps without approval, for the whole project.
@@ -40,6 +69,16 @@ Each **step → its own module/notebook** (like the intern repo's separate files
 rebalancing / construction). Target module paths are indicative. Phase-level **Done-when** in bold.
 Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out · Done · Reuse) lives in
 `docs/BUILD_PLAN.md`** — this §5 is the index.
+
+> **⟳ Reframe impact on the phases (2026-07-04; details in `ROADMAP.md` + `docs/BUILD_PLAN.md`):**
+> **Promoted to core/earlier:** 5 (distributions — the risk dial), 8 (covariance — tracking error), 10
+> (season sim — the tracked benchmark). **Reframed:** 4 → **consensus-VBD value + rookie model** (not an
+> edge-seeking projection); 6 → **personalization intelligence** (where ADP is soft = how cheaply to
+> indulge); 7 → **opportunity-adjusted** (drop causal claims); 11 → **core opponent model** (Brier-scored),
+> **CFR dropped**, **MCTS deprioritized**. **New (the personalization spine, `docs/PERSONALIZATION.md`):**
+> preference-spec layer · constrained optimizer · cost-of-personalization report · behavioral opponent
+> model · per-pick availability · risk dial. **Deferred:** 12 (NLP) + all in-app AI. The app (14) starts
+> as a **Streamlit/Gradio MVP**.
 
 ### Phase 0 — Data foundation (PIT ingest → DuckDB)
 - 0.1 ✅ Environment & repo scaffold
@@ -165,7 +204,14 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 and 12 (NLP) are **cross-cutting workstreams** — start them alongside, not strictly after, the modeling
 phases. The app (14) consumes whatever modeling exists; a thin v1 can wrap Phases 1–2 early.
 
-## 6. Definition of done (v1)
-A league-usable **season-long co-pilot** whose recommendations come from a model that has **demonstrably
-beaten consensus ADP *and* the betting market (and a simple baseline) on a PIT walk-forward, with
-bootstrap CIs** — plus an honest scorecard of where it does and doesn't add edge.
+## 6. Definition of done (reframed 2026-07-04)
+**v1:** a league-usable, season-long **personalization co-pilot** that (a) produces **well-calibrated**
+projections and risk dials (reliability diagrams, interval coverage), (b) accurately predicts **draft
+availability** (Brier-scored over real picks), and (c) honestly **prices the cost of each personalization
+decision** against one or more benchmarks (lead with relative/directional cost). "Beat ADP" is an optional
+secondary curiosity, not a requirement.
+
+**MVP (near-term, needs none of Phases 11–15, no in-app AI):** you can sit down for a real draft this
+season, express your preferences, and get personalized pick recommendations with an honest relative cost
+readout — from a **Python (Streamlit/Gradio) UI, with no LLM in the loop**. (Full MVP scope:
+`docs/PERSONALIZATION.md` §7.)

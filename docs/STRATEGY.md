@@ -1,6 +1,57 @@
 # Fantasy Football Quant Model & App — Feasibility, Parallels, and Build Plan
 
-## Context
+## Part 0 — Strategic Reframe (direct indexing, 2026-07-04) — *SUPERSEDES the original objective*
+
+> **Read this first.** As of 2026-07-04 the project's **objective and definition of done are replaced.**
+> Everything below Part 0 (Parts 1–15) remains valuable as the intellectual foundation and the modeling
+> catalog, but wherever it frames the goal as **"beat consensus ADP + the betting market and prove it with
+> bootstrap CIs," that framing is superseded.** Full rationale: `docs/REFRAME-2026-07-04.md`; the design
+> contract: `docs/PERSONALIZATION.md`. **Phases 0–2 (data, harness, baselines) remain valid and used.**
+
+**The pivot.** From *"build a model that beats ADP"* → *"build a **personalization engine** that gives the
+user the team they want and honestly **prices what that costs** versus optimal."* This is AlphaThena's
+**direct-indexing** philosophy applied to drafting: never try to beat the benchmark — **track** it
+(bounded "tracking error") while layering on value that needs no market-beating skill (personalization +
+the in-season "tax-loss-harvesting" analog). **Team strength stops being the objective and becomes a
+benchmark we track within a tolerance budget; personalization becomes the objective.** The output is still
+a single, fully-optimized personalized team — we simply stop *claiming* it beats consensus, and instead
+measure the cost of each indulgence against the consensus-optimal team.
+
+**The three signal layers (a hard contract — never one "ADP" blob).** "Based around ADP" splits into:
+1. **Value** (what makes one team better) = **consensus projections → VBD**. *Not* ADP (that's draft
+   *order*, not points). Lean on consensus (e.g. FantasyPros aggregate) for the mean; always VBD it (raw
+   order overrates QBs in 1-QB — our Phase-2 finding). **This drops most of the "build a better
+   projection" burden.**
+2. **Availability** (who's gettable at each pick) = **ADP + the behavioral opponent model**.
+3. **Variance/risk** (floor vs ceiling) = **our own distributional layer** (a trimmed Phase 5 — the one
+   value-side thing we still build ourselves; consensus/ADP are point estimates).
+
+The optimizer maximizes **consensus-VBD value** subject to the user's constraints/archetype, plans around
+**ADP availability**, and uses the **variance** layer for the risk dial. See `docs/PERSONALIZATION.md`.
+
+**Why (the problem this solves).** The old finish line — a statistically significant edge over ADP on a
+~10-season walk-forward — is **very likely unreachable, even for a genuinely good model.** From our own
+numbers: the naive baseline edge was −59 PAR/season, 95% CI [−162, +33] (SE ≈ 50 PAR/season); detecting an
+80-PAR edge at 80% power needs ≈ **27 seasons** and we have ≈ 10; the best in-sample blend (+80 PAR) still
+had a CI crossing zero. We **trade an unwinnable inferential fight** for well-posed, checkable prediction
+problems — calibration, availability, and cost — each measurable *within a single draft*, no bootstrap
+needed. This is exactly why AlphaThena's business works **without** alpha.
+
+**New definition of done (v1).** A league-usable, season-long **personalization co-pilot** that (a)
+produces **well-calibrated** projections and risk dials, (b) accurately predicts **draft availability**,
+and (c) honestly **prices the cost of each personalization decision** against one or more benchmarks.
+"Beat ADP" is demoted from a requirement to an optional curiosity. **MVP done:** you can draft a real
+league this season through a Python (Streamlit/Gradio) UI with personalized recs and an honest relative
+cost readout — **no LLM in the loop** (all in-app AI deferred post-MVP).
+
+**Carried-forward cautions** (recorded as constraints in `findings.md` / `CLAUDE.md`): calibration > edge;
+carve a true **lockbox** (freeze recent seasons, evaluate once); build an explicit **rookie model** (don't
+punt rookies to ADP); FFC ADP is soft money (best-ball ADP is sharper); the benchmark is self-referential
+(offer several); lead with **relative** cost, stay humble on absolute title-equity deltas.
+
+---
+
+## Context *(historical — the original "beat ADP" framing; see Part 0 for the current objective)*
 
 You spent this internship at **Alphathena building a production-grade equity risk model**: a
 fundamental factor covariance cache (`Σ = X F Xᵀ + D`) that replicates and is horse-raced against

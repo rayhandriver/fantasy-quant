@@ -5,6 +5,13 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-04** — **⟳ STRATEGIC REFRAME** (`docs/REFRAME-2026-07-04.md`, `docs/PERSONALIZATION.md`):
+  objective → **direct-indexing personalization** (build the team the user wants, price the cost vs
+  optimal); team strength = tracked benchmark, "beat ADP" demoted. **Three signal layers:** value =
+  consensus-VBD, availability = ADP+behavioral, variance = own distributions. Docs updated (STRATEGY Part
+  0, PROJECT, ROADMAP, BUILD_PLAN, CLAUDE, glossary, findings). **Next: the personalization spine on Phases
+  0–2** — Phase 3 `X` → consensus ingest+VBD+rookie → trimmed distribution → constraint object + optimizer
+  + cost report → Streamlit MVP. **No code changed; Phases 0–2 valid.**
 - **2026-07-04** — **PHASE 2 COMPLETE.** 2.1 VBD, 2.2 naive baseline (on par w/ ADP: −59 PAR/season
   CI[−162,+33]), 2.3 props (built+tested; **free-data gap** → no-op), 2.4 ensemble (grid-fit w=0.25 →
   2116 ≥ best component; vs ADP +80 CI[−22,+190] not-sig). Lesson: **don't fight the sharp market.**
@@ -146,6 +153,18 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
   (endpoints w=0 pure-ADP, w=1 pure-baseline → best ≥ both by construction). w=0.25 best in-sample (caveat).
 
 ## Open questions (to resolve at the relevant step)
+- **⟳ REFRAME decisions (2026-07-04, `docs/REFRAME` §10) — highest priority:**
+  - **Consensus-projections source (value signal).** Where do we get consensus projected points (e.g.
+    FantasyPros aggregate)? Is it free / scrapeable / **PIT-snapshottable** for backtest seasons? This is
+    the new value input (Phase 4 reframed) — confirm before building it.
+  - **Human completed-draft data (Sleeper).** The behavioral opponent model + availability (S4) need
+    real pick-by-pick drafts, not ADP averages. Confirm Sleeper's API exposes enough before committing;
+    else availability falls back to ADP+noise.
+  - **Benchmark set for the cost report.** Which to offer: ADP-consensus-optimal / our-projection-optimal
+    / expert-consensus-optimal (recommend several — the benchmark is self-referential).
+  - **Lockbox seasons.** Which recent season(s) to freeze as the untouched final-evaluation set.
+  - **Paid props line.** Under the reframe it's even more optional — decide whether to ever cross it; if
+    not, formally drop "beat the betting market" from the goals.
 - ~~**0.4 ADP coverage:**~~ RESOLVED — **FFC** goes back to **2010** (free, JSON API; half-ppr only 2018+);
   **Underdog** best-ball requires auth (no free historical) → **deferred**, schema is format-aware for later.
 - ~~**0.5 markets:**~~ RESOLVED — **game lines** (spreads/totals/moneylines) are **free & historical** via

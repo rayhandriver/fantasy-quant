@@ -11,8 +11,27 @@ methodology). `PROJECT.md` §5 is the index; this is the depth. `ROADMAP.md` tra
 - **Reuse** — libraries / intern-repo analogs / earlier steps to build on.
 
 **The discipline applies to every step** (see `CLAUDE.md` §3): point-in-time everywhere, walk-forward
-never in-sample, beat ADP **and** the betting market before shipping, guard every output, log to
-`findings.md` + `glossary.md` as you go. Run everything via `uv run python steps/<script>.py`.
+never in-sample, **calibration > edge** (well-calibrated, not ADP-beating), **track the benchmark & price
+the cost**, keep a **lockbox**, **no LLM in the core**, guard every output, log to `findings.md` +
+`glossary.md` as you go. Run everything via `uv run python steps/<script>.py`.
+
+> **⟳ STRATEGIC REFRAME (2026-07-04) — read `docs/REFRAME-2026-07-04.md` + `docs/PERSONALIZATION.md`.**
+> The objective is now **direct-indexing personalization**, not beating ADP. Per-phase impact:
+> - **Phase 4 → "mean VALUE":** ingest **consensus projections → VBD**; **don't** build an edge-seeking
+>   model; add an explicit **rookie model**; the bar is calibration, not beating ADP. (GBT/age-curve/
+>   hier-Bayes below are **optional**, kept only if they improve calibration.)
+> - **Phase 5 (distributions) → promoted to core** (the risk dial; the one value-side thing we build).
+>   **Phase 8 (covariance) & Phase 10 (season sim) → promoted/earlier** (tracking error + the tracked
+>   benchmark).
+> - **Phase 6 → personalization intelligence** (where ADP is soft = how cheaply to indulge). **Phase 7 →
+>   opportunity-adjusted** (drop causal counterfactual claims). **Phase 9 → + constrained optimizer +
+>   cost-of-personalization report.** **Phase 11 → opponent model = core, Brier-scored; CFR dropped, MCTS
+>   deprioritized.** **Phase 12 (NLP) + all in-app AI → deferred post-MVP.** **Phase 14 → Streamlit/Gradio
+>   MVP first.**
+> - **New: the Personalization spine** (constraint object · constrained optimizer · cost report ·
+>   behavioral opponent model · availability · risk dial) — see the section at the end of this file and
+>   `docs/PERSONALIZATION.md`. **The three signal layers are a hard contract:** value = consensus-VBD,
+>   availability = ADP + behavioral, variance = our own distributions — never one "ADP" input.
 
 ---
 
@@ -231,8 +250,16 @@ factor family so each is independently testable.*
 
 ---
 
-# Phase 4 — Mean projection models
-*Goal: the best point projection you can build — then prove it beats the Phase-2 baselines AND the market.*
+# Phase 4 — Mean VALUE *(⟳ reframed: consensus-VBD, not edge-seeking)*
+*Goal (reframed): a **well-calibrated** value signal for the optimizer, leaning on **consensus
+projections → VBD** rather than an own edge-seeking model — plus an explicit rookie model.*
+
+> **⟳ REFRAMED (2026-07-04).** New primary steps: **4.1 consensus-projections ingest** (e.g. FantasyPros
+> aggregate — PIT-snapshotted; source is an open decision, `PLAN.md`), **4.2 VBD value board** (reuse
+> `valuation/vbd.py`), **4.3 rookie model** (draft capital + landing spot + athletic/college — consensus
+> rookie value is thin; §4.4-caution), **4.4 calibration** (reliability/coverage). The GBT / age-curve /
+> hier-Bayes / props-shrink steps below are **demoted to optional** — build them only if they measurably
+> improve *calibration*, not to beat ADP.
 
 ### 4.1 — GBT component models → `projections/gbt.py`
 - **Do:** per-position **XGBoost/LightGBM** models for the components (targets, catch rate, YPR, TD rate for
@@ -268,9 +295,13 @@ factor family so each is independently testable.*
 
 ---
 
-# Phase 5 — Distributional projections
+# Phase 5 — Distributional projections *(⟳ PROMOTED to core)*
 *Goal: the full distribution F(points), not just the mean — the prerequisite for floor/ceiling, variance
 preference, and the season simulator.*
+
+> **⟳ PROMOTED (2026-07-04).** This is **the one value-side thing we build ourselves** (consensus/ADP are
+> point estimates) and it **powers the per-round risk dial** — no risk feature without it. For the MVP,
+> **trim** to the minimal per-player variance/distribution the dial needs; the full 5.1–5.5 stack comes later.
 
 ### 5.1 — Quantile regression → `projections/quantile.py`
 - **Do:** XGBoost **quantile loss** for P10/P50/P90 per player (season and weekly grains).
@@ -304,9 +335,13 @@ preference, and the season simulator.*
 
 ---
 
-# Phase 6 — ADP-bias mining (self-contained; start after Phase 1)
-*Goal: find persistent, exploitable ADP biases — the intern factor-return regression, repurposed. High
-value, low coupling.*
+# Phase 6 — Personalization intelligence *(⟳ reframed from ADP-bias mining)*
+*Goal (reframed): map **where ADP is soft** — not to "beat" it, but to tell the app **how cheaply a user
+can indulge a preference** ("good news, you can wait a round on your guy").*
+
+> **⟳ REFRAMED (2026-07-04).** Same machinery (ADP-alpha panel → cross-sectional regression → scorecard),
+> new use: the output is a **softness map** feeding the cost report and reach-budget advice, not an
+> edge-to-beat-ADP. Note FFC ADP is soft money; best-ball ADP is the sharper reference (caution §4.5).
 
 ### 6.1 — ADP-alpha panel → `adp/panel.py`
 - **Do:** build `(player, season)` → pre-season **ADP** + end-of-season **finish**; define **ADP alpha**
@@ -328,9 +363,14 @@ value, low coupling.*
 
 ---
 
-# Phase 7 — Causal "player-in-system" [DEEP]
-*Goal: answer the counterfactual "how would X do in offense Y?" — the crux of trades, coaching changes,
-rookies. Beyond correlational factors.*
+# Phase 7 — Opportunity-adjusted projection *(⟳ reframed from "causal")*
+*Goal (reframed): a **skill ÷ opportunity** decomposition used as a **feature** for re-projecting role
+changes — the practical 80%, without the causal-inference claims.*
+
+> **⟳ REFRAMED (2026-07-04).** **Drop the causal counterfactual framing** — "how would X do in offense Y"
+> is **not identifiable** from observational NFL data; presenting it as causal oversells it. Keep the
+> tractable core (intrinsic-skill latent × situation multiplier) as a projection feature; validate on
+> held-out moves; never present a causal claim untested OOS.
 
 ### 7.1 — Skill ÷ opportunity decomposition → `causal/decompose.py`
 - **Do:** model production = player-intrinsic latent (skill, transferable) × team-conferred situation
@@ -391,8 +431,15 @@ rookies. Beyond correlational factors.*
 
 ---
 
-# Phase 9 — Valuation & draft policy
-*Goal: turn projections + risk into draft decisions, and measure the structural ("tax") alpha.*
+# Phase 9 — Valuation & draft policy *(⟳ + constrained optimizer + cost report)*
+*Goal: turn the value signal + risk into draft decisions via a **constrained optimizer**, and **price the
+cost of personalization** against the benchmark team.*
+
+> **⟳ REFRAMED (2026-07-04).** Add two first-class steps (the AlphaThena optimizer analog): a
+> **constrained draft optimizer** — maximize **consensus-VBD value** subject to hard excludes
+> (never-draft), soft tilts (± rounds), archetype priors, and the per-round risk dial, planning around
+> **ADP availability** — and the **cost-of-personalization report** (tracking-error decomposition vs the
+> consensus-VBD-optimal team; the old "structural-alpha" number, repurposed). See `docs/PERSONALIZATION.md`.
 
 ### 9.1 — Conditional-VBD → `valuation/conditional_vbd.py`
 - **Do:** value of a pick = points now − **E[best available at your next pick]** (expectation over the draft
@@ -441,9 +488,19 @@ rookies. Beyond correlational factors.*
 
 ---
 
-# Phase 11 — Game-theory draft engine [DEEP]
-*Goal: treat the draft as the adversarial game it is — beat the greedy policy by looking ahead and modeling
-opponents.*
+# Phase 11 — Draft engine *(⟳ opponent model = core & Brier-verifiable; CFR dropped)*
+*Goal (reframed): predict **draft flow** — who survives to each pick — with a **behavioral opponent
+model**, scored against real completed drafts.*
+
+> **⟳ REFRAMED (2026-07-04).** The opponent model moves from unverifiable frontier flex to **core,
+> verifiable infrastructure**: its job (who's available at each pick) has **hard ground truth**, Brier-
+> scorable over thousands of picks. New/primary steps: **11.1 behavioral opponent model** (positional
+> runs, reaches for favorites, hometown/name-brand bias, rookie hype, K/DST panic, handcuffs — replacing
+> "ADP + Gaussian noise"), **11.2 per-pick availability distributions** (survival over simulated flow),
+> **11.3 realistic mock** (configurable opponent personalities). **✗ Drop CFR** (a snake draft is
+> near-perfect-information — CFR is a category error). **◔ Deprioritize heavy live MCTS** (unverifiable vs
+> good greedy value-based drafting; live-latency risk). Auctions/self-play = later. **Needs real
+> completed-draft data (Sleeper) — open decision, `PLAN.md`.**
 
 ### 11.1 — Live opponent modeling → `draft/opponent_model.py`
 - **Do:** per-opponent **Bayesian posterior over their board** (Dirichlet/categorical over positions+players),
@@ -474,8 +531,12 @@ opponents.*
 
 ---
 
-# Phase 12 — NLP / live-news pipeline [DEEP]
+# Phase 12 — NLP / live-news pipeline *(◔ DEFERRED post-MVP)*
 *Goal: convert unstructured news into timestamped, PIT structured signal — the freshest-information edge.*
+
+> **◔ DEFERRED (2026-07-04).** Not in the near-term scope — **keep the core LLM-free**. When built (after
+> the deterministic app), it obeys **AI on the edges, deterministic core**: the LLM only extracts a
+> timestamped fact; the model prices the impact. It never computes a number that must be correct.
 
 ### 12.1 — Source scrapers/streams → `news/sources.py`
 - **Do:** robust collectors for beat writers, injury reports, depth charts, **inactives**, transactions —
@@ -527,8 +588,16 @@ opponents.*
 
 ---
 
-# Phase 14 — The app (shareable league co-pilot)
-*Goal: wrap the proven model in a personalized, multi-user product your league can actually use.*
+# Phase 14 — The app *(⟳ Streamlit/Gradio MVP first; Next.js later)*
+*Goal: wrap the model in a personalized product — starting as a **Python (Streamlit/Gradio) MVP**, not a
+production web stack.*
+
+> **⟳ REFRAMED (2026-07-04).** **Highest-leverage engineering decision: do NOT build FastAPI + Next.js to
+> use this yourself.** Build the first interface in **Streamlit/Gradio** (sliders, upload, live output in
+> days, zero frontend engineering) to validate the personalization idea. Expose the **Autopilot +
+> Co-pilot** tiers over the constraint object with defaulted sliders + the "one-line why." FastAPI +
+> Next.js + live-draft sync + widget become a later **"I have users and want polish"** step. **Own the
+> contracts, delegate the interiors.**
 
 ### 14.1 — Backend → `app/backend/`
 - **Do:** **FastAPI** service over DuckDB/Postgres exposing projections, boards, sim, valuations; auth for
@@ -575,8 +644,56 @@ opponents.*
 
 ---
 
+# Personalization spine *(NEW — the reframe's MVP-critical track; spec: `docs/PERSONALIZATION.md`)*
+*Goal of the group: the direct-indexing machinery — a constraint object, a constrained optimizer, and an
+honest cost report — layered on Phases 0–5. Cross-phase; this is what the near-term MVP is built around.*
+
+### S1 — Preference-spec layer → `personalization/config.py`
+- **Do:** a pydantic `DraftConfig` (league context incl. **superflex**, archetype, must/never + reach
+  budgets, tilts in rounds, risk dials, fandom/character/injury/rookie tilts, benchmark set, control tier)
+  + a **precedence-chain resolver** (explicit > league-inferred > archetype-implied > population prior).
+- **Out:** `personalization/config.py` (`DraftConfig`, `resolve`) + archetype preset table.
+- **Done:** any partial input resolves to a complete, valid config; `never_draft`/roster legality inviolable.
+
+### S2 — Constrained optimizer → `personalization/optimizer.py`
+- **Do:** maximize **consensus-VBD value** s.t. hard excludes + soft tilts (± rounds) + archetype priors +
+  per-round risk dial, planning around **ADP availability**; greedy first (live-usable), lookahead later.
+- **Out:** `personalization/optimizer.py` (`optimize_pick`, `optimize_board`).
+- **Done:** excludes never appear; a tilt shifts a player ~its budget; output is one legal, fully-filled roster.
+
+### S3 — Cost-of-personalization report → `personalization/cost.py`
+- **Do:** build the **benchmark-optimal** roster (same optimizer, no personal constraints) and decompose
+  the value / championship-equity gap **per decision**; lead with **relative/directional** cost.
+- **Out:** `personalization/cost.py` (`cost_report`) + `analysis/results/cost_report_*.json`.
+- **Done:** "locking X / refusing Y cost ~N PAR and ~M% title-prob," per-decision, vs ≥1 benchmark.
+
+### S4 — Behavioral opponent model → availability → `draft/opponent_model.py`, `draft/availability.py`
+- **Do:** fit opponent behavior (positional runs, reaches, hometown/name-brand bias, rookie hype, K/DST
+  panic, handcuffs) from **real completed drafts** (Sleeper — open decision); survival → **per-pick
+  availability distributions**; Brier-score vs held-out picks.
+- **Out:** `draft/opponent_model.py`, `draft/availability.py` (`availability_at(pick)`).
+- **Done:** beats ADP+noise on held-out pick prediction (Brier); powers the realistic mock + "who's left next."
+
+### S5 — Risk dial → `personalization/risk.py`
+- **Do:** map the per-round/global risk + correlation appetite to a value/variance objective the optimizer
+  uses (powered by the trimmed Phase-5 distributions).
+- **Out:** `personalization/risk.py`. **Done:** raising the dial shifts the board toward higher ceiling.
+
+### S6 — Adaptive archetypes → `personalization/archetypes.py`
+- **Do:** archetypes as configs; the **adaptive** one re-evaluates when value falls to it (elite RBs slide
+  → drop Zero RB). **Out:** `personalization/archetypes.py`. **Done:** adaptive beats its static parent
+  when the board diverges from ADP, in sim.
+
+### S7 — In-season weekly-edge harvester → `inseason/*` *(the tax-loss-harvesting analog; = Phase 13, pulled in)*
+- **Do:** start/sit (floor vs ceiling by matchup), FAAB, streaming, trades respecting "never trade my
+  favorites," buy-low/sell-high. **Done:** each beats a naive heuristic on backtested seasons.
+
+---
+
 ## Cross-cutting (every phase)
 - **Log:** outcome → `findings.md`; new terms → `glossary.md`; per-step notes/dead-ends → `PLAN.md`.
-- **Gate:** every modeling step must **beat ADP + the betting market + the prior baseline** on the
-  walk-forward, with bootstrap CIs, or it's a documented finding — not shipped.
+- **Gate (⟳ reframed 2026-07-04):** the bar is **calibration + honest cost**, not beating ADP. A value
+  step must be **well-calibrated** (reliability/coverage); an availability step must beat ADP+noise on
+  **Brier** over real picks; the cost report must lead with **robust relative/directional** numbers.
+  Keep a **lockbox** (freeze recent seasons; evaluate the final stack once). "Beat ADP" is optional.
 - **Status:** tick `ROADMAP.md` as each step lands.

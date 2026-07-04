@@ -4,7 +4,46 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-04 — added Phase-2 baseline/market terms; Phase 2 complete.
+> **Last updated:** 2026-07-04 — added direct-indexing / personalization terms (strategic reframe).
+
+## Direct-indexing / personalization terms (reframe 2026-07-04)
+- **Direct indexing (for fantasy)** — don't try to *beat* the benchmark (the optimal team); **track** it
+  within a tolerance budget while layering on **personalization** and the in-season "tax-loss-harvesting"
+  analog. Personalization is the objective; team strength is a tracked benchmark.
+- **Tracking error (fantasy)** — the projected-value / championship-equity **gap vs the optimal team** from
+  your seat; the quantity the cost report decomposes. (Equity analog: drift from the index.)
+- **Cost-of-personalization report** — the signature metric: *"locking X and refusing Y cost ~N PAR and
+  ~M% title probability vs the optimal build, per decision."* Prices indulgence honestly; lead with
+  **relative/directional** cost.
+- **Three signal layers** — the hard contract splitting "ADP" into **value** (consensus projections → VBD,
+  *not* ADP order), **availability** (ADP + behavioral opponent model), and **variance** (our own
+  distributions). The optimizer maximizes consensus-VBD value, plans around availability, dials variance.
+- **Consensus-VBD value** — the value signal: external **consensus projected points** (e.g. FantasyPros
+  aggregate) converted to **value-over-replacement**; the "best team" and cost numbers are computed from it.
+- **Constraint / config object (`DraftConfig`)** — the single "custom index": league context, archetype,
+  must/never lists + reach budgets, tilts (in rounds), risk dials, fandom/character/injury/rookie prefs.
+  Every feature reads it; the three doors write it; the optimizer always gets a **complete** one.
+- **Precedence chain** — how every configurable resolves so nothing is unset: *explicit user setting >
+  inferred from league > implied by archetype > population prior.*
+- **Three doors** — one config at three depths: **Autopilot** (2 choices), **Co-pilot** (5–7 dials),
+  **Manual** (every slider).
+- **Constrained draft optimizer** — maximize consensus-VBD value s.t. hard excludes + soft tilts +
+  archetype + risk dial, planning around ADP availability (the AlphaThena tracking-error optimizer analog).
+- **Behavioral opponent model** — replaces "ADP + Gaussian noise": models real drafter biases (positional
+  runs, favorite reaches, hometown/name-brand bias, rookie hype, K/DST panic). Powers **availability
+  distributions** (who's likely at each pick); **Brier-scorable** against real completed drafts.
+- **Adaptive archetype** — a preset (Zero RB, Hero RB, …) that **abandons the plan when the board breaks**
+  (elite RBs slide → drop Zero RB). The one archetype most worth the quant.
+- **Risk dial** — the floor↔ceiling (and correlation-appetite) control, powered by our per-player
+  distributions; sets the value/variance tradeoff and the make-playoffs vs championship-or-bust objective.
+- **Lockbox** — recent season(s) frozen and untouched during development; the final chosen stack is
+  evaluated there **exactly once** (defends against in-sample model selection; PIT ≠ out-of-sample).
+- **Calibration > edge** — the reframed bar: projections must be well-calibrated (reliability, coverage),
+  not ADP-beating; a miscalibrated number is now visibly wrong to the user.
+- **AI on the edges, deterministic core** — LLMs only turn fuzzy input → validated object or numbers →
+  narrative; they never compute a number that must be correct. (All in-app AI deferred post-MVP.)
+
+## Fantasy / draft terms
 
 ## Fantasy / draft terms
 - **ADP (Average Draft Position)** — consensus draft cost of a player; the "market price." Sources differ

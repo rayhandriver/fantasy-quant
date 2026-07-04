@@ -1,13 +1,19 @@
 # CLAUDE.md — working guide for the fantasy-quant repo
 
 Instructions for anyone (including Claude) working in this repo. Mirrors the discipline that made the
-Alphathena `intern-repo` work. **Read `docs/STRATEGY.md` and `PROJECT.md` before writing code.**
+Alphathena `intern-repo` work. **Read `docs/STRATEGY.md` (esp. its Part 0 reframe), `PROJECT.md`, and
+`docs/PERSONALIZATION.md` before writing code.**
+
+> **⟳ REFRAME (2026-07-04).** Objective is now **direct-indexing personalization**, not beating ADP:
+> `docs/REFRAME-2026-07-04.md`. Value = **consensus projections → VBD**; availability = **ADP + a
+> behavioral model**; variance = **our own distributions** (never one "ADP" input). **No LLM in the core.**
 
 ## 1. What this is
-A quant-inspired fantasy football **season-long decision engine** (factor model + covariance +
-distributional projections + a walk-forward backtest), heading toward a shareable league app. The honest
-edge is **structural alpha**, **ADP-bias mining**, and **borrowing the sharper betting market** — not
-out-forecasting consensus — see `docs/STRATEGY.md` Parts 11–15.
+A quant-inspired fantasy football **personalization engine**: build each user a fully-optimized team from
+their own constraints and **honestly price the cost** of each preference vs the consensus-optimal team
+(the direct-indexing reframe). The honest value is **personalization + cost transparency + calibrated
+projections + correlation-aware construction** — **not** out-forecasting consensus (which our own Phase-2
+backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked benchmark**, not the objective.
 
 ## 2. Environment & how to run
 - **Package/Python manager: `uv`** with a **pinned Python 3.12** (`.python-version`). We deliberately do
@@ -28,10 +34,12 @@ out-forecasting consensus — see `docs/STRATEGY.md` Parts 11–15.
    This is the single easiest way to fool yourself.
 2. **Walk-forward, never in-sample.** Rank methods on **realized out-of-sample** outcomes (backtest over
    past seasons), not on in-sample fit. Report effect size **+ bootstrap CIs**, not a single season.
-3. **Beat the baseline before getting fancy.** Every modeling step must beat (a) the prior step **and**
-   (b) consensus ADP **and the betting market** on the walk-forward, or it doesn't ship. Expect fancy
-   models to lose — that's a finding, not a failure (cf. PCA beating the fundamental factor model in the
-   intern project).
+3. **Calibration > edge (⟳ reframed 2026-07-04).** The bar is **well-calibrated**, not ADP-beating:
+   value projections pass reliability/coverage checks; availability beats ADP+noise on **Brier** over real
+   picks; the cost report leads with robust **relative** numbers. *(Old rule — "beat ADP + the betting
+   market" — is retired: our own Phase-2 backtest shows an 80-PAR edge is unresolvable on ~10 seasons, so
+   we stop fighting that fight. "Beat ADP" is an optional curiosity.)* Value = **consensus projections →
+   VBD**; don't rebuild a beat-the-market projection.
 4. **Reuse before you write.** Search `src/fantasy_quant/` first; don't rebuild a primitive.
 5. **Guard every output.** Projections/rankings pass sanity gates (no impossible values, plausible ranges,
    calibrated intervals) — the analog of the intern repo's covariance hard gate.
@@ -50,6 +58,14 @@ out-forecasting consensus — see `docs/STRATEGY.md` Parts 11–15.
   Bayes territory; **no deep nets**. Correct for multiple testing when mining ADP biases.
 - **Personalization baking in bias.** Always show personalized boards next to the pure-projection baseline;
   treat large divergences as hypotheses to test, not preferences to lock in.
+- **PIT-clean ≠ out-of-sample-clean (the lockbox rule, ⟳ 2026-07-04).** PIT stops temporal leakage, not
+  overfitting from repeatedly selecting on the same ~10 seasons. **Freeze a lockbox** (the two most recent
+  affordable seasons), never touch it during development, and evaluate the final chosen stack there **once**.
+- **No LLM in the core (⟳ 2026-07-04).** All in-app AI is deferred post-MVP; the deterministic core never
+  depends on an LLM. When AI is added later it's **on the edges** (fuzzy input → validated object, or
+  numbers → narrative) — it never computes a number that must be correct.
+- **Own the contracts.** The human owns the data contracts between components (the `DraftConfig` constraint
+  object, the projection output shape); delegate the interiors. Contracts drift silently if the AI owns them.
 
 ## 5. Structure map (one focused file per aspect — the AlphaThena methodology)
 Each step in `PROJECT.md` §5 lands in its **own module** (mirroring the intern repo's separate files for

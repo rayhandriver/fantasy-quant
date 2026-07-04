@@ -559,3 +559,55 @@ Phases 3–5 (opportunity/efficiency features, GBT/hierarchical projections, dis
 **Next:** Phase 3 — feature engineering (the PIT exposure matrix `X`): opportunity, efficiency,
 player-intrinsic, and team/environment factors — the inputs the real projection models consume.
 
+
+
+## ⟳ Strategic Reframe — direct indexing for fantasy (2026-07-04)
+
+**Decision (not a finding from code):** the project's **objective and definition of done are replaced**.
+From *"beat consensus ADP and prove it with bootstrap CIs"* → *"build a **personalization engine** that
+gives the user the team they want and honestly **prices what that costs** vs the consensus-optimal team."*
+Team strength becomes a **tracked benchmark**, personalization the objective. Full doc:
+`docs/REFRAME-2026-07-04.md`; design contract: `docs/PERSONALIZATION.md`. **Phases 0–2 stay valid; no code
+changed.** Docs updated: STRATEGY (Part 0), PROJECT, ROADMAP, BUILD_PLAN, CLAUDE, PLAN, glossary.
+
+**Why (this project's own numbers made the case):** "beat ADP on a ~10-season walk-forward" is very likely
+**unachievable even for a good model**. Our 2.2 finding was −59 PAR/season, 95% CI [−162, +33] → SE ≈ 50
+PAR/season; detecting an 80-PAR edge (~4% over the ~2036 ADP base — a *large* edge) at 80% power needs
+≈ **27 seasons**; we have ≈ 10. The best in-sample blend (+80 PAR) still had a CI crossing zero. So we
+**stop fighting an unwinnable inferential battle** and pivot to problems checkable **within a single
+draft** (calibration, availability, cost) — the same reason AlphaThena's business works without alpha.
+
+**The three signal layers (now a hard architectural contract):** "based around ADP" is split into
+**value** = consensus projections → VBD (*not* ADP order; ADP is draft-order, not points), **availability**
+= ADP + a behavioral opponent model, **variance** = our own distributional layer. The optimizer maximizes
+**consensus-VBD value** s.t. constraints, plans around **ADP availability**, uses **variance** for the risk
+dial. Big simplification: we lean on consensus for the mean and **drop the "build a better projection"
+burden** (Phase 4 reframed to consensus-VBD + a rookie model).
+
+**Seven methodological cautions carried forward as constraints:**
+1. **Lockbox** — PIT ≠ out-of-sample; freeze recent season(s), evaluate the final stack once (guards
+   in-sample selection over ~10 seasons). Recorded in `CLAUDE.md` §4.
+2. **Calibration > edge** — a miscalibrated projection is now a *visibly wrong number the user sees*, so
+   calibration rigor matters *more* (reliability diagrams, interval coverage).
+3. **Mean vs tail** — season PAR is a mean metric, championship prob a tail metric; both must exist (a
+   user-facing risk toggle). Note: the harness's perfect-hindsight optimal-lineup scoring rewards
+   high-variance bench players — don't let it confound the distributional work.
+4. **Rookies must not punt to ADP** — build an explicit rookie model (draft capital / landing spot /
+   athletic-college); rookie RB/WR is a rich mispricing and a user who loves a rookie needs an honest number.
+5. **FFC ADP is soft money** — best-ball ADP (Underdog) is the sharper reference; matters for the benchmark
+   and for availability prediction.
+6. **Benchmark is self-referential** — "optimal" is our own model's; offer cost vs **multiple** benchmarks.
+7. **Cost-number uncertainty** — lead with **relative/directional** cost (robust); stay humble on absolute
+   championship-equity deltas.
+
+**Scope guardrails:** all in-app **AI/LLM deferred** post-MVP (AI on the edges, deterministic core);
+**Streamlit/Gradio MVP** first (not FastAPI+Next.js); **CFR dropped** (snake draft ≈ perfect-info), **MCTS
+deprioritized**; **own the contracts** (the `DraftConfig` object + projection output shape).
+
+**Open decisions (tracked in `PLAN.md`):** consensus-projections source (free/PIT?); Sleeper completed-draft
+data for the behavioral model; the benchmark set; the lockbox seasons; the paid-props go/no-go.
+
+**Next (reframed MVP path):** the personalization spine on Phases 0–2 — Phase 3 `X` → consensus ingest +
+VBD + rookie model → a trimmed per-player distribution → the constraint object + constrained greedy
+optimizer + a first cost report → a Streamlit UI. See `docs/PERSONALIZATION.md` §7.
+
