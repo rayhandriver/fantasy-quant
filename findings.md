@@ -611,3 +611,122 @@ data for the behavioral model; the benchmark set; the lockbox seasons; the paid-
 VBD + rookie model → a trimmed per-player distribution → the constraint object + constrained greedy
 optimizer + a first cost report → a Streamlit UI. See `docs/PERSONALIZATION.md` §7.
 
+
+
+## Phase 3 — Feature engineering: the PIT exposure matrix `X` (2026-07-05)
+
+**Goal:** the standardized, point-in-time exposure matrix — the engine's output that Phases 4–7 consume
+(rookie model, distributions, ADP-softness, opportunity-adjusted). Built straight through 3.1→3.5.
+
+**Architecture (the contract that sets up future phases):** each factor module produces **realized
+per-(gsis, season) facts** (lag-free, testable); **`build_exposures(con, target)` applies the PIT lag**:
+production ← target-1, intrinsic ← as-of target, environment ← target-1 of the player's **target-season
+team** (the situation they're *entering* — right for movers *and* rookies). Then winsorized
+cross-sectional **z per position**, explicit missingness flags, `assert_exposures_pit`.
+
+- **3.1 opportunity** (`features/opportunity.py`) — target/carry/snap/air-yards share, WOPR, aDOT, RZ
+  volume. 6,688 rows. Elite WRs/RBs top the board (Hill/Adams tgt-share 0.33; Jacobs carry-share 0.77).
+- **3.2 efficiency** (`features/efficiency.py`) — catch rate, YPR/YPC/YPT, YAC, **TD-regression flag**
+  (actual − RZ-opportunity-expected TDs), QB EPA/CPOE. **Done-check: corr(TD-over-expected, next-year
+  TD/gm change) = −0.50** on DEV seasons (the flag captures mean reversion). *Deep check caught a real
+  bug:* trick-play throwers (Drake London/Derrick Henry) polluted QB EPA → fixed with a ≥100-dropback
+  gate; now Purdy/Tua/Dak top 2023 EPA correctly.
+- **3.3 player-intrinsic** (`features/player.py`) — age **as-of Sep-1** (JJ: 21.2 as a 2020 rookie, +1/yr),
+  experience, draft capital (UDFA sentinels), combine athletic profile. College deferred. Handles bogus
+  draft_year=0 (→ first-season), missing birthdates (0.1% fringe → NaN, imputed in 3.5).
+- **3.4 environment** (`features/environment.py`) — team pass rate, early-down pass rate (PROE proxy),
+  pace, points, pass/rush EPA, **Vegas implied team total**, target HHI. 32 teams/season;
+  **corr(implied total, realized pts) = +0.86**; 2023 top offenses SF/DAL/MIA/KC/BUF. *Fixed* relocated-
+  franchise code mismatch (STL/SD/OAK↔LA/LAC/LV) + season-median safety fill.
+- **3.5 exposure matrix** (`features/exposures.py`) — `build_exposures` → **545 players × 48 features**
+  (43 z + `is_rookie`/`is_undrafted`/`changed_team`/`no_prior`/`age_missing`/`athletic_missing`).
+  `FEATURE_MANIFEST` documents the columns.
+
+**Readiness checks for future phases — ALL PASS:** finite + unique + z mean-centered per position; PIT
+(seasons differ; guard rejects non-lagged); **89 rookies flagged with live intrinsic signal** (rookie
+model ready); **X covers 100% of the top-150 draftable ADP board** (optimizer/6 ready); **lagged WOPR_z
+↔ next-season points corr = +0.46** pooled over 3,920 DEV player-seasons (Phase 4/5 have real signal);
+2025 calibration-holdout matrix builds (610 players, finite). All modules run on `STATS_SEASONS`
+(features are computation, not model selection — the lockbox binds *selection*, done in 4/5).
+
+**Notes:** rate outliers from tiny samples (aDOT/YPC on 1–2 touches) are **clipped** to physical bands so
+they don't distort z-scoring. Universe = skill players active in the target season (mild survivorship,
+documented — the model universe standard). 15 new unit tests; ruff clean. **Phase 3 COMPLETE.**
+
+**Next:** Phase 4 (reframed) — **consensus-projections ingest → VBD value** + a **rookie model** (uses X's
+intrinsic signal) + calibration. Needs a consensus-projections source decision first (`PLAN.md`).
+
+
+
+## Lockbox set + 2025-data diagnosis (2026-07-04)
+
+**Decision — lockbox = 2023 + 2024** (frozen; dev on **2014–2022**). Encoded in `config.py`
+(`FANTASY_SEASONS` 2014–24, `LOCKBOX_SEASONS` = (2023, 2024), `DEV_SEASONS` = 2014–22) and `CLAUDE.md` §4.
+Set **before** Phase 3 selects any features (reframe caution #1). All development / feature+model selection
+runs on `DEV_SEASONS`; the final chosen stack is evaluated on the lockbox **exactly once**.
+
+**Why not 2025 (diagnosed on request):** the 2025 season **is fully played** in the raw store — `game_lines`
+has all 285 games with final scores (2025-09-04 → 2026-02-08) and `pbp` has REG wk 1–18 + POST 19–22
+(48.8k plays). But **four derived tables lack 2025**, so it can't be a fantasy/draft season yet:
+- `weekly` + `seasonal`: **404 upstream** — live-tested `import_weekly_data([2025])` → HTTP 404. nflverse
+  publishes raw pbp first; the **aggregated player-stats rollup for 2025 isn't out yet**. Our Jun-30 cache
+  froze that 404 (per-year skip-on-fail); `--refresh` re-pull is needed once it lands.
+- `adp_snapshots`: no 2025 FFC ADP board pulled (needed as the preseason draft board).
+- `depth_charts`: nflverse stops at 2024.
+A draft-backtest season needs **both** a preseason ADP board (to draft from) **and** realized weekly points
+(to score) — 2025 has neither. **Recovery (deferred, logged in `PLAN.md`):** periodic `--refresh` re-pull,
+or reconstruct 2025 weekly from `pbp` ourselves (bigger job; still needs an ADP board).
+
+
+
+## 2025 recovery — ROOT CAUSE FOUND + plan (2026-07-04, corrects the entry above)
+
+The above "the 2025 rollup isn't out yet" was **wrong**. Root cause (user hint confirmed): **nflverse
+restructured its stats releases after the 2024 season.** `nfl_data_py` is frozen and hardcodes the *old*
+path `…/releases/download/player_stats/player_stats_{yr}.parquet` — which has **no 2025 file** → the clean
+404. The stats moved to a **new release** (`stats_player`) with new filenames, and **2025 is present there.**
+Verified live by querying the nflverse-data GitHub release assets + downloading the files:
+
+| Need | New nflverse file (`releases/download/stats_player/…`) | Verified |
+|---|---|---|
+| **weekly 2025** | `stats_player_week_2025.parquet` | ✅ 19,421 rows, wk 1–20 (incl. POST), `fantasy_points_ppr` + all counting stats (JJ wk1 4-44 → 14.8 PPR) |
+| **seasonal 2025** | `stats_player_reg_2025.parquet` | ✅ 2,020 rows, `fantasy_points_ppr`, `games` |
+| history (bonus) | `stats_player_week_1999…2025` (27 files) | ✅ the new release also covers all prior years |
+
+**Schema:** new file is compatible + richer (115 cols). "Missing" cols are just **renames**:
+`player_id`→`gsis_id` (our ingest already does this), `passing_interceptions`→`interceptions`,
+`team`→`recent_team`; `sacks`→`sacks_suffered` (not used in scoring). Has `season_type` (REG/POST),
+2pt, fumbles-lost, targets, air-yards share, plus full defensive stats.
+
+**Two remaining 2025 caveats:**
+- **`depth_charts` 2025 changed format** (user note, per the nflverse GitHub): from 2025 on, depth charts
+  are **not week-assigned** — each update is appended with an **ISO8601 timestamp** (assign to a point in
+  the season yourself). The 2025 file *is* available now (`import_depth_charts([2025])` → 554k rows); the
+  ingest must handle timestamped (not weekly) grain.
+- **ADP 2025 is genuinely absent from FFC** (re-probed across scoring/teams): FFC serves 2024 and **2026**
+  (the current board, dated today) but returns **0 players for 2025**. A historical preseason board
+  after-the-fact is the hard part → source later from **Sleeper** (wanted anyway for the opponent model),
+  Underdog, or FantasyPros.
+
+**The plan (folded into ROADMAP/BUILD_PLAN as step 0.9):**
+1. Add a **new-release ingest path** to `data/sources/nflverse.py` (read the `stats_player` URLs; map the
+   ~3 renamed cols) → append **weekly + seasonal 2025**; also migrate the source off frozen `nfl_data_py`
+   for these products (future-proofing). Handle the **timestamped depth_charts** grain.
+2. Re-run the **0.8 validator** on the extended store.
+3. **Lockbox stays 2023 + 2024** for the *draft-backtest* (needs an ADP board). Recovered **2025 becomes a
+   projection-calibration holdout** (realized outcomes exist; no board needed to check calibration — and
+   calibration is the reframe's core bar). It **upgrades to a full draft-backtest season** once a 2025 ADP
+   source lands (Sleeper).
+4. Sequencing: **do 0.9 before Phase 3** so the feature matrix `X` can include 2025 (features come from
+   pbp/snaps/ngs, all already 2025-present, but a consistent weekly/seasonal join is cleaner with 0.9 done).
+
+**0.9 DONE (2026-07-05):** `data/sources/nflverse.py` gained `conform_stats_player` (pure; rename +
+reindex to legacy schema), `backfill_stats_new_release` (append weekly/seasonal from the new
+`stats_player` release, idempotent), `ingest_depth_charts_ts` (timestamped grain → `depth_charts_ts`);
+`db.append_df` (INSERT … BY NAME). `steps/phase0_9_backfill_2025.py` + `tests/test_backfill_2025.py`
+(3 tests). **Results:** weekly **59,829 → 79,250** (2025 REG 18,539 + POST 882), seasonal → 8,702; **2025
+reconstructs `fantasy_points_ppr` to 2.4e-6** (proves the new-release schema is scoring-compatible);
+`depth_charts_ts` = 554,215 rows (`dt` 2025-08-03 → 2026-03-14, 2,985 players); **0.8 validator PASS** on
+the extended store. `config` gained `STATS_SEASONS` (2014–25) + `CALIBRATION_SEASONS` (2025); `FANTASY_SEASONS`/
+`DEV_SEASONS`/`LOCKBOX_SEASONS` unchanged (2025 stays out of the draft-backtest — no ADP board). 77 tests, ruff clean.
+

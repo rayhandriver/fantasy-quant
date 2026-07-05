@@ -60,6 +60,20 @@ def write_parquet_glob(con: duckdb.DuckDBPyConnection, table: str, glob: str,
     return row_count(con, table)
 
 
+def append_df(con: duckdb.DuckDBPyConnection, table: str, df: pd.DataFrame,
+              pulled_at: dt.datetime | None = None) -> int:
+    """Append ``df`` to an existing ``table`` (matched **by column name**, unmatched table columns
+    NULL-filled), stamping every appended row with ``pulled_at``. Used to add a newly-available
+    season to a table without rebuilding it. Returns the resulting row count.
+    """
+    df = df.copy()
+    df["pulled_at"] = pulled_at or utc_now()
+    con.register("_append_df", df)
+    con.execute(f'INSERT INTO "{table}" BY NAME SELECT * FROM _append_df')
+    con.unregister("_append_df")
+    return row_count(con, table)
+
+
 def row_count(con: duckdb.DuckDBPyConnection, table: str) -> int:
     return con.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
 

@@ -1,9 +1,10 @@
 {
-  "generated_at": "2026-07-02T03:07:41.952888+00:00",
+  "generated_at": "2026-07-05T17:37:09.762180+00:00",
   "tables": {
     "adp_snapshots": 14144,
     "combine": 4080,
     "depth_charts": 955989,
+    "depth_charts_ts": 554215,
     "draft_picks": 3077,
     "game_lines": 3295,
     "injuries": 65866,
@@ -14,16 +15,16 @@
     "pfr_rec": 4130,
     "pfr_rush": 2820,
     "player_ids": 12465,
-    "seasonal": 6682,
+    "seasonal": 8702,
     "snaps": 300812,
-    "weekly": 59829
+    "weekly": 79250
   },
   "coverage": {
     "weekly": {
-      "gsis_id": 1.0,
-      "position": 0.9997,
+      "gsis_id": 0.9997,
+      "position": 0.9995,
       "fantasy_points_ppr": 1.0,
-      "target_share": 0.8094
+      "target_share": 0.8561
     },
     "game_lines": {
       "spread_line": 1.0,
@@ -78,7 +79,7 @@
     {
       "gate": "weekly<->snaps gsis match <1%",
       "passed": true,
-      "unmatched_rate": 0.00243
+      "unmatched_rate": 0.00242
     },
     {
       "gate": "ADP top-150 gsis match <1%",
@@ -91,7 +92,7 @@
     "season_examined": 2022,
     "drafted_top150_no_weekly_appearance": 0,
     "examples": [],
-    "weekly_gsis_not_in_player_ids": 77,
+    "weekly_gsis_not_in_player_ids": 341,
     "note": "Weekly panels contain only players who recorded stats; drafted-but-DNP players must be pulled from ADP to avoid survivorship-flattered backtests."
   }
 }

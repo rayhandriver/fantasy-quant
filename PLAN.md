@@ -5,6 +5,16 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-05** — **PHASE 3 DONE** (features `X`). 3.1–3.4 realized per-(gsis,season) facts (opportunity/
+  efficiency/player/environment); 3.5 `build_exposures(target)` applies the PIT lag (prod←S-1, intrinsic
+  as-of, env←S-1 of target team), winsor-z per position, missingness flags. **545×48 matrix**; 100%
+  ADP-board cover; lagged WOPR↔next-yr pts +0.46; TD-regression flag −0.50; implied-total↔pts +0.86.
+  92 tests, ruff clean. **Next: Phase 4 — consensus-projections ingest + VBD + rookie model** (needs a
+  consensus source decision first).
+- **2026-07-05** — **0.9 DONE** — 2025 backfilled via nflverse's new `stats_player` release (frozen
+  `nfl_data_py` hits the dead old path). weekly→79,250 / seasonal→8,702 (2025 reconstructs PPR to 2.4e-6);
+  timestamped `depth_charts_ts` (554k); validator PASS. Lockbox = **2023+2024**; **2025 = calibration
+  holdout** (`config.CALIBRATION_SEASONS`; no ADP board → not a draft-backtest season). **Next: Phase 3.**
 - **2026-07-04** — **⟳ STRATEGIC REFRAME** (`docs/REFRAME-2026-07-04.md`, `docs/PERSONALIZATION.md`):
   objective → **direct-indexing personalization** (build the team the user wants, price the cost vs
   optimal); team strength = tracked benchmark, "beat ADP" demoted. **Three signal layers:** value =
@@ -134,6 +144,32 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
   `expected_wins` = all-play (schedule-independent), `final_standings` ranks by it; corr(PAR, exp-wins)=0.99.
   Exposed `roster_weekly_points` in walkforward for the weekly matrix.
 
+**Phase 3 features (X):**
+- Each 3.x module = **realized per-(gsis,season) facts**, lag-free + unit-testable; 3.5 assembly applies the
+  **PIT lag**. Contract: production←target-1, intrinsic←as-of target, environment←target-1 of the **target
+  team** (situation entered; right for movers/rookies). `assert_exposures_pit` enforces prod/env < target.
+- Standardize: **winsorized (2/98) cross-sectional z per position**; missing → group-median before z +
+  explicit `*_missing`/`no_prior`/`is_rookie` flags (rookies keep intrinsic signal, never silent-0).
+- Robustness: clip tiny-sample rate outliers (aDOT/YPC/ypr) to physical bands so z-scoring isn't distorted.
+- Gotchas fixed: QB EPA polluted by trick-play throwers → **≥100-dropback gate**; relocated team codes
+  (STL/SD/OAK↔LA/LAC/LV) → normalize game_lines side; bogus `draft_year=0` → fall back to first weekly
+  season; 0.1% missing birthdates → NaN age imputed in 3.5. `player_ids` has dup gsis (JEF270909 vs
+  00-0036322) — weekly-derived modules use the 00-00 gsis, so no pollution.
+- `FEATURE_MANIFEST` (43 z + flags) is the column contract Phase 4/5/6/7 select on. Run on `STATS_SEASONS`
+  (feature *computation* isn't model selection; the lockbox binds selection in 4/5).
+
+**0.9 2025 backfill / nflverse new-release:**
+- nflverse restructured player stats after 2024. Old release `player_stats/player_stats_{yr}.parquet`
+  (what frozen `nfl_data_py` hardcodes) has **no 2025** → 404. New release **`stats_player`**:
+  `stats_player_week_{yr}` (weekly, REG+POST) + `stats_player_reg_{yr}` (seasonal) — covers 1999–2025.
+- Conform renames: `player_id`→`gsis_id`, `passing_interceptions`→`interceptions`, `team`→`recent_team`,
+  `sacks_suffered`→`sacks`, `sack_yards_lost`→`sack_yards`; reindex to legacy cols (weekly NA-fills only
+  `dakota`; seasonal NA-fills the derived `_sh`/`dom` shares — recompute in Phase 3 from weekly/pbp).
+- Append via `db.append_df` (INSERT … BY NAME); `DELETE season=yr` first → idempotent. Writable con.
+- **Depth charts 2025 = new timestamped grain** (`dt` ISO8601, no `week`) → separate table `depth_charts_ts`
+  (+`source_year`); PIT = latest `dt ≤ as_of` per player. Week-grain `depth_charts` (2014–24) untouched.
+- 2025 has **no ADP board** (FFC empty) → `CALIBRATION_SEASONS=(2025,)`, kept out of DEV/LOCKBOX.
+
 **1.5 significance:**
 - `block_bootstrap_ci` = **stationary bootstrap** (geometric blocks, expected ≈ n^{1/3}); `expected_block=1`
   = iid → the two are directly comparable. Returns point/CI/SE/`significant` (CI excludes 0).
@@ -162,7 +198,18 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
     else availability falls back to ADP+noise.
   - **Benchmark set for the cost report.** Which to offer: ADP-consensus-optimal / our-projection-optimal
     / expert-consensus-optimal (recommend several — the benchmark is self-referential).
-  - **Lockbox seasons.** Which recent season(s) to freeze as the untouched final-evaluation set.
+  - ~~**Lockbox seasons.**~~ RESOLVED (2026-07-04) → **lockbox = 2023 + 2024**; dev on **2014–2022**
+    (`config.DEV_SEASONS`/`LOCKBOX_SEASONS`). 2025 excluded (see below).
+  - **2025 recovery — ROOT CAUSE FOUND (2026-07-04); planned as step 0.9 before Phase 3.** The 404 was
+    **not** "rollup not out yet" — nflverse **restructured stats releases after 2024**; `nfl_data_py` is
+    frozen on the *old* `player_stats/player_stats_{yr}.parquet` path (no 2025 file). The data lives in the
+    **new `stats_player` release**: `stats_player_week_2025.parquet` (weekly ✅) + `stats_player_reg_2025.parquet`
+    (seasonal ✅) — verified, schema-compatible (renames: `passing_interceptions`→`interceptions`,
+    `team`→`recent_team`, `player_id`→`gsis_id`). **Plan (0.9):** new-release ingest path → append weekly +
+    seasonal 2025 + handle timestamped `depth_charts`; re-validate. **Lockbox stays 2023+2024** (draft
+    backtest); recovered 2025 = a **projection-calibration holdout** (no ADP board needed to check
+    calibration). **Still blocked:** 2025 ADP (FFC empty for 2025; source via Sleeper/Underdog later →
+    then 2025 becomes a full draft-backtest season).
   - **Paid props line.** Under the reframe it's even more optional — decide whether to ever cross it; if
     not, formally drop "beat the betting market" from the goals.
 - ~~**0.4 ADP coverage:**~~ RESOLVED — **FFC** goes back to **2010** (free, JSON API; half-ppr only 2018+);

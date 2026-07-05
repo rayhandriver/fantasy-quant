@@ -59,8 +59,13 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 - **Personalization baking in bias.** Always show personalized boards next to the pure-projection baseline;
   treat large divergences as hypotheses to test, not preferences to lock in.
 - **PIT-clean ≠ out-of-sample-clean (the lockbox rule, ⟳ 2026-07-04).** PIT stops temporal leakage, not
-  overfitting from repeatedly selecting on the same ~10 seasons. **Freeze a lockbox** (the two most recent
-  affordable seasons), never touch it during development, and evaluate the final chosen stack there **once**.
+  overfitting from repeatedly selecting on the same ~10 seasons. **Lockbox = 2023 + 2024** (frozen; set
+  2026-07-04): never touch it during development / feature+model selection; evaluate the final chosen
+  stack there **exactly once**. All development runs on **`config.DEV_SEASONS` = 2014–2022**; only the
+  final eval reads `config.LOCKBOX_SEASONS`. (**2025** is out of the *draft-backtest* lockbox because there
+  is **no 2025 ADP board** — FFC empty; source via Sleeper later. Its realized weekly/seasonal *are*
+  recoverable via the new nflverse `stats_player` release — **step 0.9** — so once ingested, 2025 serves as
+  a **projection-calibration holdout** and upgrades to a full backtest season when ADP lands. `findings.md` 2026-07-04.)
 - **No LLM in the core (⟳ 2026-07-04).** All in-app AI is deferred post-MVP; the deterministic core never
   depends on an LLM. When AI is added later it's **on the edges** (fuzzy input → validated object, or
   numbers → narrative) — it never computes a number that must be correct.

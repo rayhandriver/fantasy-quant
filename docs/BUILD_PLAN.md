@@ -123,6 +123,25 @@ as-of leaking in. This is 60% of the eventual edge; do it slowly and correctly.*
 - **Done:** the panel passes all gates or fails loudly with the offending rows; health report is committed.
 - **Reuse:** intern `_validate_cov_hard_gate` philosophy.
 
+### 0.9 — 2025 backfill + nflverse new-release migration → `data/sources/nflverse.py` *(NEW — do before Phase 3)*
+- **Goal:** get the most-recent complete season (2025) into the store as a **projection-calibration
+  holdout**, and migrate the frozen `nfl_data_py` weekly/seasonal pull onto nflverse's **current release
+  structure** (post-2024 restructure — the real cause of the 2025 404).
+- **Do:** read the **new `stats_player` release** directly (not `nfl_data_py`):
+  `…/releases/download/stats_player/stats_player_week_{yr}.parquet` (weekly) +
+  `stats_player_reg_{yr}.parquet` (seasonal). Map the renamed columns → our `weekly` schema
+  (`player_id`→`gsis_id`, `passing_interceptions`→`interceptions`, `team`→`recent_team`); keep
+  `season_type` (REG/POST). Append 2025 to `weekly`/`seasonal`. Ingest **2025 `depth_charts`** at the new
+  **ISO8601-timestamp grain** (post-2024 they're append-with-timestamp, *not* week-assigned — store the
+  timestamp; do not force a `week`). Re-run the **0.8 validator**.
+- **Out:** extended `weekly`/`seasonal` (2014–2025) + timestamped `depth_charts_2025`; refreshed
+  `data_health.json`. Reconcile 2025 fantasy points against a couple of known box scores.
+- **Done:** 2025 weekly/seasonal join cleanly (same scoring reconstructs `fantasy_points_ppr` to ~1e-6);
+  validator passes; **2025 added to a calibration-holdout set, NOT to the draft-backtest lockbox** (still
+  no 2025 ADP board → `config`; upgrade to a full backtest season once Sleeper ADP lands).
+- **Reuse:** `data/sources/nflverse.py` ingest + rename logic; `data/db.py`; the 1.1 scorer for the recon
+  check. **Note:** `nfl_data_py` is frozen on the dead `player_stats` path — this step also future-proofs.
+
 ---
 
 # Phase 1 — Backtest harness (built BEFORE any modeling)

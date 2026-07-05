@@ -4,7 +4,7 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-04 — added direct-indexing / personalization terms (strategic reframe).
+> **Last updated:** 2026-07-05 — added Phase-3 feature terms (exposure matrix, TD-regression, winsor-z).
 
 ## Direct-indexing / personalization terms (reframe 2026-07-04)
 - **Direct indexing (for fantasy)** — don't try to *beat* the benchmark (the optimal team); **track** it
@@ -103,7 +103,16 @@ section, not just appended.
 - **Age curve (delta method)** — position-specific aging estimated from year-over-year deltas (Tango),
   robust to the selection bias of cross-sectional polynomial fits.
 - **Exposure matrix `X`** — players × factors, standardized (z-scored), point-in-time — the fantasy analog
-  of the intern repo's style-exposure matrix.
+  of the intern repo's style-exposure matrix. Built by `features/exposures.py::build_exposures(target)`:
+  production lagged to target-1, intrinsic as-of target, environment from the target-team's prior year.
+- **TD-regression flag** — realized TDs minus **red-zone-opportunity-expected** TDs; positive = TD luck
+  that mean-reverts (validated: corr −0.50 with next-year TD/game change). A key ADP-bias input (Phase 6).
+- **Winsorized cross-sectional z (per position)** — clip a factor to its 2nd/98th percentile within a
+  position, then z-score across that position's players in the as-of cross-section; the exposure-matrix
+  standardization recipe (missing → group median before z, plus an explicit missing-indicator column).
+- **`no_prior` / rookie intrinsic signal** — a player with no prior-season production (rookie / return) is
+  flagged, not silently zeroed; their draft-capital + athletic + landing-spot exposures still carry signal
+  (the reframe's "rookies must not punt to ADP").
 
 ## Modeling / quant terms (carried from the intern project)
 - **Factor + idiosyncratic decomposition** — outcome = systematic factor exposure + player-specific alpha

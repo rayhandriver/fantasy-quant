@@ -84,6 +84,79 @@ def map_snaps_gsis(snaps: pd.DataFrame, ids: pd.DataFrame) -> pd.DataFrame:
 
 
 # --------------------------------------------------------------------------------------------
+# 0.9 — nflverse "stats_player" NEW-release path (post-2024 restructure)
+# --------------------------------------------------------------------------------------------
+# nflverse restructured player stats after the 2024 season; the frozen ``nfl_data_py`` hardcodes
+# the DEAD old path (``player_stats/player_stats_{yr}.parquet``) -> clean 404 for 2025. The live
+# data is in the ``stats_player`` release. We read it directly and conform the renamed columns
+# back to our legacy ``weekly``/``seasonal`` schema so a new season appends without a migration.
+STATS_PLAYER_URL = (
+    "https://github.com/nflverse/nflverse-data/releases/download/"
+    "stats_player/stats_player_{kind}_{year}.parquet"
+)
+# new-release column name -> our legacy schema name
+_STATS_RENAME = {
+    "player_id": "gsis_id",
+    "passing_interceptions": "interceptions",
+    "team": "recent_team",
+    "sacks_suffered": "sacks",
+    "sack_yards_lost": "sack_yards",
+}
+
+
+def conform_stats_player(df: pd.DataFrame, target_cols) -> pd.DataFrame:
+    """Rename new-release ``stats_player`` columns to our legacy schema and reindex to
+    ``target_cols`` (NA-filling any legacy column the new release dropped, e.g. ``dakota`` and
+    the seasonal share/dominator columns). Pure — the unit-test target."""
+    return df.rename(columns=_STATS_RENAME).reindex(columns=list(target_cols))
+
+
+def ingest_depth_charts_ts(con, years=(2025,), refresh: bool = False) -> int:
+    """Ingest the **new timestamped** depth charts (2025+) into ``depth_charts_ts``.
+
+    From 2025 on nflverse stopped week-assigning depth charts: each update is appended with an
+    ISO8601 ``dt`` timestamp (assign to a point in the season yourself). That grain is incompatible
+    with the week-based ``depth_charts`` table (2014–24), so it lands in its own table. A
+    ``source_year`` column records which release file each row came from (the file has no season).
+    PIT use: latest snapshot with ``dt <= as_of`` per player.
+    """
+    frames = []
+    for year in years:
+        d = _load_or_pull(f"depth_charts_ts_{year}",
+                          lambda y=year: nfl.import_depth_charts([y]), refresh=refresh)
+        d = d.copy()
+        d["source_year"] = year
+        frames.append(d)
+    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    return db.write_df(con, "depth_charts_ts", df)
+
+
+def backfill_stats_new_release(con, years=(2025,), refresh: bool = False) -> dict:
+    """Append the given ``years`` of ``weekly`` + ``seasonal`` from the NEW ``stats_player``
+    release, conformed to the existing table schema. Idempotent (deletes those seasons first).
+
+    weekly  <- ``stats_player_week_{yr}`` (REG + POST) ; seasonal <- ``stats_player_reg_{yr}``.
+    Requires a writable connection. Returns ``{table: new_row_count}``.
+    """
+    counts: dict[str, int] = {}
+    for table, kind in (("weekly", "week"), ("seasonal", "reg")):
+        target = [c for c in con.execute(f'DESCRIBE "{table}"').df()["column_name"]
+                  if c != "pulled_at"]
+        for year in years:
+            raw = _load_or_pull(
+                f"{table}_statsplayer_{year}",
+                lambda k=kind, y=year: pd.read_parquet(STATS_PLAYER_URL.format(kind=k, year=y)),
+                refresh=refresh,
+            )
+            new = conform_stats_player(raw, target)
+            new = new[new["season"] == year]
+            con.execute(f'DELETE FROM "{table}" WHERE season = {int(year)}')
+            counts[table] = db.append_df(con, table, new)
+            log.info("backfilled %s %d: +%d rows", table, year, len(new))
+    return counts
+
+
+# --------------------------------------------------------------------------------------------
 # per-source ingest functions  (each returns the written row count)
 # --------------------------------------------------------------------------------------------
 def ingest_ids(con, refresh: bool = False) -> int:
