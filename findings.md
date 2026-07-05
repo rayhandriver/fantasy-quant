@@ -730,3 +730,77 @@ reconstructs `fantasy_points_ppr` to 2.4e-6** (proves the new-release schema is 
 the extended store. `config` gained `STATS_SEASONS` (2014–25) + `CALIBRATION_SEASONS` (2025); `FANTASY_SEASONS`/
 `DEV_SEASONS`/`LOCKBOX_SEASONS` unchanged (2025 stays out of the draft-backtest — no ADP board). 77 tests, ruff clean.
 
+
+## Phase 4 — Mean VALUE: consensus-VBD + rookie model + calibration (2026-07-05)
+
+**Reframe recap:** Phase 4 is no longer "build a better projection." Value = **consensus projections →
+VBD**; the bar is **calibration, not beating ADP** (our Phase-2 backtest already proved that fight is
+unwinnable on ~10 seasons). Built 4.1→4.4 straight through (gate waived for the phase, per user).
+
+**Decision locked (with the user):** the consensus source is a **two-track / free** design — because free
+*current-season* consensus is scrapeable but free *historical/PIT* consensus does not exist:
+- **Live track** — scrape the free **FantasyPros** projection pages, re-score their projected component
+  stats to **full-PPR via our own `RuleSet`** (so consensus points are identical in scale to the rest of
+  the repo, not FantasyPros' scoring), gsis-match, PIT-stamp.
+- **Historical track** — the **Phase-2 baseline is the consensus proxy** for 2014–24 (and 2025). The
+  optimizer machinery is identical; only the mean's provenance differs, and the live board is what a real
+  user actually drafts on. Honest, and unblocks everything for free.
+
+### 4.1 — consensus ingest → `projections/consensus.py`
+- `consensus_projection(con, season, as_of)` dispatches: a scraped board for `season` in the store → PIT
+  read; else → baseline proxy. Same `[player_key, pos, proj_points]` shape both ways → drops into `vbd_rank_fn`.
+- **Gotcha (caught by the numbers):** FantasyPros sometimes serves a **truncated ~10-row shell** on a cold
+  CDN hit (RB/K came back with 10 rows while WR/TE were full, and the bad pull got cached). Fix: `_pull_fp`
+  **retries below a per-position row floor** and keeps the largest table, so a partial page is never cached.
+  A coverage assertion (RB≥40, WR≥50) guards the step. K reliably serves only its top ~10 without JS —
+  fine for a 10-team draft.
+- **Results (2026 live board):** **528 players, 99% gsis-matched** (3 unmatched = 2026 rookies not yet in
+  the `player_ids` crosswalk — expected; draft data lands late). Our full-PPR reconstruction ↔ FantasyPros'
+  own FPTS: **corr 1.000, MAD ~1 pt** (the tiny gap = 2-pt/return-TDs we don't reconstruct). PIT verified
+  (board dated today invisible to an earlier as-of).
+
+### 4.2 — VBD value board → `valuation/value_board.py`  **(the frozen contract)**
+- **Key correctness point:** VBD replacement must come from **projected** points at the replacement rank
+  (QB10/RB24/…), **not** `metrics.replacement_levels` (which reads *realized* season points — nonexistent
+  for the season being drafted). First cut used realized → replacement 0 → `vbd == proj_points` → QBs not
+  demoted (a silent bug the numbers exposed). `projection_replacement()` fixes it.
+- Frozen **contract**: `player_key · pos · proj_points · source · vbd · pos_rank · overall_rank`
+  (`source` ∈ consensus/proxy/rookie). This is what Phase 5 wraps. 0-point projections (listed bodies with
+  no forecast) dropped.
+- **Sanity that matters:** QBs in the top-15 go **6 (by raw points) → 0 (by VBD)** in 1-QB — VBD correctly
+  moves scarcity to RB/WR; the board leads RB/WR/RB/WR… with the top TE at overall #10 (looks like a real
+  VBD board).
+
+### 4.3 — rookie model → `projections/rookie.py`
+- Rookies are the one place the mean goes blind (no prior production). Model = **per-position ridge**
+  (closed-form numpy, dependency-free — respects small-n / no-deep-nets) on **`log(draft_ovr)` + landing-spot
+  env** (implied team total, target competition, pass rate), fit **walk-forward** on strictly-prior seasons.
+- **Gotcha:** 2014's landing-spot env needs 2013, which predates the store → all-NaN env poisoned the pooled
+  fit (all-NaN weights → all-NaN predictions). Fix: league-typical env fallbacks + drop residual-NaN training
+  rows. Root-cause found by tracing NaN back through the fit, not by loosening asserts.
+- **Results:** OOS **Spearman(pred, realized rookie pts) = +0.62** (453 rookies, 5 DEV seasons); the
+  dominant signal is draft capital (**corr(draft_ovr, realized) = −0.59** pooled, 728 rookies — earlier
+  picks score more). Top-projected 2021 rookies = Lawrence/Chase/Waddle/Najee — the high-capital names.
+  Integration: fills **+76 rookies** into the 2021 proxy board (642 → 718), so the historical board stops
+  being blind to rookies. (QB busts like Zach Wilson rank high — the model uses ex-ante draft capital,
+  correctly; that's a *variance* story for Phase 5, not a mean error.)
+
+### 4.4 — calibration → `projections/calibration.py`  **(the real done-criterion)**
+- Measures the value mean vs realized: per-position **bias ratio** (Σreal/Σpred), monotone **reliability
+  table**, per-position **correction factor** (= the bias itself; `corrected = pred·bias` pulls Σreal/Σcorr
+  → 1). Two universes: **conditional** (played) and **unconditional** (projected-but-DNP = 0, the honest
+  survivorship-safe draft-day view). K/DST excluded (scored via separate pbp paths, not `season_points` —
+  a bug the first run surfaced as K bias 0.01).
+- **Finding — the projection is optimistic and it's mostly games-played attrition, not rank error:** proxy
+  bias **0.60** (conditional) / **0.46** (incl. DNP as 0) — the ~40% gap is dominated by players not
+  playing a full 17 (partial seasons, injuries, washouts), *not* by mis-ranking: **reliability climbs
+  monotonically** (bin-corr **0.99**, mean realized 35→218 across deciles) and **Spearman +0.52**. So the
+  fix is a **scale correction**, not a new model — per-position factors pull 2022 bias to **0.96**.
+- **Holdout (read once):** the **2025** calibration season gives **bias 0.58, Spearman +0.57** — nearly
+  identical to DEV, so the miscalibration is *stable* and the correction generalizes to an unseen season.
+  This is "calibration > edge" operationalized: we didn't try to beat ADP; we made the number honest.
+
+**Phase 4 net:** the personalization spine now has a real, calibrated **value layer** — a live consensus
+board a user can draft on today (2026), a frozen VBD contract for the optimizer + Phase 5 to build on, a
+validated rookie fill, and a documented+corrected calibration with a clean 2025-holdout check. 102 tests,
+ruff clean. **Next: Phase 5 distributions (full 5.1–5.5), wrapping the 4.2 contract → the risk dial.**

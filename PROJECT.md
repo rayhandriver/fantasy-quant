@@ -114,13 +114,13 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 - 3.5 Standardized PIT exposure matrix `X` → `features/exposures.py`
 - **Done when** a finite, documented, PIT exposure matrix is produced for any as-of date.
 
-### Phase 4 — Mean projection models
-- 4.1 GBT component models per position (XGBoost/LightGBM) → `projections/gbt.py`
-- 4.2 Age curves (delta method) → `projections/age_curves.py`
-- 4.3 Hierarchical-Bayes thin-sample priors → `projections/hier_bayes.py`
-- 4.4 **Props-anchored shrinkage** (shrink model toward de-vig prop means) → `projections/market_shrink.py`
-- 4.5 Calibration vs market & realized → `projections/calibration.py`
-- **Done when** mean projections beat the Phase-2 baselines *and* hold up against the market OOS.
+### Phase 4 — Mean VALUE *(⟳ reframed: consensus-VBD, not edge-seeking)*
+- 4.1 **Consensus-projections ingest** (two-track: live FantasyPros scrape + historical baseline proxy) → `projections/consensus.py`
+- 4.2 **VBD value board** (consensus → draft-time VBD → ranks; the frozen contract) → `valuation/value_board.py`
+- 4.3 **Rookie model** (draft capital + landing spot, per-position ridge) → `projections/rookie.py`
+- 4.4 **Calibration** (bias ratio, reliability, correction; 2025 holdout) → `projections/calibration.py`
+- **Done when** the value signal is **well-calibrated** (bias ≈ 1 after correction, monotone reliability, holdout rank-fidelity) — *not* when it beats ADP.
+- *Optional/demoted (only if they improve calibration):* GBT `gbt.py` · age curves `age_curves.py` · hier-Bayes `hier_bayes.py` · props-shrink `market_shrink.py`.
 
 ### Phase 5 — Distributional projections
 - 5.1 Quantile regression (P10/P50/P90) → `projections/quantile.py`

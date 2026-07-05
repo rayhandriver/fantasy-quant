@@ -4,7 +4,9 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-05 — added Phase-3 feature terms (exposure matrix, TD-regression, winsor-z).
+> **Last updated:** 2026-07-05 — added Phase-4 value terms (consensus two-track, VBD value board contract,
+> draft-time replacement, rookie model, bias ratio / correction / survivorship haircut). *(Prior: Phase-3
+> feature terms — exposure matrix, TD-regression, winsor-z.)*
 
 ## Direct-indexing / personalization terms (reframe 2026-07-04)
 - **Direct indexing (for fantasy)** — don't try to *beat* the benchmark (the optimal team); **track** it
@@ -57,6 +59,20 @@ section, not just appended.
 - **Replacement level** — the baseline a position is measured against (the last reliably-started
   player). Resolved for the 10-team 9-starter league (1.4): league-wide started = `n_teams × slot` with
   the FLEX split RB/WR/TE ∝ 2:2:1 → replacement ranks QB10 / RB24 / WR24 / TE12 / K10 / DST10.
+- **Draft-time (projection) replacement** — for a *forward* value board, the replacement level is the
+  **projected** points at each replacement rank, **not** realized (the season being drafted has no realized
+  yet). Using realized by mistake zeros out VBD. (Phase 1.4's realized replacement is for backtest scoring.)
+- **Consensus projection (two-track)** — Phase 4's value mean. *Live:* scrape the free **FantasyPros**
+  consensus board, re-score its projected stats to **full-PPR with our own `RuleSet`** (same scale as the
+  repo, not FantasyPros' scoring). *Historical:* the Phase-2 baseline as a documented **proxy** (no free
+  historical/PIT consensus exists). One `consensus_projection(season)` dispatches; both yield
+  `player_key·pos·proj_points`.
+- **VBD value board (the contract)** — consensus mean → draft-time VBD → within-position + overall ranks,
+  frozen as `player_key·pos·proj_points·source·vbd·pos_rank·overall_rank`. The single value object the
+  optimizer maximizes and the Phase-5 distribution layer wraps.
+- **Rookie value model** — a rookie has no prior production but has **draft capital + landing spot**; a
+  per-position **ridge** on `log(draft_ovr)` + landing-spot environment fills rookies the mean misses
+  (instead of punting to ADP). Draft capital is the dominant signal (earlier picks score more).
 - **All-play / expected wins** — a schedule-independent record: each week you "win" the fraction of the
   league you outscore (ties half). Removes head-to-head schedule luck; the cheap proxy for finish until
   the Phase-10 season/playoff simulation.
@@ -124,6 +140,15 @@ section, not just appended.
   archetype priors.
 - **Quantile projection** — model P10/P50/P90 directly (not just the mean) to get floor/ceiling.
 - **Calibration / bias statistic** — realized ÷ predicted ≈ 1; do P90 weeks actually happen 10% of the time.
+- **Bias ratio** — Σrealized / Σpredicted per position; <1 = optimistic. The value signal's headline
+  calibration number (the reframe's real done-criterion — *calibration > edge*).
+- **Correction factor** — deflate/inflate a miscalibrated projection by its bias (`corrected = pred·bias`)
+  so Σreal/Σcorrected → 1: a documented miscalibration *corrected*, not just noted.
+- **Reliability table** — bin players by predicted points; realized should climb monotonically across bins
+  (rank fidelity) even if the level is off (which the correction factor fixes).
+- **Conditional vs unconditional calibration (survivorship haircut)** — bias among players who *played*
+  vs including projected-but-DNP as 0. The gap (~0.60 → ~0.46 for our proxy) is the injury/washout discount
+  a draft board must respect; it's mostly games-played attrition, not mis-ranking.
 - **Quadratic / expected-utility roster scoring** — concave utility for starters (floor), convex for late
   dart-throws (ceiling) — makes "consistency vs volatility" concrete.
 

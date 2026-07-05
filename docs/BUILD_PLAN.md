@@ -280,37 +280,44 @@ projections → VBD** rather than an own edge-seeking model — plus an explicit
 > hier-Bayes / props-shrink steps below are **demoted to optional** — build them only if they measurably
 > improve *calibration*, not to beat ADP.
 
-### 4.1 — GBT component models → `projections/gbt.py`
-- **Do:** per-position **XGBoost/LightGBM** models for the components (targets, catch rate, YPR, TD rate for
-  WR; touches, YPC, TD, target share for RB; etc.), with **nested cross-validation** (small-n discipline).
-  Compose components → points. Feature importances logged.
-- **Out:** `projections/gbt.py` (`fit_components`, `project`); **Done:** beats 2.2 baseline OOS; CV honest
-  (no leakage across seasons). **Reuse:** `xgboost`/`lightgbm`; 3.5 X; 1.3 harness.
+### 4.1 — Consensus-projections ingest (two-track) → `projections/consensus.py` ✅ *(2026-07-05)*
+- **Do:** the reframe's VALUE mean. **Live track:** scrape the free FantasyPros consensus board, re-score
+  its projected component stats to **full-PPR via our `RuleSet`** (not FantasyPros' scoring), gsis-match,
+  PIT-stamp → `consensus_projections`. **Historical track:** no free consensus exists 2014–24, so the
+  Phase-2 baseline is the documented consensus **proxy**. `consensus_projection(con, season, as_of)`
+  dispatches between them behind one `[player_key, pos, proj_points]` shape.
+- **Done:** 2026 board = **528 players, 99% gsis-matched**; our full-PPR ↔ FP FPTS **corr 1.000**; PIT +
+  two-track dispatch verified. Retry-guard rejects a transient truncated page. **Reuse:** 1.1 `score_offense`,
+  0.4 `match_adp_to_gsis`, 2.2 baseline.
 
-### 4.2 — Age curves (delta method) → `projections/age_curves.py`
-- **Do:** Tom Tango **delta method** per position (year-over-year deltas averaged across players, smoothed) —
-  robust vs cross-sectional polynomial selection bias. Apply as a multiplier in projections.
-- **Out:** `projections/age_curves.py` (`age_curve`, `apply_aging`); **Done:** curves match known shapes (RB
-  cliff ~28-30, WR peak 25-27); improves OOS. **Reuse:** 0.2 seasonal panels.
+### 4.2 — VBD value board (the frozen contract) → `valuation/value_board.py` ✅ *(2026-07-05)*
+- **Do:** consensus mean → **draft-time VBD** (replacement from the **projection** at QB10/RB24/… ranks, not
+  realized — the season being drafted has none) → within-position + overall ranks. Freeze the output shape
+  `player_key·pos·proj_points·source·vbd·pos_rank·overall_rank` — the contract Phase 5 wraps.
+- **Done:** VBD demotes 1-QB QBs from **6→0** in the top-15 vs a raw-points sort; board builds off both
+  tracks; contract asserted. **Reuse:** 2.1 `vbd`, 1.4 `replacement_ranks`.
 
-### 4.3 — Hierarchical-Bayes thin-sample priors → `projections/hier_bayes.py`
-- **Do:** **PyMC** hierarchical model pooling rookies / injury-returns / new-system players toward
-  **archetype-level priors** (partial pooling). Install `uv sync --extra bayes` here.
-- **Out:** `projections/hier_bayes.py` (`fit_hier`, `posterior_mean`); **Done:** shrinks thin samples
-  sensibly; beats naive point estimates for low-`n` players OOS. **Reuse:** `pymc`; 3.5 X.
+### 4.3 — Rookie value model → `projections/rookie.py` ✅ *(2026-07-05)*
+- **Do:** rookies have no prior production but do have **draft capital + landing spot** — a small per-position
+  **ridge** (closed-form, dependency-free) on `log(draft_ovr)` + landing-spot env (implied total, target
+  competition, pass rate), fit **walk-forward** on strictly-prior seasons. Fills rookies the proxy board
+  misses (instead of an ADP punt). **College production deferred** (user decision).
+- **Done:** OOS **Spearman +0.62** vs realized rookie points (5 seasons); draft-capital signal −0.59 pooled;
+  fills +76 rookies into the 2021 proxy board. **Reuse:** 3.3 player, 3.4 environment, 1.1 scoring.
 
-### 4.4 — Props-anchored shrinkage → `projections/market_shrink.py`
-- **Do:** shrink the model projection toward the **de-vig'd prop mean** by a confidence weight (more shrink
-  where your model is uncertain / where the market is liquid). The disciplined "don't fight the sharp market"
-  step.
-- **Out:** `projections/market_shrink.py` (`market_shrink`); **Done:** shrunk projections beat un-shrunk OOS
-  on players with liquid props. **Reuse:** 0.5/2.3 props; 4.1.
+### 4.4 — Calibration report → `projections/calibration.py` ✅ *(2026-07-05)*
+- **Do:** the real done-criterion (*calibration > edge*). Per-position **bias ratio** (Σreal/Σpred),
+  monotone **reliability table**, per-position **correction factor** (deflate by the bias); **conditional**
+  (played) and **unconditional** (DNP=0 survivorship haircut) universes; dev on `DEV_SEASONS`, verdict read
+  **once** on the 2025 holdout.
+- **Done:** proxy bias **0.60** (played) / 0.46 (incl. DNP), reliability bin-corr **0.99**, correction pulls
+  2022 to **0.96**; **2025 holdout bias 0.58, Spearman +0.57** (consistent OOS). **Reuse:** intern
+  bias-statistic idea, 1.1 `season_points`.
 
-### 4.5 — Calibration vs market & realized → `projections/calibration.py`
-- **Do:** bias-statistic analog (realized ÷ predicted ≈ 1) + reliability plots; compare your projection to
-  the market and to realized. Flag systematic over/under by position.
-- **Out:** `projections/calibration.py` (`calibration_report`); **Done:** calibration ≈ 1 or the miscalibration
-  is documented + corrected. **Reuse:** intern `bias_statistic`.
+> **Optional / demoted (build only if they measurably improve *calibration*, not to beat ADP):** GBT
+> component models (`projections/gbt.py`, xgboost/lightgbm + nested CV), Tango **age curves**
+> (`age_curves.py`), **hier-Bayes** thin-sample priors (`hier_bayes.py`, PyMC), **props-anchored shrinkage**
+> (`market_shrink.py`, once a props source lands). Deferred per the 2026-07-04 reframe.
 
 ---
 

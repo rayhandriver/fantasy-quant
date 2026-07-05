@@ -5,6 +5,19 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-05** — **PHASE 4 DONE** (VALUE signal, reframed = consensus-VBD, not edge-seeking). **4.1**
+  two-track consensus (`projections/consensus.py`): live = FantasyPros scrape re-scored to full-PPR via our
+  `RuleSet` (528 players, 99% gsis, our-pts↔FP-FPTS corr 1.000; retry-guard beats FP's transient truncated
+  pages), historical = Phase-2 baseline **proxy** (no free historical consensus exists); one
+  `consensus_projection(season)` dispatches. **4.2** VBD value board (`valuation/value_board.py`): draft-time
+  replacement from **projections** (realized doesn't exist for the season being drafted) at QB10/RB24/… ranks
+  → QBs drop 6→0 in top-15 vs raw; **frozen contract** `player_key·pos·proj_points·source·vbd·pos_rank·
+  overall_rank`. **4.3** rookie ridge (`projections/rookie.py`): closed-form per-position on log(draft_ovr)+
+  landing-spot env, walk-forward; OOS Spearman **+0.62**; +76 rookies into the 2021 proxy board. **4.4**
+  calibration (`projections/calibration.py`): proxy bias **0.60** played / **0.46** incl-DNP (survivorship
+  haircut), reliability bin-corr 0.99, per-pos correction → 0.96; **2025 holdout (once): bias 0.58, Spearman
+  +0.57**. Doc numbering reconciled (BUILD_PLAN/PROJECT had stale pre-reframe 4.x). 102 tests, ruff clean.
+  **Next: Phase 5 — full distributional layer (user chose 5.1–5.5), wraps the 4.2 contract.**
 - **2026-07-05** — **PHASE 3 DONE** (features `X`). 3.1–3.4 realized per-(gsis,season) facts (opportunity/
   efficiency/player/environment); 3.5 `build_exposures(target)` applies the PIT lag (prod←S-1, intrinsic
   as-of, env←S-1 of target team), winsor-z per position, missingness flags. **545×48 matrix**; 100%
