@@ -804,3 +804,99 @@ unwinnable on ~10 seasons). Built 4.1→4.4 straight through (gate waived for th
 board a user can draft on today (2026), a frozen VBD contract for the optimizer + Phase 5 to build on, a
 validated rookie fill, and a documented+corrected calibration with a clean 2025-holdout check. 102 tests,
 ruff clean. **Next: Phase 5 distributions (full 5.1–5.5), wrapping the 4.2 contract → the risk dial.**
+
+## Phase 5 — Distributional projections: the per-player risk dial (2026-07-05)
+
+**Reframe recap:** distributions are **the one value-side thing we build ourselves** (consensus/ADP are
+point estimates) and they **power the per-round risk dial** — no risk feature without them. Phase 5 turns
+the 4.2 calibrated mean into a **full season distribution F(points) per player**, assembled from four
+factors and frozen into a contract the optimizer (Phase 9) and copula/roster layer (Phase 8) consume.
+**Grain decision: season-total only** — that is exactly what the draft dial + optimizer consume; a
+weekly-grain distribution (start/sit, in-season) is deferred to the season simulator (Phase 10) and noted
+as future work. User chose the **full 5.1–5.5 stack** run straight-through (sub-phase gate waived).
+
+**Method deviations from BUILD_PLAN (accepted with the user 2026-07-05; no new deps):** 5.1 uses a
+**statsmodels linear `QuantReg`**, not XGBoost quantile loss; 5.4 uses a **scikit-learn logistic
+discrete-time hazard**, not `lifelines`. Both are the right call for ~a-few-hundred player-seasons/position
+(the no-deep-models, no-overfit rule) and avoid a heavy dependency. **Future intent (documented, not
+scheduled):** revisit **XGBoost quantile regression** (5.1) and a **`lifelines` survival model** (5.4) once
+the sample or the residual signal justifies the extra flexibility. See BUILD_PLAN Phase 5 notes.
+
+**5.1 — quantile regression (`projections/quantile.py`).** Per-position linear `QuantReg` of realized
+season points on the **calibrated mean** (the 4.2 board × the 4.4 per-position correction), one line per
+τ ∈ {.1,.25,.5,.75,.9}, fit walk-forward on the **conditional (available) DEV cohort** (weeks ≥ 0.85·season
+→ the *if-healthy* distribution; injury attrition is a separate factor, 5.4, so it isn't double-counted).
+1,074 player-seasons. **Median-line slope ≈ 1.10** (τ.50 recovers the mean); the outer τ lines **fan out
+with level** (heteroscedastic spread — a 300-pt projection is wider than a 60-pt one) for **3/4 positions**
+(QB fans through the intercept, not the slope — slopes QB 0.83, RB 1.10, WR 1.19, TE 1.29). Quantile
+crossing repaired by sorting the fitted quantiles.
+
+**5.2 — conformalized quantile regression (`projections/conformal.py`).** CQR (Romano 2019): conformity
+score `E = max(q_lo−y, y−q_hi)`, per-position adjustment `d = ⌈(1−α)(n+1)⌉/n` empirical quantile of E,
+band → `[q_lo−d, q_hi+d]`, α=0.2 (80% target). Fit `d` on held-out DEV seasons **[2021, 2022]**:
+**QB +18, WR +3, RB +2, TE +0** pts (QB intervals were the most too-tight). **2025 holdout (read once):
+coverage 70% → 73%** on the available cohort (n=176) — conformal moves it toward the 80% target without
+worsening it (per-pos QB 94 / WR 73 / RB 71 / TE 64%).
+
+**5.3 — boom/bust weekly variance (`projections/variance.py`).** From realized weekly points: per-player
+weekly mean/sd/**CoV**, **boom rate** (share of weeks clearing a position "great game" line) and **bust
+rate**. Confirmed fantasy weekly scoring is **right-skewed** (the boom tail): skew **TE +1.60, RB/WR +1.27,
+QB +0.23**. Key finding: **`corr(boom_prob, CoV) = −0.37`** — boom rate tracks scoring *level* (elite
+players clear the line often *and* steadily), so it's a **separate axis** from volatility, not the same
+knob. Carried through the contract as a consistency signal (a different, complementary axis from the
+season-total spread).
+
+**5.4 — availability: discrete-time hazard → games-played distribution (`projections/injury.py`).** The 4.4
+calibration found the mean's biggest *level* miss is **games-played attrition**, not mis-ranking. We model
+it as the **other factor**: a logistic **discrete-time availability hazard** on the person-period grid
+(31,623 player-weeks, base availability 70.6%) with age / position / prior-season-availability / week; then
+games-played ~ **Beta-Binomial** over team games with method-of-moments over-dispersion **ρ = 0.33** so the
+distribution keeps the fat *lost-season* tail (a torn ACL zeroes the year — a plain Binomial would miss it).
+Coefficients are actuarially sane: **prior-avail +0.42** (durability persists), **age −0.10**, **week −0.18**,
+**RB −0.16 (least available), WR −0.10, TE −0.11** vs the QB reference — matching the known RB-highest injury
+rate. Universe = established contributors (prior games ≥ 8); rookies/backups fall to a median-availability
+fallback in the assembler. Documented limitation: the grid conditions on ≥1 appearance, so a pre-Week-1
+whole-season miss is under-counted (the 4.4 unconditional haircut partly covers it).
+
+**Assembler + 5.5 utility (`projections/distribution.py`, `valuation/utility.py`).** The four factors compose
+into a **Monte-Carlo sample cloud per player** (2000 draws): `Y = H · (avail_fraction / G_ref)`, H drawn from
+the conformal-widened conditional quantiles (its own asymmetry *is* the boom skew — no separate injection),
+availability from 5.4, normalized by the cohort's mean availability fraction (~0.93) so a typical draw returns
+≈ H (injury downside lives entirely in the multiplier, never double-counted inside H). **Frozen contract:**
+`player_key·pos·mean·sd·q10·q50·q90·boom_prob·bust_prob·games_played_mean·ce_value`. The **mean-variance
+certainty equivalent** `CE(λ)=E[Y]−λ·Var[Y]` is the risk dial (λ=0 risk-neutral; larger λ docks volatility);
+`risk_premium=λ·Var` is the honest per-player cost of uncertainty, and it slots straight into the Phase-8
+covariance work (Var → portfolio tracking-error variance, same λ). 2025 board = **673 players**; per-position
+mean season points QB 187 / RB 110 / WR 109 / TE 82 (top QB ~279) — sane. λ dial verified: it docks the most
+volatile player far more than the steadiest as risk aversion rises. Persisted to **`player_distributions`**
+(673 rows, season 2025; gitignored store).
+
+**Two real bugs found wiring the phase together (2025/early-season paths that 5.1–5.4 never exercised — they
+ran only on seasons ≥ 2016):**
+- **`value_board` crashed on an empty projection season.** The assembler trains on *all* DEV seasons < target
+  (2014–2022); **2014 has zero consensus/proxy rows** (the proxy baseline can't forecast the first season, no
+  prior). An empty `mean` frame made `vbd()` do `float64 − empty-arrow-string` (pandas 3.0's `.map` over an
+  empty arrow-string series returns an empty *large_string* — nothing to infer float from) → `ArrowNotImplemented`.
+  **Fix:** `value_board` now returns an empty contract-shaped frame when there's no projection (guarded before
+  the VBD arithmetic). A latent Phase-4 robustness bug, surfaced by Phase 5.
+- **Season means were ~17× too high (units mismatch).** `sample_player_season` computed `Y = H · (G / G_ref)`
+  with **G a games *count* (0–17)** but **G_ref a *fraction* (~0.93)**, so `G/G_ref ≈ 17`. A WR read **4524**
+  season points. **Fix:** convert the sampled games to a fraction first — `Y = H · ((G/team_games) / G_ref)` —
+  so a typical-availability draw returns ≈ H. Guarded by a regression test (`test_sample_player_season_is_on_the_H_scale`).
+
+**Calibration read + the honest limitation.** Two coverage numbers on the 2025 holdout: **conditional
+(available cohort, weeks ≥ 0.85·season, n=176): 76%** — near the 80% target, median |q50−realized| = 47 pts;
+this is the population the interval is calibrated for (consistent with 5.2). **Unconditional (full 673-player
+board, realized 0 for anyone who never played): 44%** — dragged down by **122/673 projected bodies who never
+earned a snap**. That gap is **role/depth attrition**, which the injury-only availability model (5.4)
+deliberately does **not** capture (it models games-missed for players *with* a role, not "never earned one").
+This is a **documented Phase-5 limitation**, not a coverage the distribution promises → **future work: a
+role/depth survival haircut beyond injury** (e.g. a depth-chart/opportunity-driven "makes the roster / holds
+the role" probability layered under the availability multiplier).
+
+**Phase 5 net:** the risk dial exists end-to-end — a calibrated per-player season distribution wrapping the
+4.2 value contract, with an explicit λ that prices each player's uncertainty in points, ready for the Phase-8
+covariance and the constrained optimizer. **18 new unit tests (120 total), ruff clean; all five step scripts
+green; `player_distributions` persisted.** **Next: the personalization spine — `DraftConfig` constraint object
++ constrained greedy optimizer + first cost report → Streamlit MVP** (Phase 8 covariance can slot in via the
+same λ/Var).

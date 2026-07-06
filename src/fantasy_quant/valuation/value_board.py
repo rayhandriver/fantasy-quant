@@ -84,6 +84,11 @@ def value_board(con, season: int, as_of=None, ruleset: RuleSet | None = None,
 
     # a 0-point projection is a listed body with no real forecast -> no value signal.
     mean = mean.dropna(subset=["proj_points"]).query("proj_points > 0").copy()
+    # a season with no projection at all (e.g. the first year, which the proxy baseline can't
+    # forecast for lack of a prior season) yields an empty board, not a crash. Guard here so the
+    # empty-frame arithmetic below (float proj_points − empty arrow-string map) never runs.
+    if mean.empty:
+        return pd.DataFrame(columns=CONTRACT_COLS)
     mean["cpos"] = mean["pos"].map(canon_pos).fillna(mean["pos"])
     repl = projection_replacement(mean, slots, n_teams)   # draft-time (projected) replacement
     valued = vbd(mean, repl)

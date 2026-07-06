@@ -329,31 +329,48 @@ preference, and the season simulator.*
 > point estimates) and it **powers the per-round risk dial** — no risk feature without it. For the MVP,
 > **trim** to the minimal per-player variance/distribution the dial needs; the full 5.1–5.5 stack comes later.
 
-### 5.1 — Quantile regression → `projections/quantile.py`
-- **Do:** XGBoost **quantile loss** for P10/P50/P90 per player (season and weekly grains).
-- **Out:** `projections/quantile.py` (`project_quantiles`); **Done:** quantiles ordered, coverage roughly
-  nominal. **Reuse:** `xgboost`.
+> **✅ BUILT (2026-07-05) — full 5.1–5.5 stack.** **Grain = season-total only** (what the draft dial +
+> optimizer consume); a **weekly-grain distribution is deferred to future work** (start/sit; folds into the
+> Phase-10 season sim). **Method deviations (accepted with the user, no new deps):** 5.1 uses statsmodels
+> linear `QuantReg` (not XGBoost); 5.4 uses a scikit-learn logistic discrete-time hazard (not `lifelines`) —
+> both right for ~a-few-hundred player-seasons/position under the no-overfit rule. **Future intent
+> (documented, not scheduled): adopt XGBoost quantile regression (5.1) and a `lifelines` survival model
+> (5.4) if the sample or residual signal justifies the extra flexibility.** Assembler `distribution.py`
+> composes the four factors into a Monte-Carlo cloud → frozen `player_distributions` contract. Calibration:
+> conditional (available cohort) 2025 coverage **76% ≈ 80%**; unconditional full-board **44%** = **role/depth
+> attrition** the injury-only model doesn't capture → **future work: a role/depth survival haircut beyond
+> injury.** Findings: `findings.md` "Phase 5" (2026-07-05).
 
-### 5.2 — Conformal prediction → `projections/conformal.py`
+### 5.1 — Quantile regression → `projections/quantile.py` ✅
+- **Do:** ~~XGBoost **quantile loss**~~ → **built as a per-position linear statsmodels `QuantReg`** of realized
+  season points on the calibrated mean (season grain; the no-overfit rule beats XGBoost on ~300 rows/pos).
+  P10/P25/P50/P75/P90 per player. *(Future: revisit **XGBoost quantile loss** and a **weekly grain** if warranted.)*
+- **Out:** `projections/quantile.py` (`quantile_projection`); **Done:** quantiles ordered (crossing repaired
+  by sort), median slope ≈1.10, band fans with level 3/4 pos. **Reuse:** `statsmodels`.
+
+### 5.2 — Conformal prediction → `projections/conformal.py` ✅ *(CQR; 2025 holdout coverage 70%→73%)*
 - **Do:** wrap projections in **split/conformalized quantile regression** for distribution-free **calibrated**
   intervals; validate empirical coverage.
 - **Out:** `projections/conformal.py` (`conformal_intervals`); **Done:** P90/P10 coverage within tolerance of
   90/10% OOS. **Reuse:** 5.1; `scikit-learn`.
 
-### 5.3 — Boom/bust variance (GARCH-like) → `projections/variance.py`
+### 5.3 — Boom/bust variance (GARCH-like) → `projections/variance.py` ✅ *(weekly CoV + boom/bust; corr(boom,CoV) −0.37)*
 - **Do:** model **week-to-week variance** itself (volatility clustering); classify consistency vs boom/bust;
   per-player variance estimate for the covariance/sim.
 - **Out:** `projections/variance.py` (`week_variance`, `boom_bust_score`); **Done:** high-variance players
   flagged match intuition; variance predicts realized weekly std OOS. **Reuse:** weekly panel; `statsmodels`.
 
-### 5.4 — Injury survival/hazard → `projections/injury.py`
-- **Do:** **survival/hazard model** (time-to-injury, recurrent events) with age/usage/position covariates →
-  per-player **games-missed distribution**. Feeds handcuff valuation + season sim.
-- **Out:** `projections/injury.py` (`games_missed_dist`, `injury_hazard`); **Done:** position base rates match
-  known actuarial rates (RB highest); produces a distribution, not a point. **Reuse:** 0.2 injuries; `lifelines`
-  (add dep) or `statsmodels`.
+### 5.4 — Injury survival/hazard → `projections/injury.py` ✅
+- **Do:** built as a **logistic discrete-time availability hazard** (a logit on person-period player-week rows
+  *is* the survival model, the right tool for a 17-week horizon vs. continuous-time Cox) with age/position/
+  prior-avail/week covariates → **Beta-Binomial games-played distribution** (over-dispersion ρ keeps the
+  lost-season tail). *(Future: a **`lifelines`** continuous-time/recurrent-event survival model if the extra
+  flexibility is justified.)* Feeds handcuff valuation + season sim.
+- **Out:** `projections/injury.py` (`availability_projection`, `sample_games`, `fit_availability`); **Done:**
+  RB least available (matches actuarial); ρ=0.33; produces a distribution, not a point. **Reuse:** 0.2 injuries;
+  `scikit-learn`. *Limitation: grid conditions on ≥1 appearance → no role/depth attrition (documented; future work).*
 
-### 5.5 — Expected-utility (floor/ceiling) scoring → `valuation/utility.py`
+### 5.5 — Expected-utility (floor/ceiling) scoring → `valuation/utility.py` ✅ *(mean-variance CE = E[Y]−λ·Var[Y]; assembler → `player_distributions`)*
 - **Do:** position-dependent **utility function** over each player's distribution — concave (floor) for
   starters, convex (ceiling) for late dart-throws — making "consistency vs volatility" concrete.
 - **Out:** `valuation/utility.py` (`expected_utility`); **Done:** utility ranks a safe floor above a volatile

@@ -5,6 +5,26 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-05** — **PHASE 5 DONE** (distributional layer — the per-player risk dial; full 5.1–5.5 stack,
+  season-total grain). **5.1** per-position linear `QuantReg` of realized pts on the calibrated mean, fit on
+  the conditional/available DEV cohort (1,074 player-seasons; median slope ≈1.10; band fans with level 3/4
+  pos). **5.2** CQR (Romano 2019) per-pos adjustment (QB +18/WR +3/RB +2/TE +0 on [2021,2022]); **2025
+  holdout coverage 70%→73%** on the available cohort. **5.3** weekly boom/bust: right-skew confirmed (TE
+  +1.60…QB +0.23); **corr(boom,CoV) −0.37** ⇒ boom rate is a level axis, separate from volatility. **5.4**
+  logistic **discrete-time availability hazard** (31.6k player-weeks) → **Beta-Binomial games-played**
+  (ρ=0.33, keeps the lost-season tail); coefs sane (prior-avail +0.42, RB least available). **Assembler**
+  `distribution.py`: `Y=H·(avail_frac/G_ref)` Monte-Carlo cloud (2000 draws) → frozen contract
+  `player_key·pos·mean·sd·q10·q50·q90·boom_prob·bust_prob·games_played_mean·ce_value`; **5.5** mean-variance
+  CE `E[Y]−λ·Var[Y]` risk dial + `risk_premium`. Wrote `player_distributions` (673 rows, 2025). **2 real bugs
+  fixed** (both on 2025/first-season paths 5.1–5.4 never hit): `value_board` crashed on an empty projection
+  season (2014 has no proxy → empty arrow-string − float) → guarded to return an empty contract frame; and a
+  **units bug** `G/G_ref` (games *count* ÷ *fraction*) inflated means ~17× → fixed to `(G/team_games)/G_ref`
+  (regression-tested). Conditional 2025 coverage **76% ≈ 80%**; unconditional full-board **44%** = **role/depth
+  attrition** the injury-only model doesn't capture (documented limitation → future work). **Method deviations
+  (accepted, no new deps):** statsmodels `QuantReg` not XGBoost (5.1); sklearn logistic hazard not `lifelines`
+  (5.4) — future intent to adopt XGBoost-quantile / `lifelines` if the sample justifies it. 120 tests, ruff
+  clean; all 5 steps green. **Next: personalization spine — `DraftConfig` + constrained greedy optimizer +
+  first cost report → Streamlit MVP** (Phase 8 covariance slots in via the same λ/Var).
 - **2026-07-05** — **PHASE 4 DONE** (VALUE signal, reframed = consensus-VBD, not edge-seeking). **4.1**
   two-track consensus (`projections/consensus.py`): live = FantasyPros scrape re-scored to full-PPR via our
   `RuleSet` (528 players, 99% gsis, our-pts↔FP-FPTS corr 1.000; retry-guard beats FP's transient truncated

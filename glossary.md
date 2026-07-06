@@ -152,6 +152,40 @@ section, not just appended.
 - **Quadratic / expected-utility roster scoring** — concave utility for starters (floor), convex for late
   dart-throws (ceiling) — makes "consistency vs volatility" concrete.
 
+### Phase 5 — distribution / risk-dial terms (2026-07-05)
+- **Quantile regression** — fit a line per quantile τ (the pinball/quantile loss) to get P10/P50/P90 directly;
+  our 5.1 is a per-position linear `QuantReg` of realized points on the calibrated mean, so the outer τ lines
+  **fan out with level** (heteroscedastic spread — bigger projections have wider absolute outcomes).
+- **Quantile crossing** — fitted quantiles that cross (P90 < P50 somewhere); repaired by sorting the τ values.
+- **Conformalized quantile regression (CQR)** — a distribution-free correction (Romano 2019) that widens/shrinks
+  an estimated interval by the empirical (1−α) quantile of the conformity score `E = max(q_lo−y, y−q_hi)` on a
+  held-out calibration set, giving **≈(1−α) marginal coverage** even if the quantile model is off.
+- **Empirical coverage** — the fraction of realized outcomes that actually land inside the stated interval;
+  the calibration check for an "80% interval" (should be ≈80%).
+- **If-healthy (conditional) distribution** — the season-points spread for players who play a near-full slate
+  (weeks ≥ 0.85·season); injury attrition is modeled **separately** (5.4) and multiplied in, so downside isn't
+  double-counted (mirrors conditional-vs-unconditional calibration).
+- **Boom / bust rate** — share of a player's weeks clearing a position "great game" line (boom) or below a "dud"
+  line (bust). A **consistency** signal; `corr(boom, CoV) ≈ −0.37` ⇒ boom rate tracks scoring *level*, a
+  **separate axis** from volatility.
+- **Coefficient of variation (CoV)** — weekly sd ÷ weekly mean; a scale-free volatility read (steady grinder vs
+  boom/bust dart).
+- **Discrete-time (survival) hazard** — a logistic regression on person-period (player-week) rows *is* a
+  survival model; the right tool for a fixed 17-week horizon (vs. continuous-time Cox). Our 5.4 availability model.
+- **Beta-Binomial games-played** — games played ~ Binomial(team_games, p) with an over-dispersion ρ (Beta-mixed
+  success prob) so the count keeps a fat **lost-season tail** (injuries are lumpy — an ACL zeroes the year).
+- **Availability multiplier / G_ref** — season points = if-healthy H × (a player's availability fraction ÷ the
+  cohort's mean availability fraction G_ref ≈ 0.93); a typical-availability draw returns ≈ H.
+- **Certainty equivalent (CE) / risk dial** — mean-variance `CE(λ) = E[Y] − λ·Var[Y]`; the single number the
+  optimizer maximizes. **λ is the user-facing risk dial** (λ=0 risk-neutral; larger λ docks volatility). Slots
+  into Phase-8 covariance unchanged (Var → portfolio tracking-error variance, same λ prices tracking error).
+- **Risk premium** — `λ·Var`, the honest per-player **cost of uncertainty in points** (the reframe's promise).
+- **CVaR (conditional value-at-risk)** — mean of the worst α-tail of the sample cloud; a downside-floor read for
+  the narrative (not the ranking objective).
+- **Role / depth attrition** — a projected player who never earns a snap (cut, buried on the depth chart) —
+  realized ≈ 0. Distinct from **injury** attrition; the 5.4 availability model doesn't capture it, so the
+  *unconditional* full-board interval under-covers (a documented Phase-5 limitation → future work).
+
 ## Betting-market terms (a sharper market than ADP — first-class data source)
 - **Player prop** — a sportsbook line on a player stat (e.g. receiving yards O/U 62.5, anytime-TD). A sharp,
   real-money estimate of expectation — used as a feature, a projection anchor, and a calibration target.

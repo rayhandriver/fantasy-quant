@@ -122,13 +122,15 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 - **Done when** the value signal is **well-calibrated** (bias ≈ 1 after correction, monotone reliability, holdout rank-fidelity) — *not* when it beats ADP.
 - *Optional/demoted (only if they improve calibration):* GBT `gbt.py` · age curves `age_curves.py` · hier-Bayes `hier_bayes.py` · props-shrink `market_shrink.py`.
 
-### Phase 5 — Distributional projections
-- 5.1 Quantile regression (P10/P50/P90) → `projections/quantile.py`
-- 5.2 Conformal prediction intervals (calibrated) → `projections/conformal.py`
-- 5.3 Boom/bust variance (GARCH-like clustering) → `projections/variance.py`
-- 5.4 Injury survival/hazard → games-missed distribution → `projections/injury.py`
-- 5.5 Expected-utility (floor/ceiling) scoring → `valuation/utility.py`
-- **Done when** per-player predictive distributions are calibrated (coverage ≈ nominal).
+### Phase 5 — Distributional projections ✅ **COMPLETE** *(2026-07-05)*
+- 5.1 ✅ Quantile regression (P10/P50/P90) → `projections/quantile.py` *(per-pos linear `QuantReg` on the calibrated mean; median slope ≈1.10; band fans with level 3/4 pos)*
+- 5.2 ✅ Conformal prediction intervals (CQR, calibrated) → `projections/conformal.py` *(2025 holdout coverage 70%→73% on the available cohort)*
+- 5.3 ✅ Boom/bust variance → `projections/variance.py` *(weekly CoV + boom/bust rates; corr(boom,CoV) −0.37 ⇒ separate axis)*
+- 5.4 ✅ Injury availability: discrete-time hazard → games-played dist → `projections/injury.py` *(logistic hazard + Beta-Binomial ρ=0.33; RB least available)*
+- 5.5 ✅ Expected-utility (risk dial) scoring → `valuation/utility.py` *(mean-variance CE = E[Y]−λ·Var[Y]); assembler `projections/distribution.py` writes the frozen `player_distributions` contract*
+- **Done when** per-player predictive distributions are calibrated (coverage ≈ nominal): **conditional (available cohort) 2025 coverage 76% ≈ 80% target.** Unconditional full-board 44% is **role/depth attrition** the injury-only model doesn't capture — a documented limitation.
+- **Grain:** season-total only (what the draft dial/optimizer consume). **Weekly-grain distribution = future work** (start/sit, folds into the Phase-10 season sim).
+- **Method notes:** used statsmodels `QuantReg` (5.1) + scikit-learn logistic hazard (5.4), *not* XGBoost/`lifelines`, per the small-sample no-overfit rule (no new deps). **Future intent:** adopt **XGBoost quantile** / **`lifelines` survival** if the sample or residual signal justifies it.
 
 ### Phase 6 — ADP-bias mining (self-contained; can start after Phase 1)
 - 6.1 ADP-alpha panel construction → `adp/panel.py`
