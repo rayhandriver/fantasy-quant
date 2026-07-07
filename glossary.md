@@ -4,9 +4,11 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-05 — added Phase-4 value terms (consensus two-track, VBD value board contract,
-> draft-time replacement, rookie model, bias ratio / correction / survivorship haircut). *(Prior: Phase-3
-> feature terms — exposure matrix, TD-regression, winsor-z.)*
+> **Last updated:** 2026-07-07 — added personalization-spine implementation terms (`base_value` =
+> risk-adjusted value-over-replacement, reach budget / secured fraction, leave-one-out attribution).
+> *(Prior: 2026-07-05 Phase-4 value terms — consensus two-track, VBD value board contract, draft-time
+> replacement, rookie model, bias ratio / correction / survivorship haircut; 2026-07-05 Phase-3 feature
+> terms — exposure matrix, TD-regression, winsor-z.)*
 
 ## Direct-indexing / personalization terms (reframe 2026-07-04)
 - **Direct indexing (for fantasy)** — don't try to *beat* the benchmark (the optimal team); **track** it
@@ -31,6 +33,18 @@ section, not just appended.
   **Manual** (every slider).
 - **Constrained draft optimizer** — maximize consensus-VBD value s.t. hard excludes + soft tilts +
   archetype + risk dial, planning around ADP availability (the AlphaThena tracking-error optimizer analog).
+  *MVP built 2026-07-07 as a constrained greedy over the Phase-1.2 simulator (`draft/optimizer.py`).*
+- **Risk-adjusted value-over-replacement (`base_value`)** — the concrete quantity the MVP optimizer drafts
+  and the cost report sums: the Phase-5 **certainty equivalent** (mean − λ·Var) minus its own positional
+  replacement level. VBD's cross-position comparability **and** the λ risk dial in one number; a player with
+  no distribution falls back to plain Phase-4 VBD, a team defense to ADP.
+- **Reach budget** — per must-draft player, how many *rounds early* you'll reach to secure him. The optimizer
+  waits until the last responsible pick within budget — where ADP says he won't survive to your next turn
+  (snake geometry + a noise margin) — so value is never wasted overreaching. **Secured fraction** = the share
+  of mock drafts a must-player was actually landed (the reach-budget honesty readout).
+- **Leave-one-out (LOO) attribution** — how the cost report splits the headline gap across preferences: drop
+  exactly one constraint, redraft on the **same seeds**, and the value it recovers = that preference's cost.
+  Sums to the headline only approximately (preferences interact) — reported honestly.
 - **Behavioral opponent model** — replaces "ADP + Gaussian noise": models real drafter biases (positional
   runs, favorite reaches, hometown/name-brand bias, rookie hype, K/DST panic). Powers **availability
   distributions** (who's likely at each pick); **Brier-scorable** against real completed drafts.
@@ -44,8 +58,6 @@ section, not just appended.
   not ADP-beating; a miscalibrated number is now visibly wrong to the user.
 - **AI on the edges, deterministic core** — LLMs only turn fuzzy input → validated object or numbers →
   narrative; they never compute a number that must be correct. (All in-app AI deferred post-MVP.)
-
-## Fantasy / draft terms
 
 ## Fantasy / draft terms
 - **ADP (Average Draft Position)** — consensus draft cost of a player; the "market price." Sources differ

@@ -29,14 +29,15 @@ Legend: ☐ todo · ◐ in progress · ☑ done · ✗ dropped · ◔ deprioriti
 **Phase 15 — Multi-format (roadmap)** ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS
 
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
-☐ **S1** preference-spec layer (constraint object + UI) · ☐ **S2** constrained optimizer (max consensus-VBD s.t. constraints/archetype, plan around ADP availability) · ☐ **S3** cost-of-personalization report (vs the consensus-VBD-optimal team) · ☐ **S4** behavioral opponent model → availability forecasts · ☐ **S5** per-round risk dial (from Phase 5) · ☐ **S6** adaptive archetypes · ☐ **S7** in-season weekly-edge harvester
+✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out) · ☐ **S4** behavioral opponent model → availability forecasts *(MVP uses ADP+noise)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ☐ **S6** adaptive archetypes · ☐ **S7** in-season weekly-edge harvester
 
 **Next up (reframed MVP path):** ~~0.9 backfill~~ ✅ · ~~Phase 3 features `X`~~ ✅ · ~~Phase 4 consensus-VBD
-value + rookie model~~ ✅ · ~~Phase 5 per-player distribution + risk dial~~ ✅ → now (4) the **constraint
-object** (`DraftConfig`) + a **constrained greedy optimizer** (max consensus-VBD/CE s.t. constraints, plan
-around ADP availability) + a first **cost report** vs the consensus-VBD-optimal team; then (5) a
-**Streamlit/Gradio** UI. **Phase 8 covariance** can slot in via the same λ/Var the risk dial exposes. Full
-MVP scope: `docs/PERSONALIZATION.md` §7.
+value + rookie model~~ ✅ · ~~Phase 5 per-player distribution + risk dial~~ ✅ · ~~**Personalization spine
+S1–S3 + S5**: `DraftConfig` + constrained greedy optimizer + cost report + Streamlit MVP~~ ✅ (2026-07-07,
+built/validated on DEV 2022; season is a parameter). → now: **Phase 8 covariance** (upgrades the risk dial
+from per-player to portfolio `Var` via the same λ), then **S4** behavioral opponent model + a **walk-forward
+realized-PAR validation** of the cost number, and **scrape a 2026 ADP board** to take the app live. Full MVP
+scope: `docs/PERSONALIZATION.md` §7.
 
 **Open decisions (reframe §10 — tracked in `PLAN.md`):** real completed-draft data (Sleeper) for the
 behavioral model; a **consensus-projections source** (FantasyPros aggregate — free/PIT?); the benchmark

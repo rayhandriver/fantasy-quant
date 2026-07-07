@@ -106,7 +106,7 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 - 2.4 **Ensemble-with-market** (blend model + ADP + props, learned weights) → `projections/ensemble.py`
 - **Done when** PAR-ranked baselines (incl. the props-implied one) backtest cleanly vs ADP.
 
-### Phase 3 — Feature engineering (exposures `X`)
+### Phase 3 — Feature engineering (exposures `X`) ✅ **COMPLETE** *(2026-07-05)*
 - 3.1 Opportunity factors (target/snap/route/carry share, air yards, WOPR, RZ) → `features/opportunity.py`
 - 3.2 Efficiency factors (YPRR, YAC, catch/TD rate + **TD-regression flags**) → `features/efficiency.py`
 - 3.3 Player-intrinsic (age, draft capital, athletic, experience) → `features/player.py`
@@ -114,7 +114,7 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 - 3.5 Standardized PIT exposure matrix `X` → `features/exposures.py`
 - **Done when** a finite, documented, PIT exposure matrix is produced for any as-of date.
 
-### Phase 4 — Mean VALUE *(⟳ reframed: consensus-VBD, not edge-seeking)*
+### Phase 4 — Mean VALUE *(⟳ reframed: consensus-VBD, not edge-seeking)* ✅ **COMPLETE** *(2026-07-05)*
 - 4.1 **Consensus-projections ingest** (two-track: live FantasyPros scrape + historical baseline proxy) → `projections/consensus.py`
 - 4.2 **VBD value board** (consensus → draft-time VBD → ranks; the frozen contract) → `valuation/value_board.py`
 - 4.3 **Rookie model** (draft capital + landing spot, per-position ridge) → `projections/rookie.py`
@@ -131,6 +131,16 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 - **Done when** per-player predictive distributions are calibrated (coverage ≈ nominal): **conditional (available cohort) 2025 coverage 76% ≈ 80% target.** Unconditional full-board 44% is **role/depth attrition** the injury-only model doesn't capture — a documented limitation.
 - **Grain:** season-total only (what the draft dial/optimizer consume). **Weekly-grain distribution = future work** (start/sit, folds into the Phase-10 season sim).
 - **Method notes:** used statsmodels `QuantReg` (5.1) + scikit-learn logistic hazard (5.4), *not* XGBoost/`lifelines`, per the small-sample no-overfit rule (no new deps). **Future intent:** adopt **XGBoost quantile** / **`lifelines` survival** if the sample or residual signal justifies it.
+
+### ★ Personalization spine — the direct-indexing MVP ✅ **COMPLETE (S1–S3 + S5)** *(2026-07-07)*
+*Cross-phase MVP track (spec: `docs/PERSONALIZATION.md`); built on Phases 0–5, straight-through. On DEV 2022; season is a parameter (2026 board drops in when scraped).*
+- S1 ✅ Constraint object → `draft/config.py` *(`DraftConfig`: league · archetype (state-aware master dial) · never/must(+reach budget) · tilts · risk λ; validated; `benchmark()` + leave-one-out helpers. MVP subset of §3.)*
+- S2 ✅ Constrained greedy optimizer → `draft/optimizer.py` *(over the Phase-1.2 simulator; `base_value` = risk-adjusted value-over-replacement (CE − replacement); tilts→priority; must-draft = availability planning, no overreach.)*
+- S3 ✅ Cost-of-personalization report → `valuation/cost_report.py` *(personalized vs `benchmark()` on the same seeds → headline pts/% + per-preference **leave-one-out** + must-player secured fraction. Relative/directional per §7.)*
+- S5 ✅ Risk dial **wired in** *(Phase-5 λ/CE flows through `base_value`; UI exposes it. Phase-8 covariance will swap per-player Var for portfolio Var under the same λ.)*
+- UI ✅ Streamlit **Autopilot + Co-pilot** → `app/streamlit_app.py` *(`uv run streamlit run …`; personalized board beside the pure-value baseline + cost readout; deterministic, no LLM. `ui` extra.)*
+- **Done when** you can draft any 2022 seat, express preferences, and get a personalized board **and** an honest relative cost vs the value-optimal team, from a Python UI — **met.** 137 tests, ruff clean; 3 spine step scripts green; app verified via `AppTest`.
+- **Deferred (not MVP):** S4 behavioral opponent model *(MVP = ADP+noise)* · S6 adaptive archetypes · S7 in-season harvester · a **walk-forward realized-PAR validation** of the cost · scraping a **2026 ADP** board to go live.
 
 ### Phase 6 — ADP-bias mining (self-contained; can start after Phase 1)
 - 6.1 ADP-alpha panel construction → `adp/panel.py`

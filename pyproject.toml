@@ -50,6 +50,11 @@ bayes = [
   "pymc>=5.16",
   "arviz>=0.19",
 ]
+# The MVP draft app (personalization spine · step 4). Streamlit-first per PERSONALIZATION §8.
+# Install + run:  uv sync --extra ui  &&  uv run streamlit run src/fantasy_quant/app/streamlit_app.py
+ui = [
+  "streamlit>=1.38",
+]
 
 [dependency-groups]
 dev = [

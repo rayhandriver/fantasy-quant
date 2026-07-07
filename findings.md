@@ -900,3 +900,59 @@ covariance and the constrained optimizer. **18 new unit tests (120 total), ruff 
 green; `player_distributions` persisted.** **Next: the personalization spine — `DraftConfig` constraint object
 + constrained greedy optimizer + first cost report → Streamlit MVP** (Phase 8 covariance can slot in via the
 same λ/Var).
+
+---
+
+## Personalization spine (S1–S3 + S5) — the direct-indexing MVP (2026-07-07)
+
+Built the reframe's MVP spine on top of Phases 0–5, straight-through (sub-phase gate waived by the user, per
+the 4→5 cadence). **On DEV 2022** (latest non-lockbox season with an ADP board + realized outcomes); **season
+is a parameter**, so a scraped 2026 board drops in unchanged. New modules: `draft/config.py` (the contract),
+`draft/optimizer.py`, `valuation/cost_report.py`, `app/streamlit_app.py`; three `steps/spine_*` scripts; 17
+unit tests in `test_spine.py`. **137 tests total, ruff clean; all spine step scripts green; the Streamlit app
+verified headlessly via `AppTest`.** `streamlit` added as a `ui` extra.
+
+- **S1 — `DraftConfig` (the contract we own).** The MVP subset of `PERSONALIZATION.md` §3: league context,
+  one archetype (a master positional dial), hard `never_draft` + `must_draft` (with a per-player **reach
+  budget** in rounds), soft per-player `tilts`, and `risk_lambda`. Normalized + validated on construction
+  (contradictory must∩never, unknown archetype, out-of-range seat/λ all raise). `benchmark()` strips every
+  preference (same seat & λ) → the value-optimal peer; `without_constraint(label)` / `constraint_labels()`
+  drive the cost report's leave-one-out. **Left out on purpose** (half-used schema > honest scope): fandom
+  excludes, correlation appetite, control tiers, benchmark sets — added when needed.
+- **S2 — constrained greedy optimizer.** Reuses the Phase-1.2 simulator via a pluggable `your_pick_fn`; no new
+  draft engine. **Value signal `base_value` = risk-adjusted value-over-replacement**: the Phase-5 certainty
+  equivalent (mean − λ·Var) minus its own positional replacement level, so cross-position priority is on the
+  VBD scale *and* carries the λ dial; players with no distribution fall back to plain Phase-4 VBD, DST to ADP.
+  Priority scale = the harness's own `(-value).rank()` (lower = sooner). **Tilts** convert rounds→priority as
+  `eff = base_rank − n_teams · tilt_rounds`. **must-draft** is a pure **availability-planning** rule (no value
+  tilt): take a must-player only at the last responsible moment — when he's within the reach budget *and*
+  unlikely to survive to your next pick (ADP ≤ next-pick + noise margin, from the snake geometry) — so value
+  is never wasted reaching. The benchmark runs the identical machinery (only the config differs), so the cost
+  is a **pure preference cost**.
+- **S3 — cost-of-personalization report.** Personalized vs `benchmark()` drafted over the **same seeds** (same
+  opponents, same value index), differenced into one headline (points + % of benchmark), then attributed per
+  preference by **leave-one-out** (drop one constraint, redraft, the value it recovers = its cost). Also
+  reports each must-player's **secured fraction** across drafts (reach-budget honesty). Relative/directional
+  per §7 — a projected draft-day gap; a **walk-forward realized-PAR validation is the next layer**.
+- **S5 — risk dial.** Already built (Phase 5 `utility.risk_adjusted_board`); here it's *wired in* — λ flows
+  through CE into `base_value`, so the whole optimizer/report respond to the dial. The UI exposes it as a
+  slider. Phase-8 covariance will replace per-player `Var` with portfolio `Var` under the same λ.
+- **S1 UI (S4 of the "signature seven" is deferred).** Streamlit **Autopilot** (archetype + seat) **+
+  Co-pilot** (λ slider, must/never/reach/wait lists) with defaulted controls and one-line "why"; always shows
+  the personalized roster **beside the pure-value baseline** + the cost readout (guardrail §8). Deterministic,
+  **no LLM**. Value-index assembly (~8 s) is `@st.cache_data`-keyed on (season, λ); a report is ~3–4 s.
+
+**Bug caught (design):** the first archetypes were **stateless** `(pos, round)` tilts, so `elite_te` ("get a
+top TE early") kept firing every round ≤ 4 and drafted **two** elite TEs (Kyle Pitts *and* Dalton Schultz),
+cratering a test roster's value and inflating the cost to a bogus ~53 %. **Fix:** made the "grab one anchor"
+archetypes **roster-state-aware** — the tilt now takes `have` (count already at the position), supplied by the
+pick policy from `roster_counts`, so `elite_te`/`hero_rb`/`late_qb` stop reaching once you hold your anchor.
+Regression-guarded (`test_get_one_archetypes_stop_after_the_first`, `test_elite_te_takes_one_te_early_not_two`).
+*(Not a bug — flagged for honesty:* a must-draft can carry a **negative** `base_value` (e.g. A.J. Brown off an
+injury-shortened 2021 → pessimistic 2022 proxy projection); insisting on him is then genuinely costly, and the
+report says so. The value signal is only as good as the projection feeding it.)*
+
+**Spine net:** you can sit down for a 2022 draft from any seat, express preferences (archetype + must/never/
+tilts + risk λ), and get a personalized board **and an honest, relative cost** vs the value-optimal team —
+from a Streamlit UI, no LLM in the loop. **Next:** Phase 8 covariance (portfolio `Var` under the same λ) ·
+S4 behavioral opponent model · a walk-forward realized-PAR validation of the cost · scrape 2026 ADP to go live.

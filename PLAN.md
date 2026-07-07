@@ -5,6 +5,27 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-07** — **PERSONALIZATION SPINE DONE (S1–S3 + S5)** — the direct-indexing MVP, run straight-through
+  (gate waived, per the 4→5 cadence). Built/validated on **DEV 2022** (latest non-lockbox season w/ ADP +
+  realized); **season is a parameter** (a scraped 2026 board drops in unchanged). **S1** `draft/config.py` —
+  `DraftConfig` (the contract we own): league context, one **archetype** (master positional dial), hard
+  `never_draft` + `must_draft`(reach budget), soft `tilts` (rounds), `risk_lambda`; validated on construction;
+  `benchmark()` strips prefs, `without_constraint`/`constraint_labels` drive LOO. Trimmed to §7 MVP (no fandom/
+  correlation/control-tier fields until needed). **S2** `draft/optimizer.py` — constrained greedy over the
+  Phase-1.2 simulator (pluggable `your_pick_fn`, no new engine). **`base_value` = risk-adjusted
+  value-over-replacement** (Phase-5 CE − positional replacement; VBD scale + λ dial in one); tilts convert
+  rounds→priority (`eff = base_rank − n_teams·tilt`); **must-draft = pure availability planning** (take at the
+  last responsible pick within budget, using snake geometry + noise margin — never overreach). **S3**
+  `valuation/cost_report.py` — personalized vs `benchmark()` over the **same seeds**, differenced into one
+  headline (pts + %), attributed per preference by **leave-one-out**, + must-player **secured fraction**;
+  relative/directional per §7 (walk-forward realized-PAR = next layer). **S5** risk dial wired in (λ → CE →
+  `base_value`). **UI** `app/streamlit_app.py` — Streamlit Autopilot (archetype+seat) + Co-pilot (λ, must/
+  never/reach/wait), personalized board **beside** the baseline + cost readout, no LLM. **Bug caught:**
+  stateless archetype tilts made `elite_te` draft **two** TEs → made archetypes **roster-state-aware** (`have`
+  count) so "grab one anchor" stops after the first (regression-tested). **137 tests (was 120), ruff clean; 3
+  spine step scripts green; Streamlit app verified via `AppTest`.** `streamlit` added as a `ui` extra. **Next:
+  Phase 8 covariance (portfolio Var under the same λ) · S4 behavioral opponent model · realized-PAR validation
+  · scrape 2026 ADP to go live.**
 - **2026-07-05** — **PHASE 5 DONE** (distributional layer — the per-player risk dial; full 5.1–5.5 stack,
   season-total grain). **5.1** per-position linear `QuantReg` of realized pts on the calibrated mean, fit on
   the conditional/available DEV cohort (1,074 player-seasons; median slope ≈1.10; band fans with level 3/4
@@ -230,7 +251,9 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
     real pick-by-pick drafts, not ADP averages. Confirm Sleeper's API exposes enough before committing;
     else availability falls back to ADP+noise.
   - **Benchmark set for the cost report.** Which to offer: ADP-consensus-optimal / our-projection-optimal
-    / expert-consensus-optimal (recommend several — the benchmark is self-referential).
+    / expert-consensus-optimal (recommend several — the benchmark is self-referential). *MVP (2026-07-07):
+    a single benchmark = the **unconstrained value-optimal team from the same seat & λ**
+    (`DraftConfig.benchmark()`), through the identical optimizer; the multi-benchmark set is deferred.*
   - ~~**Lockbox seasons.**~~ RESOLVED (2026-07-04) → **lockbox = 2023 + 2024**; dev on **2014–2022**
     (`config.DEV_SEASONS`/`LOCKBOX_SEASONS`). 2025 excluded (see below).
   - **2025 recovery — ROOT CAUSE FOUND (2026-07-04); planned as step 0.9 before Phase 3.** The 404 was
@@ -255,7 +278,10 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
   (`n_teams×slot` + FLEX split 2:2:1). VBD (2.1) reuses `backtest/metrics.replacement_levels`.
 - **6.x ADP-alpha:** target definition — finish-rank − ADP-rank vs points − slot-replacement.
 - **10.x season-sim:** bye-week, injury (games-missed), and playoff-bracket fidelity.
-- **14.2 app:** how many personalization levers to expose in v1.
+- ~~**14.2 app:**~~ RESOLVED for the MVP (2026-07-07) — Streamlit **Autopilot** (archetype + seat) +
+  **Co-pilot** (risk λ, must/never lists, reach/wait tilts); personalized board shown **beside** the pure-value
+  baseline + the cost readout. The fuller **Manual** surface (fandom, correlation appetite, control tiers) is
+  deferred to a later app version.
 
 ## Dead ends
 - _(none yet)_
