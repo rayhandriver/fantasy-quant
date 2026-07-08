@@ -956,3 +956,46 @@ report says so. The value signal is only as good as the projection feeding it.)*
 tilts + risk λ), and get a personalized board **and an honest, relative cost** vs the value-optimal team —
 from a Streamlit UI, no LLM in the loop. **Next:** Phase 8 covariance (portfolio `Var` under the same λ) ·
 S4 behavioral opponent model · a walk-forward realized-PAR validation of the cost · scrape 2026 ADP to go live.
+
+## Spine step 4 — realized-PAR validation of the cost number (2026-07-08)
+The cost report prices personalization in **projected** `base_value`; step 4 (`valuation/cost_validation.py`,
+`steps/spine_4_validate.py`) asks whether that projected cost shows up in **realized** points. Each archetype
+is drafted vs its `bpa` benchmark over **matched seeded opponents**, both scored on realized optimal-lineup
+season points (survivorship-safe); because both share the season's replacement level, their starter-point
+difference **is** the PAR difference. Per-season realized-cost series → stationary block-bootstrap 95% CI +
+a projected↔realized cross-check. Runs on **`VALIDATION_SEASONS` = 2017–2022** (a season is only scored once
+it has ≥ 3 prior DEV seasons — the conformal minimum; earlier seasons still train, but their board isn't
+trustworthy). Availability is **not** validated (a real draft-day Brier needs pick-by-pick logs the FFC
+aggregates lack — deferred to a Sleeper scrape).
+
+**Result (6 seasons, 60 drafts each):** projected archetype costs are all **tiny** (within ±13 `base_value`
+pts of the benchmark — soft tilts barely move projected value). Realized costs are **noise-dominated**: only
+**late_qb** is distinguishable from 0 — a **realized GAIN of ~59 pts/season** (CI [−95, −25]), i.e. waiting on
+QB in a 1-QB league historically *added* real points (textbook late-round-QB, now measured on our own data).
+zero_rb / hero_rb / elite_te all straddle 0. The **projected→realized cross-check is ~nil** (Spearman ρ =
+−0.04, sign agreement 33 % over 24 subject-seasons). **Reading:** on ~6 seasons the projected draft-day cost
+does **not** predict realized-season point differences — it's a *draft-day decision aid*, not a season
+forecast, exactly the §7 humility. (Single-archetype late_qb is not multiple-testing corrected — suggestive,
+directionally very plausible.)
+
+## Phase 6 — ADP-bias mining: where the market is soft (2026-07-08)
+Reframed goal: not "beat the draft market" but *find where ADP is systematically soft, so we know how cheaply
+a preference can be indulged.* **6.1** (`adp/panel.py`) builds a **1,504-row** panel of drafted offensive
+players over **9 DEV seasons**; target = **value-over-replacement alpha** = realized VOR − **leave-one-season-
+out isotonic** ADP-implied VOR (monotone in ADP pos-rank, never fit on the season it scores → no outcome
+leaks into a player's own baseline; per-position mean alpha ≈ 0, |max| = 1.2, and the famous breakouts —
+McCaffrey '19 +241, Kamara '17, Kupp '21 — top the list). **6.2** (`adp/regression.py`) regresses alpha on
+PIT traits (rookie, experience, ADP dispersion, prior-season durability & efficiency; position dummies as
+controls) with **season-block-bootstrap** CIs (respecting the ~9-season effective sample, not 1,504 correlated
+rows). **6.3** (`adp/scorecard.py`) applies **Benjamini-Hochberg FDR** + a **walk-forward sign-stability** floor
+(≥ 60 %).
+
+**Result:** R² = **0.017** (ADP already prices almost everything — the honest baseline). After both guards,
+**exactly one stable bias survives: prior-season games played (durability) is UNDER-priced** (+14.6 VOR per SD,
+95 % CI [+11.4, +21.0], p_fdr = 0.001, **100 % sign-stable across 8 seasons**). Reframe reading: indulging a
+preference toward **last-year-durable** players is essentially **free** — the crowd systematically
+under-drafts availability. Prior-season **efficiency** (pts/game) is *over*-priced (−11.8) but **ruled out**
+(p_fdr = 0.06, only 62 % stable) — the recency/efficiency-chasing bias is suggestive, not bankable. Rookie,
+experience, and ADP-disagreement are honestly ruled out. This satisfies the Phase-6 done-criterion ("stable,
+significant biases with CIs, or honestly ruled out"). **Scope:** analysis only — how this softness signal
+would price a preference cheaper in the cost report is a documented follow-on, not wired in yet.

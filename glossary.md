@@ -252,3 +252,24 @@ section, not just appended.
   an edge is "real" only when its CI excludes 0 (the ship/no-ship gate vs ADP **and** the market).
 - **Paired comparison** — score two methods in the *same* seeded draft contexts so the difference
   isolates the method (not draft-slot or opponent luck); the replacement level cancels in the difference.
+- **Realized-PAR validation (spine step 4)** — does the *projected* personalization cost show up in
+  *realized* points? Draft each archetype vs its benchmark on matched seeds, score realized optimal-lineup
+  season points, block-bootstrap the per-season cost. Finding: on ~6 seasons it's noise-dominated (projected
+  cost is a draft-day aid, not a season forecast).
+
+## Phase 6 — ADP-bias mining terms
+- **ADP-alpha** — how much a player's realized value beat (+) or missed (−) what their draft slot implied;
+  the fantasy analog of a **factor return**. Our target is **value-over-replacement alpha** = realized VOR −
+  ADP-implied VOR.
+- **ADP-implied baseline (LOSO isotonic)** — the expected VOR at a given ADP positional rank, from a
+  monotone (non-increasing) **isotonic** fit trained **leave-one-season-out** — never on the season it
+  scores, so no outcome leaks into a player's own baseline.
+- **ADP softness** — where ADP is systematically mispriced; the reframe reads a **positive** stable alpha for
+  a trait as **under-drafted** (cheap/free to indulge a preference toward) and **negative** as over-drafted
+  (costly to chase).
+- **Durability under-pricing** — the one bias that survives FDR + stability: players who played more games
+  *last* season beat their ADP (+14.6 VOR/SD, p_fdr≈0.001) — the crowd under-values availability.
+- **Benjamini-Hochberg FDR** — controls the false-discovery rate when testing several traits at once; a raw
+  5 % p-value is too generous across a family, so we FDR-adjust before calling a bias real.
+- **Sign stability (walk-forward)** — the fraction of seasons a coefficient keeps its pooled sign; a bias
+  that flips across seasons is not actionable regardless of its pooled p-value.
