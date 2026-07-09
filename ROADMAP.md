@@ -23,24 +23,37 @@ Legend: ☐ todo · ◐ in progress · ☑ done · ✗ dropped · ◔ deprioriti
 **Phase 9 — Valuation & draft policy** *(⟳ + constrained optimizer + cost report)* ◐ **9.1 conditional-VBD** *(covariance half **pulled forward 2026-07-09**: the greedy maximizes marginal portfolio CE = base_value − 2λ·σ_j·Σρσ, λ=0 reproduces the old greedy; positional-scarcity conditioning remains)* · ☑ **9.2 constrained optimizer** *(= spine S2)* · ☑ **9.3 cost-of-personalization report** *(= spine S3; headline now **portfolio CE** + risk profile)* · ☐ 9.4 greedy policy · ☐ 9.5 win-prob objective *(the old "structural-alpha" → the cost report)*
 **Phase 10 — Season/playoff sim** *(⟳ PROMOTED/earlier — the tracked benchmark + tail objective)* ☐ 10.1 season engine · ☐ 10.2 playoffs (championship prob) · ☐ 10.3 leverage
 **Phase 11 — Draft engine** *(⟳ opponent model = core & Brier-verifiable)* ☐ 11.1 **behavioral opponent model** · ☐ 11.2 **per-pick availability distributions** · ☐ 11.3 realistic mock · ✗ CFR *(dropped — snake draft ≈ perfect-info)* · ◔ MCTS *(deprioritized — unverifiable + live-latency risk)* · ☐ auctions (later) · ☐ self-play RL (roadmap)
-**Phase 12 — NLP/news** *(◔ DEFERRED post-MVP — no LLM in the core)* ☐ 12.1 sources · ☐ 12.2 LLM extract · ☐ 12.3 event-study · ☐ 12.4 validate
-**Phase 13 — In-season co-pilot** *(the tax-loss-harvesting analog)* ☐ 13.1 re-project · ☐ 13.2 start/sit · ☐ 13.3 waivers/FAAB · ☐ 13.4 streaming · ☐ 13.5 trades
-**Phase 14 — App** *(⟳ Streamlit/Gradio MVP first; FastAPI+Next.js later)* ☐ 14.1 **Streamlit/Gradio MVP** (autopilot+co-pilot, constraint-object UI, league sync, cost readout) · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ◔ backend/Next.js/live-draft/widget *(deferred to the "have users" stage)*
-**Phase 15 — Multi-format (roadmap)** ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS
+**Phase 12 — NLP/news** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 7 — the guardrail is unchanged: LLM on the edges only, never computing a number that must be correct; 12.4's bar = adds value over the structured injury/depth feeds, or ruled out)* ☐ 12.1 sources · ☐ 12.2 LLM extract · ☐ 12.3 event-study · ☐ 12.4 validate
+**Phase 13 — In-season co-pilot** *(the tax-loss-harvesting analog; pipeline stage 5)* ☐ 13.1 re-project · ☐ 13.2 start/sit · ☐ 13.3 waivers/FAAB · ☐ 13.4 streaming · ☐ 13.5 trades
+**Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ☐ 14.1 **Streamlit MVP hardening** (autopilot+co-pilot, constraint-object UI, league sync, cost+risk+softness readouts, sim views, in-season dashboard, news feed, format toggles) · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
+**Phase 15 — Multi-format** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 8 — + auction draft support, absorbed from Phase 11's "later")* ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS · ☐ 15.4 auction drafts
 
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
 ✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ☐ **S4** behavioral opponent model → availability forecasts *(MVP uses ADP+noise)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ☐ **S6** adaptive archetypes · ☐ **S7** in-season weekly-edge harvester
 
-**Next up (reframed MVP path):** ~~0.9 backfill~~ ✅ · ~~Phase 3 features `X`~~ ✅ · ~~Phase 4 consensus-VBD
-value + rookie model~~ ✅ · ~~Phase 5 per-player distribution + risk dial~~ ✅ · ~~**Personalization spine
-S1–S3 + S5**: `DraftConfig` + constrained greedy optimizer + cost report + Streamlit MVP~~ ✅ (2026-07-07,
-built/validated on DEV 2022; season is a parameter)~~ · ~~**spine step-4 realized-PAR validation**~~ ✅ ·
-~~**Phase 6 ADP-bias mining** (softness scorecard: durability under-priced)~~ ✅ (2026-07-08, on DEV
-2014–2022) · ~~**Phase 8 covariance** (portfolio `Var` under the same λ; covariance-aware greedy = 9.1's
-covariance half)~~ ✅ (2026-07-09) · ~~**wire the Phase-6 softness signal into the cost report**~~ ✅
-(2026-07-09, credit + net-effective-cost lines). → now: **S4** behavioral opponent model (needs the Sleeper
-draft-log scrape — same source as the **2026 ADP board** that takes the app live), then Phase 14.1 Streamlit
-hardening. Full MVP scope: `docs/PERSONALIZATION.md` §7.
+**★ THE PIPELINE (locked 2026-07-09 — engine-complete-before-app; no time crunch).** Every underlying
+function — **including the formerly-deferred Phases 12 & 15** — is built and validated before any app work;
+Phase 14 comes last and ships with everything embedded. Done so far: Phases 0–6, 8; spine S1–S3+S5;
+Phase-6→cost-report wiring (all ✅ above). Remaining, in order:
+**Stage 0** *(passive, start now, runs alongside everything)* — FFC **2026 ADP snapshot cron** (boards are
+unrecoverable after the season — bank the PIT series now, use whenever; makes 2026 a future backtest season)
++ an early **Sleeper API probe** (de-risk the one external dependency long before stage 3) →
+**1) Phase 10** season/playoff sim + **weekly-grain distributions** (the Phase-5 deferral folds in; consumes
+the Phase-8 Σ; done-when = calibrated championship probs on DEV) →
+**2) Phase 9 completion** (9.1 scarcity half · 9.4 lookahead · 9.5 win-prob objective — `make_playoffs` vs
+`championship_or_bust` starts changing drafts) →
+**3) step 0.10 Sleeper ingest → S4/Phase 11** opponent model + per-pick availability (+ the **availability
+Brier** owed from spine-4; 2025 → full backtest season) →
+**4) Phase 7** opportunity-adjusted projection *(keep-or-drop: ≥ consensus calibration + better on
+role-changers, or dropped)* →
+**5) Phase 13/S7** in-season co-pilot → **6) S6** adaptive archetypes →
+**7) Phase 12** news/NLP *(LLM edges-only guardrail unchanged)* → **8) Phase 15** multi-format + auction →
+**9)** optional research gate (MCTS / self-play RL — only by explicit decision, **before** the lockbox;
+CFR stays dropped) →
+**10) LOCKBOX EVAL — exactly once** (freeze the stack, evaluate on 2023+2024, report as-is; nothing
+modeling-side changes after) →
+**11) Phase 14** the app with every factor embedded, then the 14.4 go-live tail.
+Working rules throughout: DEV-only, STOP gates between sub-steps, findings/glossary/PLAN/ROADMAP per step.
 
 **Open decisions (reframe §10 — tracked in `PLAN.md`):** real completed-draft data (Sleeper) for the
 behavioral model; a **consensus-projections source** (FantasyPros aggregate — free/PIT?); the benchmark

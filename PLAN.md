@@ -5,6 +5,22 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-09** — **PHASE 8 DONE + PHASE-6 WIRING DONE + THE PIPELINE LOCKED.** (a) Phase 8 covariance
+  (`covariance/{estimate,shrinkage,copula}.py`, `valuation/{roster_risk,handcuff}.py`): relationship-typed
+  pooled correlations (QB1-WR1 **+0.37** emp ≈ folk +0.40; RB1-RB2 both-active only −0.05 — backfield
+  negativity lives in availability, hence the copula), EB shrink toward structural priors (OOS: halves
+  stack-variance error vs independence), rotated-Clayton handcuff tail (0.391 vs 0.393 empirical; Gaussian
+  0.346), roster risk + Iman-Conover, handcuff real option (elevation 1.77). **9.1's covariance half pulled
+  forward** (user choice): the greedy maximizes marginal portfolio CE, λ=0 reproduces the old greedy exactly;
+  cost-report headline = portfolio CE + risk profile; spine re-validated (conclusions unchanged). (b) Phase-6
+  softness **wired into the cost report** (user choice: credit + net line, raw headline never moved):
+  frozen `adp/softness.py::DURABILITY` (+14.59 VOR/SD, μ=10.57 σ=6.37) → roster exposure gap × coef; drift
+  check in `steps/phase6_adp_bias.py`. 175 tests, ruff clean. (c) **PIPELINE DECISION (user, 2026-07-09):
+  engine-complete-before-app, no time crunch — the formerly-deferred Phases 12 (news/NLP, edges-only LLM
+  guardrail intact) and 15 (multi-format + auction) are IN scope before any app work; Phase 14 comes last
+  with everything embedded.** Order (ROADMAP ★ THE PIPELINE): stage-0 passive FFC-2026 snapshots + Sleeper
+  probe → Ph10 (+weekly grain) → Ph9 completion → 0.10 Sleeper→S4/Ph11 → Ph7 (keep-or-drop) → Ph13/S7 → S6 →
+  Ph12 → Ph15 → optional MCTS/RL gate → **lockbox eval once** → Ph14 app. **Next: stage 0 + Phase 10.1.**
 - **2026-07-07** — **PERSONALIZATION SPINE DONE (S1–S3 + S5)** — the direct-indexing MVP, run straight-through
   (gate waived, per the 4→5 cadence). Built/validated on **DEV 2022** (latest non-lockbox season w/ ADP +
   realized); **season is a parameter** (a scraped 2026 board drops in unchanged). **S1** `draft/config.py` —

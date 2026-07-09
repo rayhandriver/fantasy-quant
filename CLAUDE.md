@@ -66,9 +66,10 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
   is **no 2025 ADP board** — FFC empty; source via Sleeper later. Its realized weekly/seasonal *are*
   recoverable via the new nflverse `stats_player` release — **step 0.9** — so once ingested, 2025 serves as
   a **projection-calibration holdout** and upgrades to a full backtest season when ADP lands. `findings.md` 2026-07-04.)
-- **No LLM in the core (⟳ 2026-07-04).** All in-app AI is deferred post-MVP; the deterministic core never
-  depends on an LLM. When AI is added later it's **on the edges** (fuzzy input → validated object, or
-  numbers → narrative) — it never computes a number that must be correct.
+- **No LLM in the core (⟳ 2026-07-04; timing amended 2026-07-09).** The deterministic core never depends
+  on an LLM. Phase 12 (news/NLP) is now **in the pre-app pipeline** (ROADMAP ★ THE PIPELINE, stage 7 — no
+  longer "post-MVP"), but the guardrail is unchanged: AI lives **on the edges** (fuzzy input → validated
+  object, or numbers → narrative) — it never computes a number that must be correct.
 - **Own the contracts.** The human owns the data contracts between components (the `DraftConfig` constraint
   object, the projection output shape); delegate the interiors. Contracts drift silently if the AI owns them.
 
