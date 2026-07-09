@@ -978,6 +978,12 @@ does **not** predict realized-season point differences — it's a *draft-day dec
 forecast, exactly the §7 humility. (Single-archetype late_qb is not multiple-testing corrected — suggestive,
 directionally very plausible.)
 
+*Re-run 2026-07-09 under the Phase-8 covariance-aware optimizer (same seeds):* conclusions unchanged —
+**late_qb** still a REAL GAIN (−65.5 pts/season, CI [−97, −34]); **elite_te** now nominally a small gain
+(−16.7, CI [−31.1, −1.3] — barely excludes 0 and is not multiple-testing corrected; read as suggestive);
+zero_rb / hero_rb straddle 0; projected↔realized still ≈ nil (ρ = −0.06). The projected cost remains a
+draft-day aid, not a season forecast.
+
 ## Phase 6 — ADP-bias mining: where the market is soft (2026-07-08)
 Reframed goal: not "beat the draft market" but *find where ADP is systematically soft, so we know how cheaply
 a preference can be indulged.* **6.1** (`adp/panel.py`) builds a **1,504-row** panel of drafted offensive
@@ -999,3 +1005,62 @@ under-drafts availability. Prior-season **efficiency** (pts/game) is *over*-pric
 experience, and ADP-disagreement are honestly ruled out. This satisfies the Phase-6 done-criterion ("stable,
 significant biases with CIs, or honestly ruled out"). **Scope:** analysis only — how this softness signal
 would price a preference cheaper in the cost report is a documented follow-on, not wired in yet.
+
+## Phase 8 — Covariance & rosters: the portfolio layer + covariance-aware picks (2026-07-09)
+The most direct internship reuse: a roster is a portfolio, `Var(team) = 1ᵀΣ1`. With 17-week seasons a raw
+500×500 sample covariance is hopeless (n ≪ k), so `covariance/estimate.py` (**8.1**) imposes structure —
+`Σ = D^½·R·D^½` with **D** from the Phase-5 season sds (no re-estimation) and **R** a **relationship-typed
+correlation** pooled across every same-team pair of each kind (QB1-WR1, RB1-RB2, …; ~250–700 pairs per type
+vs 17 weeks per pair; cross-team = 0; estimated on both-active weeks so availability dependence is never
+double-counted). Every Σ passes the **hard gate** (finite/symmetric/PSD) behind a diagonal-preserving
+Higham-style repair. **8.2** (`covariance/shrinkage.py`) shrinks each pooled estimate toward a documented
+structural prior with EB weight `n/(n+κ)` — the Ledoit-Wolf philosophy adapted to typed blocks (literal LW
+needs the raw high-dim matrix our sample can't produce; documented deviation).
+
+**Correlation findings (DEV ≤ 2022):** the folk stack numbers are REAL — QB1-WR1 = **+0.37** empirical
+(prior +0.40; 287 pairs), QB1-TE1 +0.28, QB1-WR2 +0.27. But **RB1-RB2 both-active is only −0.05** (folk
+−0.30): the backfield's negative dependence lives in **availability**, not performance — precisely why the
+copula (below) carries it separately. **OOS done-bar:** walk-forward QB1+WR1 stack-variance prediction —
+shrunk ρ **halves** the error vs assuming independence (MAE 21.7 vs 45.8, 217 pairs; only ρ differs by
+construction). Board Σ (142 players, 2022): gate PASS, condition number 9.1.
+
+**8.3** (`covariance/copula.py`, targeted scope per 2026-07-09 decision): the handcuff payoff is *tail*
+dependence — backup booms exactly when starter busts — expressed as a **90°-rotated Clayton** fit by pooled
+Kendall τ on **zero-filled** RB1/RB2 weeks (absence *is* the event). On 288 real DEV backfields: τ = −0.14 →
+θ = 0.34, λ_L = 0.13; P(backup top-quartile | starter bottom-quartile) = **0.393 empirical vs 0.391 Clayton
+vs 0.346 Gaussian** (independence 0.25) — the Clayton nails the tail the Gaussian misses. **8.4**
+(`valuation/roster_risk.py`): roster Σ → portfolio mean/sd/floor/ceiling (Gaussian team-total approx,
+documented) + **Iman–Conover** to impose R on the Phase-5 sample clouds without touching any marginal;
+done-bar holds on the real 2022 board (stack sd 155 vs 131 independent; hedge floor higher). **8.5**
+(`valuation/handcuff.py`): backup priced as a contingent claim — pooled elevation ratio **1.77** (backup 5.8
+ppg with starter → 10.3 without, 506 real starter-out weeks); option premium moves correctly with starter
+fragility (+19.5 pts at 30 % out vs +3.9 at 6 %).
+
+**9.1 pulled forward (user decision 2026-07-09): the greedy is covariance-aware.** Each pick now maximizes
+the *marginal portfolio CE*: `base_value_j − 2λ·σ_j·Σ_{i∈roster, same team} ρ_ij σ_i`, mapped through the
+static value→rank curve so ADP-fallback (K/DST) timing and all must/never/tilt mechanics are untouched, and
+λ=0 reproduces the old greedy exactly (regression-tested). Live on the 2022 board: rostering the top QB
+pushes his WR1 **102 picks down** at λ=0.01 while other-team players are untouched. The cost report's
+yardstick upgrades to **portfolio CE** = Σ base_value − 2λ·Σ cross-cov, and it now renders a **risk profile**
+(portfolio sd vs independent sd, floor/ceiling, named stacks/hedges). **Honest observation:** the value-greedy
+already diversifies across NFL teams naturally, so both λ settings usually draft ≈ zero same-team covariance —
+the penalty is a *guard-rail that binds when preferences push toward a stack*, not a rebalancer. Spine
+re-validated post-change: spine-3 checks PASS; spine-4 realized-PAR sweep re-run (see updated numbers there).
+16 new pure tests (`tests/test_phase8.py`); suite green; ruff clean.
+
+## Phase 6 → cost report: the market-softness credit is wired in (2026-07-09)
+The one FDR-stable Phase-6 bias — **durability under-pricing** (+14.6 realized VOR per SD of prior-year
+games, 100 % sign-stable) — now prices personalization in the report (`adp/softness.py`; user decision
+2026-07-09: **credit + net line, the raw headline is never silently moved**). Mechanics: the signal is
+**frozen with provenance** (`DURABILITY`: coef +14.5856, CI [+11.36, +20.98], μ=10.57, σ=6.37 — the DEV
+panel's own moments, so exposure × coef is unit-honest); each roster's **exposure** = Σ z(prior-year games)
+over its offensive players (rookies at raw 0, exactly the panel convention), PIT via the season−1 feature
+builder; **credit = (your exposure − benchmark's, averaged over the same paired drafts as the headline) ×
+coef**, carried with the coefficient's CI; **net effective cost = raw − credit**, explicitly labeled a
+*historical-bias estimate, not a projection*. `steps/phase6_adp_bias.py` doubles as the **drift check**
+(recomputes the scorecard, asserts the frozen numbers within 5 %). Live read on 2022 (zero_rb + prefs,
+seat 5): the personalized roster carries **+0.3 SD** more durability than its benchmark → **+4.4 pts**
+credit [CI +3.4, +6.3]; raw −5.2 → net −9.6. Small for soft archetypes, by construction — the line exists
+so a *durability-leaning* preference is visibly cheaper than the raw number claims (and a fragile-leaning
+one visibly dearer). 6 new pure tests (`tests/test_softness.py`); spine-3 gates extended (net ≡ raw − credit,
+headline string unchanged).

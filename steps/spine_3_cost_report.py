@@ -45,6 +45,13 @@ def main() -> None:
     loo_sum = rep.per_constraint["cost_points"].sum()
     print(f"\n  headline cost {rep.cost_points:+.1f} pts vs leave-one-out sum {loo_sum:+.1f} pts "
           f"(differ by interactions between preferences).")
+
+    # Phase-8 + Phase-6 wiring gates: the risk profile and the softness credit/net line are live,
+    # and the net line is exactly headline − credit (the raw headline is never silently moved).
+    assert rep.risk_yours is not None and rep.risk_yours.n_valued > 0
+    assert rep.softness is not None and not rep.softness.empty
+    assert abs(rep.net_cost_points - (rep.cost_points - rep.softness_points)) < 1e-9
+    assert "net effective cost" in rep.render()
     print("\nSpine step 3 (cost report) — all checks PASS.")
     con.close()
 

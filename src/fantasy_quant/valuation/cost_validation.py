@@ -34,9 +34,10 @@ from fantasy_quant.config import DEV_SEASONS
 from fantasy_quant.draft.config import ARCHETYPES, DraftConfig, LeagueSetup
 from fantasy_quant.draft.optimizer import (
     DEFAULT_NOISE,
+    assemble_correlation,
     assemble_value,
     optimize_draft,
-    team_value,
+    portfolio_value,
 )
 
 log = logging.getLogger(__name__)
@@ -60,10 +61,12 @@ def _seat_config(base: DraftConfig, seat: int) -> DraftConfig:
 
 
 def _score(con, season: int, cfg: DraftConfig, vi: pd.DataFrame, realized, slots,
-           noise: float, seed: int) -> tuple[float, float]:
-    """Draft ``cfg`` for ``season`` and return (realized starter points, projected team value)."""
-    roster = optimize_draft(con, season, cfg, vi, noise, seed=seed).your_roster()
-    return roster_season_points(roster, realized, slots), team_value(roster, vi)
+           noise: float, seed: int, corr) -> tuple[float, float]:
+    """Draft ``cfg`` for ``season`` and return (realized starter points, projected portfolio CE —
+    the Phase-8 objective the covariance-aware greedy climbs)."""
+    roster = optimize_draft(con, season, cfg, vi, noise, seed=seed, corr=corr).your_roster()
+    return (roster_season_points(roster, realized, slots),
+            portfolio_value(roster, vi, corr, cfg.risk_lambda))
 
 
 def paired_costs(con, subjects: dict[str, DraftConfig], benchmark: DraftConfig,
@@ -88,15 +91,16 @@ def paired_costs(con, subjects: dict[str, DraftConfig], benchmark: DraftConfig,
         except Exception as e:  # noqa: BLE001 — a thin-history season can't build a board; skip it
             log.warning("skipping %d: value board would not assemble (%s)", season, e)
             continue
+        corr = assemble_correlation(con, season, ruleset)   # PIT, shared by every subject
         realized = build_realized(con, season, ruleset)
         for k in range(k_drafts):
             seat = k % n_teams
             s = seed + int(season) * 1000 + k
             b_pts, b_val = _score(con, season, _seat_config(benchmark, seat), vi, realized,
-                                  slots, noise, s)
+                                  slots, noise, s, corr)
             for name, cfg in subjects.items():
                 p_pts, p_val = _score(con, season, _seat_config(cfg, seat), vi, realized,
-                                      slots, noise, s)
+                                      slots, noise, s, corr)
                 rows.append({
                     "subject": name, "season": int(season), "draft": k, "seat": seat,
                     "bench_points": b_pts, "pers_points": p_pts,

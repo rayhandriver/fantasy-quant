@@ -9,8 +9,10 @@ is over-drafted (costly to chase). Pipeline: 6.1 build the leave-one-season-out 
 6.2 cross-sectional regression with season-block-bootstrap CIs → 6.3 scorecard (Benjamini-Hochberg
 FDR + walk-forward sign stability). Runs on ``DEV_SEASONS``; the 2023/24 lockbox is never read.
 
-This is *analysis* — it does not yet wire into the cost report. How the surviving softness signal
-would price a preference cheaper is left for a follow-on (documented in findings.md).
+Since 2026-07-09 the surviving signal is **wired into the cost report** as a frozen
+:data:`~fantasy_quant.adp.softness.DURABILITY` constant (credit + net-effective-cost lines); this
+script doubles as the **drift check** — it recomputes the scorecard and asserts the frozen numbers
+still match the data.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from __future__ import annotations
 from fantasy_quant.adp.panel import FEATURES, build_alpha_panel
 from fantasy_quant.adp.regression import fit_alpha_regression
 from fantasy_quant.adp.scorecard import bias_scorecard
+from fantasy_quant.adp.softness import DURABILITY, signals_from_scorecard
 from fantasy_quant.config import DEV_SEASONS, LOCKBOX_SEASONS
 from fantasy_quant.data import db
 
@@ -50,6 +53,18 @@ def main() -> None:
     survivors = sc.significant["label"].tolist()
     print(f"\n  Done-when satisfied: {len(survivors)} stable, FDR-significant ADP bias(es) "
           f"identified {survivors or '— the rest honestly ruled out'}.")
+
+    # drift check — the frozen softness constant the cost report prices with must still match a
+    # fresh recompute (regeneration uses the same n_boot=5000 seed=0 fit as the freeze).
+    fresh = {s.term: s for s in signals_from_scorecard(sc, panel)}
+    assert "prior_games" in fresh, "durability no longer survives the scorecard — refreeze needed"
+    f = fresh["prior_games"]
+    for attr in ("coef", "mu", "sd"):
+        frozen, now = getattr(DURABILITY, attr), getattr(f, attr)
+        assert abs(frozen - now) <= 0.05 * max(abs(frozen), 1.0), \
+            f"softness drift: {attr} frozen {frozen:.3f} vs recomputed {now:.3f} — refreeze"
+    print(f"  Drift check: frozen DURABILITY (coef {DURABILITY.coef:+.1f}, μ {DURABILITY.mu:.1f}, "
+          f"σ {DURABILITY.sd:.1f}) matches the recompute.")
     print("\nPhase 6 (ADP-bias mining) — all checks PASS.")
     con.close()
 

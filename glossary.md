@@ -273,3 +273,46 @@ section, not just appended.
   5 % p-value is too generous across a family, so we FDR-adjust before calling a bias real.
 - **Sign stability (walk-forward)** — the fraction of seasons a coefficient keeps its pooled sign; a bias
   that flips across seasons is not actionable regardless of its pooled p-value.
+
+## Phase 8 — covariance & roster-construction terms (2026-07-09)
+- **Relationship-typed correlation** — instead of a hopeless 500×500 sample covariance from 17 weeks, pool
+  the weekly-point correlation of every same-team pair of one *kind* (QB1-WR1, RB1-RB2, WR1-WR2, …) across
+  all training seasons; hundreds of pairs estimate one number. Cross-team pairs are 0.
+- **Structural prior / EB shrinkage** — each pooled correlation is shrunk toward a documented folk prior
+  (QB1-WR1 +0.40, RB1-RB2 −0.30) with weight `n_pairs/(n_pairs+κ)` — the Ledoit-Wolf bias-variance idea
+  adapted to typed blocks. Data-rich relationships go empirical; rare ones lean on the prior.
+- **Covariance hard gate** — no consumer ever sees a Σ that isn't finite, symmetric and PSD (the intern
+  covariance gate, ported); assembly slippage is repaired by a diagonal-preserving eigenvalue clip
+  (Higham-style — a player's own Phase-5 variance is never distorted).
+- **Portfolio CE** — the roster-level certainty equivalent: `Σ base_value − 2λ·Σ_{i<j same team} ρσσ`.
+  `base_value` already charges each player's own λ·Var; the cross-term charges (stacks) or credits (hedges)
+  co-movement. The covariance-aware greedy's objective and the cost report's yardstick.
+- **Marginal covariance penalty** — what adding player *j* to roster *R* costs beyond his own variance:
+  `2λ·σ_j·Σ_{i∈R, same team} ρ_ij σ_i`. Mapped through the static value→rank curve so it moves a candidate a
+  calibrated number of *picks* down the board.
+- **Stack / hedge** — same-team pair with materially positive ρ (QB + his pass-catcher: higher ceiling,
+  lower floor) / negative ρ (RB1 + RB2: higher floor). The risk profile names them per roster.
+- **Iman–Conover** — impose a target rank correlation on independent Monte-Carlo marginals by re-ordering
+  draws; every Phase-5 marginal (skew, conformal width, injury tail) is preserved exactly.
+- **Clayton copula (rotated)** — a dependence structure whose mass concentrates in one tail,
+  `λ_L = 2^(−1/θ)`; rotated 90° it expresses the handcuff direction (starter LOW ↔ backup HIGH), which a
+  single Pearson ρ cannot. Fit from pooled Kendall τ on zero-filled backfield weeks.
+- **Kendall τ** — rank-based dependence used to fit the copula (`θ = 2τ/(1−τ)` for Clayton); robust to the
+  zero-inflated weekly point distributions.
+- **Handcuff option premium** — the part of a backup's value that exists only because his starter might miss
+  time: `G·p_out·ppg_standalone·(elevation_ratio − 1)`; priced with the 5.4 availability hazard.
+- **Elevation ratio** — pooled multiplier on a backup's scoring when the starter sits (DEV estimate: 1.77,
+  from 506 real starter-out weeks).
+
+## Phase 6 wiring terms (2026-07-09)
+- **Softness credit** — (your roster's durability exposure − the benchmark's) × the frozen scorecard
+  coefficient, in VOR points; positive means your preferences tilted toward the under-priced trait and the
+  raw projected cost overstates the real cost. Reported with the coefficient's CI.
+- **Durability exposure** — a roster's summed z-score of prior-season games over its offensive players,
+  standardized by the frozen DEV-panel μ/σ (the regression's own scale — never recomputed on a new season).
+- **Net effective cost** — raw projected cost − softness credit; a separate, labeled line (*historical-bias
+  estimate, not a projection*) under the untouched headline. Decision 2026-07-09: credit + net line, never a
+  silently-moved headline.
+- **Frozen signal + drift check** — the scorecard survivor is embedded as a constant with provenance
+  (`adp/softness.py::DURABILITY`); the Phase-6 step script recomputes the scorecard and fails loudly if the
+  frozen numbers drift > 5 % — computed-not-hardcoded, enforced.
