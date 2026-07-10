@@ -1172,3 +1172,20 @@ PIPELINE:**
 **Takeaway:** the two 🔴 items are pure loss-avoidance (do now). T3+T4 are the real modeling work and the
 highest-leverage fixes to land **before** the lockbox freeze, because the one-shot eval and the app's
 "honest distributions" pitch both rest on the distributions being correctly wide.
+
+### 2026-07-10 — T7 done: scrape guards + raw-payload archival + props formally shelved
+Hardened the two external scrapes that are the value/availability spine so they **fail loudly** instead of
+ingesting garbage, and closed the props no-op limbo.
+- **Freshness/schema gates** (`data/validate.py`, wired into `data_health_report._scrape_gates`): three pure,
+  injectable gates — `adp_freshness_gate` (live-season FFC snapshot ≤ 6 days old, i.e. the CLAUDE.md §2
+  Stage-0 chore promoted to an assertion), `board_size_gate` (FantasyPros board in 400–700; 2026 = 528),
+  `match_rate_gate` (gsis-match ≥ 95 %; 2026 ran ~0.99). Each fires **only when the relevant live board is
+  present**, so historical-only dev stores stay green (no false alarms). 7 new unit tests, wall-clock-free.
+- **Raw-payload archival** (`cache.archive_text`): every FFC/FantasyPros pull date-stamps its raw JSON/HTML
+  under `data/raw/**/payloads/` (gitignored, one file/day) so a broken scrape can be diffed against last-good
+  shape. Best-effort — an archiving error never sinks the pull. 3 new tests.
+- **Props layer — SHELVED** (user decision): formally deferred, not a silent no-op. Consistent with the
+  reframe's "don't fight the sharp market"; the de-vig math stays built + tested for a future `ODDS_API_KEY`.
+  Marked in `props_projection.py` + `ROADMAP.md` 2.3 (⏸️).
+**Takeaway:** the spine now has a schema-drift tripwire and a forensic trail; the only remaining tech-debt
+before the lockbox is the modeling pair **T3+T4**.

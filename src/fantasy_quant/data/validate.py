@@ -18,13 +18,21 @@ import json
 
 import pandas as pd
 
-from fantasy_quant.config import PROJECT_ROOT
+from fantasy_quant.config import FANTASY_SEASONS, PROJECT_ROOT
 from fantasy_quant.data import db
 from fantasy_quant.data.panel import assert_panel_pit
 
 HEALTH_JSON = PROJECT_ROOT / "analysis" / "results" / "data_health.json"
 
 _COUNTING_STATS = ["targets", "receptions", "carries", "attempts", "offense_snaps"]
+
+# --- T7 scrape freshness / schema guard thresholds ------------------------------------------
+# The external scrapes (FFC ADP, FantasyPros consensus) are the value/availability spine and rot
+# silently when a site's markup changes or the recurring pull lapses. These turn the CLAUDE.md §2
+# Stage-0 chore + "sane board" expectations into hard, test-visible gates that fail loudly.
+ADP_MAX_AGE_DAYS = 6            # live-season FFC snapshot must be at most this stale (the §2 chore)
+FP_BOARD_ROW_BAND = (400, 700)  # a full FantasyPros consensus board sits here (2026 = 528)
+GSIS_MATCH_FLOOR = 0.95         # consensus-board identity match floor (2026 ran ~0.99)
 
 
 # --------------------------------------------------------------------------------------------
@@ -43,6 +51,43 @@ def _pct_nonnull(con, table: str, col: str) -> float | None:
 
 def _gate(name: str, passed: bool, **detail) -> dict:
     return {"gate": name, "passed": bool(passed), **detail}
+
+
+# --------------------------------------------------------------------------------------------
+# T7 — scrape freshness / schema guards (pure, injectable; the DB wrapper is `_scrape_gates`)
+# --------------------------------------------------------------------------------------------
+def adp_freshness_gate(latest_snapshot_date, today, *, live_season, newest_completed_season,
+                       max_age_days: int = ADP_MAX_AGE_DAYS) -> dict:
+    """Gate: the *live-season* FFC ADP snapshot series is fresh (≤ ``max_age_days`` old).
+
+    This promotes the CLAUDE.md §2 Stage-0 chore to a hard, test-visible assertion. It only fires
+    for an **in-progress** draft cycle (``live_season > newest_completed_season``) — the board we
+    actively re-snapshot. A dev store holding only historical single snapshots has nothing to keep
+    fresh, so the gate passes as not-applicable. Pure: pass real dates in from the DB wrapper.
+    """
+    if live_season is None or live_season <= newest_completed_season:
+        return _gate("adp: live-season snapshot fresh", True, applicable=False)
+    if latest_snapshot_date is None:
+        return _gate("adp: live-season snapshot fresh", False, live_season=live_season,
+                     reason="no snapshot for live season")
+    age = (today - latest_snapshot_date).days
+    return _gate("adp: live-season snapshot fresh", age <= max_age_days,
+                 live_season=live_season, latest=str(latest_snapshot_date), age_days=age,
+                 max_age_days=max_age_days)
+
+
+def board_size_gate(name: str, n_rows: int, band: tuple[int, int] = FP_BOARD_ROW_BAND) -> dict:
+    """Gate: a scraped board's row count sits in a sane band — a truncated/empty page (markup
+    change, shell) falls below the floor and trips the gate instead of ingesting silently."""
+    lo, hi = band
+    return _gate(name, lo <= n_rows <= hi, n_rows=n_rows, band=[lo, hi])
+
+
+def match_rate_gate(name: str, rate, floor: float = GSIS_MATCH_FLOOR) -> dict:
+    """Gate: identity (gsis) match rate is at or above ``floor``; a markup/name-format break shows
+    up here as a coverage drop. ``None`` (no rows) fails loudly rather than passing vacuously."""
+    ok = rate is not None and rate >= floor
+    return _gate(name, ok, match_rate=None if rate is None else round(float(rate), 4), floor=floor)
 
 
 # --------------------------------------------------------------------------------------------
@@ -152,6 +197,40 @@ def _join_rate_gates(con) -> list[dict]:
     return gates
 
 
+def _scrape_gates(con, today=None) -> list[dict]:
+    """T7 — freshness + schema guards on the external scrapes (FFC ADP, FantasyPros consensus), so a
+    lapsed chore or a site-markup change trips a red gate instead of ingesting garbage silently.
+
+    Each guard only fires when the relevant *live* board is present, so historical-only dev stores
+    stay green. ``today`` is injectable for testing; defaults to the wall clock at report time."""
+    today = today or dt.date.today()
+    newest_completed = max(FANTASY_SEASONS)
+    gates: list[dict] = []
+
+    # ADP freshness — the Stage-0 §2 chore as an assertion (live season = the max banked season).
+    live_season, latest = None, None
+    if db.table_exists(con, "adp_snapshots"):
+        row = con.execute("SELECT MAX(season) FROM adp_snapshots").fetchone()
+        live_season = int(row[0]) if row and row[0] is not None else None
+        if live_season is not None:
+            d = con.execute("SELECT MAX(snapshot_date) FROM adp_snapshots WHERE season = ?",
+                            [live_season]).fetchone()[0]
+            latest = pd.to_datetime(d).date() if d is not None else None
+    gates.append(adp_freshness_gate(latest, today, live_season=live_season,
+                                    newest_completed_season=newest_completed))
+
+    # FantasyPros consensus board — sane size + gsis-match (only once a live board's been scraped).
+    if db.table_exists(con, "consensus_projections"):
+        s = con.execute("SELECT MAX(season) FROM consensus_projections").fetchone()[0]
+        if s is not None:
+            n = _count(con,
+                       f"SELECT COUNT(*) FROM consensus_projections WHERE season = {int(s)}")
+            gates.append(board_size_gate("consensus: FantasyPros board size sane", n))
+            gates.append(match_rate_gate("consensus: gsis-match rate",
+                                         _pct_nonnull(con, "consensus_projections", "gsis_id")))
+    return gates
+
+
 def _coverage(con) -> dict:
     return {
         "weekly": {c: _pct_nonnull(con, "weekly", c)
@@ -197,7 +276,7 @@ def _survivorship(con, season: int = 2022) -> dict:
 
 def data_health_report(con, write: bool = True) -> dict:
     """Assemble the store-wide health report; write ``analysis/results/data_health.json``."""
-    gates = _range_gates(con) + _dup_gates(con) + _join_rate_gates(con)
+    gates = _range_gates(con) + _dup_gates(con) + _join_rate_gates(con) + _scrape_gates(con)
     tables = {t: db.row_count(con, t) for t in db.list_tables(con)}
     report = {
         "generated_at": dt.datetime.now(dt.UTC).isoformat(),

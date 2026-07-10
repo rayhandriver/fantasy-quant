@@ -18,7 +18,7 @@ At a glance:
 | **T4** | 🟠 | Season-sim level bias −137 pts/team/season | before lockbox (with T3) | ☐ |
 | **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ☐ |
 | **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☐ |
-| **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☐ |
+| **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
 | **T8** | 🟡 | `objective` is a dead label; opponent model still ADP+noise | 9.5 now / opponent model at 0.10 | ☐ |
 
 ---
@@ -195,7 +195,24 @@ the divergence would start biasing results.
 ---
 
 ## 🟡 T7 — Harden the external-scrape dependencies
-**Status ☐ · opportunistic (~2 hr guards; 5-min props decision).**
+**Status ☑ done (2026-07-10) — all three parts shipped.**
+
+**Done (2026-07-10).**
+1. **Freshness/schema guards** (`data/validate.py`): pure, injectable gates `adp_freshness_gate`
+   (live-season FFC snapshot ≤ 6 days old — the CLAUDE.md §2 chore as an assertion), `board_size_gate`
+   (FantasyPros board row-count band 400–700), `match_rate_gate` (gsis-match ≥ 95 %), wired into
+   `data_health_report` via `_scrape_gates`; guards fire only when the relevant live board is present
+   (historical-only stores stay green). 7 new pure unit tests in `tests/test_validate.py`.
+2. **Raw-payload archival** (`data/cache.py::archive_text`): each FFC (`_pull_ffc`) and FantasyPros
+   (`_pull_fp`) pull date-stamps its raw JSON/HTML under `data/raw/**/payloads/` (gitignored) so a
+   broken scrape can be diffed against last-good shape; best-effort (never sinks a pull). 3 new tests
+   in `tests/test_cache.py`.
+3. **Props decision — SHELVED** (user, 2026-07-10): the markets/props layer is **formally deferred**
+   (not a silent no-op), consistent with the reframe's "don't fight the sharp market"; the de-vig math
+   stays built + tested for a future `ODDS_API_KEY`. Marked in `markets/props_projection.py`,
+   `ROADMAP.md` Phase 2.3 (⏸️).
+
+<details><summary>Original plan (kept for the record)</summary>
 
 **Symptom.** FantasyPros (value) and FFC (ADP) scrapes are the spine and rot silently when site markup
 changes; `markets/props_projection.py` is a **no-op** (no free props data), so the "markets" signal layer is
@@ -214,6 +231,8 @@ effectively absent though half-wired.
 
 **Done-when.** A markup change trips a red test; raw payloads are archived; the props layer's status is an
 explicit decision, not a silent no-op.
+
+</details>
 
 ---
 
@@ -249,6 +268,7 @@ probs. 8b: opponent model beats ADP+noise on a real-pick availability Brier.
 
 ## Ordering (see `ROADMAP.md ★ THE PIPELINE` for the full sequence)
 1. ~~**Now:** T1 (commit), T2 (backup).~~ ☑ both done (2026-07-10).
-2. **Next build:** T8a (Phase 9.5 — roadmap's "← NOW") with T6 (MC consolidation) folded in.
-3. **Before the lockbox:** T3 + T4 together (coverage + level bias), then T5 (pre-register).
-4. **Opportunistic:** T7 (scrape guards) whenever data is touched; T8b when a real Sleeper league is available.
+2. ~~**Opportunistic:** T7 (scrape guards + raw-payload archival + props shelved).~~ ☑ done (2026-07-10).
+3. **Next build:** T8a (Phase 9.5 — roadmap's "← NOW") with T6 (MC consolidation) folded in.
+4. **Before the lockbox:** T3 + T4 together (coverage + level bias), then T5 (pre-register).
+5. **Later:** T8b when a real Sleeper league is available.

@@ -143,6 +143,9 @@ def _pull_fp(pos: str, scoring_slug: str = "PPR", attempts: int = 4) -> pd.DataF
         df = flatten_fp_table(tables[0], pos) if tables else pd.DataFrame()
         if len(df) > len(best):
             best = df
+            # archive the best-shaped raw HTML of the day for last-good diffing (T7)
+            cache.archive_text(CONSENSUS_RAW / "payloads", f"fp_{scoring_slug}_{pos}",
+                               r.text, "html")
         if len(best) >= floor:
             return best
         time.sleep(1.0)  # back off before retrying a partial page

@@ -365,3 +365,10 @@ section, not just appended.
   low because the weekly disaggregation understates week-to-week spread (single prior-season CoV; flat
   constant fallbacks), and the lineup **max** feeds on spread. Championship probabilities are relative within
   a league so they calibrate regardless; absolute-points and variance consumers do not.
+- **Scrape freshness/schema gates (T7)** — test-visible hard gates in `data/validate.py` that fail loudly
+  when an external scrape rots: `adp_freshness_gate` (live-season FFC snapshot ≤ 6 days old — the CLAUDE.md
+  §2 Stage-0 chore as an assertion), `board_size_gate` (FantasyPros board row-count band), `match_rate_gate`
+  (gsis-match ≥ 95 %). Pure/injectable; fire only when the relevant live board is present.
+- **Raw-payload archival (T7)** — `cache.archive_text` date-stamps each FFC/FantasyPros pull's raw JSON/HTML
+  under `data/raw/**/payloads/` (gitignored, one file/day), so a broken scrape can be diffed against
+  last-good shape. Best-effort: never sinks a pull.

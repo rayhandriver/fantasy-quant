@@ -1,5 +1,12 @@
 """Phase 2.3 — props-implied projection: repackage the sharp betting market as fantasy points.
 
+**STATUS: SHELVED (decision 2026-07-10; T7).** Formally deferred, not a silent no-op. Per the
+reframe finding *"don't fight the sharp market"* (`findings.md` 2026-07-04) the value signal is
+consensus→VBD, so the markets layer is **not** on the pre-app pipeline. The de-vig math below stays
+built + unit-tested so it can be switched on later by wiring a props source (``ODDS_API_KEY`` for
+live, or a paid historical archive) — but no further investment is planned until then. Tracked in
+`docs/TECH-DEBT.md` **T7** and `ROADMAP.md` Phase 2.3.
+
 Season player props (e.g. "Justin Jefferson receiving yards O/U 1275") are a real-money, often
 sharper-than-ADP forecast of a player's production. For a symmetric −110/−110 over/under the **line
 is ≈ the market's expected value**, so a de-vig'd set of a player's season props maps straight to
@@ -9,9 +16,9 @@ projected fantasy points via the :class:`RuleSet` — the market's own projectio
 and season win-totals are **not available for free** — the-odds-api serves props live-only, and
 nflverse `import_win_totals` returns empty. The free `game_lines` are gameday-dated lines, so they
 carry **no pre-draft signal**. So :func:`season_props_projection` no-ops (returns an empty frame →
-the VBD `rank_fn` falls back to ADP) until a props source is wired in (``ODDS_API_KEY`` for live,
-or add a paid historical archive). The math below is built and unit-tested, so once props land,
-``vbd_rank_fn(season_props_projection)`` backtests through the Phase-1 harness unchanged.
+the VBD `rank_fn` falls back to ADP) until a props source is wired in. The math below is built and
+unit-tested, so once props land, ``vbd_rank_fn(season_props_projection)`` backtests through the
+Phase-1 harness unchanged.
 """
 
 from __future__ import annotations

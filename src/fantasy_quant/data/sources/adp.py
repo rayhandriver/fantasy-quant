@@ -146,6 +146,8 @@ def _pull_ffc(scoring: str, teams: int, year: int) -> pd.DataFrame:
                   headers=HEADERS, timeout=30)
     r.raise_for_status()
     time.sleep(0.5)  # be polite to FFC
+    # archive the raw JSON payload date-stamped for last-good diffing (T7)
+    cache.archive_text(ADP_RAW / "payloads", f"ffc_{scoring}_t{teams}_{year}", r.text, "json")
     j = r.json()
     players, meta = j.get("players", []), j.get("meta", {})
     if not players or not meta.get("end_date"):
