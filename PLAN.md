@@ -5,6 +5,27 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-09 (b)** — **STAGE 0 LIVE + PHASE 10 DONE (all gates PASS).** (a) **Stage 0:** FFC **2026
+  snapshot series** banked (1,028 rows, full grid, 99.3 % gsis — the rookie class already resolves;
+  `snapshot_adp` = date-keyed raw cache + replay-append on `(config, snapshot_date)`, idempotent +
+  self-healing; **weekly chore encoded in CLAUDE.md §2** — Claude cron is session-only, so the standing
+  instruction + optional Windows Task Scheduler carry it). **Sleeper probe:** identity SOLVED — Sleeper's
+  own gsis field is 31 % sparse but nflverse `player_ids.sleeper_id` → gsis covers **99.0 %** of draftable
+  top-300 (cast the DOUBLE, strip padded gsis whitespace); **no public ADP endpoint** (derive from drafts);
+  pick-by-pick shape needs a real league → 0.10. (b) **Phase 10** (`simulation/{weekly,season,playoffs,
+  leverage}.py`): user decisions — 14-reg/6-team/15–17 format (parameterized), **top-down weekly
+  disaggregation** (season draws from the Phase-5 sampler w/ `return_games`, board-wide Phase-8 Σ via an
+  Iman-Conover **permutation** so G rides with its draw, Dirichlet(α=1/CoV²) shares, real byes, uniform
+  missed-week placement; weeks ≡ season draw ⇒ Phase-5 calibration survives by construction); optimal
+  lineups for all teams (vectorized ≡ 1.3 reference); K/DST + cloudless players = prior-season constants.
+  **Calibration gate PASS (1,800 team-seasons, 2017–22 × 30 ADP+noise leagues):** title Brier **0.0878 <
+  0.090** w/ on-diagonal reliability; playoff **0.2302 < 0.240**; league-spread ratio **1.02**; stability
+  0.975/0.949; leverage @ wk8: dog **+0.018** playoff prob at 1.6×, leader **−0.028** (the lever = making
+  the cut; title ≈ neutral between equal teams). *Documented:* 62.4 % points coverage (Phase-5 attrition
+  propagates) + **−137 pt level bias** (suspects: prior-yr CoV understates realized weekly spread feeding
+  the lineup max; replacement-constant fallbacks) — probabilities are relative and calibrate anyway.
+  194 tests, ruff clean. **Next: Phase 9 completion (9.1 scarcity · 9.4 lookahead · 9.5 win-prob objective
+  on the now-calibrated title/playoff probs).**
 - **2026-07-09** — **PHASE 8 DONE + PHASE-6 WIRING DONE + THE PIPELINE LOCKED.** (a) Phase 8 covariance
   (`covariance/{estimate,shrinkage,copula}.py`, `valuation/{roster_risk,handcuff}.py`): relationship-typed
   pooled correlations (QB1-WR1 **+0.37** emp ≈ folk +0.40; RB1-RB2 both-active only −0.05 — backfield

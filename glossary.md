@@ -316,3 +316,29 @@ section, not just appended.
 - **Frozen signal + drift check** — the scorecard survivor is embedded as a constant with provenance
   (`adp/softness.py::DURABILITY`); the Phase-6 step script recomputes the scorecard and fails loudly if the
   frozen numbers drift > 5 % — computed-not-hardcoded, enforced.
+
+## Stage 0 + Phase 10 — snapshot series & season-sim terms (2026-07-09)
+- **Snapshot series** — the live season's ADP banked repeatedly over the preseason (vs 0.4's single
+  late-preseason snapshot per historical year); each pull appends only new
+  `(season, config, snapshot_date)` keys, so it's idempotent, and replays its own raw parquet cache, so a
+  table rebuild can't lose it. `adp_asof` needs no change — it already takes the latest snapshot ≤ as-of.
+- **Sleeper identity join** — Sleeper's own `gsis_id` field is sparse (~31% of draftables), but nflverse
+  `player_ids` carries a native `sleeper_id` column: `sleeper player_id → player_ids.sleeper_id → gsis_id`
+  covers **99.0%** of the draftable top-300 (probe 2026-07-09; mind the DOUBLE dtype and padded whitespace).
+- **Top-down weekly disaggregation** — the Phase-10 weekly grain: draw **season totals** from the Phase-5
+  clouds (Phase-8 Σ imposed board-wide via Iman–Conover), then split each draw across the player's active
+  weeks; weeks sum exactly to the season draw, so all season-grain calibration survives by construction.
+- **Dirichlet week shares** — active-week proportions drawn Dirichlet with concentration `α = 1/CoV²` from
+  the player's own 5.3 weekly volatility: a boom/bust player's weeks fan out, a grinder's stay flat.
+- **Correlation permutation** — Iman–Conover expressed as an index array instead of reordered values, so a
+  companion array (each draw's games-played `G`) is permuted identically and every season draw keeps its
+  own injury story for week placement.
+- **LeagueFormat** — the league structure object (2026-07-09 decision: 10 teams, weeks 1–14 regular season,
+  6-team playoff weeks 15–17, top-2 byes, reseeded semis, points-for tiebreak); the sim treats it as a
+  parameter, so other formats drop in.
+- **Exchangeable-league calibration** — the Phase-10 done-bar: draft many ADP+noise leagues on DEV seasons,
+  predict each team's playoff/title probability preseason, then replay the same rosters and schedule on
+  realized weekly points; calibration = Brier vs the format base rates (0.6/0.1) + reliability bins.
+- **Variance leverage** — the 10.3 lever: a mean-preserving spread on a team's remaining weekly scores;
+  trailing teams gain playoff probability from added variance (they need tails), leaders lose it (they need
+  to protect the cut) — the DFS-GPP logic applied season-long.

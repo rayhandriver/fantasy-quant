@@ -208,6 +208,92 @@ def ingest_adp(con, years=DEFAULT_YEARS, scorings=DEFAULT_SCORINGS, teams_list=D
 
 
 # --------------------------------------------------------------------------------------------
+# Stage 0 — recurring in-season snapshot series (the 2026 board is unrecoverable later)
+# --------------------------------------------------------------------------------------------
+SNAPSHOT_DIR = ADP_RAW / "snapshots"
+
+
+def new_snapshot_rows(df: pd.DataFrame, existing_keys: set[tuple]) -> pd.DataFrame:
+    """Rows of ``df`` whose ``(season, source, format, scoring, teams, snapshot_date)`` key is not
+    already in the store — the idempotency filter for the snapshot append (pure, unit-tested)."""
+    if df.empty:
+        return df
+    keys = list(zip(
+        df["season"].astype(int), df["source"], df["format"], df["scoring"],
+        df["teams"].astype(int), pd.to_datetime(df["snapshot_date"]).dt.date,
+        strict=True,
+    ))
+    mask = [k not in existing_keys for k in keys]
+    return df[mask]
+
+
+def _existing_snapshot_keys(con, season: int) -> set[tuple]:
+    if not db.table_exists(con, "adp_snapshots"):
+        return set()
+    rows = con.execute(
+        "SELECT DISTINCT season, source, format, scoring, teams, snapshot_date "
+        "FROM adp_snapshots WHERE season = ?", [int(season)]
+    ).fetchall()
+    return {(int(r[0]), r[1], r[2], r[3], int(r[4]), pd.Timestamp(r[5]).date()) for r in rows}
+
+
+def snapshot_adp(con, season: int, scorings=DEFAULT_SCORINGS, teams_list=DEFAULT_TEAMS) -> dict:
+    """Bank today's FFC board for ``season`` as a new PIT snapshot (Stage 0 recurring pull).
+
+    Unlike :func:`ingest_adp` (one late-preseason snapshot per historical season, table replace),
+    this accumulates a **series** of snapshots for one live season: each pull is cached to a
+    parquet keyed by FFC's ``meta.end_date`` under ``data/raw/adp/snapshots/``, then *every*
+    cached snapshot for the season is replayed and only rows whose
+    ``(season, source, format, scoring, teams, snapshot_date)`` key is missing from
+    ``adp_snapshots`` are appended — idempotent per day, and self-healing after any 0.4 table
+    rebuild (which only restores the single per-season snapshots). ``adp_asof`` needs no change:
+    it already selects the latest snapshot ≤ as_of.
+    """
+    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    pulled = []
+    for scoring in scorings:
+        for teams in teams_list:
+            df = _pull_ffc(scoring, teams, season)
+            if df.empty:
+                log.warning("FFC returned no %s/%d-team board for %d", scoring, teams, season)
+                continue
+            snap = pd.to_datetime(df["snapshot_date"].iloc[0]).date()
+            path = SNAPSHOT_DIR / f"ffc_{scoring}_t{teams}_{season}_{snap}.parquet"
+            df.to_parquet(path, index=False)
+            pulled.append(path.name)
+
+    cached = sorted(SNAPSHOT_DIR.glob(f"ffc_*_{season}_*.parquet"))
+    if not cached:
+        return {"pulled": pulled, "new_rows": 0, "snapshot_dates": []}
+    raw = pd.concat([pd.read_parquet(p) for p in cached], ignore_index=True)
+
+    ids = con.execute("SELECT name, position, team, gsis_id, draft_year FROM player_ids").df()
+    raw = match_adp_to_gsis(raw, ids, overrides=_load_name_overrides())
+    # snapshot_date joins every key: the series holds many snapshots per (season, config).
+    snap_key = ["season", "source", "format", "scoring", "teams", "snapshot_date"]
+    raw, n_nulled = dedupe_gsis_within_snapshot(raw, snap_key)
+    if n_nulled:
+        log.info("nulled %d homonym-collided gsis within snapshots", n_nulled)
+    raw["snapshot_date"] = pd.to_datetime(raw["snapshot_date"]).dt.date
+    raw["start_date"] = pd.to_datetime(raw["start_date"], errors="coerce").dt.date
+    raw["pos_rank"] = (
+        raw.groupby([*snap_key, "position"])["adp"].rank(method="first").astype(int)
+    )
+    keep = [
+        "season", "snapshot_date", "start_date", "source", "format", "scoring", "teams",
+        "gsis_id", "ffc_player_id", "name", "position", "team", "adp", "pos_rank",
+        "times_drafted", "stdev", "high", "low", "bye", "total_drafts",
+    ]
+    raw = raw[[c for c in keep if c in raw.columns]]
+
+    new = new_snapshot_rows(raw, _existing_snapshot_keys(con, season))
+    if len(new):
+        db.append_df(con, "adp_snapshots", new)
+    dates = sorted(pd.to_datetime(new["snapshot_date"]).dt.date.unique()) if len(new) else []
+    return {"pulled": pulled, "new_rows": int(len(new)), "snapshot_dates": [str(d) for d in dates]}
+
+
+# --------------------------------------------------------------------------------------------
 # PIT accessor — the done-criterion
 # --------------------------------------------------------------------------------------------
 def adp_asof(con, season: int, as_of, source: str = "ffc", scoring: str = "ppr",

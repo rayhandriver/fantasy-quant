@@ -27,6 +27,10 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
   (an improvement over the intern-repo's bootstrap). Put reusable logic in `src/fantasy_quant/`, runnable
   phase scripts in `steps/`.
 - Jupyter kernel: **"Python (fantasy-quant)"** (registered via ipykernel). Notebooks live in `notebooks/`.
+- **Standing chore (Stage 0, from 2026-07-09 until the 2026 season starts):** the FFC 2026 ADP board is
+  unrecoverable later, so keep the snapshot series fresh — if the latest 2026 snapshot in `adp_snapshots`
+  is > 6 days old, run `uv run python steps/stage0_adp_snapshot.py` (idempotent, ~10 s). Any session
+  working in this repo should check/refresh this.
 
 ## 3. The discipline (non-negotiable — ported from the intern project)
 1. **Point-in-time (PIT) everywhere.** When building any as-of feature/projection/ranking, **no data

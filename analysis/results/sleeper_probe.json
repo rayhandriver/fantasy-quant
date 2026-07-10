@@ -1,0 +1,63 @@
+{
+  "base": "https://api.sleeper.app/v1",
+  "state": {
+    "season": "2026",
+    "league_season": "2026",
+    "previous_season": "2025",
+    "week": 0,
+    "season_type": "off"
+  },
+  "players": {
+    "n_players_total": 12200,
+    "n_active_fantasy": 3035,
+    "gsis_coverage_all_active": 0.3163,
+    "gsis_native_coverage_draftable": 0.3133,
+    "gsis_crosswalk_coverage_draftable": 0.99,
+    "crosswalk_misses": [
+      "Thomas Odukoya",
+      "De'Zhaun Stribling",
+      "Titus Swen"
+    ],
+    "top_n": 300,
+    "id_fields_on_sample": [
+      "espn_id",
+      "fantasy_data_id",
+      "gsis_id",
+      "kalshi_id",
+      "oddsjam_id",
+      "opta_id",
+      "pandascore_id",
+      "player_id",
+      "rotowire_id",
+      "rotoworld_id",
+      "sportradar_id",
+      "stats_id",
+      "swish_id",
+      "yahoo_id"
+    ],
+    "sample_mapping": {
+      "player_id": "9509",
+      "gsis_id": null,
+      "full_name": "Bijan Robinson",
+      "position": "RB",
+      "team": "ATL",
+      "search_rank": 1
+    }
+  },
+  "trending": {
+    "n": 5,
+    "shape": [
+      "count",
+      "player_id"
+    ]
+  },
+  "draft_chain": {
+    "note": "no public seed account exposed a completed draft; re-probe with a real username/league_id at step 0.10"
+  },
+  "bogus_draft_status": 404,
+  "verdict": {
+    "identity_join_viable": true,
+    "pick_by_pick_confirmed": false,
+    "adp_via_api": false
+  }
+}

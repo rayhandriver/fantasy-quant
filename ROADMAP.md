@@ -21,7 +21,7 @@ Legend: ☐ todo · ◐ in progress · ☑ done · ✗ dropped · ◔ deprioriti
 **Phase 7 — Opportunity-adjusted projection** *(⟳ from "causal" — drop counterfactual claims; a feature, not causal inference)* ☐ 7.1 skill÷opportunity decompose · ☐ 7.2 situation multiplier · ☐ 7.3 rookie transport · ☐ 7.4 validate
 **Phase 8 — Covariance & rosters** *(⟳ PROMOTED/earlier — tracking error is a covariance quantity; correlation appetite = a user dial)* ✅ **COMPLETE** *(2026-07-09)* — ☑ **8.1 estimate** *(relationship-typed pooled correlations; QB1-WR1 **+0.37** emp ≈ the +0.40 folk prior, 287 pairs; RB1-RB2 both-active only −0.05 — backfield negativity lives in availability; Σ hard gate + Higham repair; 142-player board Σ PASS, cond 9.1)* · ☑ **8.2 shrinkage** *(EB shrink toward structural priors, w=n/(n+κ); OOS walk-forward: shrunk ρ **halves** stack-variance error vs independence, MAE 21.7 vs 45.8, 217 pairs)* · ☑ **8.3 copula** *(targeted to handcuffs per 2026-07-09 decision; rotated Clayton on zero-filled RB1/RB2: τ=−0.14, λ_L=0.13; real-tail check 0.393 emp vs 0.391 Clayton vs 0.346 Gaussian)* · ☑ **8.4 roster risk** *(portfolio μ/σ/floor/ceiling + Iman-Conover on the Phase-5 clouds; stack-vs-hedge done-bar holds on the 2022 board)* · ☑ **8.5 handcuff option** *(contingent claim on 5.4 availability; elevation ratio 1.77 from 506 starter-out weeks; premium monotone in fragility)*
 **Phase 9 — Valuation & draft policy** *(⟳ + constrained optimizer + cost report)* ◐ **9.1 conditional-VBD** *(covariance half **pulled forward 2026-07-09**: the greedy maximizes marginal portfolio CE = base_value − 2λ·σ_j·Σρσ, λ=0 reproduces the old greedy; positional-scarcity conditioning remains)* · ☑ **9.2 constrained optimizer** *(= spine S2)* · ☑ **9.3 cost-of-personalization report** *(= spine S3; headline now **portfolio CE** + risk profile)* · ☐ 9.4 greedy policy · ☐ 9.5 win-prob objective *(the old "structural-alpha" → the cost report)*
-**Phase 10 — Season/playoff sim** *(⟳ PROMOTED/earlier — the tracked benchmark + tail objective)* ☐ 10.1 season engine · ☐ 10.2 playoffs (championship prob) · ☐ 10.3 leverage
+**Phase 10 — Season/playoff sim** *(⟳ PROMOTED/earlier — the tracked benchmark + tail objective)* ✅ **COMPLETE** *(2026-07-09; `simulation/` package + weekly grain — the Phase-5 deferral folded in)* — ☑ **10.1 season engine** *(top-down weekly disaggregation: Phase-5 clouds + Phase-8 Σ via Iman-Conover permutation → Dirichlet(1/CoV²) week shares, real byes, uniform missed-game placement; `LeagueFormat` 14-reg/6-team/15–17 w/ top-2 byes; vectorized optimal lineups ≡ 1.3 reference; **sim-sd/realized league sd = 1.02**)* · ☑ **10.2 playoffs** *(reseeded bracket → title/playoff probs; **calibration gate on 1,800 DEV team-seasons: title Brier 0.0878 < 0.090, playoff 0.2302 < 0.240, reliability on-diagonal; stability 0.975/0.949**)* · ☑ **10.3 leverage** *(mean-preserving spread from any mid-season state: trailing +0.018 playoff prob at 1.6×, leader −0.028 — variance is about making the cut; `leverage_advice` verdict for Phase 13)* — *documented: 62.4% points coverage (Phase-5 attrition gap propagates) + −137 pt level bias; probabilities calibrate regardless*
 **Phase 11 — Draft engine** *(⟳ opponent model = core & Brier-verifiable)* ☐ 11.1 **behavioral opponent model** · ☐ 11.2 **per-pick availability distributions** · ☐ 11.3 realistic mock · ✗ CFR *(dropped — snake draft ≈ perfect-info)* · ◔ MCTS *(deprioritized — unverifiable + live-latency risk)* · ☐ auctions (later) · ☐ self-play RL (roadmap)
 **Phase 12 — NLP/news** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 7 — the guardrail is unchanged: LLM on the edges only, never computing a number that must be correct; 12.4's bar = adds value over the structured injury/depth feeds, or ruled out)* ☐ 12.1 sources · ☐ 12.2 LLM extract · ☐ 12.3 event-study · ☐ 12.4 validate
 **Phase 13 — In-season co-pilot** *(the tax-loss-harvesting analog; pipeline stage 5)* ☐ 13.1 re-project · ☐ 13.2 start/sit · ☐ 13.3 waivers/FAAB · ☐ 13.4 streaming · ☐ 13.5 trades
@@ -35,13 +35,15 @@ Legend: ☐ todo · ◐ in progress · ☑ done · ✗ dropped · ◔ deprioriti
 function — **including the formerly-deferred Phases 12 & 15** — is built and validated before any app work;
 Phase 14 comes last and ships with everything embedded. Done so far: Phases 0–6, 8; spine S1–S3+S5;
 Phase-6→cost-report wiring (all ✅ above). Remaining, in order:
-**Stage 0** *(passive, start now, runs alongside everything)* — FFC **2026 ADP snapshot cron** (boards are
-unrecoverable after the season — bank the PIT series now, use whenever; makes 2026 a future backtest season)
-+ an early **Sleeper API probe** (de-risk the one external dependency long before stage 3) →
-**1) Phase 10** season/playoff sim + **weekly-grain distributions** (the Phase-5 deferral folds in; consumes
-the Phase-8 Σ; done-when = calibrated championship probs on DEV) →
-**2) Phase 9 completion** (9.1 scarcity half · 9.4 lookahead · 9.5 win-prob objective — `make_playoffs` vs
-`championship_or_bust` starts changing drafts) →
+**Stage 0** ✅ **LIVE** *(2026-07-09)* — FFC **2026 snapshot series** banked from 2026-07-09 (1,028 rows,
+full grid, 99.3 % gsis; `steps/stage0_adp_snapshot.py`, idempotent + self-healing; **standing weekly chore
+in CLAUDE.md §2** until the season starts) + **Sleeper probe** done (identity solved: crosswalk
+`sleeper_id→gsis` = 99.0 % of draftables; no public ADP endpoint; pick-by-pick shape needs a real league →
+0.10) →
+**1) Phase 10** ✅ **DONE** *(2026-07-09 — weekly grain folded in; done-when MET: calibrated championship
+probs on DEV, title Brier 0.0878 < 0.090 with on-diagonal reliability)* →
+**2) Phase 9 completion — ← NOW** (9.1 scarcity half · 9.4 lookahead · 9.5 win-prob objective —
+`make_playoffs` vs `championship_or_bust` starts changing drafts, consuming the calibrated Phase-10 probs) →
 **3) step 0.10 Sleeper ingest → S4/Phase 11** opponent model + per-pick availability (+ the **availability
 Brier** owed from spine-4; 2025 → full backtest season) →
 **4) Phase 7** opportunity-adjusted projection *(keep-or-drop: ≥ consensus calibration + better on

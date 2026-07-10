@@ -170,11 +170,16 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 - 9.4 Win-probability / CVaR objective → `valuation/objective.py`
 - **Done when** the greedy conditional-VBD policy beats ADP drafting OOS.
 
-### Phase 10 — Season & playoff simulation (north-star metric)
-- 10.1 Monte-Carlo season engine (schedule, byes, injuries) → `simulation/season.py`
-- 10.2 Playoff bracket → championship/playoff probability → `simulation/playoffs.py`
-- 10.3 Leverage-by-game-state (variance as a lever) → `simulation/leverage.py`
-- **Done when** title-probability ranking is stable and beats ADP + PAR OOS.
+### Phase 10 — Season & playoff simulation (north-star metric) ✅ **COMPLETE** *(2026-07-09)*
+- 10.1 ✅ Monte-Carlo season engine (schedule, byes, injuries) → `simulation/season.py` *(+ the weekly
+  grain the Phase-5 deferral owed: `simulation/weekly.py` — top-down disaggregation, Phase-8 Σ imposed
+  board-wide, Dirichlet(1/CoV²) week shares; sim league spread ≡ realized, ratio 1.02)*
+- 10.2 ✅ Playoff bracket → championship/playoff probability → `simulation/playoffs.py`
+- 10.3 ✅ Leverage-by-game-state (variance as a lever) → `simulation/leverage.py`
+- **Done when** *(⟳ pipeline 2026-07-09: calibrated championship probs on DEV)* — **MET**: on 1,800
+  DEV team-seasons, title Brier 0.0878 < 0.090 baseline with on-diagonal reliability, playoff 0.2302
+  < 0.240; ranking stable across draws (0.975/0.949). *(The old "beats ADP + PAR OOS" clause retired with
+  the reframe — the sim is the benchmark/objective layer, not an edge claim.)*
 
 ### Phase 11 — Game-theory draft engine **[DEEP]**
 - 11.1 Live opponent modeling (Bayesian board inference) → `draft/opponent_model.py`

@@ -59,7 +59,7 @@ def sample_from_quantiles(taus, qvals, u) -> np.ndarray:
 
 
 def sample_player_season(taus, qvals, avail_p, team_games, rho, g_ref,
-                         rng: np.random.Generator, n: int) -> np.ndarray:
+                         rng: np.random.Generator, n: int, return_games: bool = False):
     """``n`` season-point draws for one player: healthy H (from quantiles) × normalized
     availability.
 
@@ -67,12 +67,17 @@ def sample_player_season(taus, qvals, avail_p, team_games, rho, g_ref,
     multiplier must be a fraction too: we divide the sampled games *count* by the player's team
     games to a fraction before normalizing. A typical-availability draw (fraction ≈ G_ref) returns
     ≈ H; the injury downside lives entirely here, never double-counted inside H's spread.
+
+    ``return_games=True`` additionally returns the per-draw games count ``g`` (same rng stream —
+    the draws are identical either way). The Phase-10 weekly-grain layer needs each draw's own
+    ``g`` so a low season total caused by missed games is spread over correspondingly few weeks.
     """
     tg = int(round(team_games))
     h = sample_from_quantiles(taus, qvals, rng.uniform(0.0, 1.0, n))
     g = injury.sample_games(avail_p, tg, rho, rng, n)
     avail_frac = g / max(tg, 1)
-    return np.clip(h * (avail_frac / max(g_ref, 1e-6)), 0.0, None)
+    y = np.clip(h * (avail_frac / max(g_ref, 1e-6)), 0.0, None)
+    return (y, g) if return_games else y
 
 
 # --------------------------------------------------------------------------------------------
@@ -112,12 +117,14 @@ def conditional_avail_ref(con, seasons, floor: float = 0.85) -> float:
 # the assembler
 # --------------------------------------------------------------------------------------------
 def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_draws: int = N_DRAWS,
-                          train_seasons=None, seed: int = 0):
+                          train_seasons=None, seed: int = 0, return_games: bool = False):
     """Build the season distribution for every player on ``season``'s board.
 
     Returns ``(summary_df, samples)`` where ``summary_df`` has the contract columns (minus
     ``ce_value``, added by :mod:`fantasy_quant.valuation.utility`) and ``samples`` is an
-    ``(n_players, n_draws)`` array aligned to ``summary_df`` rows.
+    ``(n_players, n_draws)`` array aligned to ``summary_df`` rows. With ``return_games=True``
+    returns ``(summary_df, samples, games)`` — the per-draw games-played counts aligned to
+    ``samples`` (identical draws; the Phase-10 weekly layer consumes ``games``).
     """
     ruleset = ruleset or RuleSet()
     if train_seasons is None:
@@ -146,12 +153,18 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
 
     rng = np.random.default_rng(seed)
     samples = np.empty((len(df), n_draws))
+    games = np.empty((len(df), n_draws)) if return_games else None
     for i, row in df.iterrows():
         qv = np.sort(row[qcols].to_numpy(float))
         qv[0] = max(0.0, qv[0] - adj.get(row["pos"], 0.0))          # conformal-widen the band
         qv[-1] = qv[-1] + adj.get(row["pos"], 0.0)
-        samples[i] = sample_player_season(taus, qv, row["avail_p"], row["team_games"],
-                                          row["rho"], g_ref, rng, n_draws)
+        drawn = sample_player_season(taus, qv, row["avail_p"], row["team_games"],
+                                     row["rho"], g_ref, rng, n_draws,
+                                     return_games=return_games)
+        if return_games:
+            samples[i], games[i] = drawn
+        else:
+            samples[i] = drawn
 
     pcts = np.percentile(samples, [10, 50, 90], axis=1)
     out = pd.DataFrame({
@@ -161,4 +174,4 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
         "boom_prob": df["boom_prob"], "bust_prob": df["bust_prob"],
         "games_played_mean": df["avail_p"] * df["team_games"],
     })
-    return out, samples
+    return (out, samples, games) if return_games else (out, samples)

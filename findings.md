@@ -1064,3 +1064,71 @@ credit [CI +3.4, +6.3]; raw −5.2 → net −9.6. Small for soft archetypes, by
 so a *durability-leaning* preference is visibly cheaper than the raw number claims (and a fragile-leaning
 one visibly dearer). 6 new pure tests (`tests/test_softness.py`); spine-3 gates extended (net ≡ raw − credit,
 headline string unchanged).
+
+## Stage 0 — the 2026 snapshot series is live + the Sleeper probe (2026-07-09)
+THE PIPELINE's only time-sensitive item, done first: **FFC 2026 ADP is now being banked** as a PIT snapshot
+*series* (`data/sources/adp.py::snapshot_adp` + `steps/stage0_adp_snapshot.py`). First pull 2026-07-09:
+**1,028 rows across the full grid** (standard/ppr/half-ppr × 10/12 teams; the ppr-10 board = 201 players),
+gsis match **99.3 %** on skill rows — the 2026 rookie class is already in nflverse rosters, so no
+name-match debt — and the `adp_asof` PIT guard passes (day-before-first-snapshot = empty). Design choices
+that matter: each pull caches a **date-keyed raw parquet** and the ingest **replays the whole cache,
+appending only missing `(season, config, snapshot_date)` keys** — idempotent per day and self-healing if a
+0.4 rebuild ever recreates `adp_snapshots` (a rebuild only restores the one-per-season historical
+snapshots). `snapshot_date` joins the homonym-dedupe and pos_rank keys (a series has many snapshots per
+season — the 0.4 code assumed one). Scheduling reality: a Claude Code cron is **session-only**, so the
+durable mechanism is layered — in-session weekly job + a **standing chore in CLAUDE.md §2** (any session:
+if the latest 2026 snapshot is > 6 days old, run the script) + a Windows Task Scheduler one-liner as the
+zero-dependency fallback. 4 pure tests (`tests/test_stage0.py`).
+
+**Sleeper probe (read-only, public endpoints — `steps/stage0_sleeper_probe.py` →
+`analysis/results/sleeper_probe.json`): the stage-3 identity risk is retired.** Sleeper's own `gsis_id`
+field is sparse (**31.3 %** of the draftable top-300 by search_rank), which would have been a blocker — but
+nflverse `player_ids` carries a native **`sleeper_id`** column, and `sleeper player_id →
+player_ids.sleeper_id → gsis_id` covers **297/300 = 99.0 %** of draftables (misses are camp bodies).
+Ingest gotchas recorded: the crosswalk stores `sleeper_id` as DOUBLE (`4984.0` — cast before joining) and
+Sleeper pads some `gsis_id` values with leading whitespace. Also confirmed: `state/nfl` (season 2026 live),
+the 12,200-player dump, trending adds; **no public ADP endpoint exists** — Sleeper "ADP" must be *derived*
+from completed drafts at scale, and **pick-by-pick shape is unconfirmed** until we probe a real
+username/league (none of the public seed accounts expose a completed draft; the user's own league does this
+for free at step 0.10). Verdict: **PARTIAL — identity solved, draft-shape deferred to 0.10 by design.**
+
+## Phase 10 — season/playoff simulation: calibrated championship probabilities (2026-07-09)
+**The engine the reframe promoted is live and PASSES its done-bar: preseason championship/playoff
+probabilities are calibrated on DEV.** New package `simulation/` (weekly · season · playoffs · leverage) +
+`steps/phase10_sim.py` + 15 pure tests; the Phase-5 weekly-grain deferral is folded in as planned.
+
+**Design (user decisions 2026-07-09).** League = `LeagueFormat(10 teams, reg 1–14, 6-team playoff 15–17,
+top-2 byes, reseeded semis, PF tiebreak)` — a parameter, not a constant. Weekly grain = **top-down
+disaggregation**: season totals are drawn by the Phase-5 sampler itself (now `return_games=True`, same rng
+stream), correlated **board-wide once** with the Phase-8 Σ via an Iman–Conover *permutation*
+(`correlation_permutation` — regression-tested equal to `correlate_samples`, and the games-played companion
+rides along with its own draw), then each draw is split across the player's active weeks: real NFL bye
+(from `game_lines`, PIT) forced to zero, missed games placed uniformly at random, active-week shares
+**Dirichlet(α = 1/CoV²)** from his own 5.3 weekly volatility. Weeks sum *exactly* to the season draw — all
+Phase-5 calibration survives by construction. Rostered K/DST score the prior season's top-10 weekly
+average as a constant; cloudless offense players (deep sleepers) the prior season's replacement level per
+week. Lineups: **optimal weekly for all 10 teams** (the Phase-1 convention, symmetric; a vectorized
+evaluator regression-tested equal to `optimal_lineup_points` makes 90k league-weeks cheap).
+
+**The calibration gate (1,800 team-seasons: 2017–2022 × 30 ADP+noise leagues × 10 teams; preseason
+predictions vs the SAME rosters+schedule replayed on realized weekly points):**
+- **Title: Brier 0.0878 < 0.0900** (constant-0.1 baseline); reliability essentially on the diagonal —
+  predicted 0.036/0.076/0.123/0.184/0.282 vs realized 0.045/0.073/0.123/0.186/0.235 per bin.
+- **Playoff: Brier 0.2302 < 0.2400** (constant-0.6); bins near-diagonal, mild edge-bin overconfidence.
+- **League points spread matches reality: sim-sd / realized cross-team sd = 1.02** (the 10.1 "matches
+  historical league variance" criterion). Ranking stability across fresh draws: playoff Spearman 0.975,
+  title 0.949 (title is resolution-limited among near-equal ADP rosters, by construction).
+- **10.3 leverage behaves like theory says** at realized week-8 standings with predicted futures
+  (18 leagues): mean-preserving variance ↑ (1.6× vs 0.6×) moves the trailing team's playoff prob
+  **+0.018** and the leader's **−0.028**; title effects ≈ 0 between equal-strength teams in a knockout —
+  the lever is about *making the cut*, exactly the DFS-GPP logic. `leverage_advice` returns the curve +
+  verdict (add/cut/hold) from any mid-season state (`simulate_league` resumes from `start_week/wins0/pf0`).
+
+**Documented limitations (honest, non-blocking):** (a) team season-points 80%-interval coverage is
+**62.4%** — the Phase-5 *unconditional* role/depth-attrition gap propagates (its known limitation, not a
+new one); (b) a level bias of **−137 pts/season/team** (~−8/wk): predicted optimal-lineup totals run low —
+prime suspects are prior-year weekly CoV understating realized week-to-week spread (the lineup max feeds on
+spread) and the replacement-constant fallback for cloudless players; probabilities — the deliverable — are
+relative within a league and calibrate anyway. Revisit only if a consumer needs absolute points.
+**What Phase 9.5 gets for free:** `title_probability`/`playoff_prob` per roster = the `make_playoffs` vs
+`championship_or_bust` objectives, now with a calibration certificate.
