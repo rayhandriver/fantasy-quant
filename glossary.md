@@ -372,3 +372,17 @@ section, not just appended.
 - **Raw-payload archival (T7)** — `cache.archive_text` date-stamps each FFC/FantasyPros pull's raw JSON/HTML
   under `data/raw/**/payloads/` (gitignored, one file/day), so a broken scrape can be diffed against
   last-good shape. Best-effort: never sinks a pull.
+- **Positional cliff (9.1 scarcity)** — `optimizer.positional_cliff`: for each player, the value drop to
+  the `horizon`-th next-best available same-position player in the current pool. A steep cliff = a scarce
+  tier that won't refill → addressing it is urgent; a flat tier ≈ 0 → safe to wait. Pure pool structure.
+- **Survival probability / lookahead (9.4)** — `optimizer.survival_prob`: P(a player is still available at
+  your next pick) = `Φ((adp − window_end)/noise)`, `window_end` = the last opponent pick before your next
+  snake turn. Combined with the cliff as an **urgency** term `scarcity_w·cliff·(1−survival)` — scarce **and**
+  vanishing = draft now. `scarcity_w=0` reproduces the covariance-only greedy.
+- **Win-prob objective (9.5)** — the opt-in `winprob_pick_fn`: portfolio-CE/scarcity prefilter → top-k →
+  finish the draft greedily per candidate → Phase-10 mini-sim → take the candidate that maximizes the
+  routed metric. Makes `DraftConfig.objective` real: `make_playoffs`→`playoff_prob`,
+  `championship_or_bust`→`title_prob`. Title is resolution-limited (needs ≥~200 sims/pick).
+- **cached_distribution (T6)** — the memoized Phase-5 draw cloud both the draft value (`assemble_value`) and
+  the season sim (`build_weekly_model`) read, keyed on `(season, ruleset, n_draws, seed)`, so they reference
+  one joint set of draws instead of diverging by an accidental seed mismatch.

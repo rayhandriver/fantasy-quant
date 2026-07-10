@@ -141,6 +141,18 @@ class DraftState:
     def pick_log(self) -> pd.DataFrame:
         return pd.DataFrame(self.log)
 
+    def clone(self, rng: np.random.Generator | None = None) -> DraftState:
+        """A detached copy for lookahead rollouts (9.4/9.5): mutating the clone (further picks)
+        leaves this state untouched. The board is shared (read-only during a draft); ``available``,
+        ``rosters`` and ``log`` are copied. Pass ``rng`` to control the rollout's opponent draws
+        (default: a fresh independent stream) so a rollout never consumes this state's rng."""
+        return DraftState(
+            board=self.board, n_teams=self.n_teams, rounds=self.rounds, slots=self.slots,
+            your_team=self.your_team, rng=rng or np.random.default_rng(0), noise=self.noise,
+            available=set(self.available), rosters=[list(r) for r in self.rosters],
+            log=list(self.log), overall_pick=self.overall_pick,
+        )
+
 
 # --------------------------------------------------------------------------------------------
 # pick policies
@@ -218,16 +230,25 @@ def simulate_draft(board: pd.DataFrame, your_pick_fn=None, n_teams: int = 10, ro
         rng=np.random.default_rng(seed), noise=noise,
         available=set(b.index), rosters=[[] for _ in range(n_teams)],
     )
-    pick_fn = your_pick_fn or adp_pick_fn
+    return run_to_completion(state, your_pick_fn)
 
+
+def run_to_completion(state: DraftState, your_pick_fn=None) -> DraftState:
+    """Drive ``state`` from its current pick to the end of the draft, in place (and return it).
+
+    Your seat uses ``your_pick_fn`` (defaults to :func:`adp_pick_fn`); every other seat picks via
+    :func:`pick_by_adp` with ``state.noise``. :func:`simulate_draft` runs this from a fresh state;
+    the 9.5 win-prob policy runs it on a :meth:`DraftState.clone` to finish a *tentative* draft.
+    """
+    pick_fn = your_pick_fn or adp_pick_fn
     while not state.is_done() and state.available:
         team = state.team_on_clock()
-        if team == your_team:
+        if team == state.your_team:
             idx = int(pick_fn(state))
             if idx not in state.available:
                 raise ValueError(f"your_pick_fn returned unavailable pick {idx}")
         else:
-            idx = pick_by_adp(state, team, noise=noise)
+            idx = pick_by_adp(state, team, noise=state.noise)
         _apply_pick(state, team, idx)
     return state
 

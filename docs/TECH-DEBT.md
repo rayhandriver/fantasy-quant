@@ -17,9 +17,9 @@ At a glance:
 | **T3** | 🟠 | Downside under-modeled — unconditional coverage 44 % / points coverage 62 % | before lockbox | ☐ |
 | **T4** | 🟠 | Season-sim level bias −137 pts/team/season | before lockbox (with T3) | ☐ |
 | **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ☐ |
-| **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☐ |
+| **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☑ |
 | **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
-| **T8** | 🟡 | `objective` is a dead label; opponent model still ADP+noise | 9.5 now / opponent model at 0.10 | ☐ |
+| **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (8b) | 9.5 done / opponent model at 0.10 | ◐ |
 
 ---
 
@@ -172,7 +172,18 @@ lockbox is evaluated once and reported as-is with the decision-count caveat.
 ---
 
 ## 🟡 T6 — Consolidate the Monte-Carlo draws
-**Status ☐ · fold into Phase 9.5 (~1–2 hr).**
+**Status ☑ done (2026-07-10, with Phase 9.5).**
+
+**Done (2026-07-10).** Added `distribution.cached_distribution(con, season, ruleset, n_draws, seed)`
+— memoized on `(season, ruleset_json, n_draws, seed)` (the `_CORR_CACHE` pattern), always computed
+`return_games=True` and served as `(summary, samples, games)`; `samples` is bit-identical whether or
+not `games` is captured (same rng stream), so the games-free consumer slices `[:2]` off the *same*
+cloud. Both consumers now read it: `optimizer.assemble_value` (with a new threaded `seed`) and
+`weekly.build_weekly_model`. `optimize_draft(winprob=True)` builds the sim's `WeeklyModel` on the
+**same seed** as the value index, so the draft and sim reference one joint cloud. `test_phase9`
+asserts the memoization (one underlying call per `(season, seed)`; a distinct seed recomputes).
+
+<details><summary>Original plan (kept for the record)</summary>
 
 **Symptom.** `distribution.assemble_distribution` (`N_DRAWS = 2000`, `seed = 0` default) is called
 independently by `optimizer.assemble_value` (`src/fantasy_quant/draft/optimizer.py:100`) and
@@ -191,6 +202,8 @@ cloud is recomputed several times.
 **Done-when.** 194 tests still pass; a new test asserts the two consumers get identical `samples` for the
 same `(season, seed)`. Do this **before** Phase 9.5 wires the sim into the draft objective (T8) — that's when
 the divergence would start biasing results.
+
+</details>
 
 ---
 
@@ -237,7 +250,18 @@ explicit decision, not a silent no-op.
 ---
 
 ## 🟡 T8 — Make `objective` real (Phase 9.5) + the behavioral opponent model (0.10 → Phase 11)
-**Status ☐ · 9.5 is the immediate build; opponent model blocked on a real Sleeper league.**
+**Status ◐ · 8a ☑ done (2026-07-10); 8b open (blocked on a real Sleeper league).**
+
+**Done — 8a (2026-07-10).** `DraftConfig.objective` is now consumed. `winprob_pick_fn` (opt-in via
+`optimize_draft(winprob=True)`) prefilters to the top-k portfolio-CE/scarcity candidates, finishes the
+draft greedily for each, scores the league with a Phase-10 mini-sim, and takes the candidate that
+maximizes the routed metric — `make_playoffs`→`playoff_prob`, `championship_or_bust`→`title_prob`.
+Common random numbers across candidates make the comparison pure roster signal. 2022 DEV: the two
+objectives draft **8–9 different roster slots** and the title-max board carries **+0.09 title prob** over
+the playoff-max board on an independent eval (at 250 sims/pick). **Honest caveat:** `title_prob` is a
+~1-in-10 event, so `championship_or_bust` needs ≥~200 sims or it chases sim noise (at 60 sims it
+under-performed); `make_playoffs` resolves at far fewer. Portfolio CE stays the fast default.
+`steps/phase9_policy.py` is the done-bar; **8b** (behavioral opponent model) remains below.
 
 **Symptom.** `DraftConfig.objective` (`src/fantasy_quant/draft/config.py:141`, comment "MVP: label") is
 validated and passed around but **nothing consumes it** — the optimizer maximizes portfolio CE, not win
@@ -269,6 +293,6 @@ probs. 8b: opponent model beats ADP+noise on a real-pick availability Brier.
 ## Ordering (see `ROADMAP.md ★ THE PIPELINE` for the full sequence)
 1. ~~**Now:** T1 (commit), T2 (backup).~~ ☑ both done (2026-07-10).
 2. ~~**Opportunistic:** T7 (scrape guards + raw-payload archival + props shelved).~~ ☑ done (2026-07-10).
-3. **Next build:** T8a (Phase 9.5 — roadmap's "← NOW") with T6 (MC consolidation) folded in.
-4. **Before the lockbox:** T3 + T4 together (coverage + level bias), then T5 (pre-register).
-5. **Later:** T8b when a real Sleeper league is available.
+3. ~~**Phase 9 completion:** T8a (win-prob objective) with T6 (MC consolidation) folded in.~~ ☑ done (2026-07-10).
+4. **Next build:** step 0.10 Sleeper ingest → S4/Phase 11 (**T8b** behavioral opponent model + availability Brier).
+5. **Before the lockbox:** T3 + T4 together (coverage + level bias), then T5 (pre-register).

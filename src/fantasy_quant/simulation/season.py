@@ -151,6 +151,21 @@ def simulate_league(team_weekly: np.ndarray, fmt: LeagueFormat, schedule: np.nda
     return LeagueSim(wins=wins, points_for=pf, made_playoffs=made, champion=champion)
 
 
+def league_probabilities(rosters: list[pd.DataFrame], model, fmt: LeagueFormat,
+                         slots: RosterSlots, rng: np.random.Generator, sims: int = 300,
+                         sim_cols: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """``(playoff_prob, title_prob)`` per team for a fully-drafted league, via the Phase-10 MC
+    engine — the thin bridge the 9.5 win-prob draft objective scores candidates through (and the
+    same three calls ``phase10_sim`` makes per league). ``sim_cols`` selects the shared draw columns
+    (defaults to a fresh random subset of ``sims`` worlds)."""
+    if sim_cols is None:
+        sim_cols = rng.choice(model.n_draws, min(sims, model.n_draws), replace=False)
+    schedule = round_robin_schedule(fmt.n_teams, fmt.reg_weeks, rng)
+    tw = rosters_weekly(rosters, model, sim_cols, slots, rng)
+    sim = simulate_league(tw, fmt, schedule)
+    return sim.playoff_prob, sim.title_prob
+
+
 def rosters_weekly(rosters: list[pd.DataFrame], model, sim_cols: np.ndarray,
                    slots: RosterSlots, rng: np.random.Generator) -> np.ndarray:
     """Expand drafted rosters to team weekly optimal-lineup scores, ``(n_teams, n_sims,

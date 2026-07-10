@@ -1189,3 +1189,32 @@ ingesting garbage, and closed the props no-op limbo.
   Marked in `props_projection.py` + `ROADMAP.md` 2.3 (⏸️).
 **Takeaway:** the spine now has a schema-drift tripwire and a forensic trail; the only remaining tech-debt
 before the lockbox is the modeling pair **T3+T4**.
+
+## Phase 9 completion — draft policy: scarcity/lookahead + the win-prob objective (2026-07-10)
+Closed out Phase 9 (9.1 scarcity half · 9.4 lookahead · 9.5 win-prob objective), folding in **T6**.
+
+- **T6 — one shared draw cloud.** `distribution.cached_distribution` memoizes the Phase-5 assembler on
+  `(season, ruleset, n_draws, seed)` and both consumers (`assemble_value`, `build_weekly_model`) read it;
+  `samples` is bit-identical with/without the games companion (same rng stream), so the sim and the draft
+  value can no longer silently diverge once a non-zero seed is threaded. `optimize_draft(winprob=True)`
+  builds the sim on the **same seed** as the value index.
+- **9.1 scarcity + 9.4 lookahead — one urgency term.** `positional_cliff` = the value drop below a player
+  at his position in the current pool (a scarce tier that won't refill); `survival_prob` = P(he lasts to
+  your next pick) from snake geometry + ADP-noise. Their product `scarcity_w·cliff·(1−survival)` is added to
+  the marginal-CE score in `RiskModel.effective_rank`: **urgency fires only when a player is both well above
+  his positional fallback AND about to vanish.** `scarcity_w=0` reproduces the covariance-only greedy exactly
+  (the Phase-8 regression test pins it). 2022 DEV: 11/15 picks differ from the covariance-only board.
+- **9.5 win-prob objective — `objective` is real (T8a).** Opt-in `winprob_pick_fn`: portfolio-CE/scarcity
+  **prefilter → top-k**, then for each candidate finish the draft greedily (you) vs ADP+noise (opponents)
+  and score the league with a **Phase-10 mini-sim**; take the candidate maximizing the routed metric —
+  `make_playoffs`→`playoff_prob`, `championship_or_bust`→`title_prob`. Common random numbers across
+  candidates. 2022 DEV: the two objectives draft **8–9 different roster slots**; the title-max board carries
+  **+0.09 title prob** over the playoff-max board on an independent 1,000-world eval.
+- **Finding — the title objective is resolution-limited.** At 60 sims/pick `championship_or_bust` chases sim
+  noise and *under*-performs `make_playoffs` on realized title prob; at ≥~200 sims it correctly exceeds it.
+  Title is a ~1-in-10 event, so it needs a healthy sim budget; `make_playoffs` (6-in-10) resolves cheaply.
+  This is the same "title is resolution-limited" limitation the Phase-10 calibration gate documented — the
+  policy inherits it. Default `winprob_sims=200`; `steps/phase9_policy.py` is the done-bar.
+**Takeaway:** the greedy now plans (scarcity + snake-aware availability) and the objective finally *does
+something*, consuming the calibrated Phase-10 probabilities — but only make-the-cut is cheap to optimize;
+chasing the title needs compute. **Next: step 0.10 Sleeper ingest → the behavioral opponent model (T8b).**

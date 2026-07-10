@@ -280,7 +280,7 @@ def _my_first_two(vi, board, lam):
     corr = neutral_model()                               # QB1-WR1 prior ρ = +0.40
     cfg = DraftConfig(league=LeagueSetup(draft_slot=1, slots=UNCAPPED), risk_lambda=lam)
     b = attach_value(board, vi)
-    risk = build_risk_model(b, vi, corr, lam)
+    risk = build_risk_model(b, vi, corr, lam, scarcity_w=0.0)   # isolate the covariance mechanic
     res = simulate_draft(b, your_pick_fn=personalized_pick_fn(cfg, 0.0, risk),
                          n_teams=10, rounds=15, slots=UNCAPPED, your_team=0, noise=0.0, seed=7)
     return res.pick_log().query("is_you")["player_key"].tolist()[:2]

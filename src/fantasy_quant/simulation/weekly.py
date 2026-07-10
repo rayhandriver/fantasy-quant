@@ -32,7 +32,7 @@ from fantasy_quant.backtest import metrics, scoring
 from fantasy_quant.backtest.scoring import RuleSet
 from fantasy_quant.covariance.estimate import nearest_psd, player_covariance
 from fantasy_quant.projections import variance
-from fantasy_quant.projections.distribution import assemble_distribution
+from fantasy_quant.projections.distribution import cached_distribution
 
 OFFENSE = ("QB", "RB", "WR", "TE")
 COV_CLIP = (0.2, 2.5)          # weekly CoV clipped to a physical band before α = 1/CoV²
@@ -192,8 +192,10 @@ def build_weekly_model(con, season: int, ruleset: RuleSet | None = None,
     from fantasy_quant.draft.optimizer import _board_teams, assemble_correlation
 
     ruleset = ruleset or RuleSet()
-    summary, samples, games = assemble_distribution(con, season, ruleset, n_draws=n_draws,
-                                                    seed=seed, return_games=True)
+    # T6: the *same* shared draw cloud the draft optimizer scores value against (keyed on seed), so
+    # the value the greedy drafts and the value the sim scores can never silently diverge.
+    summary, samples, games = cached_distribution(con, season, ruleset, n_draws=n_draws, seed=seed)
+    summary = summary.copy()
 
     as_of = draft_date(con, season)
     board = adp_asof(con, season, as_of)

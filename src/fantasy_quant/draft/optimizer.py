@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
+from scipy.special import ndtr
 
 from fantasy_quant.backtest.metrics import replacement_ranks
 from fantasy_quant.backtest.scoring import RuleSet
@@ -40,12 +41,24 @@ from fantasy_quant.config import DEV_SEASONS
 from fantasy_quant.covariance.estimate import MAX_ROLE_RANK
 from fantasy_quant.covariance.shrinkage import CorrelationModel, estimate_correlation_model
 from fantasy_quant.draft.config import DraftConfig
-from fantasy_quant.draft.simulator import DraftState, RosterSlots, canon_pos, simulate_draft
+from fantasy_quant.draft.simulator import (
+    DraftState,
+    RosterSlots,
+    _apply_pick,
+    canon_pos,
+    run_to_completion,
+    simulate_draft,
+)
 from fantasy_quant.projections import distribution
 from fantasy_quant.valuation import utility
 from fantasy_quant.valuation.value_board import value_board
 
 DEFAULT_NOISE = 5.0
+# 9.1/9.4 scarcity+lookahead: how much of a candidate's availability-gated positional cliff is
+# added to his priority value (points-over-replacement units). Modest — value still leads, scarcity
+# only breaks ties toward the player at a thin position who won't survive to your next pick.
+DEFAULT_SCARCITY_W = 0.5
+SCARCITY_HORIZON = 3          # the cliff is the value drop to the 3rd-next same-position player
 
 
 # ------------------------------------------------------------------------------------------------
@@ -82,7 +95,8 @@ def _board_teams(board_adp: pd.DataFrame) -> pd.DataFrame:
     return t.drop_duplicates("player_key")[["player_key", "team", "role_rank"]]
 
 
-def assemble_value(con, season: int, config: DraftConfig, as_of=None) -> pd.DataFrame:
+def assemble_value(con, season: int, config: DraftConfig, as_of=None,
+                   seed: int = 0) -> pd.DataFrame:
     """The value index the optimizer drafts against, keyed by ``player_key``.
 
     ``base_value`` = **risk-adjusted value-over-replacement**: the Phase-5 certainty equivalent
@@ -92,12 +106,16 @@ def assemble_value(con, season: int, config: DraftConfig, as_of=None) -> pd.Data
     stay on ADP (``base_value`` NaN → the simulator's ADP fallback). Also carries each player's PIT
     ``team`` + ``role_rank`` (from the ADP board) so the covariance layer can price same-team
     co-movement.
+
+    ``seed`` selects the shared Phase-5 draw cloud (T6): pass the same seed the season sim uses and
+    the value the greedy drafts against is scored on the *same* joint draws (see
+    :func:`fantasy_quant.projections.distribution.cached_distribution`).
     """
     lg = config.league
     if as_of is None:
         as_of = draft_date(con, season)
     vb = value_board(con, season, as_of, ruleset=lg.ruleset, slots=lg.slots, n_teams=lg.n_teams)
-    dist, _ = distribution.assemble_distribution(con, season, ruleset=lg.ruleset)
+    dist = distribution.cached_distribution(con, season, ruleset=lg.ruleset, seed=seed)[0]
     ceb = utility.risk_adjusted_board(dist, lam=config.risk_lambda)
 
     ce_repl = _replacement_from(ceb["ce_value"], ceb["pos"], lg.slots, lg.n_teams)
@@ -197,6 +215,47 @@ def assemble_correlation(con, season: int, ruleset: RuleSet | None = None) -> Co
 
 
 # ------------------------------------------------------------------------------------------------
+# 9.1 positional scarcity + 9.4 availability lookahead (pure — the unit-test targets)
+# ------------------------------------------------------------------------------------------------
+def positional_cliff(keys, positions, bv: dict[str, float],
+                     horizon: int = SCARCITY_HORIZON) -> np.ndarray:
+    """The **value cliff** below each player at his own position in the current pool (9.1 scarcity).
+
+    For each valued player: ``base_value`` minus the value of the ``horizon``-th next-best available
+    same-position player (or the thinnest available one if fewer remain), floored at 0. A steep
+    cliff = a scarce tier that won't refill → addressing it is urgent; a flat tier (many similar
+    players) = ~0 → safe to wait. Pure pool structure; the timing gate is :func:`survival_prob`.
+    """
+    vals = np.array([bv.get(k, np.nan) for k in keys], float)
+    pos = np.asarray(list(positions), dtype=object)
+    out = np.zeros(len(vals))
+    for p in {q for q in pos if q is not None}:
+        ix = np.where(pos == p)[0]
+        order = ix[np.argsort(-np.nan_to_num(vals[ix], nan=-np.inf))]   # value-desc, NaNs last
+        rv = vals[order]
+        for r, gi in enumerate(order):
+            if not np.isfinite(vals[gi]):
+                continue
+            fb = rv[min(r + horizon, len(rv) - 1)]
+            out[gi] = max(0.0, vals[gi] - (fb if np.isfinite(fb) else 0.0))
+    return out
+
+
+def survival_prob(adp, window_end: float | None, noise: float) -> np.ndarray:
+    """P(a player is still available at your next pick) from ADP + opponent noise (9.4 lookahead).
+
+    Opponents pick ≈ best-available by ADP + Gaussian(noise); a player with ADP ``a`` survives the
+    ``window_end`` picks before your next turn iff his noised draft slot lands past it —
+    ``Φ((a − window_end)/noise)``. ``window_end=None`` (no further pick of yours) ⇒ all survive
+    (1.0), so nothing is urgent. Returns an array aligned to ``adp``.
+    """
+    a = np.asarray(adp, float)
+    if window_end is None:
+        return np.ones_like(a)
+    return ndtr((a - float(window_end)) / max(noise, 1.0))
+
+
+# ------------------------------------------------------------------------------------------------
 # the risk model the covariance-aware pick policy consults
 # ------------------------------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -214,14 +273,33 @@ class RiskModel:
     role: dict[str, int] = field(repr=False)
     rank_x: np.ndarray = field(repr=False)     # base_value, ascending
     rank_y: np.ndarray = field(repr=False)     # matching priority rank (1 = draft first)
+    scarcity_w: float = 0.0                    # 9.1/9.4 urgency weight (0 = covariance-only greedy)
+    noise: float = DEFAULT_NOISE               # opponent ADP noise the survival model assumes
 
-    def effective_rank(self, pool: pd.DataFrame, roster: pd.DataFrame) -> np.ndarray:
-        """Covariance-adjusted priority rank per pool row (NaN where unvalued → ADP fallback):
-        rank(base_value − 2λ·σ_j·Σ_{i∈roster, same team} ρ_ij σ_i) through the static curve."""
+    def effective_rank(self, pool: pd.DataFrame, roster: pd.DataFrame,
+                       window_end: float | None = None) -> np.ndarray:
+        """Covariance- **and scarcity-** adjusted priority rank per pool row (NaN where unvalued →
+        ADP fallback), through the static value→rank curve:
+
+            rank( base_value_j − 2λ·σ_j·Σ_{i∈roster, same team} ρ_ij σ_i
+                              + scarcity_w · cliff_j · P(j gone by my next pick) )
+
+        The covariance term (Phase 8) charges same-team co-movement; the scarcity term (9.1 cliff ×
+        9.4 availability) adds urgency only when a candidate is *both* well above his positional
+        fallback *and* unlikely to survive to ``window_end``. ``scarcity_w=0`` reproduces the
+        covariance-only greedy exactly (regression-tested)."""
         mine = [(self.team.get(k), self.pos.get(k), self.role.get(k, 1), self.sd.get(k))
                 for k in roster["player_key"]]
         mine = [m for m in mine if m[0] and m[3] and np.isfinite(m[3])]
         my_teams = {t for t, _, _, _ in mine}
+
+        if self.scarcity_w > 0:
+            cliff = positional_cliff(pool["player_key"], pool["pos"], self.bv)
+            p_gone = 1.0 - survival_prob(pool["adp"].to_numpy(float), window_end, self.noise)
+            urgency = self.scarcity_w * cliff * p_gone
+        else:
+            urgency = np.zeros(len(pool))
+
         out = np.full(len(pool), np.nan)
         for n, (pk, pos) in enumerate(zip(pool["player_key"], pool["pos"], strict=False)):
             v = self.bv.get(pk)
@@ -234,15 +312,18 @@ class RiskModel:
                 for ti, pi, ri, si in mine:
                     if ti == tj:
                         pen += 2.0 * self.lam * sj * si * self.corr.rho(pi, ri, pos, rj)
-            out[n] = float(np.interp(v - pen, self.rank_x, self.rank_y))
+            out[n] = float(np.interp(v - pen + urgency[n], self.rank_x, self.rank_y))
         return out
 
 
 def build_risk_model(board: pd.DataFrame, value_index: pd.DataFrame, corr: CorrelationModel,
-                     lam: float) -> RiskModel:
+                     lam: float, scarcity_w: float = DEFAULT_SCARCITY_W,
+                     noise: float = DEFAULT_NOISE) -> RiskModel:
     """Assemble the :class:`RiskModel` from a value-attached board + the value index. The rank
     curve interpolates the board's own ``base_value → value`` mapping, so a zero penalty reproduces
-    the static rank (and λ=0 the covariance-blind draft) exactly."""
+    the static rank (and λ=0, ``scarcity_w=0`` the covariance-blind, myopic draft) exactly.
+    ``scarcity_w`` weights the 9.1/9.4 urgency term; ``noise`` is the opponent ADP noise the
+    survival model assumes (match the simulator's)."""
     vi = value_index.dropna(subset=["base_value"]).drop_duplicates("player_key").copy()
     for c in ("sd", "team", "role_rank"):        # tolerate pre-Phase-8 value indexes
         if c not in vi.columns:
@@ -262,7 +343,7 @@ def build_risk_model(board: pd.DataFrame, value_index: pd.DataFrame, corr: Corre
         pos=dict(zip(vi["player_key"], vi["pos"], strict=False)),
         role={k: int(r) for k, r in zip(vi["player_key"], vi["role_rank"], strict=False)
               if pd.notna(r)},
-        rank_x=x, rank_y=y,
+        rank_x=x, rank_y=y, scarcity_w=float(scarcity_w), noise=float(noise),
     )
 
 
@@ -313,44 +394,105 @@ def _must_now(state: DraftState, config: DraftConfig, margin: float) -> int | No
     return best[1] if best else None
 
 
+def _greedy_eff(state: DraftState, config: DraftConfig, risk: RiskModel | None,
+                ) -> tuple[pd.DataFrame, np.ndarray]:
+    """The constrained greedy's **effective priority** per legal pool row (lower = draft sooner),
+    with never-excludes, the covariance/scarcity re-rank, ADP fallback and soft tilts applied.
+
+    Shared by the myopic :func:`personalized_pick_fn` (take the argmin) and the 9.5 prefilter (take
+    the top-K) so both see one identical, consistent ordering. Must-draft urgency is handled by the
+    caller via :func:`_must_now` before this runs."""
+    seat = state.your_team
+    pool = state.draftable_pool(seat)
+    if config.never_draft:                                       # hard exclude
+        pool = pool[~pool["player_key"].isin(config.never_draft)]
+        if pool.empty:                                           # never leave a slot unfilled
+            av = state.available_board()
+            av = av[~av["player_key"].isin(config.never_draft)]
+            pool = av if not av.empty else state.available_board()
+
+    rnd = state.round()
+    counts = state.roster_counts(seat)                           # for state-aware archetypes
+    smart = risk is not None and (risk.lam > 0 or risk.scarcity_w > 0)
+    if smart:                                   # marginal-portfolio-CE + scarcity/lookahead re-rank
+        last = state.n_teams * state.rounds
+        nxt = _next_own_pick(state.overall_pick, seat, state.n_teams, last)
+        window_end = None if nxt is None else nxt - 1            # opp picks before my next turn
+        base = risk.effective_rank(pool, state.your_roster(), window_end)
+    else:
+        base = pool["value"].to_numpy(float)
+    base = np.where(np.isnan(base), pool["adp"].to_numpy(float), base)   # ADP fallback
+    tilt = np.fromiter(
+        (config.total_tilt_rounds(pk, pos, rnd, counts.get(pos, 0))
+         for pk, pos in zip(pool["player_key"], pool["pos"], strict=False)),
+        dtype=float, count=len(pool),
+    )
+    return pool, base - state.n_teams * tilt                     # + tilt rounds → sooner
+
+
 def personalized_pick_fn(config: DraftConfig, noise: float = DEFAULT_NOISE,
                          risk: RiskModel | None = None):
     """Build the ``your_pick_fn`` the simulator drives your seat with, from a resolved config.
 
-    With a :class:`RiskModel` (and λ>0) each candidate's priority is re-ranked per pick by its
-    covariance-adjusted marginal value against your current roster; without one (or at λ=0) the
-    static value rank is used unchanged — the pre-Phase-8 behavior."""
+    With a :class:`RiskModel` (λ>0 or ``scarcity_w>0``) each candidate's priority is re-ranked per
+    pick by its covariance-adjusted marginal value and its 9.1/9.4 scarcity urgency against your
+    current roster; without one the static value rank is used unchanged (the pre-Phase-8 path)."""
     margin = max(noise, 1.0)
-    cov_aware = risk is not None and risk.lam > 0
 
     def pick_fn(state: DraftState) -> int:
-        seat = state.your_team
-        pool = state.draftable_pool(seat)
-        if config.never_draft:                                   # hard exclude
-            pool = pool[~pool["player_key"].isin(config.never_draft)]
-            if pool.empty:                                       # never leave a slot unfilled
-                av = state.available_board()
-                av = av[~av["player_key"].isin(config.never_draft)]
-                pool = av if not av.empty else state.available_board()
-
         forced = _must_now(state, config, margin)                # secure must-draft in time
         if forced is not None and forced in state.available:
             return forced
-
-        rnd = state.round()
-        counts = state.roster_counts(seat)                       # for state-aware archetypes
-        if cov_aware:                                            # marginal-portfolio-CE re-rank
-            base = risk.effective_rank(pool, state.your_roster())
-        else:
-            base = pool["value"].to_numpy(float)
-        base = np.where(np.isnan(base), pool["adp"].to_numpy(float), base)   # ADP fallback
-        tilt = np.fromiter(
-            (config.total_tilt_rounds(pk, pos, rnd, counts.get(pos, 0))
-             for pk, pos in zip(pool["player_key"], pool["pos"], strict=False)),
-            dtype=float, count=len(pool),
-        )
-        eff = base - state.n_teams * tilt                        # + tilt rounds → sooner
+        pool, eff = _greedy_eff(state, config, risk)
         return int(pool.index[int(np.argmin(eff))])
+
+    return pick_fn
+
+
+# ------------------------------------------------------------------------------------------------
+# 9.5 — the win-probability draft objective (opt-in; makes DraftConfig.objective real, T8a)
+# ------------------------------------------------------------------------------------------------
+def winprob_pick_fn(config: DraftConfig, weekly_model, fmt, risk: RiskModel | None = None,
+                    noise: float = DEFAULT_NOISE, k: int = 6, sims: int = 200, base_seed: int = 0):
+    """The objective-aware pick policy: portfolio-CE/scarcity **prefilter → top-``k``**, then for
+    each candidate finish the draft greedily (you) vs ADP+noise (opponents) and score the resulting
+    league with a Phase-10 **mini-sim**; take the candidate that maximizes the config's objective
+    probability for your seat.
+
+    ``objective`` routes the metric — ``make_playoffs`` → ``playoff_prob``, ``championship_or_bust``
+    → ``title_prob`` (rewarding ceiling/variance → a genuinely different board, the point of 9.5).
+    A mini-sim per candidate is expensive, so this is opt-in and budgeted by ``k``; portfolio CE
+    stays the fast default. Common random numbers across candidates (one seed per pick for the
+    schedule, draw columns and opponent completion) make the comparison pure roster signal, not sim
+    noise. Consumes the Phase-10 probabilities the calibration gate certified (T8a)."""
+    from fantasy_quant.simulation.season import league_probabilities
+
+    margin = max(noise, 1.0)
+    want_title = config.objective == "championship_or_bust"
+    base_pick = personalized_pick_fn(config, noise, risk)        # the fast draft-completion policy
+
+    def pick_fn(state: DraftState) -> int:
+        forced = _must_now(state, config, margin)
+        if forced is not None and forced in state.available:
+            return forced
+        pool, eff = _greedy_eff(state, config, risk)
+        cand = [int(pool.index[i]) for i in np.argsort(eff)[:max(1, k)]]
+        if len(cand) == 1:
+            return cand[0]
+
+        pick_seed = base_seed + state.overall_pick
+        best_idx, best_score = cand[0], -1.0
+        for c in cand:                                       # CRN: same seeds for every candidate
+            roll = state.clone(np.random.default_rng(pick_seed))
+            _apply_pick(roll, roll.your_team, c)             # take c, then finish the draft fast
+            run_to_completion(roll, base_pick)
+            rosters = [roll.roster(t) for t in range(roll.n_teams)]
+            pp, tp = league_probabilities(rosters, weekly_model, fmt, roll.slots,
+                                          np.random.default_rng(pick_seed + 1), sims=sims)
+            score = float(tp[roll.your_team] if want_title else pp[roll.your_team])
+            if score > best_score:
+                best_idx, best_score = c, score
+        return best_idx
 
     return pick_fn
 
@@ -360,14 +502,20 @@ def personalized_pick_fn(config: DraftConfig, noise: float = DEFAULT_NOISE,
 # ------------------------------------------------------------------------------------------------
 def optimize_draft(con, season: int, config: DraftConfig, value_index: pd.DataFrame | None = None,
                    noise: float = DEFAULT_NOISE, seed: int = 0,
-                   corr: CorrelationModel | None = None) -> DraftState:
+                   corr: CorrelationModel | None = None, winprob: bool = False,
+                   winprob_k: int = 6, winprob_sims: int = 200) -> DraftState:
     """Draft a personalized roster for ``season`` from ``config``'s seat, PIT.
 
     Pass a shared ``value_index`` (from :func:`assemble_value`) to draft several configs against the
     same value signal — the cost report reuses one index across the personalized team, benchmark,
     and every leave-one-out redraft, so only the config differs. ``corr`` (the Phase-8 correlation
     model) is built PIT — and memoized — when not supplied; the greedy is covariance-aware whenever
-    ``config.risk_lambda > 0``.
+    ``config.risk_lambda > 0`` and scarcity/lookahead-aware via the value index's ``sd``/``adp``.
+
+    ``winprob=True`` (9.5, opt-in) swaps the myopic portfolio-CE greedy for the objective-aware
+    win-probability policy: it builds the season's :class:`WeeklyModel` on the **same seed** (shared
+    draws, T6) and routes ``config.objective`` via a Phase-10 mini-sim (``winprob_k`` candidates,
+    ``winprob_sims`` worlds per pick). Fast portfolio CE stays the default.
     """
     lg = config.league
     as_of = draft_date(con, season)
@@ -375,11 +523,23 @@ def optimize_draft(con, season: int, config: DraftConfig, value_index: pd.DataFr
         raise ValueError(f"no PIT ADP board for {season} — can't plan around availability")
     board = preseason_board(con, season, as_of)
     if value_index is None:
-        value_index = assemble_value(con, season, config, as_of)
+        value_index = assemble_value(con, season, config, as_of, seed=seed)
     if corr is None:
         corr = assemble_correlation(con, season, lg.ruleset)
     board = attach_value(board, value_index)
-    risk = build_risk_model(board, value_index, corr, config.risk_lambda)
-    return simulate_draft(board, your_pick_fn=personalized_pick_fn(config, noise, risk),
-                          n_teams=lg.n_teams, rounds=lg.rounds, slots=lg.slots,
-                          your_team=lg.your_team, noise=noise, seed=seed)
+    risk = build_risk_model(board, value_index, corr, config.risk_lambda, noise=noise)
+
+    if winprob:
+        from fantasy_quant.simulation.season import LeagueFormat
+        from fantasy_quant.simulation.weekly import build_weekly_model
+        if lg.n_teams % 2:
+            raise NotImplementedError("win-prob objective needs an even league size (round-robin)")
+        wm = build_weekly_model(con, season, lg.ruleset, seed=seed)
+        fmt = LeagueFormat(n_teams=lg.n_teams)
+        pick_fn = winprob_pick_fn(config, wm, fmt, risk, noise=noise, k=winprob_k,
+                                  sims=winprob_sims, base_seed=seed)
+    else:
+        pick_fn = personalized_pick_fn(config, noise, risk)
+
+    return simulate_draft(board, your_pick_fn=pick_fn, n_teams=lg.n_teams, rounds=lg.rounds,
+                          slots=lg.slots, your_team=lg.your_team, noise=noise, seed=seed)

@@ -5,6 +5,26 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-10 (c)** — **PHASE 9 COMPLETE** (9.1 scarcity · 9.4 lookahead · 9.5 win-prob objective) **+ T6**.
+  **9.1 scarcity/9.4 lookahead:** `positional_cliff` (value drop to the next same-position tier) × `1 −
+  survival_prob` (snake-aware ADP+noise survival to your next pick) → an **urgency** term folded into
+  `RiskModel.effective_rank` (`scarcity_w·cliff·(1−survival)`); `scarcity_w=0` reproduces the covariance-only
+  greedy exactly (pinned the Phase-8 regression test to `scarcity_w=0`). **T6:** `cached_distribution`
+  memoizes the Phase-5 cloud on `(season, ruleset, n_draws, seed)`; `assemble_value` (+ threaded `seed`) and
+  `build_weekly_model` both read it — one joint cloud, no silent divergence. **9.5 win-prob (T8a):** opt-in
+  `winprob_pick_fn` — portfolio-CE/scarcity prefilter → top-k → finish the draft greedily per candidate →
+  Phase-10 **mini-sim** → argmax the routed metric (`make_playoffs`→playoff_prob,
+  `championship_or_bust`→title_prob), CRN across candidates; refactored the simulator (`DraftState.clone`
+  + `run_to_completion`) to support the rollout. **2022 DEV:** objective swings **8–9 roster slots**,
+  title-max **+0.09 title prob** at 250 sims. **Dead end / caveat:** at 60 sims the title objective chases
+  noise (under-performs make_playoffs) — title is a ~1-in-10 event → needs ≥~200 sims; default
+  `winprob_sims=200`. `steps/phase9_policy.py` + 7 tests; 210 tests pass, ruff clean; cost-report spine
+  re-validated with scarcity on. **Next: step 0.10 Sleeper ingest → the behavioral opponent model (T8b).**
+- **2026-07-10 (b)** — **T7 done** (opportunistic, while in the data layer): scrape freshness/schema gates in
+  `data/validate.py` (`adp_freshness_gate` = the §2 chore as an assertion, `board_size_gate`,
+  `match_rate_gate`) wired into `data_health_report`; `cache.archive_text` date-stamps raw FFC/FantasyPros
+  payloads under `data/raw/**/payloads/` for last-good diffing; **props/markets layer formally SHELVED**
+  (user decision) — not a silent no-op. +10 tests.
 - **2026-07-10** — **FULL-CODEBASE AUDIT → remediation register opened (`docs/TECH-DEBT.md`).** Reviewed the
   whole engine in detail (simulation, covariance/distribution/injury core, valuation spine, config); 194
   tests pass, ruff clean, code healthy. Catalogued **8 problems with exact long-run fixes** — the durable

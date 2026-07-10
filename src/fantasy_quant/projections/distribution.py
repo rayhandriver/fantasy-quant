@@ -175,3 +175,30 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
         "games_played_mean": df["avail_p"] * df["team_games"],
     })
     return (out, samples, games) if return_games else (out, samples)
+
+
+# --------------------------------------------------------------------------------------------
+# T6 — one shared draw cloud per (season, ruleset, n_draws, seed)
+# --------------------------------------------------------------------------------------------
+_DIST_CACHE: dict[tuple, tuple] = {}
+
+
+def cached_distribution(con, season: int, ruleset: RuleSet | None = None, n_draws: int = N_DRAWS,
+                        seed: int = 0) -> tuple:
+    """Memoized :func:`assemble_distribution` — the **single source of the draw cloud** both the
+    draft optimizer (``optimizer.assemble_value``) and the season sim
+    (``weekly.build_weekly_model``) both read, so they can never silently diverge (T6).
+
+    Always computed ``return_games=True`` and cached as ``(summary, samples, games)`` keyed on
+    ``(season, ruleset_json, n_draws, seed)`` — mirroring ``_CORR_CACHE``. ``samples`` is
+    bit-identical whether or not ``games`` is captured (same rng stream — see
+    :func:`sample_player_season`), so the games-free consumer slices ``[:2]`` off the *same* cloud.
+    Thread one explicit ``seed`` from a run's entry point and the draft and sim reference the same
+    joint draws.
+    """
+    rs = ruleset or RuleSet()
+    key = (int(season), rs.model_dump_json(), int(n_draws), int(seed))
+    if key not in _DIST_CACHE:
+        _DIST_CACHE[key] = assemble_distribution(con, season, rs, n_draws=n_draws, seed=seed,
+                                                 return_games=True)
+    return _DIST_CACHE[key]
