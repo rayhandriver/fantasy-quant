@@ -31,8 +31,9 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
   unrecoverable later, so keep the snapshot series fresh — if the latest 2026 snapshot in `adp_snapshots`
   is > 6 days old, run `uv run python steps/stage0_adp_snapshot.py` (idempotent, ~10 s). Any session
   working in this repo should check/refresh this. **After refreshing, back up the crown jewels off the WSL
-  disk** (they're gitignored, single-copy): copy `data/raw/adp/snapshots/*.parquet` (and periodically the
-  `.duckdb`) to `/mnt/c/Users/rayha/fantasy-quant-backup/` — see `docs/TECH-DEBT.md` **T2**.
+  disk** (they're gitignored, single-copy): run `uv run python steps/backup_db.py` — it copies the 2026 ADP
+  snapshots + 2025 backfill + a timestamped `.duckdb` to `/mnt/c/Users/rayha/fantasy-quant-backup/` and
+  md5-verifies each. See `docs/TECH-DEBT.md` **T2** (done 2026-07-10).
 
 ## 3. The discipline (non-negotiable — ported from the intern project)
 1. **Point-in-time (PIT) everywhere.** When building any as-of feature/projection/ranking, **no data

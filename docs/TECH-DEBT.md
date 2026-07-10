@@ -12,8 +12,8 @@ At a glance:
 
 | id | 🔺 | problem | when | status |
 |----|----|---------|------|--------|
-| **T1** | 🔴 | Phase 10 + Stage 0 work uncommitted | now | ☐ |
-| **T2** | 🔴 | Irreplaceable data (2026 ADP series, 2025 backfill) has no backup | now | ☐ |
+| **T1** | 🔴 | Phase 10 + Stage 0 work uncommitted | now | ☑ |
+| **T2** | 🔴 | Irreplaceable data (2026 ADP series, 2025 backfill) has no backup | now | ☑ |
 | **T3** | 🟠 | Downside under-modeled — unconditional coverage 44 % / points coverage 62 % | before lockbox | ☐ |
 | **T4** | 🟠 | Season-sim level bias −137 pts/team/season | before lockbox (with T3) | ☐ |
 | **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ☐ |
@@ -44,7 +44,15 @@ exists only in the working tree. 194 tests pass, ruff clean; there is no reason 
 ---
 
 ## 🔴 T2 — Back up the irreplaceable data
-**Status ☐ · do now (~15 min; ~30 with the LFS path).**
+**Status ☑ done (2026-07-10) — layers 1 & 2 shipped; layer 3 (git-LFS) left as an optional stretch.**
+
+**Done (2026-07-10).** Added `steps/backup_db.py` (idempotent, checksum-verifying) and ran it: the 6 live
+2026 FFC snapshot parquets + the 3 2025 `stats_player` backfill parquets + a date-stamped full `.duckdb`
+dump (295 MB) now live off the WSL disk at `/mnt/c/Users/rayha/fantasy-quant-backup/`, all md5-verified
+byte-identical to source. Wired into the weekly Stage-0 chore (CLAUDE.md §2). **Remaining optional:** layer
+3 — put `data/raw/adp/snapshots/` under git-LFS for automatic versioned history (removes the manual step).
+
+<details><summary>Original plan (kept for the record)</summary>
 
 **Symptom.** `data/fantasy_quant.duckdb` (309 MB) and `data/raw/adp/snapshots/*.parquet` (6 banked) are
 gitignored and live only on this WSL ext4 disk. Two assets in them are **not reproducible**: the **live
@@ -65,6 +73,8 @@ what we spent sessions to capture.
 
 **Done-when.** The 2026 snapshot parquets + a recent `.duckdb` exist off the WSL disk; the weekly chore
 refreshes the backup; (stretch) snapshots are version-controlled.
+
+</details>
 
 ---
 
@@ -238,7 +248,7 @@ probs. 8b: opponent model beats ADP+noise on a real-pick availability Brier.
 ---
 
 ## Ordering (see `ROADMAP.md ★ THE PIPELINE` for the full sequence)
-1. **Now:** T1 (commit), T2 (backup).
+1. ~~**Now:** T1 (commit), T2 (backup).~~ ☑ both done (2026-07-10).
 2. **Next build:** T8a (Phase 9.5 — roadmap's "← NOW") with T6 (MC consolidation) folded in.
 3. **Before the lockbox:** T3 + T4 together (coverage + level bias), then T5 (pre-register).
 4. **Opportunistic:** T7 (scrape guards) whenever data is touched; T8b when a real Sleeper league is available.

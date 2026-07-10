@@ -42,9 +42,10 @@ in CLAUDE.md §2** until the season starts) + **Sleeper probe** done (identity s
 0.10) →
 **1) Phase 10** ✅ **DONE** *(2026-07-09 — weekly grain folded in; done-when MET: calibrated championship
 probs on DEV, title Brier 0.0878 < 0.090 with on-diagonal reliability)* →
-**Stage H — housekeeping (do now, blocks nothing but at-risk):** **T1** commit the uncommitted Phase-10 +
-Stage-0 work · **T2** back up the irreplaceable data (2026 ADP snapshot series + 2025 backfill are gitignored
-and live only on the WSL disk). *(`docs/TECH-DEBT.md`.)* →
+**Stage H — housekeeping** ✅ **DONE** *(2026-07-10)* — ☑ **T1** committed the Phase-10 + Stage-0 work ·
+☑ **T2** backed up the irreplaceable data off the WSL disk (`steps/backup_db.py`, checksum-verified;
+6 × 2026 ADP snapshots + 2025 backfill + timestamped `.duckdb` at `/mnt/c/.../fantasy-quant-backup/`).
+*(`docs/TECH-DEBT.md`.)* →
 **2) Phase 9 completion — ← NOW** (9.1 scarcity half · 9.4 lookahead · 9.5 win-prob objective —
 `make_playoffs` vs `championship_or_bust` starts changing drafts, consuming the calibrated Phase-10 probs;
 folds in **T8a** `objective` currently a dead label + **T6** consolidate the Monte-Carlo draws before the

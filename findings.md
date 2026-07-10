@@ -1145,9 +1145,11 @@ are latent risks and honestly-documented modeling limits, not broken code.
 **8 problems, each with its fix, now tracked in `docs/TECH-DEBT.md` (T1–T8) and sequenced in ROADMAP ★ THE
 PIPELINE:**
 - **T1 (🔴 now):** a full session (Phase 10 + Stage 0) is uncommitted — only in the working tree.
-- **T2 (🔴 now):** the 2026 ADP snapshot series + 2025 `stats_player` backfill are **unreproducible** and live
-  only on the gitignored WSL disk with no backup. → off-disk copy of the snapshot parquets + periodic DB dump
-  (+ optional git-LFS on `data/raw/adp/snapshots/`).
+- **T2 (🔴 → ☑ done 2026-07-10):** the 2026 ADP snapshot series + 2025 `stats_player` backfill were
+  **unreproducible** and lived only on the gitignored WSL disk with no backup. → added `steps/backup_db.py`
+  (idempotent, md5-verifying) and ran it: 6 snapshot parquets + 3 backfill parquets + a timestamped 295 MB
+  `.duckdb` dump now at `/mnt/c/Users/rayha/fantasy-quant-backup/`, byte-identical to source; wired into the
+  weekly Stage-0 chore. Optional stretch left open: git-LFS on `data/raw/adp/snapshots/`.
 - **T3 (🟠 pre-lockbox):** downside under-modeled — unconditional coverage **44 %**, points coverage **62 %**.
   Two causes: `injury.availability_frame` gate `prior_games≥8` (`injury.py:87`) drops the volatile cohort to
   a flat median + shared `rho`; and **role/depth attrition is unmodeled** (`Y=H·(G/G_ref)` has no role term).
