@@ -42,20 +42,29 @@ in CLAUDE.md §2** until the season starts) + **Sleeper probe** done (identity s
 0.10) →
 **1) Phase 10** ✅ **DONE** *(2026-07-09 — weekly grain folded in; done-when MET: calibrated championship
 probs on DEV, title Brier 0.0878 < 0.090 with on-diagonal reliability)* →
+**Stage H — housekeeping (do now, blocks nothing but at-risk):** **T1** commit the uncommitted Phase-10 +
+Stage-0 work · **T2** back up the irreplaceable data (2026 ADP snapshot series + 2025 backfill are gitignored
+and live only on the WSL disk). *(`docs/TECH-DEBT.md`.)* →
 **2) Phase 9 completion — ← NOW** (9.1 scarcity half · 9.4 lookahead · 9.5 win-prob objective —
-`make_playoffs` vs `championship_or_bust` starts changing drafts, consuming the calibrated Phase-10 probs) →
-**3) step 0.10 Sleeper ingest → S4/Phase 11** opponent model + per-pick availability (+ the **availability
-Brier** owed from spine-4; 2025 → full backtest season) →
+`make_playoffs` vs `championship_or_bust` starts changing drafts, consuming the calibrated Phase-10 probs;
+folds in **T8a** `objective` currently a dead label + **T6** consolidate the Monte-Carlo draws before the
+sim feeds the draft) →
+**3) step 0.10 Sleeper ingest → S4/Phase 11** opponent model + per-pick availability (**T8b**; + the
+**availability Brier** owed from spine-4; 2025 → full backtest season) →
 **4) Phase 7** opportunity-adjusted projection *(keep-or-drop: ≥ consensus calibration + better on
 role-changers, or dropped)* →
 **5) Phase 13/S7** in-season co-pilot → **6) S6** adaptive archetypes →
 **7) Phase 12** news/NLP *(LLM edges-only guardrail unchanged)* → **8) Phase 15** multi-format + auction →
 **9)** optional research gate (MCTS / self-play RL — only by explicit decision, **before** the lockbox;
 CFR stays dropped) →
+**➤ PRE-LOCKBOX HARDENING (`docs/TECH-DEBT.md`): T3** coverage fix (cohort availability prior + role-survival
+haircut → unconditional 44 %→≥70 %) **+ T4** sim level bias (−137 pts→~0) — done together — then **T5**
+pre-register the frozen stack + 2025 full-stack dress rehearsal. *(T7 scrape guards: opportunistic.)* →
 **10) LOCKBOX EVAL — exactly once** (freeze the stack, evaluate on 2023+2024, report as-is; nothing
 modeling-side changes after) →
 **11) Phase 14** the app with every factor embedded, then the 14.4 go-live tail.
 Working rules throughout: DEV-only, STOP gates between sub-steps, findings/glossary/PLAN/ROADMAP per step.
+**Known-problem register (the exact fix per item): `docs/TECH-DEBT.md` (T1–T8).**
 
 **Open decisions (reframe §10 — tracked in `PLAN.md`):** real completed-draft data (Sleeper) for the
 behavioral model; a **consensus-projections source** (FantasyPros aggregate — free/PIT?); the benchmark

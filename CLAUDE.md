@@ -30,7 +30,9 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 - **Standing chore (Stage 0, from 2026-07-09 until the 2026 season starts):** the FFC 2026 ADP board is
   unrecoverable later, so keep the snapshot series fresh — if the latest 2026 snapshot in `adp_snapshots`
   is > 6 days old, run `uv run python steps/stage0_adp_snapshot.py` (idempotent, ~10 s). Any session
-  working in this repo should check/refresh this.
+  working in this repo should check/refresh this. **After refreshing, back up the crown jewels off the WSL
+  disk** (they're gitignored, single-copy): copy `data/raw/adp/snapshots/*.parquet` (and periodically the
+  `.duckdb`) to `/mnt/c/Users/rayha/fantasy-quant-backup/` — see `docs/TECH-DEBT.md` **T2**.
 
 ## 3. The discipline (non-negotiable — ported from the intern project)
 1. **Point-in-time (PIT) everywhere.** When building any as-of feature/projection/ranking, **no data
@@ -53,6 +55,10 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
    1.1, …) deliver a short overview of what was accomplished and **explicitly ask the user for permission
    before starting the next sub-step.** Never chain sub-steps without that approval. This applies across the
    **entire** project, every phase. (User instruction, 2026-06-30.)
+
+> **Known problems & their exact fixes live in `docs/TECH-DEBT.md` (register T1–T8, opened 2026-07-10).**
+> Consult it before the lockbox eval: **T3** (coverage) + **T4** (sim level bias) must be fixed first, and
+> **T5** pre-registration is a hard gate on the one-shot eval.
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them

@@ -1132,3 +1132,41 @@ spread) and the replacement-constant fallback for cloudless players; probabiliti
 relative within a league and calibrate anyway. Revisit only if a consumer needs absolute points.
 **What Phase 9.5 gets for free:** `title_probability`/`playoff_prob` per roster = the `make_playoffs` vs
 `championship_or_bust` objectives, now with a calibration certificate.
+
+## Full-codebase audit → remediation register (2026-07-10)
+
+**Goal:** review the whole engine in detail, catalogue where problems do/could occur, and record the exact
+long-run fix per item. No modeling code changed — audit + docs only.
+
+**Health:** 194 tests pass, ruff clean, DuckDB present (309 MB), 2026 ADP snapshot fresh. Code is mature and
+unusually well-documented; PIT/lockbox discipline is enforced structurally (at the read). The issues below
+are latent risks and honestly-documented modeling limits, not broken code.
+
+**8 problems, each with its fix, now tracked in `docs/TECH-DEBT.md` (T1–T8) and sequenced in ROADMAP ★ THE
+PIPELINE:**
+- **T1 (🔴 now):** a full session (Phase 10 + Stage 0) is uncommitted — only in the working tree.
+- **T2 (🔴 now):** the 2026 ADP snapshot series + 2025 `stats_player` backfill are **unreproducible** and live
+  only on the gitignored WSL disk with no backup. → off-disk copy of the snapshot parquets + periodic DB dump
+  (+ optional git-LFS on `data/raw/adp/snapshots/`).
+- **T3 (🟠 pre-lockbox):** downside under-modeled — unconditional coverage **44 %**, points coverage **62 %**.
+  Two causes: `injury.availability_frame` gate `prior_games≥8` (`injury.py:87`) drops the volatile cohort to
+  a flat median + shared `rho`; and **role/depth attrition is unmodeled** (`Y=H·(G/G_ref)` has no role term).
+  → cohort availability prior + a **role-survival haircut** `Y=H·(G/G_ref)·R` (reuse `estimate.py:role_ranks`).
+- **T4 (🟠 pre-lockbox, with T3):** sim level bias **−137 pts/team/season**. Prior-yr weekly CoV
+  (`weekly.py:203`, single season) understates spread feeding the lineup max; flat K/DST + cloudless constant
+  fallbacks (`weekly.py:120–140`) never spike. → attribute by roster slot, pool CoV over 2–3 seasons, jitter
+  the fallbacks. (Widening spread also lifts T3 — hence done together.)
+- **T5 (🟠 at the lockbox):** the eval is one-shot with accumulating DEV researcher-df. → pre-register the
+  frozen stack + metrics; 2025 full-stack dress rehearsal; track the DEV decision count.
+- **T6 (🟡 with 9.5):** `assemble_distribution` recomputed by the optimizer (`optimizer.py:100`) and the sim
+  (`weekly.py:195`); shares a draw only by the default `seed=0` and diverges silently otherwise. → one
+  memoized `cached_distribution` + a threaded seed.
+- **T7 (🟡 opportunistic):** FantasyPros/FFC scrapes fail silently; `props_projection` is a no-op. → freshness/
+  schema guards in `data/validate.py` as red tests; archive raw payloads; formally shelve the props layer.
+- **T8 (🟡):** `DraftConfig.objective` (`config.py:141`) is a dead label — nothing consumes it; opponents are
+  still ADP+noise. → **9.5** routes `objective` to Phase-10 `title_prob`/`playoff_prob` (now); the behavioral
+  opponent model needs a real Sleeper league (step 0.10 → Phase 11), with the availability Brier owed from S4.
+
+**Takeaway:** the two 🔴 items are pure loss-avoidance (do now). T3+T4 are the real modeling work and the
+highest-leverage fixes to land **before** the lockbox freeze, because the one-shot eval and the app's
+"honest distributions" pitch both rest on the distributions being correctly wide.

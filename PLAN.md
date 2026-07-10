@@ -5,6 +5,21 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-10** — **FULL-CODEBASE AUDIT → remediation register opened (`docs/TECH-DEBT.md`).** Reviewed the
+  whole engine in detail (simulation, covariance/distribution/injury core, valuation spine, config); 194
+  tests pass, ruff clean, code healthy. Catalogued **8 problems with exact long-run fixes** — the durable
+  "what's left to fix" source of truth is now **`docs/TECH-DEBT.md`** (ids T1–T8), sequenced into ROADMAP ★
+  THE PIPELINE: **T1** commit the uncommitted Phase-10/Stage-0 work (now) · **T2** back up the irreplaceable
+  data — 2026 ADP snapshot series + 2025 backfill live only on the WSL disk, gitignored (now) · **T3**
+  under-modeled downside (unconditional coverage 44 % / points 62 %: injury gate `prior_games≥8` excludes
+  rookies + **no role/depth-attrition term** → add cohort availability prior + a role-survival haircut
+  `Y=H·(G/G_ref)·R`) · **T4** sim level bias −137 pts/team (prior-yr CoV understates weekly spread feeding the
+  lineup max; flat K/DST + cloudless fallbacks) — do with T3, **both before the lockbox** · **T5**
+  de-risk the one-shot lockbox (pre-register the frozen stack; 2025 full-stack dress rehearsal; track DEV
+  decision count) · **T6** consolidate the Monte-Carlo draws (recomputed / silently diverge across optimizer
+  & sim once seeds differ) — fold into 9.5 · **T7** scrape freshness/schema guards + settle the props no-op ·
+  **T8** make `objective` real (9.5, currently a dead label) + the behavioral opponent model (0.10→Ph11). No
+  code changed this session — audit + docs only.
 - **2026-07-09 (b)** — **STAGE 0 LIVE + PHASE 10 DONE (all gates PASS).** (a) **Stage 0:** FFC **2026
   snapshot series** banked (1,028 rows, full grid, 99.3 % gsis — the rookie class already resolves;
   `snapshot_adp` = date-keyed raw cache + replay-append on `(config, snapshot_date)`, idempotent +

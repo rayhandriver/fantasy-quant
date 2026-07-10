@@ -4,7 +4,12 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-07 — added personalization-spine implementation terms (`base_value` =
+> **Last updated:** 2026-07-10 — added audit / remediation terms (remediation register, role-survival
+> haircut, cohort availability prior). *(Prior: 2026-07-07 personalization-spine implementation terms —
+> `base_value` = risk-adjusted value-over-replacement, reach budget / secured fraction, leave-one-out
+> attribution.)*
+>
+> **Prior update:** 2026-07-07 — added personalization-spine implementation terms (`base_value` =
 > risk-adjusted value-over-replacement, reach budget / secured fraction, leave-one-out attribution).
 > *(Prior: 2026-07-05 Phase-4 value terms — consensus two-track, VBD value board contract, draft-time
 > replacement, rookie model, bias ratio / correction / survivorship haircut; 2026-07-05 Phase-3 feature
@@ -342,3 +347,21 @@ section, not just appended.
 - **Variance leverage** — the 10.3 lever: a mean-preserving spread on a team's remaining weekly scores;
   trailing teams gain playoff probability from added variance (they need tails), leaders lose it (they need
   to protect the cut) — the DFS-GPP logic applied season-long.
+
+## Audit / remediation terms (2026-07-10)
+- **Remediation register** — `docs/TECH-DEBT.md`: the dated, stable-id (`T1–T8`) list of every known problem
+  in the engine with the *exact* long-run fix, severity, and when-to-do; the "what's left to fix" source of
+  truth, sequenced against the build in ROADMAP ★ THE PIPELINE.
+- **Role-survival haircut** — the planned T3 fix for the unconditional-coverage gap: a third distribution
+  factor `R` (Bernoulli mixture — keeps projected role → 1; loses role → a cohort downside fraction) so the
+  season draw becomes `Y = H·(G/G_ref)·R`. Widens the **left tail** to capture a projected starter who keeps
+  playing but loses his job — the depth/role attrition the injury-only model misses. Estimated from realized
+  role-rank transitions (reuses `covariance/estimate.role_ranks`).
+- **Cohort availability prior** — the other half of T3: instead of dropping sub-threshold players
+  (`prior_games < 8`) to one league-median availability, give rookies/backups an availability mean **and
+  dispersion `rho`** drawn from their `(pos, draft-capital/age)` cohort, so the highest-attrition group stops
+  being modeled with the least specificity.
+- **Level bias (sim)** — the T4 defect: Phase-10 predicted optimal-lineup totals run ~137 pts/team/season
+  low because the weekly disaggregation understates week-to-week spread (single prior-season CoV; flat
+  constant fallbacks), and the lineup **max** feeds on spread. Championship probabilities are relative within
+  a league so they calibrate regardless; absolute-points and variance consumers do not.
