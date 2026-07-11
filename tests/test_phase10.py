@@ -63,6 +63,20 @@ def test_split_weeks_cov_controls_weekly_spread():
     assert spiky.std(axis=1).mean() > 2 * flat.std(axis=1).mean()
 
 
+def test_spread_kappa_raises_the_weekly_max():
+    """T4: since it is mean-preserving, inflating a player's weekly CoV leaves the season total
+    unchanged but raises the weekly optimal-lineup MAX (a tail statistic) — the exact lever the
+    spread correction pulls to cure the sim's low team totals."""
+    from fantasy_quant.simulation.weekly import SPREAD_KAPPA
+    rng1, rng2 = np.random.default_rng(2), np.random.default_rng(2)
+    y, g, eligible = np.full(4000, 170.0), np.full(4000, 17), np.arange(17)
+    base = split_weeks(y, g, 0.7, eligible, 17, rng1)
+    infl = split_weeks(y, g, 0.7 * SPREAD_KAPPA["RB"], eligible, 17, rng2)
+    assert np.allclose(base.sum(axis=1), infl.sum(axis=1))            # mean-preserving per draw
+    assert infl.max(axis=1).mean() > base.max(axis=1).mean() + 2.0    # higher weekly ceiling
+    assert SPREAD_KAPPA["QB"] < SPREAD_KAPPA["RB"]              # QB (single slot) less inflated
+
+
 def _tiny_model() -> WeeklyModel:
     summary = pd.DataFrame({
         "player_key": ["a", "b"], "pos": ["RB", "WR"], "team": ["AAA", "BBB"],

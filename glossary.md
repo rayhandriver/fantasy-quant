@@ -4,10 +4,10 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-10 — added audit / remediation terms (remediation register, role-survival
-> haircut, cohort availability prior). *(Prior: 2026-07-07 personalization-spine implementation terms —
-> `base_value` = risk-adjusted value-over-replacement, reach budget / secured fraction, leave-one-out
-> attribution.)*
+> **Last updated:** 2026-07-11 — T3/T4 **implemented** (role-loss washout mixture — reformulated from the
+> planned production haircut; cohort availability prior; weekly-spread correction κ; residual level bias).
+> *(Prior: 2026-07-10 — audit / remediation terms: remediation register, role-survival haircut, cohort
+> availability prior.)*
 >
 > **Prior update:** 2026-07-07 — added personalization-spine implementation terms (`base_value` =
 > risk-adjusted value-over-replacement, reach budget / secured fraction, leave-one-out attribution).
@@ -352,19 +352,36 @@ section, not just appended.
 - **Remediation register** — `docs/TECH-DEBT.md`: the dated, stable-id (`T1–T8`) list of every known problem
   in the engine with the *exact* long-run fix, severity, and when-to-do; the "what's left to fix" source of
   truth, sequenced against the build in ROADMAP ★ THE PIPELINE.
-- **Role-survival haircut** — the planned T3 fix for the unconditional-coverage gap: a third distribution
-  factor `R` (Bernoulli mixture — keeps projected role → 1; loses role → a cohort downside fraction) so the
-  season draw becomes `Y = H·(G/G_ref)·R`. Widens the **left tail** to capture a projected starter who keeps
-  playing but loses his job — the depth/role attrition the injury-only model misses. Estimated from realized
-  role-rank transitions (reuses `covariance/estimate.role_ranks`).
-- **Cohort availability prior** — the other half of T3: instead of dropping sub-threshold players
-  (`prior_games < 8`) to one league-median availability, give rookies/backups an availability mean **and
-  dispersion `rho`** drawn from their `(pos, draft-capital/age)` cohort, so the highest-attrition group stops
-  being modeled with the least specificity.
-- **Level bias (sim)** — the T4 defect: Phase-10 predicted optimal-lineup totals run ~137 pts/team/season
-  low because the weekly disaggregation understates week-to-week spread (single prior-season CoV; flat
-  constant fallbacks), and the lineup **max** feeds on spread. Championship probabilities are relative within
-  a league so they calibrate regardless; absolute-points and variance consumers do not.
+- **Role-loss washout mixture (T3-B, done 2026-07-11)** — `injury.role_retention` +
+  `distribution.sample_player_season`. The *implemented* T3-B, reformulated after the DEV diagnosis that the
+  dominant unconditional miss is a projected body who **barely plays** (benched/buried/hurt), not one who
+  plays but produces less. So role loss acts through the **availability channel**: a two-component season
+  mixture where, with a tier-specific **washout** probability `p_crater` (played < 40 % of games), the games
+  are drawn from a low `crater_avail` (≈0.15) *replacing* the normal hazard branch (not additive → injury not
+  double-counted), and per-game production keeps only `keep_frac`. Applied to **established, deep-projected**
+  players only (elite/starter washouts are injury, already in `G`). Fattens the games≈0 left tail without
+  lowering the healthy `q90`. Supersedes the originally-planned production haircut `R`, which added ~0 coverage
+  and hurt the conditional band. (Role tiers still keyed on `role_tier` vs the startable/replacement rank.)
+- **Cohort availability prior (T3-A, done 2026-07-11)** — `injury.cohort_availability_prior`: instead of
+  dropping sub-threshold players (`prior_games < 8`) to one league-median availability, give rookies/backups
+  an availability mean **and dispersion `rho`** drawn from their `(pos × draft-capital tier)` cohort (hi = pick
+  ≤ 100 overall), with `(pos,*)`→`(*,*)` backoff. Recovers the real split the median erased (hi-capital rookie
+  RB plays 0.67 of games vs lo-capital 0.42, fatter `rho`). The **main** T3 lever: DEV unconditional coverage
+  39 %→63 % on its own.
+- **Weekly-spread correction κ (T4, done 2026-07-11)** — `weekly.SPREAD_KAPPA`, a per-position multiplier on
+  the effective weekly CoV. The Phase-10 level bias is *not* stale CoV (per-player CoV is well-calibrated) nor
+  the flat K/DST fallbacks (those run +16, slightly high) — it is **structural**: the mean-preserving Dirichlet
+  week-split has tails too light to reproduce the weekly optimal-lineup **max** (a tail statistic), because a
+  mean-preserving split caps weekly upside at the season total. κ inflates the effective CoV (mean-preserving,
+  so season totals and Phase-5/T3 calibration are untouched) to restore the max. QB is a single mean-preserving
+  slot so it barely responds → smallest inflation. Chosen on the DEV gate as the **highest κ that keeps every
+  hard gate (Brier, stability, both leverage) passing** — a genuine trade-off (higher κ → more coverage/less
+  bias but over-dispersion + broken dog-leverage).
+- **Level bias (sim) — residual (T4)** — after κ, a residual level bias remains, concentrated in the
+  early/COVID DEV seasons (2017/18/20 start ~−220/team at κ=1.0) and partly a **projection-level** shortfall κ
+  cannot fix (κ is mean-preserving). Championship probabilities are relative within a league so they calibrate
+  regardless; absolute-points and variance consumers inherit the residual. Fully closing it needs a
+  non-mean-preserving weekly-upside term (breaks the Phase-5 sum invariant) or better early-season projections.
 - **Scrape freshness/schema gates (T7)** — test-visible hard gates in `data/validate.py` that fail loudly
   when an external scrape rots: `adp_freshness_gate` (live-season FFC snapshot ≤ 6 days old — the CLAUDE.md
   §2 Stage-0 chore as an assertion), `board_size_gate` (FantasyPros board row-count band), `match_rate_gate`

@@ -38,6 +38,16 @@ OFFENSE = ("QB", "RB", "WR", "TE")
 COV_CLIP = (0.2, 2.5)          # weekly CoV clipped to a physical band before α = 1/CoV²
 DEFAULT_COV = 0.9              # fallback weekly CoV when a player has no prior weeks at all
 
+# T4 — the weekly-spread correction. Each player's *marginal* weekly CoV is already well-calibrated
+# from the prior season (attribution 2026-07-11), but the mean-preserving Dirichlet split's light
+# tails understate the weekly optimal-lineup MAX — a tail statistic — biasing simulated team totals
+# ~137 pts/season (~8/wk) low. ``kappa`` inflates the *effective* weekly CoV to restore that
+# lineup-max tail. It is **mean-preserving per player** (row sums still equal each season draw), so
+# season totals and the whole Phase-5 calibration are untouched — only the intra-season shape moves.
+# Fit on DEV (steps/phase10_sim). QB is a single mean-preserving lineup slot so its team total
+# barely responds; its smaller inflation only reflects the 2-QB streaming benefit.
+SPREAD_KAPPA = {"QB": 1.4, "RB": 1.8, "WR": 1.8, "TE": 1.7}
+
 
 # ------------------------------------------------------------------------------------------------
 # Iman–Conover as a permutation (so companion arrays ride along with their draws)
@@ -202,10 +212,15 @@ def build_weekly_model(con, season: int, ruleset: RuleSet | None = None,
     summary = summary.merge(_board_teams(board), on="player_key", how="left")
     summary["role_rank"] = summary["role_rank"].fillna(1).astype(int)
 
-    vol = variance.weekly_volatility(con, [season - 1], ruleset)
+    # Pool the prior TWO seasons for a more robust per-player CoV (fewer players fall back to the
+    # flat DEFAULT_COV), then shrink any still-missing to the position median. PIT: strictly prior.
+    vol = variance.weekly_volatility(con, [season - 2, season - 1], ruleset)
     summary = summary.merge(vol[["player_key", "wk_cov"]], on="player_key", how="left")
     pos_med = summary.groupby("pos")["wk_cov"].transform("median")
     summary["wk_cov"] = summary["wk_cov"].fillna(pos_med).fillna(DEFAULT_COV)
+    # T4 spread correction (mean-preserving): restore the weekly optimal-lineup-max tail.
+    summary["wk_cov"] = (summary["wk_cov"] * summary["pos"].map(SPREAD_KAPPA).fillna(1.0)
+                         ).clip(*COV_CLIP)
 
     corr = assemble_correlation(con, season, ruleset)
     r = player_covariance(np.ones(len(summary)), summary["team"].fillna("?"),

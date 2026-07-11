@@ -58,13 +58,15 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
    **entire** project, every phase. (User instruction, 2026-06-30.)
 
 > **Known problems & their exact fixes live in `docs/TECH-DEBT.md` (register T1–T8, opened 2026-07-10).**
-> Consult it before the lockbox eval: **T3** (coverage) + **T4** (sim level bias) must be fixed first, and
-> **T5** pre-registration is a hard gate on the one-shot eval.
+> **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
+> eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **Next-session pointer (2026-07-11).** The pipeline's strict-next item (step 0.10 Sleeper → opponent
-> model, **T8b**) is **blocked on draft data** — the `MadBawa` account exists but is empty. Full Sleeper
-> reference (API, identity crosswalk, unblock path) = **`docs/SLEEPER.md`**. **Recommended autonomous next
-> session: T3 + T4** (`docs/TECH-DEBT.md`). Return to Sleeper once mock/real drafts exist.
+> **Next-session pointer (2026-07-11, updated).** T3 + T4 are **done** (2025 holdout uncond coverage
+> 44 %→77 %; Phase-10 points coverage 62 %→77 %, bias −137→−113; all gates PASS — see `findings.md` /
+> `docs/TECH-DEBT.md`). The pipeline's strict-next item (step 0.10 Sleeper → opponent model, **T8b**) remains
+> **blocked on draft data** — the `MadBawa` account exists but is empty (`docs/SLEEPER.md`). **Options:** (a)
+> **T5** pre-registration whenever the lockbox eval is imminent; (b) resume Sleeper once mock/real drafts
+> exist. No further autonomous modeling is required before the lockbox — T3/T4 were the last mandatory pair.
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them

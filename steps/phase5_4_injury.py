@@ -1,4 +1,4 @@
-"""Phase 5.4 — availability: discrete-time weekly hazard → games-played distribution.
+"""Phase 5.4 — availability: discrete-time weekly hazard → games-played distribution (+ T3).
 
     uv run python steps/phase5_4_injury.py
 
@@ -6,6 +6,10 @@ Done when: a logistic weekly-availability hazard is fit on the DEV player-week g
 sane (older players and RBs are less available; durable-last-year players more so), the
 Beta-Binomial over-dispersion ρ is estimated (so games-played keeps its lost-season tail), and the
 model produces a per-player games-played mean for a season.
+
+**T3 (2026-07-11)** extends this module with the two downside fixes and their done-bar checks: the
+**cohort availability prior** for the rookie/backup sub-gate universe (A) and the **role-loss
+washout mixture** for established deep-projected players (B). See TECH-DEBT T3 / `findings.md`.
 """
 
 from __future__ import annotations
@@ -44,7 +48,37 @@ def main() -> None:
     assert 0.0 <= rho <= 0.5, "dispersion in range"
     assert 0.6 < proj["avail_p"].mean() < 1.0, "mean availability plausible"
 
-    print("\nPhase 5.4 (injury availability) — all checks PASS.")
+    # -- T3-A: the cohort availability prior (rookies/backups the hazard drops) --------------------
+    train = [s for s in dev if s < tgt]
+    cohort = injury.cohort_availability_prior(con, train)
+    print("\nT3-A cohort availability prior (pos × draft-capital tier → avail_p, ρ):")
+    for pos in ("RB", "WR", "TE", "QB"):
+        hi = cohort.get((pos, "hi")) or cohort.get((pos, "*"))
+        lo = cohort.get((pos, "lo")) or cohort.get((pos, "*"))
+        print(f"  {pos}: hi-capital avail {hi['avail_p']:.0%} (ρ {hi['rho']:.2f}) | "
+              f"lo-capital avail {lo['avail_p']:.0%} (ρ {lo['rho']:.2f})")
+    rb_hi, rb_lo = cohort.get(("RB", "hi")), cohort.get(("RB", "lo"))
+    if rb_hi and rb_lo:
+        assert rb_hi["avail_p"] > rb_lo["avail_p"], "premium RB rookies should out-play late fliers"
+    assert cohort[("*", "*")]["rho"] > rho, "the cohort tail must be fatter than the established"
+    print("  [PASS] premium picks out-play late fliers; cohort tail fatter than the established.")
+
+    # -- T3-B: the role-loss washout mixture (established, deep-projected) ----------------------
+    ret = injury.role_retention(con, train)
+    print("\nT3-B role-loss washout rate by tier (p_washout, crater_avail, keep_frac):")
+    for pos in ("RB", "WR"):
+        for tier in ("elite", "starter", "deep"):
+            c = ret.get((pos, tier))
+            if c:
+                print(f"  {pos}-{tier:7s}: p {c['p_crater']:.2f}  avail {c['crater_avail']:.2f}  "
+                      f"keep {c['keep_frac']:.2f}  (n={c['n']})")
+    for pos in ("RB", "WR", "TE"):
+        deep, elite = ret.get((pos, "deep")), ret.get((pos, "elite"))
+        if deep and elite:
+            assert deep["p_crater"] > elite["p_crater"], f"{pos} deep washes out more than elite"
+    print("  [PASS] deep-projected players wash out more than elite — the pure role-loss channel.")
+
+    print("\nPhase 5.4 (injury availability + T3 cohort/washout) — all checks PASS.")
     con.close()
 
 

@@ -9,7 +9,7 @@ cloud per player**, plus summary columns for display and the risk dial:
 
 The sample model (documented, deliberately simple, no double-counting):
 
-    Y = H · (G / G_ref)          H = if-healthy season points,  G = games played
+    Y = H · (G / G_ref) · R      H = if-healthy points,  G = games played,  R = role survival
 
 * **H** is drawn from the conformal-calibrated conditional quantiles (5.1 fanned by level, 5.2
   widened to real 80% coverage). Its asymmetry *is* the boom skew — realized fantasy points are
@@ -17,7 +17,14 @@ The sample model (documented, deliberately simple, no double-counting):
 * **G** ~ Beta-Binomial availability (5.4), normalized by ``G_ref`` = the conditional cohort's own
   mean games, so a typical-availability draw returns ≈ H (the injury downside lives entirely in the
   multiplier, never double-counted inside H's spread — the 4.4 conditional/unconditional
-  discipline, now sampled).
+  discipline, now sampled). **T3-A:** rookies/backups (no prior-season hazard) draw ``G`` from a
+  ``(pos × draft-capital)`` cohort prior — a lower mean and fatter lost-season tail than the league
+  median the old single fallback used.
+* **R** (T3-B) ~ a Bernoulli role-survival haircut (``R ≤ 1``): with a per-(pos, projected-role)
+  probability a healthy player loses his role and keeps only a downside fraction of H. It widens the
+  **left tail / games≈0 region** — the dominant *unconditional* (draft-day) coverage miss: a
+  projected body who washes out. Applied to established, deep-projected players only (the cohort
+  prior already owns the rookie/backup downside), so injury and role loss never double-count.
 
 Samples are the substrate; ``mean/sd/quantiles`` are percentiles of the cloud.
 ``boom_prob``/``bust_prob`` are the 5.3 *weekly* volatility signal (a different, complementary
@@ -59,24 +66,39 @@ def sample_from_quantiles(taus, qvals, u) -> np.ndarray:
 
 
 def sample_player_season(taus, qvals, avail_p, team_games, rho, g_ref,
-                         rng: np.random.Generator, n: int, return_games: bool = False):
+                         rng: np.random.Generator, n: int, return_games: bool = False,
+                         p_crater: float = 0.0, crater_avail: float = 0.35,
+                         keep_frac: float = 1.0):
     """``n`` season-point draws for one player: healthy H (from quantiles) × normalized
-    availability.
+    availability × role-survival haircut.
 
     ``G_ref`` is the conditional cohort's mean availability *fraction* (~0.93), so the availability
     multiplier must be a fraction too: we divide the sampled games *count* by the player's team
     games to a fraction before normalizing. A typical-availability draw (fraction ≈ G_ref) returns
     ≈ H; the injury downside lives entirely here, never double-counted inside H's spread.
 
+    **T3-B role-survival mixture**: with probability ``p_crater`` the player's season "goes bad"
+    (benched/buried/hurt) — his games are drawn from a low ``crater_avail`` instead of his normal
+    availability and he keeps only ``keep_frac`` of per-game production. This bad branch *replaces*
+    the normal branch (not additive), so it fattens the **left tail / games≈0 region** — the
+    dominant unconditional miss — without lowering the healthy upper tail (``q90``); injury is never
+    double-counted. ``p_crater = 0`` ⇒ the pre-T3 behavior. The per-draw ``g`` returned reflects the
+    crater, so the weekly-grain layer spreads a bad season over correspondingly few weeks.
+
     ``return_games=True`` additionally returns the per-draw games count ``g`` (same rng stream —
-    the draws are identical either way). The Phase-10 weekly-grain layer needs each draw's own
-    ``g`` so a low season total caused by missed games is spread over correspondingly few weeks.
+    the draws are identical either way).
     """
     tg = int(round(team_games))
     h = sample_from_quantiles(taus, qvals, rng.uniform(0.0, 1.0, n))
     g = injury.sample_games(avail_p, tg, rho, rng, n)
+    r = 1.0
+    if p_crater > 0.0:
+        crater = rng.random(n) < p_crater
+        g_lost = injury.sample_games(crater_avail, tg, min(rho * 1.5, 0.5), rng, n)
+        g = np.where(crater, g_lost, g)
+        r = np.where(crater, keep_frac, 1.0)
     avail_frac = g / max(tg, 1)
-    y = np.clip(h * (avail_frac / max(g_ref, 1e-6)), 0.0, None)
+    y = np.clip(h * (avail_frac / max(g_ref, 1e-6)) * r, 0.0, None)
     return (y, g) if return_games else y
 
 
@@ -144,12 +166,42 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
     df = df.merge(vol[["player_key", "boom_prob", "bust_prob"]], on="player_key", how="left")
     df = df.dropna(subset=qcols).reset_index(drop=True)
 
-    # sensible fallbacks for players missing an availability/volatility row (e.g. rookies).
-    med_p = float(df["avail_p"].median()) if df["avail_p"].notna().any() else 0.85
-    df["avail_p"] = df["avail_p"].fillna(med_p)
+    # T3-A: players without a hazard row are the rookie/backup COHORT — route them to the cohort
+    # availability prior (keyed on pos × draft-capital tier) instead of one shared median. Their
+    # downside lives in a low avail_p + fat rho; established contributors keep the hazard estimate.
+    is_cohort = df["avail_p"].isna().to_numpy()
+    cohort = injury.cohort_availability_prior(con, train_seasons)
+    tiers = injury.player_tiers(con, [season])[["player_key", "capital_tier"]]
+    df = df.merge(tiers, on="player_key", how="left")
+    df["capital_tier"] = df["capital_tier"].fillna("lo")
+    for i in np.flatnonzero(is_cohort):
+        ap, rh = injury.lookup_cohort(cohort, df.at[i, "pos"], df.at[i, "capital_tier"])
+        df.at[i, "avail_p"], df.at[i, "rho"] = ap, rh
     df["team_games"] = df["team_games"].fillna(quantile.season_games(season))
     df["rho"] = df["rho"].fillna(df["rho"].median() if df["rho"].notna().any() else 0.15)
     df[["boom_prob", "bust_prob"]] = df[["boom_prob", "bust_prob"]].fillna(0.0)
+
+    # T3-B: the role-loss washout mixture, applied to ESTABLISHED players projected in a **deep**
+    # role only (cohort players' downside is already in their low availability; elite/starter
+    # washouts are injury, already in the hazard G — restricting to deep is the pure role-loss
+    # channel and keeps injury from being double-counted). Projected role tier comes from the
+    # calibrated projection rank within position vs the startable (replacement) rank.
+    from fantasy_quant.backtest.metrics import replacement_ranks
+    from fantasy_quant.draft.simulator import RosterSlots
+    retention = injury.role_retention(con, train_seasons)
+    startable = replacement_ranks(RosterSlots(), n_teams=10)
+    df["proj_rank"] = df.groupby("pos")["calibrated_mean"].rank(ascending=False, method="first")
+    p_crater = np.zeros(len(df))
+    crater_avail = np.full(len(df), 0.35)
+    keep_frac = np.ones(len(df))
+    for i in range(len(df)):
+        if is_cohort[i]:
+            continue
+        tier = injury.role_tier(df.at[i, "proj_rank"], startable.get(df.at[i, "pos"], 24))
+        if tier != "deep":
+            continue
+        p_crater[i], crater_avail[i], keep_frac[i] = injury.lookup_role(
+            retention, df.at[i, "pos"], tier)
 
     rng = np.random.default_rng(seed)
     samples = np.empty((len(df), n_draws))
@@ -160,7 +212,10 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
         qv[-1] = qv[-1] + adj.get(row["pos"], 0.0)
         drawn = sample_player_season(taus, qv, row["avail_p"], row["team_games"],
                                      row["rho"], g_ref, rng, n_draws,
-                                     return_games=return_games)
+                                     return_games=return_games,
+                                     p_crater=float(p_crater[i]),
+                                     crater_avail=float(crater_avail[i]),
+                                     keep_frac=float(keep_frac[i]))
         if return_games:
             samples[i], games[i] = drawn
         else:

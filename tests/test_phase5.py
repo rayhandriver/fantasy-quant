@@ -135,6 +135,55 @@ def test_sample_player_season_full_health_slightly_exceeds_H():
 
 
 # --------------------------------------------------------------------------------------------
+# T3 — cohort availability prior (A) + role-loss washout mixture (B)
+# --------------------------------------------------------------------------------------------
+def test_capital_tier_boundary_and_vectorized():
+    assert injury.capital_tier(50) == "hi"                    # premium pick
+    assert injury.capital_tier(200) == "lo"                   # late/undrafted
+    assert injury.capital_tier(None) == "lo"                  # missing -> lo
+    out = injury.capital_tier(pd.Series([10.0, 150.0]))
+    assert list(out) == ["hi", "lo"]
+
+
+def test_role_tier_bands():
+    assert injury.role_tier(5, 24) == "elite"                # top half of startable
+    assert injury.role_tier(18, 24) == "starter"             # rest of startable
+    assert injury.role_tier(40, 24) == "deep"                # beyond startable
+
+
+def test_lookup_cohort_backoff():
+    prior = {("*", "*"): {"avail_p": 0.5, "rho": 0.3},
+             ("RB", "*"): {"avail_p": 0.48, "rho": 0.35},
+             ("RB", "hi"): {"avail_p": 0.67, "rho": 0.39}}
+    assert injury.lookup_cohort(prior, "RB", "hi") == (0.67, 0.39)     # exact cell
+    assert injury.lookup_cohort(prior, "RB", "lo") == (0.48, 0.35)     # -> (pos, *)
+    assert injury.lookup_cohort(prior, "QB", "hi") == (0.5, 0.3)       # -> (*, *)
+
+
+def test_lookup_role_backoff_returns_triple():
+    ret = {("*", "*"): {"p_crater": 0.1, "crater_avail": 0.2, "keep_frac": 0.7},
+           ("WR", "deep"): {"p_crater": 0.3, "crater_avail": 0.1, "keep_frac": 0.6}}
+    assert injury.lookup_role(ret, "WR", "deep") == (0.3, 0.1, 0.6)
+    assert injury.lookup_role(ret, "WR", "elite") == (0.1, 0.2, 0.7)   # backoff to (*, *)
+
+
+def test_washout_mixture_fattens_left_tail_preserves_upper():
+    """T3-B: the washout branch must lower q10 (and the mean) while leaving q90 ~unchanged — a
+    left-tail-only widening, so conditional (healthy) coverage isn't dragged down by q90."""
+    taus, qvals = (0.1, 0.5, 0.9), (120.0, 120.0, 120.0)     # H constant 120
+    kw = dict(avail_p=0.95, team_games=17, rho=0.05, g_ref=0.9, n=40000)
+    base = distribution.sample_player_season(taus, qvals, rng=np.random.default_rng(4),
+                                             p_crater=0.0, **kw)
+    wash = distribution.sample_player_season(taus, qvals, rng=np.random.default_rng(4),
+                                             p_crater=0.3, crater_avail=0.12, keep_frac=0.7, **kw)
+    b10, b90 = np.percentile(base, [10, 90])
+    w10, w90 = np.percentile(wash, [10, 90])
+    assert w10 < b10 - 20                                     # left tail markedly fatter
+    assert wash.mean() < base.mean()                         # mean pulled down by the bad branch
+    assert abs(w90 - b90) < 0.10 * b90                        # upper tail ~preserved
+
+
+# --------------------------------------------------------------------------------------------
 # 5.5 mean-variance utility / risk dial
 # --------------------------------------------------------------------------------------------
 def test_certainty_equivalent_penalizes_variance_and_floors():

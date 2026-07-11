@@ -37,6 +37,12 @@ _CONT = ["age", "prior_avail", "week_norm"]
 _POS_DUMMIES = ["is_RB", "is_WR", "is_TE"]        # QB is the reference level
 FEATURES = _CONT + _POS_DUMMIES
 
+# T3-A: draft-capital tier boundary for the rookie/backup availability cohort. ``draft_ovr`` ≤ this
+# = a premium pick (roughly rounds 1–3 of a 32-team draft) whose lost-season tail differs from a
+# late/undrafted flier's. Coarse on purpose — the sub-8-prior-games cohort is small (~30/season).
+CAPITAL_HI_OVR = 100
+_MIN_COHORT_CELL = 15                             # below this, a (pos, tier) cell backs off to pos
+
 
 def _season_games(season: int) -> int:
     return 16 if int(season) < 2021 else 17
@@ -212,3 +218,183 @@ def availability_projection(con, season: int, train_seasons=None) -> pd.DataFram
     out["games_played_mean"] = out["avail_p"] * out["team_games"]
     out["rho"] = rho
     return out
+
+
+# --------------------------------------------------------------------------------------------
+# T3-A — the rookie/backup availability cohort prior (the sub-gate universe the hazard drops)
+# --------------------------------------------------------------------------------------------
+def capital_tier(draft_ovr) -> pd.Series | str:
+    """``'hi'`` for a premium pick (``draft_ovr`` ≤ :data:`CAPITAL_HI_OVR`), else ``'lo'`` — the
+    coarse draft-capital split for the cohort prior. Vectorized over a Series or scalar."""
+    ovr = pd.to_numeric(draft_ovr, errors="coerce")
+    if np.isscalar(draft_ovr) or not hasattr(draft_ovr, "__len__"):
+        return "hi" if (pd.notna(ovr) and ovr <= CAPITAL_HI_OVR) else "lo"
+    return np.where(ovr <= CAPITAL_HI_OVR, "hi", "lo")
+
+
+def player_tiers(con, seasons) -> pd.DataFrame:
+    """Per ``(season, player_key)`` position + ``capital_tier`` for skill players — the routing key
+    for the cohort prior (and, downstream, the role haircut)."""
+    frames = []
+    for s in seasons:
+        pf = player_features_mod.player_features(con, [int(s)])[
+            ["gsis_id", "position", "draft_ovr"]].copy()
+        pf["season"] = int(s)
+        frames.append(pf)
+    pf = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(
+        columns=["gsis_id", "position", "draft_ovr", "season"])
+    pf["capital_tier"] = capital_tier(pf["draft_ovr"])
+    return pf.rename(columns={"gsis_id": "player_key", "position": "pos"})[
+        ["season", "player_key", "pos", "capital_tier"]]
+
+
+def cohort_availability_prior(con, train_seasons, min_prior_games: int = 8,
+                              min_cell: int = _MIN_COHORT_CELL) -> dict:
+    """Availability prior for the **sub-gate cohort** (rookies + backups the hazard drops).
+
+    Keyed on ``(pos, capital_tier)`` with a ``(pos, '*')`` and global ``('*', '*')`` backoff. Each
+    cell returns the realized mean availability *fraction* ``avail_p`` **and** its Beta-Binomial
+    over-dispersion ``rho`` (rookie RBs carry a fatter lost-season tail than the league median — the
+    T3 downside the single shared fallback erased). PIT: estimated only on ``train_seasons``.
+    """
+    gp = games_played(con, train_seasons)
+    if gp.empty:
+        return {("*", "*"): {"avail_p": 0.85, "rho": 0.15, "n": 0}}
+    prior = games_played(con, [s - 1 for s in train_seasons]).rename(
+        columns={"games": "prior_games"})
+    prior["season"] = prior["season"] + 1
+    gp = gp.merge(prior[["season", "player_key", "prior_games"]],
+                  on=["season", "player_key"], how="left")
+    gp["prior_games"] = gp["prior_games"].fillna(0)                      # no prior row -> rookie
+    cohort = gp[gp["prior_games"] < min_prior_games].copy()
+    tiers = player_tiers(con, train_seasons)
+    cohort = cohort.merge(tiers[["season", "player_key", "capital_tier"]],
+                          on=["season", "player_key"], how="left")
+    cohort["capital_tier"] = cohort["capital_tier"].fillna("lo")
+    cohort["frac"] = (cohort["games"] / cohort["team_games"]).clip(0, 1)
+
+    def _cell(grp: pd.DataFrame) -> dict:
+        p = float(grp["frac"].mean())
+        rho = estimate_dispersion(grp["games"].to_numpy(), grp["team_games"].to_numpy(),
+                                  np.full(len(grp), p))
+        return {"avail_p": p, "rho": rho, "n": int(len(grp))}
+
+    out: dict = {("*", "*"): _cell(cohort)}
+    for pos, g in cohort.groupby("pos"):
+        out[(str(pos), "*")] = _cell(g)
+    for (pos, tier), g in cohort.groupby(["pos", "capital_tier"]):
+        if len(g) >= min_cell:
+            out[(str(pos), str(tier))] = _cell(g)
+    return out
+
+
+def lookup_cohort(prior: dict, pos: str, tier: str) -> tuple[float, float]:
+    """``(avail_p, rho)`` from a :func:`cohort_availability_prior` dict with
+    (pos,tier)→(pos,*)→(*,*) backoff."""
+    for key in ((str(pos), str(tier)), (str(pos), "*"), ("*", "*")):
+        if key in prior:
+            return prior[key]["avail_p"], prior[key]["rho"]
+    return 0.85, 0.15
+
+
+# --------------------------------------------------------------------------------------------
+# T3-B — the role-survival haircut R (the dominant *unconditional* miss: active but demoted)
+# --------------------------------------------------------------------------------------------
+ROLE_TIERS = ("elite", "starter", "deep")
+_KEEP_FLOOR = 0.05        # a washed-out player keeps *something*; never zero the whole draw
+WASHOUT_AVAIL = 0.40      # played < 40% of team games = a washed-out season (benched/buried/hurt)
+
+
+def role_tier(proj_rank, startable_rank: int) -> str:
+    """Coarse projected-role tier from a within-position projection rank: ``elite`` (top half of
+    the startable slots), ``starter`` (the rest of the startable slots), ``deep`` (beyond startable
+    — the fringe body whose crater is the unconditional-coverage killer)."""
+    if proj_rank <= 0.5 * startable_rank:
+        return "elite"
+    if proj_rank <= startable_rank:
+        return "starter"
+    return "deep"
+
+
+def role_retention(con, train_seasons, min_cell: int = 20, ruleset=None) -> dict:
+    """Per ``(pos, role_tier)`` role-loss parameters (T3-B): the probability a projected contributor
+    has his **season go bad** and, when it does, how little he plays and produces.
+
+    The empirical diagnosis (findings 2026-07-11) is that the dominant *unconditional* (draft-day)
+    coverage miss is a projected body who **washes out** — benched, buried, or hurt — and plays a
+    near-zero season, not one who plays a full slate at reduced per-game output. So role loss is
+    modeled through the **availability channel**: a two-component season mixture where the "washout"
+    branch draws games from a low ``crater_avail``. Because the washout branch *replaces* the normal
+    (injury-hazard) branch rather than stacking on it, injury is never double-counted; and because
+    it fires at the true (low, tier-specific) **washout** rate — not the higher below-replacement
+    rate — it fattens the games≈0 left tail without dragging down the healthy upper tail (``q90``).
+    Estimated on established, projected-fantasy-relevant players (prior-season points = the PIT
+    projection proxy); a washout = played < :data:`WASHOUT_AVAIL` of the team's games:
+
+    * ``p_crater`` = P(washout)
+    * ``crater_avail`` = median realized games / team games among washed-out players (≈ 0.15)
+    * ``keep_frac`` = median per-game realized/projected among washed-out players (production kept)
+
+    Returns a dict keyed ``(pos, tier)`` with ``(pos, '*')`` → ``('*', '*')`` backoff.
+    """
+    from fantasy_quant.backtest import metrics, scoring
+    from fantasy_quant.draft.simulator import RosterSlots
+
+    ranks = metrics.replacement_ranks(RosterSlots(), n_teams=10)
+    recs = []
+    for s in train_seasons:
+        prior = scoring.season_points(con, s - 1, ruleset)
+        cur = scoring.season_points(con, s, ruleset)
+        prior = prior[prior["position"].isin(SKILL)].copy()
+        cur = cur[cur["position"].isin(SKILL)].copy()
+        if prior.empty or cur.empty:
+            continue
+        prior["proj_rank"] = prior.groupby("position")["points"].rank(
+            ascending=False, method="first")
+        # only players who were fantasy-relevant last year (a meaningful projected level)
+        prior = prior[prior.apply(lambda r: r["proj_rank"] <= 2 * ranks[r["position"]], axis=1)]
+        gp = games_played(con, [s]).rename(columns={"player_key": "gsis_id"})
+        m = prior.merge(cur[["gsis_id", "points"]], on="gsis_id", how="left",
+                        suffixes=("_prior", "_cur"))
+        m = m.merge(gp[["gsis_id", "games", "team_games"]], on="gsis_id", how="left")
+        m["points_cur"] = m["points_cur"].fillna(0.0)
+        m["avail"] = (m["games"] / m["team_games"]).clip(0, 1).fillna(0.0)  # never played -> 0
+        for r in m.itertuples(index=False):
+            pos = r.position
+            tier = role_tier(r.proj_rank, ranks[pos])
+            washout = r.avail < WASHOUT_AVAIL
+            per_game_prior = r.points_prior / max(_season_games(s - 1), 1)
+            per_game_cur = r.points_cur / max(r.games if r.games and r.games > 0 else np.nan, 1)
+            keep = float(np.clip(np.nan_to_num(per_game_cur) / max(per_game_prior, 1e-6),
+                                 _KEEP_FLOOR, 1.0))
+            recs.append({"pos": pos, "tier": tier, "washout": washout,
+                         "avail": r.avail, "keep": keep})
+
+    df = pd.DataFrame(recs)
+    if df.empty:
+        return {("*", "*"): {"p_crater": 0.12, "crater_avail": 0.15, "keep_frac": 0.7, "n": 0}}
+
+    def _cell(g: pd.DataFrame) -> dict:
+        wo = g[g["washout"]]
+        return {"p_crater": float(g["washout"].mean()),
+                "crater_avail": float(wo["avail"].median()) if len(wo) else 0.15,
+                "keep_frac": float(wo["keep"].median()) if len(wo) else 0.7,
+                "n": int(len(g))}
+
+    out: dict = {("*", "*"): _cell(df)}
+    for pos, g in df.groupby("pos"):
+        out[(str(pos), "*")] = _cell(g)
+    for (pos, tier), g in df.groupby(["pos", "tier"]):
+        if len(g) >= min_cell:
+            out[(str(pos), str(tier))] = _cell(g)
+    return out
+
+
+def lookup_role(retention: dict, pos: str, tier: str) -> tuple[float, float, float]:
+    """``(p_crater, crater_avail, keep_frac)`` from a :func:`role_retention` dict with
+    (pos,tier)→(pos,*)→(*,*) backoff."""
+    for key in ((str(pos), str(tier)), (str(pos), "*"), ("*", "*")):
+        if key in retention:
+            c = retention[key]
+            return c["p_crater"], c["crater_avail"], c["keep_frac"]
+    return 0.15, 0.35, 0.7

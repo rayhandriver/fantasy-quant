@@ -5,7 +5,21 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
-- **2026-07-11** — **NEXT-SESSION DECISION + Sleeper account status (see `docs/SLEEPER.md`).** The pipeline's
+- **2026-07-11 (b)** — **T3 + T4 DONE** (pre-lockbox modeling pair; `docs/TECH-DEBT.md` T3/T4 ☑, full write-up
+  in `findings.md`). Attribution-first overturned both specs: (T4) the bias is all offense/CoV-path — K/DST
+  fallbacks run **+16** (jittering worsens it, left alone) and per-player weekly CoV is already calibrated;
+  the cause is the mean-preserving Dirichlet split's light tails understating the lineup **max**. (T3) the
+  dominant miss is *barely-plays* (availability), not *plays-worse*. Shipped: **T3-A** cohort availability
+  prior (`injury.cohort_availability_prior`, `pos × draft-capital tier`) — the main lever; **T3-B** role-loss
+  **washout** mixture (`injury.role_retention`, availability channel, deep-tier only) — reformulated from the
+  planned production haircut, which added ~0 coverage; **T4** `weekly.SPREAD_KAPPA` per-position effective-CoV
+  inflation (mean-preserving) + 2-season CoV pooling. **κ = {QB 1.4, RB/WR 1.8, TE 1.7}** = the highest κ
+  keeping every hard gate passing (κ trades coverage/bias against sim over-dispersion + the dog-leverage gate).
+  **Results:** 2025 holdout uncond coverage **44 %→77 %**, cond **76 %→76 %**; Phase-10 points coverage
+  **62 %→77.2 %**, bias **−137→−113**, title Brier 0.0881, playoff 0.2342, all gates PASS (1,800 team-seasons);
+  216 tests, ruff clean. Residual bias documented (early/COVID + projection-level; probabilities are relative
+  so calibrated). Tuned only on DEV; 2025 read once. **Next: T5 pre-registration before the lockbox.**
+- **2026-07-11 (a)** — **NEXT-SESSION DECISION + Sleeper account status (see `docs/SLEEPER.md`).** The pipeline's
   strict-next item (step 0.10 Sleeper → Phase 11 opponent model, **T8b**) is **blocked on draft data**: the
   user created a Sleeper account (`MadBawa`, user_id `1381536159267573760`) but it is **brand-new and empty**
   — no leagues, no drafts (verified via the public API; identity resolves, no data behind it). An empty

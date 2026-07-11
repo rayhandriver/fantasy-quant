@@ -14,8 +14,8 @@ At a glance:
 |----|----|---------|------|--------|
 | **T1** | 🔴 | Phase 10 + Stage 0 work uncommitted | now | ☑ |
 | **T2** | 🔴 | Irreplaceable data (2026 ADP series, 2025 backfill) has no backup | now | ☑ |
-| **T3** | 🟠 | Downside under-modeled — unconditional coverage 44 % / points coverage 62 % | before lockbox | ☐ |
-| **T4** | 🟠 | Season-sim level bias −137 pts/team/season | before lockbox (with T3) | ☐ |
+| **T3** | 🟠 | Downside under-modeled — unconditional coverage 44 % / points coverage 62 % | before lockbox | ☑ |
+| **T4** | 🟠 | Season-sim level bias −137 pts/team/season | before lockbox (with T3) | ☑ |
 | **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ☐ |
 | **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☑ |
 | **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
@@ -79,7 +79,30 @@ refreshes the backup; (stretch) snapshots are version-controlled.
 ---
 
 ## 🟠 T3 — Fix the under-modeled downside (unconditional coverage 44 %, points coverage 62 %)
-**Status ☐ · the top modeling debt; do before the lockbox (pair with T4).**
+**Status ☑ done (2026-07-11).** **2025 holdout (read once): unconditional coverage 44 % → 77 %,
+conditional 76 % → 76 % (held); Phase-10 team-points coverage 62 % → 77 %.** DEV: uncond 39 % → 70 %,
+cond 79 % → 75 %. 2025 is the calibration holdout (not the lockbox) — tuned only on DEV, read once.
+
+**What shipped, and how it diverged from this plan.** Attribution first (`findings.md` 2026-07-11): 31 % of
+board players realize below their own q10 and **~95 % of those barely played** (realized ≈ 0), so the
+dominant unconditional miss is **availability / roster-security** (a projected body who never plays), not
+the "plays-but-produces-less" case Root-cause-B's production haircut targeted.
+- **A — cohort availability prior** (`injury.cohort_availability_prior`) — the **main lever** (uncond
+  39 %→63 % alone). Routes the sub-`prior_games≥8` cohort to a `(pos × draft-capital tier)` prior for both
+  `avail_p` and `rho` (hi-capital rookie RB plays 0.67 of games vs lo-capital 0.42; fat `rho` 0.37+ vs the
+  0.15 shared fallback). Wired into `distribution.assemble_distribution` (replaces the median fallback).
+- **B — role-loss WASHOUT mixture** (`injury.role_retention` + `distribution.sample_player_season`), the
+  reformulation. The planned production haircut `Y=H·(G/G_ref)·R` added ~0 coverage and dropped conditional
+  to ~72 %; role loss instead acts through the **availability channel** — a tier-specific washout rate
+  `p_crater` (played < 40 % of games) draws games from a low `crater_avail` (≈0.15) *replacing* the hazard
+  branch (injury never double-counted), applied to **established, deep-projected** players only (elite/starter
+  washouts are injury, already in `G`). `covariance/estimate.role_ranks` reuse was **not** needed — role
+  tiers key on projection rank vs the startable/replacement rank (`injury.role_tier`), simpler and PIT.
+- Guard held: conditional coverage stayed in band (76 % holdout / 75 % DEV) and title Brier is unbroken.
+- New unit tests in `tests/test_phase5.py` (capital/role tiers, backoff, washout left-tail widening);
+  `steps/phase5_4_injury.py` extended with the T3 done-bar (cohort + washout assertions).
+
+<details><summary>Original plan (kept for the record — Root-cause-B was overturned by the DEV diagnosis)</summary>
 
 **Symptom.** Phase 5 unconditional 80 %-interval coverage = **44 %** (target 80 %); Phase 10 team-points
 coverage = **62.4 %**. Distributions are too narrow on the draft-day (unconditional) axis; rank calibration
@@ -115,10 +138,32 @@ The sample model is `Y = H·(G/G_ref)` (`distribution.py`) — injury only, no r
 **Effort.** A real 1–2 session phase. Highest-value modeling fix; strengthens every downstream probability
 before the freeze.
 
+</details>
+
 ---
 
 ## 🟠 T4 — Fix the season-sim level bias (−137 pts/team/season)
-**Status ☐ · do with T3 (~1 session).**
+**Status ☑ done (2026-07-11) — with T3.** Phase-10 team-points coverage **62 % → 77.2 %**, mean bias
+**−137 → −113 pts/team/season**; title Brier **0.0881** (< 0.09), playoff **0.2342** (< 0.24), stability
+0.979/0.949, **all hard gates PASS** (1,800 DEV team-seasons). `steps/phase10_sim.py` unchanged as the gate.
+
+**What shipped, and how it diverged from this plan.** Attribution (`findings.md` 2026-07-11) overturned both
+candidates: (1) the bias is entirely in the **offense** path (−140); K/DST fallbacks run **+16** — jittering
+them would *worsen* the bias, so they're left alone; (2) per-player weekly CoV is **already well-calibrated**
+from the prior season (RB 0.67 model vs 0.63 realized) — pooling doesn't move the bias. The real cause is
+**structural**: the mean-preserving Dirichlet week-split has tails too light to reproduce the weekly
+optimal-lineup **max** (a tail statistic), because a mean-preserving split caps weekly upside at the season
+total. Fix = `weekly.SPREAD_KAPPA`, a per-position **effective-CoV inflation** (mean-preserving, so season
+totals / Phase-5 / T3 calibration are untouched) that restores the max, plus pooling `wk_cov` over the prior
+**two** seasons. QB is a single mean-preserving lineup slot (barely responds) → smallest inflation.
+**κ is a genuine trade-off** (higher → more coverage/less bias but sim over-dispersion + a broken dog-leverage
+gate); locked at `{QB 1.4, RB/WR 1.8, TE 1.7}` = the highest κ that keeps **every** hard gate passing.
+**Residual bias (documented):** ~−113 remains, concentrated in the early/COVID seasons (2017/18/20 start
+~−220 at κ=1.0) and partly a **projection-level** shortfall κ can't fix; the deliverable probabilities are
+relative so they stay calibrated. Fully closing it needs a non-mean-preserving weekly-upside term (breaks the
+Phase-5 sum invariant, gated behind explicit approval) or better early-season projections — future work.
+
+<details><summary>Original plan (kept for the record — both root-cause candidates were wrong)</summary>
 
 **Symptom.** Phase-10 predicted optimal-lineup totals run ~**137 pts/team/season low** (~−8/wk). The
 championship-prob deliverable is *relative within a league* so it calibrates anyway — but any absolute-points
@@ -144,6 +189,8 @@ disaggregation** that feeds the lineup max is the suspect.
 
 **Done-when.** Level bias shrinks toward 0 **while** title Brier stays < 0.090 and the reliability diagonal
 holds. (Widening spread also lifts T3 coverage — that's why they're done together.)
+
+</details>
 
 ---
 
@@ -302,5 +349,6 @@ probs. 8b: opponent model beats ADP+noise on a real-pick availability Brier.
 1. ~~**Now:** T1 (commit), T2 (backup).~~ ☑ both done (2026-07-10).
 2. ~~**Opportunistic:** T7 (scrape guards + raw-payload archival + props shelved).~~ ☑ done (2026-07-10).
 3. ~~**Phase 9 completion:** T8a (win-prob objective) with T6 (MC consolidation) folded in.~~ ☑ done (2026-07-10).
-4. **Next build:** step 0.10 Sleeper ingest → S4/Phase 11 (**T8b** behavioral opponent model + availability Brier).
-5. **Before the lockbox:** T3 + T4 together (coverage + level bias), then T5 (pre-register).
+4. ~~**Before the lockbox:** T3 + T4 together (coverage + level bias).~~ ☑ done (2026-07-11).
+5. **Next build:** step 0.10 Sleeper ingest → S4/Phase 11 (**T8b** behavioral opponent model + availability Brier).
+6. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).

@@ -1230,3 +1230,72 @@ because the account is empty, the next autonomous session should be **T3+T4** (p
 return to Sleeper once the user runs mock drafts (plumbing) or the real 2026 draft season lands (Aug–Sep,
 gold-standard behavioral signal). **Takeaway:** a username was necessary but not sufficient — the Sleeper
 step needs *drafts*, not just an account.
+
+## T3 + T4 — downside coverage & sim level bias (2026-07-11) ☑
+The pre-lockbox modeling pair (TECH-DEBT T3, T4). Attribution-first, then fix, all tuned on DEV
+(2014–2022); the 2025 holdout read **once** at the end (T5 discipline; 2025 is the calibration holdout,
+not the lockbox 2023/24).
+
+### Attribution spike (read-only) — reshaped both fixes
+- **T4 owns the OFFENSE (weekly-disaggregation) path, not the K/DST fallbacks.** Decomposing the
+  team-points bias by roster slot: offense (CoV path) −140, K/DST (fallback path) **+16** (slightly high).
+  So the "flat K/DST constant" candidate was a non-issue — jittering it would have made the bias *worse*.
+  K/DST left untouched.
+- **Per-player weekly CoV is already well-calibrated** from the prior season (RB 0.67 model vs 0.63
+  realized; WR 0.70 vs 0.70), so "stale single-season CoV" was also wrong — pooling doesn't move the bias.
+- **The real cause is structural:** the mean-preserving Dirichlet week-split reproduces each player's
+  marginal weekly CoV but its light tails understate the weekly optimal-lineup MAX (a tail statistic),
+  because a mean-preserving split caps weekly upside at the season total. It needs ~1.8–2.0× the true CoV.
+- **T3 diagnosis:** 31 % of board players realize below their own q10, and **~95 % of those barely played**
+  (weeks < 50 %, realized ≈ 0 with q10 > 0); only 6 % miss above q90. So the downside miss is an
+  **availability / roster-security** phenomenon, *not* the "plays-but-produces-less" case the planned
+  healthy-conditioned production haircut targeted.
+
+### T3-A — cohort availability prior (the main coverage lever)
+`injury.cohort_availability_prior` routes the sub-`prior_games≥8` cohort (rookies/backups, ~17–21 % of the
+board, RB/WR-heavy) off the single median fallback to a `(pos × draft-capital tier)` prior for both
+`avail_p` and its Beta-Binomial `rho`. Recovers signal the median erased: hi-capital rookie RB plays 0.67
+of games vs lo-capital 0.42, fat `rho` (0.37–0.42 vs the 0.15 shared fallback). **Alone: DEV uncond
+coverage 39 % → 63 %, conditional 79 % → 76 %.**
+
+### T3-B — role-loss WASHOUT mixture (reformulated from the diagnosis)
+The originally-specified production haircut (crater = below replacement, conditioned on healthy)
+**did not work**: it added ~0 to unconditional coverage and dropped conditional to ~72 %, because the
+dominant miss is *not-playing*, not *low per-game output*. Reformulated as an **availability** mixture:
+`injury.role_retention` estimates a tier-specific **washout** rate (played < 40 % of games) + the low
+`crater_avail` (≈0.15) and `keep_frac`; `distribution.sample_player_season` draws, with prob `p_crater`, a
+*replacement* low-availability branch (not additive → injury not double-counted). Applied to **established,
+deep-projected** players only — pure role loss; elite/starter washouts are injury, already in `G`.
+Restricting to the deep tier was the frontier-best (DEV uncond 70 / cond 75, vs 62/69 hitting all tiers).
+`covariance/estimate.role_ranks` reuse turned out unnecessary — tiers key on projection rank vs the
+startable/replacement rank (simpler, PIT).
+
+**T3 result — 2025 holdout (read once): unconditional 80 %-interval coverage 44 % → 77 %, conditional
+76 % → 76 % (held).** DEV: uncond 39 % → 70 %, cond 79 % → 75 %.
+
+### T4 — weekly-spread correction κ
+`weekly.SPREAD_KAPPA` (per-position) inflates the *effective* weekly CoV to restore the lineup-max tail.
+**Mean-preserving per player** (row sums still equal each season draw), so season totals and the whole
+Phase-5 / T3 calibration are untouched — only intra-season shape moves. QB is a single mean-preserving
+slot (barely responds) → smallest inflation. Also pooled `wk_cov` over the prior **two** seasons.
+
+**κ is a genuine trade-off, not a free win.** Higher κ closes more bias and lifts coverage but
+over-disperses the sim (spread ratio ↑) and eventually flips the dog-leverage gate (at high baseline
+variance a longshot no longer gains from *more* variance). Swept on the DEV gate:
+- κ≈2.0: coverage 79 %, bias −96, **but** spread 1.37 and the dog-leverage gate **breaks**.
+- κ≈1.6: all gates pass (dog +0.013), spread 1.28, but coverage 71 % and bias −133.
+- **κ = {QB 1.4, RB/WR 1.8, TE 1.7} (chosen):** the highest κ that keeps every hard gate passing —
+  **1,800 DEV team-seasons: points coverage 62 % → 77.2 %, bias −137 → −113, title Brier 0.0881 (< 0.09),
+  playoff 0.2342 (< 0.24), stability 0.979/0.949, dog-leverage +0.0009, all gates PASS.**
+
+**Residual T4 limitation (documented):** ~−113 pts/team/season remains, concentrated in the early/COVID DEV
+seasons (2017/18/20 start ~−220 at κ=1.0) and partly a **projection-level** shortfall κ can't fix (κ is
+mean-preserving). Since the championship/playoff deliverable is *relative within a league*, it stays
+calibrated anyway (Brier + reliability diagonal hold). Fully closing the absolute level would need a
+non-mean-preserving weekly-upside term (breaks the Phase-5 sum invariant → gated behind explicit approval)
+or better early-season projections — future work.
+
+**Takeaway:** T3 fixed the downside coverage via **availability**, not production (the diagnosis overturned
+the original per-game-haircut spec); T4's mean-preserving κ lifts coverage and cuts the bias under a hard
+leverage/spread ceiling. Both harden the exact distributions the Phase-9.5 win-prob objective consumes.
+210 → 216 unit tests pass, ruff clean. **Next: T5 pre-registration before the lockbox eval.**
