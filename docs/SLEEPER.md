@@ -17,9 +17,35 @@ Two payoffs, both needing **real pick-by-pick draft data**:
 ## The account (as of 2026-07-11)
 - **username:** `MadBawa` (canonical lowercase `madbawa`)
 - **user_id:** `1381536159267573760`  ·  `is_bot: false`, created 2026-07-11
-- **STATUS: EMPTY** — `GET /user/madbawa/leagues/nfl/2026` → `null`, `GET /user/madbawa/drafts/nfl/2026`
-  → `null`. Brand-new account, **no leagues, no drafts**. Identity resolves fine; there is simply no draft
-  data behind it yet. **An empty account does not unblock the Sleeper session** (nothing to ingest/fit).
+- **STATUS: 3 mock drafts banked & ingested (2026-07-11).** The account still shows **no leagues** and the
+  mock drafts do **not** surface on `GET /user/<id>/drafts/nfl/2026` (mocks aren't attached to the user
+  endpoint — the field-verified reality that step 0.10 was designed around). They are reached **by
+  `draft_id`** (from the draft-board URL) instead. The three seed ids live in
+  `steps/phase0_10_sleeper_ingest.py::SEED_DRAFT_IDS`.
+
+## ✅ Step 0.10 — ingest DONE (2026-07-11); pick shape confirmed
+Ran the ingest end-to-end on the 3 mocks (`steps/phase0_10_sleeper_ingest.py`, all gates PASS):
+- **Format (all 3):** `complete` `snake`, **10-team × 15-round PPR**, season 2026, 150 picks each (**450**).
+  Roster is QB1/RB2/WR2/TE1/**FLEX2**/K1/DEF1 = 10 starters (wider FLEX than the canonical 9-starter
+  `RosterSlots`; irrelevant to pick-sequence ingest, recorded on `sleeper_drafts`).
+- **Pick shape:** each pick carries `pick_no`, `round`, `draft_slot`, `player_id` (= sleeper_id), rich
+  `metadata` (name/pos/team/years_exp), `is_keeper`. **`picked_by` is populated for the *human's own*
+  picks only** (45 rows = 15 × 3, all `is_human_slot`); the 405 bot picks have `picked_by = null` and
+  `roster_id = null`. `draft_order` = a single entry (the user) → `human_slot` (3 / 6 / 8 across the mocks).
+  ⇒ **bots have no persistent identity; a mock keys behavioral stats by `draft_slot`, a real league by
+  `picked_by`.**
+- **Identity crosswalk (measured on the 450 picks):** QB/RB/WR/TE **100%**, K **80%**, team DEF **0%**
+  (their id is the team abbr → bridged to a `dst_team` key, no gsis — matches the `_NON_GSIS_POS`
+  convention). Unmatched *skill* players are logged, not dropped.
+- **Deliverables:** `sleeper_drafts` + `sleeper_draft_picks` tables (idempotent upsert by `draft_id`); the
+  derived `sleeper_mock` ADP board written into `adp_snapshots` (so `adp_asof(source="sleeper_mock")` and
+  the draft simulator consume it **unchanged** — verified by drafting a 2026 mock against it); a POC
+  `sleeper_tendencies` artifact (per-slot positional cadence + reach-vs-ADP). Module:
+  `src/fantasy_quant/data/sources/sleeper.py`; tests `tests/test_sleeper.py` (offline, fixture-backed).
+- **Still open (needs real-league data): the Phase-11 behavioral opponent-model fit + the availability
+  Brier.** 3 solo-vs-bots mocks are weak signal with no opponent identity — plumbing + POC only. The
+  ingest is corpus-ready (`ingest_drafts` takes a list of ids **or** discovers a username/league) for when
+  real drafts land. See TECH-DEBT **T8b**.
 
 ## The public API (read-only, no auth)
 Sleeper's v1 API is fully public — **no password, API key, or OAuth**; everything is keyed off public IDs.
@@ -54,16 +80,61 @@ Gotchas: Sleeper's *own* `gsis_id` field is ~31 % sparse (don't rely on it); `sl
    model. Not something one account provides; needs many drafts (public leagues / mock lobbies / friends'
    league IDs).
 
-## Current recommendation (2026-07-11)
-Because the account is empty, **do not spend the next session on Sleeper** — it stalls on missing data or
-produces throwaway plumbing. Recommended autonomous next session: **T3 + T4** (the pre-lockbox modeling
-pair; see TECH-DEBT) — no external dependency, and it hardens the exact distributions the Phase-9.5
-win-prob objective consumes. **Return to Sleeper once real draft data exists**: either the user runs a
-batch of mock drafts (plumbing now) or the real 2026 draft season arrives (Aug–Sep, gold-standard signal).
+## ✅ Corpus crawler — 0.10b (2026-07-11) + a real live corpus
+Built on top of 0.10 so the corpus scales without hand-collecting ids (`steps/phase0_10b_crawl.py`;
+`sleeper.crawl_and_ingest`). Verified offline (fake-client tests) **and run live** — see the corpus below.
+- **Seed registry** `reference/sleeper_seeds.txt` — one token/line (`#` comments): `league:<id>` = a
+  league_id (from a public league URL), `draft:<id>` (or a bare number) = a draft_id, anything else = a
+  **username**. Grow the corpus = add a line, re-run the step.
+- **Crawl** `crawl_expand`: **iterative BFS snowball**. Seed from usernames (walk `user→leagues→drafts`
+  across seasons `2018–2026`), league_ids (→ their drafts + members), and draft_ids; then **participant
+  expansion** — every *human* (multi-manager) draft found queues its `draft_order` managers, whose histories
+  are crawled in turn, so **one league fans out through co-managers** until no new users or `max_drafts`.
+  Rate-limited, dedups against the store.
+- **Human vs bot separation:** each draft tagged `is_human` (≥2 distinct `picked_by`). Real drafts build a
+  **`sleeper_human`** ADP board; bots a **`sleeper_mock`** board (bot ADP never dilutes human ADP).
+- **Quality filter:** a crawled corpus is full of **abandoned drafts** (people quit mid-draft) + auctions;
+  derived artifacts (ADP boards, manager profiles) use **complete snake/linear drafts only**. Raw
+  `sleeper_draft_picks` keeps everything. The integrity gate checks **no duplicate `pick_no`** (a real
+  corruption check) — incompleteness is *reported, not failed*.
+- **Behavioral seed:** `sleeper_manager_profiles` — per real manager (across all their drafts): draft count,
+  per-position pick share, mean reach-vs-ADP, top NFL teams (crude fandom). The Phase-11 opponent-model input.
 
-If prioritizing Sleeper anyway: the user runs **1–2 mock drafts and hands over the draft URL(s)**; then a
-session can build + verify the ingest against real payloads, with the behavioral-model fit following once
-there are enough drafts.
+### Live corpus (2026-07-11) — seeded from the Sleeper docs' public example leagues
+Web-searched + validated two **public** real human leagues (the official API docs' examples, `picked_by`
+fully populated — this also **confirmed real-league drafts carry full opponent identity**, unlike mocks):
+`league:289646328504385536` ("Sleeper Friends League", 2018 12-team) and `league:206827432160788480`
+("Men Of Steel", 2017 10-team). The snowball reached a **connected component of ~266 drafts** before
+exhausting: **149 human + 117 bot drafts**, seasons 2017–2020, **289 manager profiles**, `sleeper_human`
+board ≈2,580 rows (per season), skill gsis-match **99.8 %**. All gates PASS. **This clears the Phase-11
+*data* blocker** — a first opponent-model fit + availability Brier can now run on real human picks (older
+seasons w/ realized outcomes). More/newer seeds broaden it; the fit itself is the next modeling step.
+
+## How much data (what each source buys)
+| Source | Behavioral signal? | Good | Ideal | Powers |
+|---|---|---|---|---|
+| Solo-vs-bot mocks | ❌ (bots) | ~10 | ~20 | `sleeper_mock` ADP only (FFC already covers production ADP) |
+| **Human mock-lobby** drafts | ✅ ~10 humans each | ~20 | ~40 | behavioral model + `sleeper_human` ADP |
+| Crawled public user histories | ✅ | ~50 | ~100–150 | the Brier-verifiable opponent fit |
+| Your own redraft leagues | ✅ (1 draft each) | 1–3 | — | your draft day + validation |
+
+Board mean-ADP error ≈ σ_pick/√N (mid-round σ≈15 → N=20 ⇒ ±3–4 picks). A Brier-verifiable opponent model
+needs **~50 real human drafts minimum, ~100–150 ideal** — best gotten from **human mock lobbies +
+participant-expansion crawling**, not from personally joining many leagues. (User plan 2026-07-11: gather via
+**human mock lobbies**; crawler built now to expand from them.)
+
+## Current recommendation (updated 2026-07-11, post-0.10)
+The plumbing is built and verified; the ingest is corpus-ready. To make the derived board + opponent model
+**non-trivial** (the user intends both):
+1. **Batch of mocks** → grow `SEED_DRAFT_IDS` (or discover from a username). More mocks tighten the
+   `sleeper_mock` ADP board; still weak behavioral signal (bots).
+2. **Real human leagues** (the user plans to join several) → these populate `picked_by` = persistent
+   manager identity across drafts. **This is what unlocks the Phase-11 behavioral opponent model + the
+   availability Brier.** Ingest via `ingest_drafts(con, username=...)` (or league ids); a real 2026 board
+   also upgrades 2025→2026 to a full draft-backtest season.
+
+**Privacy:** ingesting a real shared league brings other managers' public handles + picks into the store
+(already public via the API, but other people's data) — fine to proceed, noted for awareness.
 
 ## Privacy note
 Pulling a league surfaces the *other* managers' public Sleeper handles and picks. That's already public via

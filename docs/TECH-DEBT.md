@@ -19,7 +19,7 @@ At a glance:
 | **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ☐ |
 | **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☑ |
 | **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
-| **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (8b) | 9.5 done / opponent model at 0.10 | ◐ |
+| **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit open**) | 9.5 done / data ready / fit is next | ◐ |
 
 ---
 
@@ -297,7 +297,19 @@ explicit decision, not a silent no-op.
 ---
 
 ## 🟡 T8 — Make `objective` real (Phase 9.5) + the behavioral opponent model (0.10 → Phase 11)
-**Status ◐ · 8a ☑ done (2026-07-10); 8b open (blocked on a real Sleeper league).**
+**Status ◐ · 8a ☑ done (2026-07-10); 8b: step-0.10 ingest ☑ done (2026-07-11), the behavioral fit still
+open (needs a real-league pick log — bot mocks carry no persistent opponent identity).**
+
+**Done — 8b step 0.10 (2026-07-11).** The pick-by-pick **data pipe** is built + verified on 3 real mock
+drafts (`src/fantasy_quant/data/sources/sleeper.py`, `steps/phase0_10_sleeper_ingest.py`, `tests/test_sleeper.py`;
+`docs/SLEEPER.md`). Keyless public API; `sleeper_drafts` + `sleeper_draft_picks` (idempotent by `draft_id`);
+gsis crosswalk **100 % skill / 80 % K / DEF bridged**; derived `sleeper_mock` ADP board written into
+`adp_snapshots` (so `adp_asof(source="sleeper_mock")` + the simulator consume it unchanged — verified by
+drafting a 2026 mock); POC `sleeper_tendencies` (per-slot cadence + reach). Corpus-ready (`ingest_drafts`
+takes a list of ids **or** discovers a username/league). **What 0.10 confirmed that changes the fit:**
+mocks are **solo-vs-bots** — `picked_by` is set for the *human's own* picks only, so there is **no
+persistent opponent identity**; the behavioral fit + availability Brier need **real human leagues** (which
+populate `picked_by`), not mocks.
 
 **Done — 8a (2026-07-10).** `DraftConfig.objective` is now consumed. `winprob_pick_fn` (opt-in via
 `optimize_draft(winprob=True)`) prefilters to the top-k portfolio-CE/scarcity candidates, finishes the
@@ -325,23 +337,26 @@ consumes `title_probability`/`playoff_prob` directly"):
 - Keep portfolio CE as the fast default; gate the win-prob objective behind the `objective` field / a Phase-9.4
   lookahead budget (a mini-sim per candidate is expensive).
 
-**Fix — 8b (step 0.10 → Phase 11, blocked on real draft data). Full reference: `docs/SLEEPER.md`.**
-- 0.10: point the ingest at real Sleeper drafts (free, public read-only API) to confirm the pick-by-pick
-  draft JSON shape, build the `sleeper_id → gsis` crosswalk ingest (99 % coverage already proven), derive
-  per-slot ADP + reach behavior.
-- Phase 11: fit the behavioral opponent model; **report the availability Brier** owed from spine-4 (the open
-  S4 item), verifying it beats ADP+noise on real picks. 2025 becomes a full backtest season once its board lands.
+**Fix — 8b (step 0.10 ☑ → Phase 11 fit ☐). Full reference: `docs/SLEEPER.md`.**
+- 0.10 ☑ (2026-07-11): ingest built + verified — pick-by-pick JSON shape confirmed, `sleeper_id → gsis`
+  crosswalk ingested (100 % skill), per-slot/reach behavior + `sleeper_mock` ADP board derived. See the
+  "Done — 8b step 0.10" note above.
+- Phase 11 ☐ (needs a real league): fit the behavioral opponent model; **report the availability Brier**
+  owed from spine-4 (the open S4 item), verifying it beats ADP+noise on real picks. 2025→2026 becomes a full
+  backtest season once a real board lands.
 
-**Blocker (2026-07-11).** A Sleeper account exists — `MadBawa` / user_id `1381536159267573760` — but it is
-**brand-new and EMPTY** (no leagues, no drafts; identity resolves, there's just no draft data behind it). An
-empty account does **not** unblock this: 0.10 needs actual completed drafts. Unblock path (see `docs/SLEEPER.md`),
-cheapest first: **(1)** the user runs 1–2 **mock drafts** → a real `draft_id` to build+test the ingest on
-(plumbing only — bot mocks are weak behavioral signal); **(2)** a real human league draft (gold standard, but
-seasonal — 2026 redrafts go Aug–Sep); **(3)** a corpus of public draft_ids (needed to derive an ADP board at
-scale). **Recommendation while empty: do T3+T4 next (autonomous), return to Sleeper when draft data exists.**
+**Blocker → CLEARED for a first fit (2026-07-11).** The crawler (0.10b/0.10c) + a live crawl from the
+Sleeper docs' **public example leagues** built a real corpus — **149 human + 117 bot drafts (2017–2020),
+289 manager profiles**, `sleeper_human` ADP board, skill match 99.8 %. Real-league drafts were confirmed to
+carry full per-manager `picked_by`. So the *data* no longer blocks the fit — a first behavioral opponent
+model + availability Brier can run on real human picks (older seasons, but with realized outcomes). What
+would strengthen it: **more/newer seeds** (broader connected components; the current corpus is one co-manager
+component off 2 seeds) — add `league:<id>`/usernames to `reference/sleeper_seeds.txt` and re-run
+`steps/phase0_10b_crawl.py`.
 
 **Done-when.** 8a: switching `objective` measurably changes the drafted roster on DEV, consuming calibrated
-probs. 8b: opponent model beats ADP+noise on a real-pick availability Brier.
+probs. 8b: ☑ ingest + crawler verified on real drafts; a real corpus exists; **☐ the opponent model beats
+ADP+noise on a real-pick availability Brier** (the fit itself — now runnable, next modeling step).
 
 ---
 
@@ -350,5 +365,8 @@ probs. 8b: opponent model beats ADP+noise on a real-pick availability Brier.
 2. ~~**Opportunistic:** T7 (scrape guards + raw-payload archival + props shelved).~~ ☑ done (2026-07-10).
 3. ~~**Phase 9 completion:** T8a (win-prob objective) with T6 (MC consolidation) folded in.~~ ☑ done (2026-07-10).
 4. ~~**Before the lockbox:** T3 + T4 together (coverage + level bias).~~ ☑ done (2026-07-11).
-5. **Next build:** step 0.10 Sleeper ingest → S4/Phase 11 (**T8b** behavioral opponent model + availability Brier).
-6. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).
+5. ~~**Next build:** step 0.10 Sleeper ingest (the pick-by-pick data pipe).~~ ☑ done (2026-07-11).
+6. **Next build (buildable now):** Phase 7 (opportunity-adjusted projection, keep-or-drop) — the next
+   pipeline phase while the Phase-11 **fit** (T8b) waits on real-league data.
+7. **When real leagues exist:** S4/Phase 11 (**T8b** behavioral opponent model + availability Brier).
+8. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).

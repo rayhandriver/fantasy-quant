@@ -4,8 +4,15 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-11 — T3/T4 **implemented** (role-loss washout mixture — reformulated from the
-> planned production haircut; cohort availability prior; weekly-spread correction κ; residual level bias).
+> **Last updated:** 2026-07-11 (e) — **crawler league-seeding + real corpus terms** (iterative BFS snowball /
+> `league:<id>` seeding, complete-draft quality filter, type-drift-safe upsert). *(Prior: 2026-07-11 (d) —
+> Sleeper corpus-crawler terms: corpus crawler / participant expansion, `is_human` + human-vs-bot ADP,
+> `sleeper_manager_profiles`, data appetite.)* *(Prior: 2026-07-11 (c) — step
+> 0.10 Sleeper ingest terms: Sleeper draft ingest, `draft_id` vs the user endpoint, `picked_by`/`draft_slot`
+> opponent identity, `human_slot`, `sleeper_mock` ADP board, `sleeper_tendencies` POC, DEF→`dst_team` bridge.)*
+> *(Prior: 2026-07-11 — T3/T4 implemented: role-loss
+> washout mixture — reformulated from the planned production haircut; cohort availability prior; weekly-spread
+> correction κ; residual level bias.)*
 > *(Prior: 2026-07-10 — audit / remediation terms: remediation register, role-survival haircut, cohort
 > availability prior.)*
 >
@@ -405,6 +412,53 @@ section, not just appended.
   one joint set of draws instead of diverging by an accidental seed mismatch.
 - **Sleeper integration (0.10 / T8b)** — the free public read-only Sleeper API is the source for the
   behavioral opponent model + a scaled ADP board. Everything is keyed off public IDs (username→user_id→
-  leagues→drafts→picks; no auth). Identity via nflverse `player_ids.sleeper_id`→gsis (99 % of top-300).
-  Account `MadBawa` (user_id 1381536159267573760) exists but is **empty** (2026-07-11) → 0.10 needs real
-  drafts (mocks/league) first. Full reference: **`docs/SLEEPER.md`**.
+  leagues→drafts→picks; no auth). Identity via nflverse `player_ids.sleeper_id`→gsis (100 % of the drafted
+  skill cohort). Full reference: **`docs/SLEEPER.md`**.
+
+## Step 0.10 — Sleeper draft ingest terms (2026-07-11)
+- **Sleeper draft ingest** — `data/sources/sleeper.py`: fetch draft metadata + pick-by-pick, gsis-join, and
+  upsert `sleeper_drafts` + `sleeper_draft_picks` (idempotent by `draft_id`). Corpus intake takes an explicit
+  list of `draft_id`s **or** discovers drafts from a `username`/`user_id` (real leagues); pure `parse_*`/
+  `crosswalk`/`build_*` helpers + thin DB wrappers, so the parser is unit-tested offline against a fixture.
+- **`draft_id` vs the user endpoint** — a Sleeper **mock** draft is reached only by its `draft_id` (in the
+  board URL); it does **not** appear on `GET /user/<id>/drafts/...`. Real leagues *do* surface via that walk.
+- **`picked_by` / `draft_slot` (opponent identity)** — a real league stamps each pick with `picked_by` (the
+  manager's user_id — a **persistent identity** across drafts, the behavioral signal). A **solo-vs-bots mock**
+  stamps `picked_by` for the **human's own picks only**; the 9 bots are null. So behavioral stats key by
+  `picked_by` when ≥2 distinct managers exist (a real league), else by `draft_slot` (all a mock exposes).
+- **`human_slot`** — from `draft_order` (user_id→seat); in a mock the single entry is the user, so `human_slot`
+  tags which seat (and which picks, `is_human_slot`) were the human's.
+- **`sleeper_mock` ADP board** — `build_mock_adp` aggregates pick numbers across the corpus into the exact
+  **`adp_snapshots` contract** (`source="sleeper_mock"`: `adp`=mean pick, `stdev`, `high`=earliest, `low`=
+  latest, `times_drafted`, `pos_rank`), so `adp_asof(source="sleeper_mock")` **and the draft simulator consume
+  it with no code change** — the clean wiring point for drafting a live season against real draft behavior.
+- **`sleeper_tendencies` (POC behavioral artifact)** — `build_tendencies`: per-drafter (slot or manager)
+  positional cadence (`n_picked`, `avg_round`) + **reach** (`board ADP − pick_no`; +ve = drafted earlier than
+  value). On a bot-mock corpus the ADP reference is that same corpus, so it's a plumbing proof-of-concept, the
+  seed of the Phase-11 fit — which needs real-league `picked_by`, not mocks.
+- **DEF→`dst_team` bridge** — a team defense's Sleeper `player_id` is the team abbr (no gsis); the crosswalk
+  routes it to a `dst_team` key instead (matching the `_NON_GSIS_POS` D/ST convention), so DEF still boards.
+- **Corpus crawler (0.10b/0.10c)** — `crawl_expand`: grow the draft corpus by **iterative BFS snowball**.
+  Seed from usernames (walk their full `user→leagues→drafts` history), **`league:<id>`** (→ its drafts +
+  members), and draft_ids; then **participant expansion** — every *human* draft found queues its `draft_order`
+  managers, whose histories are crawled in turn, so one league fans out through co-managers until no new users
+  or `max_drafts`. Rate-limited, dedups against the store. Seeds live in `reference/sleeper_seeds.txt`
+  (`league:`/`draft:` prefixes). *A crawl reads **historical** leagues — all public in the API year-round —
+  so it needs no live/in-season drafting; historical leagues also have realized outcomes (better for the Brier).*
+- **Complete-draft quality filter** — a crawled corpus is ~44 % **abandoned drafts** (people quit mid-draft)
+  plus auctions/linear. `sleeper_draft_picks` keeps everything (raw), but derived artifacts (ADP boards,
+  manager profiles) use **complete snake/linear drafts only** (`_QUALITY_FILTER`). The integrity gate checks
+  **no duplicate `pick_no`** per draft (a real corruption check); incompleteness is *reported, not failed*.
+- **Type-drift-safe upsert** — `_upsert` does a full atomic rewrite (keep non-replaced rows, re-write union),
+  so the heterogeneous corpus reconciles both schema drift and **column-type drift** (e.g. `league_id` first
+  seen all-NULL → inferred INT, later a real string) — the append path would `ConversionException`.
+- **`is_human` / human vs bot ADP** — a draft is `is_human` when ≥2 distinct `picked_by` (a real lobby/league)
+  vs 1 (a solo-vs-bots mock). Human drafts build the **`sleeper_human`** ADP board, bots the **`sleeper_mock`**
+  board — kept separate so Sleeper's *algorithmic* bot ADP never dilutes the *behavioral* human ADP the
+  opponent model wants.
+- **`sleeper_manager_profiles`** — the Phase-11 behavioral seed: per real manager across all their crawled
+  drafts, per-position pick share + mean reach-vs-ADP + top NFL teams (crude fandom). Empty until real-human
+  drafts are ingested; the input the opponent-model fit consumes.
+- **Data appetite (Sleeper)** — board mean-ADP error ≈ σ_pick/√N (mid-round σ≈15 → N=20 ⇒ ±3–4 picks); a
+  **Brier-verifiable opponent model needs ~50 real human drafts min, ~100–150 ideal**. Bot mocks add ADP only
+  (cap ~10–20; FFC covers production ADP). Cheapest real-signal source = human mock lobbies + participant crawl.

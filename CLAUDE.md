@@ -61,12 +61,20 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **Next-session pointer (2026-07-11, updated).** T3 + T4 are **done** (2025 holdout uncond coverage
-> 44 %→77 %; Phase-10 points coverage 62 %→77 %, bias −137→−113; all gates PASS — see `findings.md` /
-> `docs/TECH-DEBT.md`). The pipeline's strict-next item (step 0.10 Sleeper → opponent model, **T8b**) remains
-> **blocked on draft data** — the `MadBawa` account exists but is empty (`docs/SLEEPER.md`). **Options:** (a)
-> **T5** pre-registration whenever the lockbox eval is imminent; (b) resume Sleeper once mock/real drafts
-> exist. No further autonomous modeling is required before the lockbox — T3/T4 were the last mandatory pair.
+> **Next-session pointer (2026-07-11, updated post-0.10).** T3 + T4 **done** (2025 holdout uncond coverage
+> 44 %→77 %; Phase-10 points coverage 62 %→77 %, bias −137→−113). **Step 0.10 Sleeper ingest is now ☑ done**
+> — the pick-by-pick data pipe is built + verified on 3 real mock drafts (100 % skill crosswalk;
+> `sleeper_mock` ADP board into `adp_snapshots`; POC tendencies; corpus-ready). See `data/sources/sleeper.py`,
+> `steps/phase0_10_sleeper_ingest.py`, `docs/SLEEPER.md`. **What's left / next:** the Phase-11 behavioral
+> opponent-model **fit** + availability Brier (**T8b**) is **blocked on real-league data** (bot mocks carry no
+> persistent `picked_by` identity). **So the next *buildable* pipeline item is Phase 7** (opportunity-adjusted
+> projection, keep-or-drop). Also open: **T5** pre-registration whenever the lockbox eval is imminent.
+> **Sleeper corpus EXISTS (2026-07-11):** a live crawl from the docs' public example leagues built **149
+> human + 117 bot drafts (2017–20), 289 manager profiles** (`sleeper_human`/`sleeper_mock` ADP boards) — the
+> **Phase-11 data blocker is cleared**, so the behavioral opponent-model **fit + availability Brier is now a
+> runnable modeling step**. Grow/broaden the corpus by adding `league:<id>` / usernames to
+> `reference/sleeper_seeds.txt` then `uv run python steps/phase0_10b_crawl.py` (iterative snowball through
+> co-managers; complete snake/linear drafts feed the boards). See `docs/SLEEPER.md`.
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them

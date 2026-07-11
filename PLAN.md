@@ -5,6 +5,43 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-11 (e)** — **0.10c: LEAGUE-SEEDING + REAL LIVE CORPUS.** User couldn't find live human mock
+  lobbies (too early in season) → chose to **web-search public leagues**. Reframe: live mocks are moot — the
+  crawler reads *historical* leagues (all public now, and better: realized outcomes for the Brier). Enhanced
+  `crawl_expand` with `league:<id>` seeding + iterative BFS snowball; web-found + validated the **Sleeper
+  API-docs public example leagues** (`289646328504385536` 2018-12tm, `206827432160788480` 2017-10tm — real
+  human drafts, `picked_by` fully populated → confirmed real-league opponent identity). Live crawl snowballed
+  to **149 human + 117 bot drafts (2017–20), 289 manager profiles, `sleeper_human` board ≈2,580 rows, skill
+  99.8 %** — **Phase-11 data blocker cleared.** Two live-data bugs fixed: `_upsert` → type-drift-safe full
+  rewrite (league_id first seen all-NULL→INT32); reach join → season-aware + dedup (`_attach_reach`). Quality
+  filter: derived artifacts use **complete snake/linear only** (44 % of crawled drafts are abandoned); gate =
+  **no duplicate pick_no** (incompleteness reported, not failed). **234 tests, ruff clean, all gates PASS.**
+  Next modeling step: the actual Phase-11 opponent-model fit + availability Brier on this corpus.
+- **2026-07-11 (d)** — **0.10b SLEEPER CORPUS CRAWLER DONE** (same session, on top of 0.10). User data plan:
+  gather real-human drafts via **human mock lobbies**, build the corpus infra now. Shipped in `sleeper.py`:
+  `crawl_expand` (BFS from seed usernames' histories + **participant expansion** — a human draft's `draft_order`
+  seats → crawl their histories, so one human lobby multiplies into its ~10 humans' leagues), `crawl_user_history`,
+  `participants_from_draft`, `manager_profiles` → `sleeper_manager_profiles` (behavioral seed), **human/bot ADP
+  split** (`sleeper_human` vs `sleeper_mock` — bot ADP never dilutes human ADP), `is_human` tag per draft,
+  schema-drift-safe `_upsert`, `load_seeds` + `reference/sleeper_seeds.txt` registry, `crawl_and_ingest`.
+  `steps/phase0_10b_crawl.py` done-bar (honest verdict tiers by human-draft count). Verified offline (fake-client
+  crawl + participant-expansion tests, manager profiles, board split) + live smoke test. **Data-appetite
+  finding:** ~50 real human drafts min / ~100–150 ideal for a Brier-verifiable opponent model; bot mocks add ADP
+  only. **232 tests, ruff clean.** Fit still blocked on real-human drafts. See `docs/SLEEPER.md`.
+- **2026-07-11 (c)** — **STEP 0.10 SLEEPER INGEST DONE** (pick-by-pick data pipe; `docs/TECH-DEBT.md` T8b
+  0.10 ☑, reference `docs/SLEEPER.md`, findings write-up added). User banked **3 mock drafts** (`MadBawa`);
+  ingested + verified end-to-end. **Design decisions this session (user):** *stretch* scope (plumbing +
+  first behavioral/ADP artifact + sim wiring, not just plumbing); build **corpus-ready** for many mocks +
+  real leagues; leave uncommitted. **What shipped:** `data/sources/sleeper.py` (keyless public API;
+  `fetch/parse/crosswalk/ingest`, corpus intake by id **or** username/league discovery, `picked_by`
+  captured for real-league identity); `sleeper_drafts` + `sleeper_draft_picks` (idempotent upsert by
+  `draft_id`); gsis crosswalk **100 % skill / 80 % K / DEF→`dst_team` bridge**; `build_mock_adp` →
+  `sleeper_mock` rows in `adp_snapshots` (so `adp_asof(source=...)` + the simulator consume it **unchanged**
+  — verified by drafting a 2026 mock); `build_tendencies` POC (`sleeper_tendencies`, per-slot cadence +
+  reach); 3 pure gates in `validate.py`; `steps/phase0_10_sleeper_ingest.py` done-bar; `tests/test_sleeper.py`
+  (10 tests, offline fixture). **Key finding:** mocks are solo-vs-bots — `picked_by` is set for the human's
+  own picks only, so the **behavioral fit** (Phase 11) needs **real human leagues**, not mocks; the ingest is
+  built for that. **226 tests, ruff clean.** Next buildable: **Phase 7**; Phase-11 fit waits on real leagues.
 - **2026-07-11 (b)** — **T3 + T4 DONE** (pre-lockbox modeling pair; `docs/TECH-DEBT.md` T3/T4 ☑, full write-up
   in `findings.md`). Attribution-first overturned both specs: (T4) the bias is all offense/CoV-path — K/DST
   fallbacks run **+16** (jittering worsens it, left alone) and per-player weekly CoV is already calibrated;

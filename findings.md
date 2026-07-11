@@ -1299,3 +1299,94 @@ or better early-season projections — future work.
 the original per-game-haircut spec); T4's mean-preserving κ lifts coverage and cuts the bias under a hard
 leverage/spread ceiling. Both harden the exact distributions the Phase-9.5 win-prob objective consumes.
 210 → 216 unit tests pass, ruff clean. **Next: T5 pre-registration before the lockbox eval.**
+
+---
+
+## Step 0.10 — Sleeper draft ingest (2026-07-11): the pick-by-pick data pipe
+
+**What & why.** The reframe's availability signal is "ADP + a *behavioral* opponent model," and the model
+is Brier-verifiable only against **real completed drafts**. Step 0.10 builds the ingest that turns Sleeper
+drafts into PIT store tables + a derived ADP board — the plumbing Phase 11 fits on. User banked **3 mock
+drafts** on `MadBawa`; this session ingested + verified them. Scope (user decision): *stretch* — plumbing +
+a first behavioral/ADP artifact + sim wiring, built **corpus-ready** for many mocks and future real leagues.
+
+**The data (field-verified on the 3 mocks; all `complete` snake, 10-team × 15-round PPR, 2026, 150 picks each):**
+- **Mocks aren't on the user endpoint.** `GET /user/<id>/drafts/nfl/2026` returns `[]` for the mocks — they
+  are reached **only by `draft_id`** (from the board URL). (Real leagues *do* surface via user→leagues→drafts.)
+- **`picked_by` is the human's own picks only.** 45/450 picks (15 × 3, all `is_human_slot`) carry
+  `picked_by = <user_id>`; the **405 bot picks have `picked_by = null`** and `roster_id = null`. `draft_order`
+  is a single entry → the user's `human_slot` (3 / 6 / 8 across the three mocks). **⇒ solo-vs-bots mocks have
+  no persistent opponent identity** — the decisive finding for scope: a mock keys behavioral stats by
+  `draft_slot`; only a **real human league** keys by `picked_by` (the signal the Phase-11 fit needs).
+- **Identity crosswalk (measured on all 450 picks):** QB/RB/WR/TE **100 %**, K **80 %**, team DEF **0 %**
+  (their `player_id` is the team abbr — no gsis — bridged to a `dst_team` key, matching `_NON_GSIS_POS`).
+  Unmatched *skill* players are logged, not dropped (none in this corpus).
+
+**What shipped.** `src/fantasy_quant/data/sources/sleeper.py` (keyless public API, 404-tolerant + retry +
+raw-payload archival; pure `parse_*`/`crosswalk`/`build_*` + thin DB wrappers). Tables `sleeper_drafts` +
+`sleeper_draft_picks` (idempotent upsert by `draft_id`, so re-ingest replaces and new drafts accumulate).
+`build_mock_adp` emits rows in the **`adp_snapshots` contract** (`source="sleeper_mock"`): `adp` = mean
+pick, `stdev`/`high`(min)/`low`(max)/`times_drafted`; so `adp_asof(source="sleeper_mock")` **and the draft
+simulator consume it with zero code change** — verified by drafting a 2026 mock against it. `build_tendencies`
+→ POC `sleeper_tendencies` (per-slot positional cadence + reach-vs-ADP; reach is corpus-relative on n=3, a
+plumbing POC not a fit). Three pure gates in `validate.py` (contiguous-unique picks, skill gsis ≥95 %, human
+slot resolved) wired into `data_health_report`, firing only when the tables exist.
+
+**Board sanity (170 players, 3 drafts):** Bijan 1.33, Gibbs 2.67, Chase 3.00, Puka 3.33 … 2026 rookies
+present (Hampton, Love, McConkey). All 0.10 gates PASS; the existing ADP gates stay green with the
+`sleeper_mock` rows added (top-150 unmatched 0.12 %, freshness fresh, uniqueness holds).
+
+**Takeaway.** The *ingest* is done and corpus-ready; the *behavioral fit* + availability Brier (T8b, Phase 11)
+remain **blocked on real-league pick logs** (bot mocks are weak signal, no opponent identity). Grow the corpus
+by adding draft ids / a username to `ingest_drafts`. **226 tests, ruff clean.** Next buildable pipeline item:
+**Phase 7** (opportunity-adjusted projection); Phase-11 fit resumes when real leagues land.
+
+### 0.10b — corpus crawler + human/bot separation (2026-07-11, same session)
+
+Per the user's data plan (gather real-human drafts via **human mock lobbies**; build the corpus infra now),
+added the crawler that scales the corpus without hand-collecting ids.
+- **Crawl + participant expansion** (`crawl_expand`): BFS from seed usernames (walk each user's
+  `leagues→drafts` across 2018–2026) + seed draft_ids, then for any *human* (multi-manager) draft, pull the
+  seated user_ids from `draft_order` and crawl their histories too — so **one human mock lobby → its ~10
+  humans → their leagues**, the multiplier that makes a real corpus reachable without joining many leagues.
+  Rate-limited, dedups against the store, `max_drafts`-capped. Verified offline with a fake HTTP client
+  (username→league→draft discovery + a 2-manager draft expanding to a second user); live smoke test against
+  the current store correctly reports 0 new / 0 human drafts.
+- **Human vs bot ADP split:** each draft tagged `is_human` (≥2 distinct `picked_by`); real drafts feed a
+  **`sleeper_human`** board, bots a **`sleeper_mock`** board — bot ADP (Sleeper's algorithm) never dilutes the
+  human ADP the opponent model wants. `_upsert` made schema-drift-safe so the corpus schema can evolve.
+- **Behavioral seed:** `sleeper_manager_profiles` — per real manager across all their drafts: positional pick
+  share, mean reach-vs-ADP, top NFL teams. The Phase-11 opponent-model input (empty until real drafts land).
+- **Data-appetite finding (quantified):** board mean-ADP SE ≈ σ_pick/√N (mid-round σ≈15 → N=20 ⇒ ±3–4
+  picks); a Brier-verifiable opponent model needs **~50 real human drafts min, ~100–150 ideal** — sourced
+  cheaply via human mock lobbies + participant-expansion crawling, not by joining many leagues. Bot mocks add
+  ADP only (cap ~10–20; FFC already covers production ADP). See `docs/SLEEPER.md` for the table.
+
+**Status:** ingest + crawler complete and corpus-ready. **232 tests, ruff clean.**
+
+### 0.10c — league-seeding + iterative snowball + a REAL live corpus (2026-07-11, same session)
+
+User couldn't find live human mock lobbies (too early in the season) but chose to **web-search public
+leagues**. Key reframe: *live* mocks are irrelevant — the crawler reads **historical** leagues, and every
+2018–25 human league is public in the API now (and better: they have realized outcomes → the availability
+Brier is computable). Enhanced the crawler + ran it live.
+- **League-ID seeding + iterative BFS** (`crawl_expand`): seed from `league:<id>` (→ its drafts + members)
+  as well as usernames/draft_ids; the participant expansion is now a real multi-level snowball (a human
+  draft's `draft_order` managers are queued and crawled until no new users / `max_drafts`).
+- **Found + validated public seeds:** the official Sleeper API-docs example leagues resolve live and are real
+  human drafts — `289646328504385536` (2018, 12-team, 180 picks, **all `picked_by` populated, 12 managers**)
+  and `206827432160788480` (2017, 10-team). This **confirmed the core assumption**: real-league drafts carry
+  full per-manager opponent identity (only bot mocks are sparse).
+- **Live crawl result:** snowballing from those 2 seeds reached the connected co-manager component —
+  **149 human + 117 bot drafts (2017–2020), 289 manager profiles, `sleeper_human` board ≈2,580 rows/season,
+  skill gsis-match 99.8 %.** All gates PASS. Real behavioral signal (e.g. a manager seen in 16 drafts, avg
+  reach −10, fav teams CLE/LAR/NO). **The Phase-11 *data* blocker is cleared** — a first fit + Brier can run.
+- **Two real bugs the live data exposed (both fixed):** (1) `sleeper_drafts.league_id` was inferred `INT32`
+  when first seen all-NULL (bot mocks) → real string league_ids couldn't append → made `_upsert` a full
+  **type-drift-safe rewrite** (also atomic, no delete-then-fail gap). (2) The multi-season ADP board has a
+  gsis appearing in several seasons → the reach `.map`/`.merge` fanned out (`InvalidIndexError`) → made the
+  reach join **season-aware + collapsed to one ADP per key** (`_attach_reach`).
+- **Corpus-quality finding:** a crawl is ~44 % **abandoned drafts** (116/266; people quit mid-draft) + some
+  auctions/linear. Fix: derived artifacts (ADP boards, manager profiles) use **complete snake/linear only**;
+  the integrity gate checks **no duplicate `pick_no`** (real corruption) and *reports* incompleteness rather
+  than failing it. **234 tests, ruff clean, all data-health gates PASS.**

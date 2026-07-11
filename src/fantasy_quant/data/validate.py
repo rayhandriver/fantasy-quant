@@ -90,6 +90,35 @@ def match_rate_gate(name: str, rate, floor: float = GSIS_MATCH_FLOOR) -> dict:
     return _gate(name, ok, match_rate=None if rate is None else round(float(rate), 4), floor=floor)
 
 
+# --- step 0.10 Sleeper ingest guards (pure; DB wrapper is `_sleeper_gates`) ------------------
+def sleeper_picks_gate(name: str, *, n_picks: int, expected_picks: int, min_pick: int,
+                       max_pick: int, n_distinct: int) -> dict:
+    """Gate: a draft's picks are complete + well-formed — exactly ``teams*rounds`` picks, numbered
+    contiguously ``1..n`` with no gap or duplicate. A truncated/garbled pick pull trips this."""
+    ok = (n_picks == expected_picks and min_pick == 1 and max_pick == n_picks
+          and n_distinct == n_picks)
+    return _gate(name, ok, n_picks=n_picks, expected=expected_picks, min_pick=min_pick,
+                 max_pick=max_pick, n_distinct=n_distinct)
+
+
+def sleeper_no_dup_picks_gate(name: str, n_drafts_with_dup: int, *, n_incomplete: int = 0,
+                              n_total: int = 0) -> dict:
+    """Gate: no draft has two picks sharing a ``pick_no`` — the true corruption check on the crawled
+    corpus (which legitimately contains *incomplete* drafts, so completeness is NOT gated, only
+    reported). A duplicate pick_no means a parse/ingest bug."""
+    return _gate(name, n_drafts_with_dup == 0, drafts_with_dup=n_drafts_with_dup,
+                 incomplete_drafts=n_incomplete, total_drafts=n_total)
+
+
+def sleeper_human_slot_gate(name: str, n_mocks: int, n_with_human_slot: int) -> dict:
+    """Gate: every *mock* draft resolved a ``human_slot`` from ``draft_order`` (a mock has one
+    entry — the user). Not applicable (passes) when there are no mocks."""
+    if n_mocks == 0:
+        return _gate(name, True, applicable=False)
+    return _gate(name, n_mocks == n_with_human_slot, n_mocks=n_mocks,
+                 with_human_slot=n_with_human_slot)
+
+
 # --------------------------------------------------------------------------------------------
 # panel hard gate
 # --------------------------------------------------------------------------------------------
@@ -231,6 +260,46 @@ def _scrape_gates(con, today=None) -> list[dict]:
     return gates
 
 
+def _sleeper_gates(con) -> list[dict]:
+    """Step 0.10 — guards on the ingested Sleeper draft corpus. Only fire when the tables exist, so
+    stores without any Sleeper drafts stay green."""
+    if not db.table_exists(con, "sleeper_draft_picks"):
+        return []
+    gates: list[dict] = []
+
+    # true integrity: no draft repeats a pick_no. Completeness is NOT gated — a crawled corpus
+    # legitimately contains abandoned drafts (people quit mid-draft) — but it is reported.
+    n_dup = _count(
+        con,
+        "SELECT COUNT(DISTINCT draft_id) FROM (SELECT draft_id FROM sleeper_draft_picks "
+        "GROUP BY draft_id, pick_no HAVING COUNT(*) > 1)",
+    )
+    n_total = _count(con, "SELECT COUNT(*) FROM sleeper_drafts")
+    n_incomplete = _count(
+        con,
+        "SELECT COUNT(*) FROM (SELECT d.draft_id FROM sleeper_drafts d "
+        "JOIN sleeper_draft_picks p USING (draft_id) "
+        "WHERE d.draft_type IN ('snake', 'linear') AND d.status = 'complete' "
+        "GROUP BY d.draft_id, d.teams, d.rounds HAVING COUNT(*) <> d.teams * d.rounds)",
+    )
+    gates.append(sleeper_no_dup_picks_gate("sleeper: no draft repeats a pick_no", n_dup,
+                                           n_incomplete=n_incomplete, n_total=n_total))
+
+    tot, matched = con.execute(
+        "SELECT COUNT(*), COUNT(gsis_id) FROM sleeper_draft_picks "
+        "WHERE UPPER(position) IN ('QB', 'RB', 'WR', 'TE')"
+    ).fetchone()
+    gates.append(match_rate_gate("sleeper: skill (QB/RB/WR/TE) gsis-match rate",
+                                 (matched / tot) if tot else None))
+
+    n_mocks, n_slot = con.execute(
+        "SELECT COUNT(*), COUNT(human_slot) FROM sleeper_drafts WHERE source = 'mock'"
+    ).fetchone()
+    gates.append(sleeper_human_slot_gate("sleeper: human slot resolved per mock",
+                                         int(n_mocks), int(n_slot)))
+    return gates
+
+
 def _coverage(con) -> dict:
     return {
         "weekly": {c: _pct_nonnull(con, "weekly", c)
@@ -276,7 +345,8 @@ def _survivorship(con, season: int = 2022) -> dict:
 
 def data_health_report(con, write: bool = True) -> dict:
     """Assemble the store-wide health report; write ``analysis/results/data_health.json``."""
-    gates = _range_gates(con) + _dup_gates(con) + _join_rate_gates(con) + _scrape_gates(con)
+    gates = (_range_gates(con) + _dup_gates(con) + _join_rate_gates(con)
+             + _scrape_gates(con) + _sleeper_gates(con))
     tables = {t: db.row_count(con, t) for t in db.list_tables(con)}
     report = {
         "generated_at": dt.datetime.now(dt.UTC).isoformat(),

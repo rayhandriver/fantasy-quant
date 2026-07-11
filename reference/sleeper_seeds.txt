@@ -1,0 +1,22 @@
+# Sleeper corpus seeds — one token per line; `#` starts a comment.
+#   league:<id>     => a league_id (from a public league URL: sleeper.com/leagues/<id>/...)
+#                      -> crawls its drafts + snowballs through its ~10 managers' other leagues
+#   draft:<id>      => a draft_id (or a bare number, for back-compat)
+#   <name>          => a Sleeper username (its full league/draft history is crawled)
+# Grow the corpus by adding lines here, then: uv run python steps/phase0_10b_crawl.py
+# See docs/SLEEPER.md ("how many mocks / real leagues") for what each source buys.
+
+# --- bot-only mock drafts (Sleeper's algorithmic ADP; NO behavioral signal) ---
+1381689410868760576
+1381687658979291136
+1381667884610109440
+
+# --- human mock-lobby draft ids (real multi-manager signal — paste URLs' ids here) ---
+# (none yet — add a human-lobby draft id and its ~10 participants get crawled automatically)
+
+# --- public league_ids / usernames to snowball (real historical human drafts) ---
+# Seeds below are the official Sleeper API docs' public example leagues (real human drafts,
+# picked_by fully populated). They snowball through co-managers' league histories.
+league:289646328504385536   # "Sleeper Friends League" 2018, 12-team snake (docs example)
+league:206827432160788480   # "Men Of Steel" 2017, 10-team snake (docs example)
+# MadBawa           # own account (mocks only so far — nothing to crawl until real leagues)
