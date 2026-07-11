@@ -5,6 +5,17 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-11** — **NEXT-SESSION DECISION + Sleeper account status (see `docs/SLEEPER.md`).** The pipeline's
+  strict-next item (step 0.10 Sleeper → Phase 11 opponent model, **T8b**) is **blocked on draft data**: the
+  user created a Sleeper account (`MadBawa`, user_id `1381536159267573760`) but it is **brand-new and empty**
+  — no leagues, no drafts (verified via the public API; identity resolves, no data behind it). An empty
+  account can't be ingested/fit. **Unblock path** (cheapest first): (1) user runs **1–2 mock drafts** →
+  a real `draft_id` to build+test the ingest (plumbing only, bot mocks = weak behavioral signal); (2) a real
+  human league draft (gold standard, seasonal — Aug–Sep 2026); (3) a corpus of public draft_ids for a scaled
+  ADP board. **Recommended next session while Sleeper is empty: T3 + T4** (the pre-lockbox modeling pair —
+  downside coverage 44 %→≥70 % + sim level bias −137→~0; autonomous, mandatory before the lockbox, and it
+  hardens the exact distributions the Phase-9.5 win-prob objective consumes). Return to Sleeper once draft
+  data exists. **Both this session's commits (T7 `ed147bf`, Phase 9 `fd261b4`) are local — not yet pushed.**
 - **2026-07-10 (c)** — **PHASE 9 COMPLETE** (9.1 scarcity · 9.4 lookahead · 9.5 win-prob objective) **+ T6**.
   **9.1 scarcity/9.4 lookahead:** `positional_cliff` (value drop to the next same-position tier) × `1 −
   survival_prob` (snake-aware ADP+noise survival to your next pick) → an **urgency** term folded into

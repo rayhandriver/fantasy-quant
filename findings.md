@@ -1218,3 +1218,15 @@ Closed out Phase 9 (9.1 scarcity half · 9.4 lookahead · 9.5 win-prob objective
 **Takeaway:** the greedy now plans (scarcity + snake-aware availability) and the objective finally *does
 something*, consuming the calibrated Phase-10 probabilities — but only make-the-cut is cheap to optimize;
 chasing the title needs compute. **Next: step 0.10 Sleeper ingest → the behavioral opponent model (T8b).**
+
+## Sleeper account check — resolves but EMPTY (2026-07-11) → 0.10 still blocked
+The user created a Sleeper account to unblock step 0.10 (behavioral opponent model, T8b). Verified via the
+public read-only API: **`MadBawa` → user_id `1381536159267573760`**, `is_bot:false`, nothing private leaked
+(email/phone null). **But it's brand-new and empty** — `/user/.../leagues/nfl/2026` and `/drafts/nfl/2026`
+both return `null` (no leagues, no drafts). **Identity resolves; there is no draft data behind it**, so 0.10
+cannot proceed — pick-by-pick drafts are the whole point. Full reference (API flow, identity crosswalk from
+the 2026-07-09 probe, tiered unblock path) is now consolidated in **`docs/SLEEPER.md`**. **Recommendation:**
+because the account is empty, the next autonomous session should be **T3+T4** (pre-lockbox modeling pair);
+return to Sleeper once the user runs mock drafts (plumbing) or the real 2026 draft season lands (Aug–Sep,
+gold-standard behavioral signal). **Takeaway:** a username was necessary but not sufficient — the Sleeper
+step needs *drafts*, not just an account.

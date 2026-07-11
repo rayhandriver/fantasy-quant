@@ -386,3 +386,8 @@ section, not just appended.
 - **cached_distribution (T6)** — the memoized Phase-5 draw cloud both the draft value (`assemble_value`) and
   the season sim (`build_weekly_model`) read, keyed on `(season, ruleset, n_draws, seed)`, so they reference
   one joint set of draws instead of diverging by an accidental seed mismatch.
+- **Sleeper integration (0.10 / T8b)** — the free public read-only Sleeper API is the source for the
+  behavioral opponent model + a scaled ADP board. Everything is keyed off public IDs (username→user_id→
+  leagues→drafts→picks; no auth). Identity via nflverse `player_ids.sleeper_id`→gsis (99 % of top-300).
+  Account `MadBawa` (user_id 1381536159267573760) exists but is **empty** (2026-07-11) → 0.10 needs real
+  drafts (mocks/league) first. Full reference: **`docs/SLEEPER.md`**.

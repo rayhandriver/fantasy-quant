@@ -61,6 +61,11 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > Consult it before the lockbox eval: **T3** (coverage) + **T4** (sim level bias) must be fixed first, and
 > **T5** pre-registration is a hard gate on the one-shot eval.
 
+> **Next-session pointer (2026-07-11).** The pipeline's strict-next item (step 0.10 Sleeper → opponent
+> model, **T8b**) is **blocked on draft data** — the `MadBawa` account exists but is empty. Full Sleeper
+> reference (API, identity crosswalk, unblock path) = **`docs/SLEEPER.md`**. **Recommended autonomous next
+> session: T3 + T4** (`docs/TECH-DEBT.md`). Return to Sleeper once mock/real drafts exist.
+
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them
   leak into a historical as-of step.

@@ -278,12 +278,20 @@ consumes `title_probability`/`playoff_prob` directly"):
 - Keep portfolio CE as the fast default; gate the win-prob objective behind the `objective` field / a Phase-9.4
   lookahead budget (a mini-sim per candidate is expensive).
 
-**Fix — 8b (step 0.10 → Phase 11, blocked on a real league).**
-- 0.10: point the ingest at the user's own Sleeper league (free) to confirm the pick-by-pick draft JSON
-  shape, build the `sleeper_id → gsis` crosswalk ingest (99 % coverage already proven), derive per-slot ADP +
-  reach behavior.
+**Fix — 8b (step 0.10 → Phase 11, blocked on real draft data). Full reference: `docs/SLEEPER.md`.**
+- 0.10: point the ingest at real Sleeper drafts (free, public read-only API) to confirm the pick-by-pick
+  draft JSON shape, build the `sleeper_id → gsis` crosswalk ingest (99 % coverage already proven), derive
+  per-slot ADP + reach behavior.
 - Phase 11: fit the behavioral opponent model; **report the availability Brier** owed from spine-4 (the open
   S4 item), verifying it beats ADP+noise on real picks. 2025 becomes a full backtest season once its board lands.
+
+**Blocker (2026-07-11).** A Sleeper account exists — `MadBawa` / user_id `1381536159267573760` — but it is
+**brand-new and EMPTY** (no leagues, no drafts; identity resolves, there's just no draft data behind it). An
+empty account does **not** unblock this: 0.10 needs actual completed drafts. Unblock path (see `docs/SLEEPER.md`),
+cheapest first: **(1)** the user runs 1–2 **mock drafts** → a real `draft_id` to build+test the ingest on
+(plumbing only — bot mocks are weak behavioral signal); **(2)** a real human league draft (gold standard, but
+seasonal — 2026 redrafts go Aug–Sep); **(3)** a corpus of public draft_ids (needed to derive an ADP board at
+scale). **Recommendation while empty: do T3+T4 next (autonomous), return to Sleeper when draft data exists.**
 
 **Done-when.** 8a: switching `objective` measurably changes the drafted roster on DEV, consuming calibrated
 probs. 8b: opponent model beats ADP+noise on a real-pick availability Brier.

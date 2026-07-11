@@ -51,8 +51,11 @@ probs on DEV, title Brier 0.0878 < 0.090 with on-diagonal reliability)* →
 objective; `make_playoffs` vs `championship_or_bust` now change the draft, consuming the calibrated
 Phase-10 probs; folded in **T8a** `objective` made real + **T6** one shared Monte-Carlo draw cloud
 before the sim feeds the draft. `steps/phase9_policy.py`, +7 tests.)* →
-**3) step 0.10 Sleeper ingest → S4/Phase 11 — ← NOW** opponent model + per-pick availability (**T8b**;
-+ the **availability Brier** owed from spine-4; 2025 → full backtest season) →
+**3) step 0.10 Sleeper ingest → S4/Phase 11 — ← NOW (but BLOCKED on draft data)** opponent model +
+per-pick availability (**T8b**; + the **availability Brier** owed from spine-4; 2025 → full backtest
+season). *Account `MadBawa` exists but is **empty** (no drafts) as of 2026-07-11 → not yet runnable; needs
+mock/real drafts first. **Reference: `docs/SLEEPER.md`.** Recommended autonomous alternative while blocked:
+**T3+T4** (pre-lockbox modeling pair, below).* →
 **4) Phase 7** opportunity-adjusted projection *(keep-or-drop: ≥ consensus calibration + better on
 role-changers, or dropped)* →
 **5) Phase 13/S7** in-season co-pilot → **6) S6** adaptive archetypes →
