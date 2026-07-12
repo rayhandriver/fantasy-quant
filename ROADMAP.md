@@ -25,16 +25,19 @@ Legend: ☐ todo · ◐ in progress · ☑ done · ✗ dropped · ◔ deprioriti
 **Phase 11 — Draft engine** *(⟳ opponent model = core & Brier-verifiable)* — **☑ step 0.10 Sleeper ingest + 0.10b corpus crawler DONE (2026-07-11)**: the pick-by-pick data pipe (`data/sources/sleeper.py`; `sleeper_drafts`/`sleeper_draft_picks`; gsis crosswalk 100% skill; POC `sleeper_tendencies`) **+ the corpus crawler** (`steps/phase0_10b_crawl.py`: seed registry incl. `league:<id>`, iterative BFS snowball via co-managers, **human/bot ADP split** `sleeper_human` vs `sleeper_mock`, complete-draft quality filter, `sleeper_manager_profiles` behavioral seed) **+ a real live corpus** (149 human + 117 bot drafts 2017–20, 289 manager profiles, crawled from the Sleeper docs' public example leagues). · ☑ **11.1 behavioral opponent model** *(2026-07-11 — conditional/McFadden logit on 7.9k real human picks/9 szn; **beats ADP-only** walk-forward: log-loss +0.113 CI[+0.101,+0.124], Brier +0.0088 CI[+0.0076,+0.0100]; interpretable coefs — **fandom +1.03** strongest, rookie +0.45, need +0.33; `draft/opponent_model.py`)* · ☑ **11.2 per-pick availability distributions** *(2026-07-11 — MC survival under the model; **availability Brier 0.158 vs best-tuned ADP+noise 0.316**, gain +0.159 CI[+0.083,+0.264] — the owed S4 metric; promotes to the S4 default; `draft/availability.py`)* · ☑ **11.3 realistic mock** *(2026-07-11 — `Personality` tilts + `opponent_pick_fn` sim hook; behavioral RB14/WR14 vs ADP+noise RB21/WR9; `draft/personalities.py`)* · ✗ CFR *(dropped — snake draft ≈ perfect-info)* · ◔ MCTS *(deprioritized — unverifiable + live-latency risk)* · ☐ auctions (later) · ☐ self-play RL (roadmap)
 **Phase 12 — NLP/news** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 7 — the guardrail is unchanged: LLM on the edges only, never computing a number that must be correct; 12.4's bar = adds value over the structured injury/depth feeds, or ruled out)* ☐ 12.1 sources · ☐ 12.2 LLM extract · ☐ 12.3 event-study · ☐ 12.4 validate
 **Phase 13 — In-season co-pilot** *(the tax-loss-harvesting analog; pipeline stage 6 — reordered after S6
-2026-07-11, no dependency reason it was ahead of S6)* ☐ 13.1 re-project *(build the weekly re-projection's
-state-space update with a generic news-feature slot even though Phase 12 doesn't exist yet, so Phase 12
-plugs in later as an added feature instead of forcing a rebuild)* · ☐ 13.2 start/sit · ☐ 13.3 waivers/FAAB ·
-☐ 13.4 streaming · ☐ 13.5 trades
+2026-07-11)* — ☑ **13.1 re-project** *(2026-07-12 — scalar **Kalman** on each player's per-week level;
+PIT; **reserved Phase-12 `news` slot**, no-op default; **beats static preseason OOS 6/6 DEV seasons,
++0.396 ppg/wk MAE gain CI[+0.32,+0.48]**; `inseason/reproject.py`)* · ☑ **13.2 start/sit** *(2026-07-12 —
+**co-pilot done-bar PASS**: mean-max on 13.1's re-projected means beats set-and-forget on realized points
+6/6 DEV, **+2.08 pts/lineup-week** CI[+1.56,+2.54]. **FINDING**: the win-prob **variance tilt** does NOT
+beat mean-max even for big underdogs (0/6; single-swap barely moves team sd — cf. Phase-10.3 whole-team-only
+leverage) → `optimal_lineup` default = `objective="mean"`, tilt kept opt-in `objective="win"` off by
+default; `inseason/lineup.py`)* · ☐ 13.3 waivers/FAAB · ☐ 13.4 streaming · ☐ 13.5 trades **← NOW (Session B)**
 **Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ☐ 14.1 **Streamlit MVP hardening** (autopilot+co-pilot, constraint-object UI, league sync, cost+risk+softness readouts, sim views, in-season dashboard, news feed, format toggles) · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
 **Phase 15 — Multi-format** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 8 — + auction draft support, absorbed from Phase 11's "later")* ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS · ☐ 15.4 auction drafts
 
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
-✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ☐ **S6** adaptive archetypes *(pipeline stage 5,
-next — ahead of S7/Phase 13 as of 2026-07-11)* · ☐ **S7** in-season weekly-edge harvester *(= Phase 13; pipeline stage 6)*
+✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ✅ **S6** adaptive archetypes *(2026-07-12 — a fade-melt wrapper on a static parent, keyed to how far a candidate has slid off ADP; **does no harm on an ADP board, banks team-value when the board breaks** — the realistic Phase-11 behavioral room: adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6; `draft/config.py` + `steps/spine_5_adaptive.py`)* · ◐ **S7** in-season weekly-edge harvester *(= Phase 13; **13.1+13.2 done 2026-07-12**, 13.3–13.5 = Session B)*
 
 **★ THE PIPELINE (locked 2026-07-09 — engine-complete-before-app; no time crunch).** Every underlying
 function — **including the formerly-deferred Phases 12 & 15** — is built and validated before any app work;
@@ -66,15 +69,15 @@ auction stay out (deprioritized/dropped/roadmap). →
 **4) Phase 7 ✗ BUILT & DROPPED (2026-07-11)** opportunity-adjusted projection — all 4 substeps built +
 validated OOS; keep-or-drop (as-written bar) = **DROP** (situation swap is a wash-to-worse than naive on
 role-changers; consensus already prices moves). Rookie transport works but duplicates 4.3. →
-**5) S6** adaptive archetypes *(⟳ reordered ahead of Phase 13 — 2026-07-11 review found no dependency that
-put Phase 13 first: S6's done-bar — "adaptive beats its static parent when the board diverges from ADP" —
-is detected by the Phase-11 availability model and validated in the Phase-11.3 personality-tilted draft
-simulator, both already built, and has zero dependency on Phase 13 or 12. Building it next reuses that
-opponent-model/optimizer context while warm.)* →
-**6) Phase 13/S7** in-season co-pilot *(13.1–13.5 all run on infrastructure that already exists — Phase 5
-distributions, 9.4 lookahead, Phase 10 sim, valuation — nothing here is gated on Phase 12; 13.1's state-space
-update should reserve a generic news-feature slot so Phase 12, if it survives its own gate, plugs in later
-without a rebuild)* →
+**5) S6** adaptive archetypes ✅ **DONE (2026-07-12)** — the fade-melt wrapper does no harm on an ADP board
+and banks team-value when the board breaks (adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6 in the
+Phase-11 behavioral room). →
+**6) Phase 13/S7** in-season co-pilot — **☑ 13.1 re-project + ☑ 13.2 start/sit DONE (2026-07-12, Session
+A):** weekly Kalman re-projection beats static preseason 6/6 DEV (+0.396 ppg/wk); the co-pilot (mean-max on
+re-projected means) beats set-and-forget +2.08 pts/lineup-week; **the win-prob variance tilt was tried and
+does not pay at the lineup grain (kept opt-in, off by default — the Phase-7/props pattern)**; 13.1 reserved
+the Phase-12 news slot. **← NOW: Session B = 13.3 waivers/FAAB + 13.4 streaming + 13.5 trades** (all on
+existing infra; nothing gated on Phase 12). →
 **7) Phase 12** news/NLP *(LLM edges-only guardrail unchanged; the project's pattern so far — 2.3 props
 shelved, Phase 7 dropped, the core Phase-2 ADP finding — means 12.4's gate has a real chance of ending the
 same way; that's the gate doing its job, not a guaranteed win)* → **8) Phase 15** multi-format + auction

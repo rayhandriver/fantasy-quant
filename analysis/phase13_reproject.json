@@ -1,0 +1,97 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "per_season": [
+    {
+      "season": 2017,
+      "n_player_weeks": 7574,
+      "n_players": 447,
+      "static_mae": 5.192108699398291,
+      "reproj_mae": 4.91453995905614,
+      "mae_gain": 0.27756874034214946,
+      "mae_gain_ci": [
+        0.17192337491280593,
+        0.38027332267522446
+      ],
+      "beats_static": true
+    },
+    {
+      "season": 2018,
+      "n_player_weeks": 7171,
+      "n_players": 434,
+      "static_mae": 5.765453401401404,
+      "reproj_mae": 5.205318440473756,
+      "mae_gain": 0.5601349609276465,
+      "mae_gain_ci": [
+        0.3994710018430465,
+        0.7400070395610692
+      ],
+      "beats_static": true
+    },
+    {
+      "season": 2019,
+      "n_player_weeks": 7288,
+      "n_players": 434,
+      "static_mae": 5.50056467963472,
+      "reproj_mae": 5.135208514276016,
+      "mae_gain": 0.3653561653587033,
+      "mae_gain_ci": [
+        0.22638778172567084,
+        0.5168840066617263
+      ],
+      "beats_static": true
+    },
+    {
+      "season": 2020,
+      "n_player_weeks": 7584,
+      "n_players": 464,
+      "static_mae": 5.606636344353974,
+      "reproj_mae": 5.103942275690499,
+      "mae_gain": 0.5026940686634729,
+      "mae_gain_ci": [
+        0.36123405736270936,
+        0.6512594810180456
+      ],
+      "beats_static": true
+    },
+    {
+      "season": 2021,
+      "n_player_weeks": 7347,
+      "n_players": 477,
+      "static_mae": 5.312398913814704,
+      "reproj_mae": 4.947574879217766,
+      "mae_gain": 0.3648240345969373,
+      "mae_gain_ci": [
+        0.23214783034219197,
+        0.508166772923863
+      ],
+      "beats_static": true
+    },
+    {
+      "season": 2022,
+      "n_player_weeks": 7445,
+      "n_players": 473,
+      "static_mae": 5.076407899753607,
+      "reproj_mae": 4.768120926845938,
+      "mae_gain": 0.30828697290766777,
+      "mae_gain_ci": [
+        0.1987679717664668,
+        0.4163222377298594
+      ],
+      "beats_static": true
+    }
+  ],
+  "n_seasons_beating_static": 6,
+  "mean_mae_gain": 0.39647749046609615,
+  "mean_mae_gain_ci": [
+    0.32020933382328975,
+    0.4804887697749454
+  ],
+  "PASS": true
+}

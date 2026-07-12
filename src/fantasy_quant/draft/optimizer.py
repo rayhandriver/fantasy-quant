@@ -422,9 +422,11 @@ def _greedy_eff(state: DraftState, config: DraftConfig, risk: RiskModel | None,
     else:
         base = pool["value"].to_numpy(float)
     base = np.where(np.isnan(base), pool["adp"].to_numpy(float), base)   # ADP fallback
+    overall = state.overall_pick                            # for the adaptive archetype's slide
     tilt = np.fromiter(
-        (config.total_tilt_rounds(pk, pos, rnd, counts.get(pos, 0))
-         for pk, pos in zip(pool["player_key"], pool["pos"], strict=False)),
+        (config.total_tilt_rounds(pk, pos, rnd, counts.get(pos, 0), adp=a, overall_pick=overall)
+         for pk, pos, a in zip(pool["player_key"], pool["pos"],
+                               pool["adp"].to_numpy(float), strict=False)),
         dtype=float, count=len(pool),
     )
     return pool, base - state.n_teams * tilt                     # + tilt rounds → sooner

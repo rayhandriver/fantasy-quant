@@ -1449,3 +1449,58 @@ A keep-or-drop gate that **dropped** — a clean negative result, exactly what t
   *strictly better on role-changers* (the second half of the bar). **Thesis-consistent:** a team fixed-effect
   carries no exploitable move-signal beyond carrying the player's realized rate forward — consensus already
   prices situation changes. Code stays in-repo as a validated-and-dropped experiment (cf. props/CFR).
+
+
+
+## Session A — S6 adaptive archetypes + Phase 13.1 re-projection + 13.2 start/sit (2026-07-12)
+
+**Goal:** the first in-season substeps, plus the adaptive draft archetype. Session A of the ROADMAP
+session-bundling plan (S6 + 13.1–13.2). All three DEV done-bars PASS; 261 tests, ruff clean. The code
+for all three pre-existed from the interrupted session; this session verified it, added the missing
+tests + done-bar runners, ran the validations, and recorded the results. Lockbox (2023+24) untouched.
+
+**S6 — adaptive archetypes (`draft/config.py` `adaptive` + `_adaptive_tilt`; `steps/spine_5_adaptive.py`).**
+- The static archetypes (`zero_rb`, `hero_rb`, …) are fixed `(pos, round, have)` fade/reach curves that
+  assume the room drafts on ADP. When it doesn't — an elite RB slides two rounds past his ADP — a static
+  Zero-RB keeps fading the very value that fell to it. **`adaptive` = a wrapper on an `adaptive_parent`
+  that melts a *fade* in proportion to how far a candidate has diverged from his ADP** (`slide = (overall
+  − adp)/n_teams`; a fade decays by `ADAPT_DECAY·max(|slide|, ADAPT_SLIDE_WEIGHT·max(0,slide))`, so value
+  actively *sliding to us* melts it ~2× faster than a reach). A fade only melts toward 0, never flips to a
+  reach; reaching archetypes (positive tilt, e.g. `elite_te`) are untouched (no fade to melt). With no
+  board context it reproduces its parent to the float (the leave-one-out / benchmark path).
+- **Done-bar PASS** (behavioral vs ADP room, team-value, block-bootstrap over 2017–22 × 6 seeds):
+  `adaptive(zero_rb)` **+2.0** team-value in the behavioral room (board-divergence 4.25 rd) and 0.0 in the
+  ADP room (do-no-harm); `adaptive(hero_rb)` **+15.6** (CI[+6.8,+23.0]) in the behavioral room, ADP-room
+  CI includes 0. **Reading:** adaptive does no harm on an ADP board and banks value when it breaks — and
+  *that boards break is the Phase-11 finding* (behavioral opponents diverge sharply from ADP), so this is
+  the realistic case, not a corner one.
+
+**13.1 — weekly re-projection (`inseason/reproject.py`; `steps/phase13_1_reproject.py`). PASS.**
+- A scalar **Kalman filter** on each player's per-week scoring *level*: the preseason Phase-5/10 season
+  projection ÷ active weeks is the prior `m0`, worth `PRIOR_WEEKS=5` pseudo-obs; each played week nudges
+  the level toward realized, weighted by his own 5.3 weekly noise `r`; `process_var>0` makes it a slow
+  random walk (recent form outweighs a hot September; default 0). **PIT by construction** — a re-projection
+  *at* week `t` reads only weeks `≤ t`. A **reserved `news` slot** (per-player level shift) is wired through
+  the input contract now and defaults to a no-op, so Phase-12 news/NLP plugs in later without a rebuild.
+- **Done-bar PASS**: re-projection's forecast MAE on the *future* played weeks beats the frozen preseason
+  level in **6/6** DEV validation seasons — mean gain **+0.396 ppg/week**, season-block CI **[+0.32,+0.48]**
+  (per-season gains +0.28…+0.56, each with a per-player-clustered CI excluding 0). Results land, the value
+  signal sharpens.
+
+**13.2 — start/sit (`inseason/lineup.py`; `steps/phase13_2_lineup.py`). Co-pilot PASS; variance-tilt DROP-as-default.**
+- **The done-bar (PASS) is the co-pilot beating set-and-forget.** The weekly mean-max lineup ranked by
+  13.1's **re-projected** means outscores the same lineup ranked by the **frozen preseason** level on
+  **realized** points: **6/6** DEV seasons, **+2.08 pts/lineup-week** (season-block CI [+1.56,+2.54]),
+  winning ~80% of lineup-weeks. This is where 13.2 delivers — not a clever objective, just feeding 13.1's
+  better means into the ordinary "start your best" lineup.
+- **FINDING — the win-probability *variance tilt* does not pay at the lineup grain.** The Phase-10.3
+  leverage idea (trailing → add variance; leading → cut it) applied as a single legal start/sit swap
+  **fails to beat mean-max OOS even for big underdogs**: mean win% gain **+0.0002** overall, **−0.0006**
+  for underdogs, **0/6** seasons clearing the bar; a diagnostic split shows even deficit-> +15-pt underdog
+  swaps net **−0.015** win%. **Why:** one swap moves team spread by a tiny fraction of the ~35-pt team sd,
+  so the second-order variance benefit is swamped by the first-order mean cost — fully consistent with
+  Phase-10.3, where leverage only bit at *whole-team* spread changes of 1.6×. **Resolution:** `optimal_lineup`
+  default flipped to `objective="mean"`; the tilt is retained as opt-in `objective="win"` but off by
+  default — the Phase-7 / props pattern (kept, not the default). *No amount of tuning `LEV_GAMMA/LEV_SCALE`
+  rescues it: a bigger tilt makes bigger bad swaps, a smaller one makes no swaps → gain → 0.*
+- **Design note honored:** 13.1's `news` slot reserves the Phase-12 hook per the 2026-07-11 reorder note.

@@ -34,7 +34,14 @@ from fantasy_quant.valuation.utility import DEFAULT_LAMBDA
 # already roster, so "get one anchor and stop" archetypes don't keep reaching (the stateless version
 # drafted two elite TEs). The optimizer turns a round of tilt into ``n_teams`` picks of priority
 # (step 2). Magnitudes are modest — an archetype nudges, value still leads — all overridable.
-ARCHETYPES: tuple[str, ...] = ("bpa", "zero_rb", "hero_rb", "elite_te", "late_qb")
+#
+# ``adaptive`` (spine step 6) is the exception: it is not a fixed ``(pos, round, have)`` curve but a
+# *wrapper* that follows a static ``adaptive_parent`` while the board tracks ADP and **melts the
+# parent's fade when the board breaks** — see :func:`_adaptive_tilt`. It therefore needs live board
+# context (a candidate's ADP vs the current overall pick), which
+# :meth:`DraftConfig.total_tilt_rounds` threads in; with no context it degrades to the parent
+# exactly (so leave-one-out / benchmark redraft behave sensibly).
+ARCHETYPES: tuple[str, ...] = ("bpa", "zero_rb", "hero_rb", "elite_te", "late_qb", "adaptive")
 
 
 def _bpa(pos: str, rnd: int, have: int) -> float:
@@ -87,6 +94,39 @@ def archetype_tilt(name: str, pos: str, rnd: int, have: int = 0) -> float:
 
 
 # ------------------------------------------------------------------------------------------------
+# spine step 6 — the adaptive wrapper ("abandon the plan when the board breaks")
+# ------------------------------------------------------------------------------------------------
+# The archetypes above are static curves: they fade/reach a position on a fixed schedule, assuming
+# the room drafts on ADP. When the room *doesn't* — an elite RB slides two rounds past his ADP — a
+# static Zero-RB keeps fading the very value that fell to it. ``adaptive`` fixes exactly that, with
+# one rule (docs/PERSONALIZATION.md §6.6, ROADMAP done-bar): a fade is only trustworthy while the
+# board honors ADP, so **melt the fade in proportion to how far a candidate's availability has
+# diverged from his ADP** — faster for a player who has actively *slid* to us (value falling to it).
+# A fade only ever melts toward 0 (never flips into a reach): when it clears, the player's own
+# risk-adjusted ``base_value`` decides the pick — precisely "let the value come to you". When the
+# board tracks ADP (slide ≈ 0) adaptive reproduces its parent to the float. Reaching archetypes
+# (a positive tilt, e.g. elite_te chasing the scarce TE) are untouched — there is no fade to melt.
+ADAPTIVE_PARENTS: tuple[str, ...] = ("zero_rb", "hero_rb", "elite_te", "late_qb")  # non-bpa statics
+ADAPT_DECAY = 0.5          # fraction of the fade removed per round the board diverges from ADP
+ADAPT_SLIDE_WEIGHT = 2.0   # value that has actively slid to us melts the fade this many× faster
+
+
+def _adaptive_tilt(parent: str, pos: str, rnd: int, have: int, *,
+                   adp: float | None, overall_pick: int | None, n_teams: int) -> float:
+    """The ``adaptive`` tilt: the ``parent`` archetype's tilt with any *fade* melted by board
+    divergence. ``slide`` = rounds this candidate is available past his ADP (+ = fell to us,
+    − = a reach because the cheap ones are already gone); a fade of magnitude ``base`` decays by
+    ``ADAPT_DECAY·max(|slide|, ADAPT_SLIDE_WEIGHT·max(0, slide))``. Missing board context (either
+    ``adp`` or ``overall_pick`` is None) ⇒ the parent's static tilt, unchanged."""
+    base = archetype_tilt(parent, pos, rnd, have)
+    if base >= 0.0 or adp is None or overall_pick is None:
+        return base
+    slide = (float(overall_pick) - float(adp)) / max(int(n_teams), 1)
+    melt = ADAPT_DECAY * max(abs(slide), ADAPT_SLIDE_WEIGHT * max(0.0, slide))
+    return base * max(0.0, 1.0 - melt)
+
+
+# ------------------------------------------------------------------------------------------------
 # league context + the config object
 # ------------------------------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -134,6 +174,7 @@ class DraftConfig:
     """
     league: LeagueSetup = field(default_factory=LeagueSetup)
     archetype: str = "bpa"
+    adaptive_parent: str | None = None   # required iff archetype == "adaptive": the preset it wraps
     must_draft: tuple[MustDraft, ...] = ()
     never_draft: frozenset[str] = frozenset()
     tilts: Mapping[str, float] = field(default_factory=dict)   # player_key -> rounds (+ = sooner)
@@ -142,6 +183,8 @@ class DraftConfig:
 
     def __post_init__(self) -> None:
         self.archetype = str(self.archetype).lower().strip()
+        self.adaptive_parent = (None if self.adaptive_parent is None
+                                else str(self.adaptive_parent).lower().strip() or None)
         self.must_draft = tuple(
             m if isinstance(m, MustDraft)
             else MustDraft(*m) if isinstance(m, tuple)
@@ -155,8 +198,14 @@ class DraftConfig:
     # -- validation --------------------------------------------------------------------------
     def validate(self) -> None:
         self.league.validate()
-        if self.archetype not in _ARCHETYPE_FNS:
+        if self.archetype not in ARCHETYPES:
             raise ValueError(f"unknown archetype {self.archetype!r}; pick from {ARCHETYPES}")
+        if self.archetype == "adaptive":
+            if self.adaptive_parent not in ADAPTIVE_PARENTS:
+                raise ValueError(f"adaptive archetype needs adaptive_parent in {ADAPTIVE_PARENTS}, "
+                                 f"got {self.adaptive_parent!r}")
+        elif self.adaptive_parent is not None:
+            raise ValueError("adaptive_parent is only valid when archetype='adaptive'")
         if self.risk_lambda < 0:
             raise ValueError(f"risk_lambda must be >= 0, got {self.risk_lambda}")
         if self.objective not in ("make_playoffs", "championship_or_bust"):
@@ -166,16 +215,29 @@ class DraftConfig:
             raise ValueError(f"players in both must_draft and never_draft: {sorted(clash)}")
 
     # -- levers the optimizer reads ----------------------------------------------------------
-    def total_tilt_rounds(self, player_key: str, pos: str, rnd: int, have: int = 0) -> float:
+    def total_tilt_rounds(self, player_key: str, pos: str, rnd: int, have: int = 0, *,
+                          adp: float | None = None, overall_pick: int | None = None) -> float:
         """Combined soft tilt (in rounds, + = sooner) = per-player tilt + the archetype's, given you
-        already roster ``have`` at ``pos`` (so 'get one anchor' archetypes stop after the first)."""
-        return (float(self.tilts.get(player_key, 0.0))
-                + archetype_tilt(self.archetype, pos, rnd, have))
+        already roster ``have`` at ``pos`` (so 'get one anchor' archetypes stop after the first).
+
+        ``adp``/``overall_pick`` are the live board context the ``adaptive`` archetype (step 6)
+        reads to melt a fade when a candidate has slid off his ADP; every static archetype ignores
+        them, so the optimizer can pass them unconditionally (and omitting them degrades adaptive to
+        its parent — the leave-one-out / benchmark path)."""
+        per_player = float(self.tilts.get(player_key, 0.0))
+        if self.archetype == "adaptive":
+            arch = _adaptive_tilt(self.adaptive_parent, pos, rnd, have,
+                                  adp=adp, overall_pick=overall_pick, n_teams=self.league.n_teams)
+        else:
+            arch = archetype_tilt(self.archetype, pos, rnd, have)
+        return per_player + arch
 
     def constraint_labels(self) -> list[str]:
         """Human-readable id per active constraint — the rows of the cost report's attribution."""
         labels: list[str] = []
-        if self.archetype != "bpa":
+        if self.archetype == "adaptive":
+            labels.append(f"archetype:adaptive({self.adaptive_parent})")
+        elif self.archetype != "bpa":
             labels.append(f"archetype:{self.archetype}")
         labels += [f"must:{m.player_key}" for m in self.must_draft]
         labels += [f"never:{pk}" for pk in sorted(self.never_draft)]
@@ -196,7 +258,9 @@ class DraftConfig:
         """A copy with exactly one constraint (from :meth:`constraint_labels`) removed — the
         leave-one-out configs the cost report redrafts to attribute cost per preference."""
         kind, _, ident = label.partition(":")
-        arch = "bpa" if kind == "archetype" else self.archetype
+        removing_arch = kind == "archetype"
+        arch = "bpa" if removing_arch else self.archetype
+        parent = None if removing_arch else self.adaptive_parent   # clears with the archetype
         must = self.must_draft
         never = self.never_draft
         tilts = dict(self.tilts)
@@ -207,8 +271,9 @@ class DraftConfig:
         elif kind == "tilt":
             # match on the regenerated label (player keys contain hyphens — never parse them apart).
             tilts = {pk: r for pk, r in tilts.items() if f"{pk}{r:+g}" != ident}
-        return DraftConfig(league=self.league, archetype=arch, must_draft=must, never_draft=never,
-                           tilts=tilts, risk_lambda=self.risk_lambda, objective=self.objective)
+        return DraftConfig(league=self.league, archetype=arch, adaptive_parent=parent,
+                           must_draft=must, never_draft=never, tilts=tilts,
+                           risk_lambda=self.risk_lambda, objective=self.objective)
 
     def benchmark(self) -> DraftConfig:
         """The unconstrained value-optimal peer from the same seat & risk appetite — the direct-
@@ -218,4 +283,5 @@ class DraftConfig:
                            objective=self.objective)
 
 
-__all__ = ["ARCHETYPES", "DraftConfig", "LeagueSetup", "MustDraft", "archetype_tilt", "DRAFTABLE"]
+__all__ = ["ARCHETYPES", "ADAPTIVE_PARENTS", "DraftConfig", "LeagueSetup", "MustDraft",
+           "archetype_tilt", "DRAFTABLE"]

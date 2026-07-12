@@ -61,39 +61,34 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **Next-session pointer (2026-07-11, updated post-Phase-11+7).** **Phase 11 (draft-engine core) ☑ DONE**
-> and **Phase 7 (opportunity-adjusted projection) ✗ BUILT & DROPPED** — one autonomous session.
-> **Phase 11 (T8b):** the behavioral opponent model (`draft/opponent_model.py`, a conditional/McFadden logit
-> on 7.9k real human picks/9 szn) **beats ADP-only** walk-forward (log-loss +0.113 CI[+0.101,+0.124]; Brier
-> +0.0088) with interpretable coefs (**fandom +1.03** strongest, rookie +0.45, need +0.33); the **availability
-> Brier** (`draft/availability.py`) **beats best-tuned ADP+noise** 0.158 vs 0.316 (+0.159 CI[+0.083,+0.264])
-> → the behavioral availability oracle is the **S4 default**; 11.3 personality mocks plug into `simulate_draft`
-> via a new `opponent_pick_fn` hook. MCTS/CFR/auction/RL stay out (deprioritized/dropped/roadmap).
-> `steps/phase11_opponent_model.py`; `analysis/phase11_opponent_model.json`. **Phase 7 (`causal/`):** all 4
-> substeps built + validated OOS; keep-or-drop (as-written bar) = **DROP** — the team-situation swap is a
-> wash-to-worse than naive carry-over on role-changers (the EB-shrunk market already beats it), and skill
-> doesn't travel better than raw rate. Rookie transport works (1σ cov 0.66) but duplicates 4.3. Kept in-repo
-> like props/CFR. `steps/phase7_opportunity.py`; `analysis/phase7_opportunity.json`.
-> **What's next (THE PIPELINE, ⟳ reordered 2026-07-11):** the next buildable item is **S6 — adaptive
-> archetypes** (moved ahead of Phase 13 on a dependency review: its done-bar is detected by the Phase-11
-> availability model and validated in the 11.3 personality-tilted simulator, both already built, with zero
-> dependency on Phase 13/12 — building it now reuses that context while warm). Then **Phase 13 / S7 — the
-> in-season co-pilot** (re-project → start/sit → waivers/FAAB → streaming → trades; 13.1 should reserve a
-> generic news-feature slot for Phase 12 to plug into later), then **Phase 12** news/NLP and **Phase 15**
-> multi-format+auction. Then the pre-lockbox hardening — **T5** pre-registration (freeze the stack, report
-> once; T3/T4 already ☑) — before the single lockbox eval and the Phase-14 app. Corpus can be grown anytime
-> via `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
-> **243 tests, ruff clean.**
->
-> **Session bundling (★ SESSION SIZING GUIDE, ROADMAP.md, added 2026-07-11):** S6 alone is too small for a
-> full session (~150L, cf. 11.3's `personalities.py` at 109L) — Phase 13/S7 is greenfield (no `inseason/`
-> package yet) and full-phase-sized on its own (~1,400–2,100L across its 5 substeps). Recommended split:
-> **Session A = S6 + 13.1–13.2** (re-project + start/sit, ~400–600L) → **Session B = 13.3–13.5** (waivers/
-> FAAB + streaming + trades, the two new-domain substeps, ~600–1,000L) → **Session C = Phase 12 + Phase 15**
-> bundled (~1,400–2,300L, same pattern as the Phase 11+7 bundle) → **Session D = optional MCTS/RL gate + T5
-> + LOCKBOX EVAL** (closeout, ~350–850L) → **Session E = Phase 14.1 alone** (Streamlit MVP hardening — never
-> bundle onto Phase 14) → **Session F+ = Phase 14's go-live tail** (14.2–14.7, expect multiple sessions).
-> **Start here next session: Session A.**
+> **Next-session pointer (2026-07-12, updated post-Session-A).** **SESSION A ☑ COMPLETE — S6 + Phase 13.1 +
+> 13.2** (all DEV done-bars PASS; **261 tests, ruff clean**; committed? **NOT yet — left for user review**).
+> The code for all three pre-existed as uncommitted WIP from the interrupted session; this session verified
+> it, added the missing unit tests (`tests/test_inseason.py`, +12) + done-bar runners, linted the WIP, ran
+> every validation, and recorded results. Lockbox (2023+24) untouched; DEV-only (2017–22 validation window).
+> - **S6 adaptive archetypes** (`draft/config.py` `"adaptive"` + `_adaptive_tilt`; `steps/spine_5_adaptive.py`)
+>   — a wrapper that **melts a static parent's *fade* by how far a candidate has slid off ADP** (`ADAPT_DECAY`,
+>   `ADAPT_SLIDE_WEIGHT`; sliding value melts ~2× a reach; reaches untouched; no board context ⇒ = parent).
+>   **Does no harm on an ADP board, banks team-value when the board breaks** (adaptive(zero_rb) +2.0,
+>   adaptive(hero_rb) +15.6 in the realistic Phase-11 behavioral room).
+> - **13.1 weekly re-projection** (`inseason/reproject.py`; `steps/phase13_1_reproject.py`) — a scalar
+>   **Kalman** on each player's per-week level; **PIT**; a **reserved Phase-12 `news` slot** (no-op default,
+>   so Phase-12 plugs in without a rebuild). **Beats static preseason OOS 6/6 seasons, +0.396 ppg/wk (CI
+>   [+0.32,+0.48]).**
+> - **13.2 start/sit** (`inseason/lineup.py`; `steps/phase13_2_lineup.py`) — **co-pilot done-bar PASS**:
+>   mean-max on 13.1's re-projected means beats set-and-forget on realized points 6/6, **+2.08 pts/lineup-week**
+>   (CI[+1.56,+2.54]). **FINDING:** the win-prob **variance tilt does NOT beat mean-max even for big underdogs**
+>   (0/6; a single legal swap barely moves the ~35-pt team sd — cf. Phase-10.3 whole-team-only leverage), so
+>   `optimal_lineup` default is now `objective="mean"`; the tilt is kept **opt-in** `objective="win"`, off by
+>   default (the Phase-7 / props "kept, not the default" pattern).
+> **What's next (THE PIPELINE):** **Session B = Phase 13.3 waivers/FAAB + 13.4 streaming + 13.5 trades** — the
+> two heavy new-domain substeps (FAAB bandit + auction theory; trade market-making) plus streaming, all on
+> existing infra, nothing gated on Phase 12 (~600–1,000L). Then **Session C = Phase 12 news/NLP + Phase 15
+> multi-format+auction**, **Session D = optional MCTS/RL gate + T5 pre-registration + LOCKBOX EVAL**, then
+> **Session E = Phase 14.1** and **F+ = the go-live tail**. **T5** pre-registration (freeze the stack, report
+> once; T3/T4 already ☑) is the only hard gate before the single lockbox eval. Corpus can be grown anytime via
+> `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
+> **Start here next session: Session B (Phase 13.3–13.5).** (Full session-sizing guide in `ROADMAP.md`.)
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them

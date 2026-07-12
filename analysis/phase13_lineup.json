@@ -1,0 +1,217 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "copilot_per_season": [
+    {
+      "season": 2017,
+      "n_lineup_weeks": 8400,
+      "n_rosters": 300,
+      "static_ppw": 39.920271622417054,
+      "copilot_ppw": 42.50377639336777,
+      "copilot_minus_static_ppw": 2.5835047709507246,
+      "gain_ci": [
+        2.250509000780851,
+        2.917480103795722
+      ],
+      "frac_weeks_better": 0.8160714285714286,
+      "beats_static": true
+    },
+    {
+      "season": 2018,
+      "n_lineup_weeks": 8400,
+      "n_rosters": 300,
+      "static_ppw": 40.37216684771879,
+      "copilot_ppw": 43.09893828885896,
+      "copilot_minus_static_ppw": 2.726771441140168,
+      "gain_ci": [
+        2.38316250781632,
+        3.102225987921125
+      ],
+      "frac_weeks_better": 0.8228571428571428,
+      "beats_static": true
+    },
+    {
+      "season": 2019,
+      "n_lineup_weeks": 8400,
+      "n_rosters": 300,
+      "static_ppw": 40.23768589181914,
+      "copilot_ppw": 42.00759304359289,
+      "copilot_minus_static_ppw": 1.7699071517737495,
+      "gain_ci": [
+        1.4593437598322707,
+        2.0972244863472054
+      ],
+      "frac_weeks_better": 0.7982142857142858,
+      "beats_static": true
+    },
+    {
+      "season": 2020,
+      "n_lineup_weeks": 8400,
+      "n_rosters": 300,
+      "static_ppw": 41.45109067324992,
+      "copilot_ppw": 44.151916883109756,
+      "copilot_minus_static_ppw": 2.7008262098598337,
+      "gain_ci": [
+        2.3338003692433196,
+        3.0593586587629455
+      ],
+      "frac_weeks_better": 0.8217857142857142,
+      "beats_static": true
+    },
+    {
+      "season": 2021,
+      "n_lineup_weeks": 8400,
+      "n_rosters": 300,
+      "static_ppw": 39.65183828061446,
+      "copilot_ppw": 41.29932876274788,
+      "copilot_minus_static_ppw": 1.647490482133414,
+      "gain_ci": [
+        1.367130115463512,
+        1.9436164342249616
+      ],
+      "frac_weeks_better": 0.8016666666666666,
+      "beats_static": true
+    },
+    {
+      "season": 2022,
+      "n_lineup_weeks": 8400,
+      "n_rosters": 300,
+      "static_ppw": 38.327519264208775,
+      "copilot_ppw": 39.403683562349705,
+      "copilot_minus_static_ppw": 1.0761642981409316,
+      "gain_ci": [
+        0.8518231507649932,
+        1.3232215348058824
+      ],
+      "frac_weeks_better": 0.8207142857142857,
+      "beats_static": true
+    }
+  ],
+  "tilt_per_season": [
+    {
+      "season": 2017,
+      "n_matchups": 250,
+      "n_underdog": 127,
+      "mean_max_winrate": 0.5071100000000001,
+      "winobj_winrate": 0.50785,
+      "winrate_gain": 0.0007399999999999998,
+      "winrate_gain_ci": [
+        -0.00026000000000000003,
+        0.0017599999999999992
+      ],
+      "underdog_gain": -0.0007874015748031494,
+      "underdog_gain_ci": [
+        -0.0022834645669291324,
+        0.0005511811023622034
+      ],
+      "beats_mean_max": false
+    },
+    {
+      "season": 2018,
+      "n_matchups": 250,
+      "n_underdog": 137,
+      "mean_max_winrate": 0.49340999999999996,
+      "winobj_winrate": 0.49380999999999997,
+      "winrate_gain": 0.00039999999999999926,
+      "winrate_gain_ci": [
+        -0.00094,
+        0.0016399999999999997
+      ],
+      "underdog_gain": -0.00018248175182481767,
+      "underdog_gain_ci": [
+        -0.001569343065693431,
+        0.0011678832116788327
+      ],
+      "beats_mean_max": false
+    },
+    {
+      "season": 2019,
+      "n_matchups": 250,
+      "n_underdog": 123,
+      "mean_max_winrate": 0.50728,
+      "winobj_winrate": 0.50762,
+      "winrate_gain": 0.00033999999999999975,
+      "winrate_gain_ci": [
+        -0.0009599999999999997,
+        0.0016799999999999992
+      ],
+      "underdog_gain": -0.0006910569105691066,
+      "underdog_gain_ci": [
+        -0.002399390243902441,
+        0.0010172764227642222
+      ],
+      "beats_mean_max": false
+    },
+    {
+      "season": 2020,
+      "n_matchups": 250,
+      "n_underdog": 112,
+      "mean_max_winrate": 0.50562,
+      "winobj_winrate": 0.5062800000000001,
+      "winrate_gain": 0.000659999999999999,
+      "winrate_gain_ci": [
+        -0.00036000000000000143,
+        0.001699999999999998
+      ],
+      "underdog_gain": -0.00040178571428571515,
+      "underdog_gain_ci": [
+        -0.0019642857142857157,
+        0.0013392857142857126
+      ],
+      "beats_mean_max": false
+    },
+    {
+      "season": 2021,
+      "n_matchups": 250,
+      "n_underdog": 123,
+      "mean_max_winrate": 0.5039,
+      "winobj_winrate": 0.503,
+      "winrate_gain": -0.0009000000000000007,
+      "winrate_gain_ci": [
+        -0.002060500000000001,
+        0.00021999999999999844
+      ],
+      "underdog_gain": -0.001178861788617887,
+      "underdog_gain_ci": [
+        -0.0030487804878048795,
+        0.00044715447154471474
+      ],
+      "beats_mean_max": false
+    },
+    {
+      "season": 2022,
+      "n_matchups": 250,
+      "n_underdog": 135,
+      "mean_max_winrate": 0.49844,
+      "winobj_winrate": 0.49833999999999995,
+      "winrate_gain": -0.00010000000000000032,
+      "winrate_gain_ci": [
+        -0.0013600000000000003,
+        0.0012
+      ],
+      "underdog_gain": -0.00048148148148148106,
+      "underdog_gain_ci": [
+        -0.0018148148148148136,
+        0.0008527777777777742
+      ],
+      "beats_mean_max": false
+    }
+  ],
+  "copilot_n_seasons_beating_static": 6,
+  "copilot_mean_gain_ppw": 2.08411072566647,
+  "copilot_mean_gain_ci": [
+    1.562110328245021,
+    2.539092076000802
+  ],
+  "copilot_PASS": true,
+  "tilt_mean_winrate_gain": 0.0001899999999999995,
+  "tilt_mean_underdog_gain": -0.0006205115369303595,
+  "tilt_seasons_beating_mean_max": 0,
+  "tilt_verdict": "does not clear the bar \u2014 mean-max default, tilt opt-in"
+}

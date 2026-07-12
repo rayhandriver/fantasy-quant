@@ -4,8 +4,11 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-11 (e) — **crawler league-seeding + real corpus terms** (iterative BFS snowball /
-> `league:<id>` seeding, complete-draft quality filter, type-drift-safe upsert). *(Prior: 2026-07-11 (d) —
+> **Last updated:** 2026-07-12 — **Session A terms**: adaptive archetype (implemented — fade-melt / slide /
+> `adaptive_parent`), Phase-13 in-season section (weekly Kalman re-projection, `m0`/`p0`/`r`/`prior_weeks`,
+> `process_var`, reserved news slot, set-and-forget vs co-pilot, mean-max lineup, lineup-grain variance tilt
+> finding). *(Prior: 2026-07-11 (e) — **crawler league-seeding + real corpus terms**: iterative BFS snowball /
+> `league:<id>` seeding, complete-draft quality filter, type-drift-safe upsert.)* *(Prior: 2026-07-11 (d) —
 > Sleeper corpus-crawler terms: corpus crawler / participant expansion, `is_human` + human-vs-bot ADP,
 > `sleeper_manager_profiles`, data appetite.)* *(Prior: 2026-07-11 (c) — step
 > 0.10 Sleeper ingest terms: Sleeper draft ingest, `draft_id` vs the user endpoint, `picked_by`/`draft_slot`
@@ -60,8 +63,16 @@ section, not just appended.
 - **Behavioral opponent model** — replaces "ADP + Gaussian noise": models real drafter biases (positional
   runs, favorite reaches, hometown/name-brand bias, rookie hype, K/DST panic). Powers **availability
   distributions** (who's likely at each pick); **Brier-scorable** against real completed drafts.
-- **Adaptive archetype** — a preset (Zero RB, Hero RB, …) that **abandons the plan when the board breaks**
-  (elite RBs slide → drop Zero RB). The one archetype most worth the quant.
+- **Adaptive archetype** (implemented, spine step 6, 2026-07-12) — a preset (Zero RB, Hero RB, …) that
+  **abandons the plan when the board breaks** (elite RBs slide → drop Zero RB). Concretely it is a
+  *wrapper* on an `adaptive_parent` (`draft/config.py`: archetype `"adaptive"` + `_adaptive_tilt`) that
+  **melts a *fade*** — a negative tilt like Zero-RB's early-RB fade — in proportion to how far a candidate
+  has diverged from his ADP. **Slide** `= (overall_pick − adp)/n_teams` (+ = fell to us, − = a reach); the
+  fade decays by `ADAPT_DECAY·max(|slide|, ADAPT_SLIDE_WEIGHT·max(0,slide))`, so value *actively sliding to
+  us* melts the fade ~2× faster than a reach. A fade only melts toward 0 (never flips to a reach); a
+  *reaching* archetype (positive tilt, e.g. `elite_te`) is untouched. With no board context it reproduces
+  its parent exactly (the leave-one-out / benchmark path). **Validated:** does no harm on an ADP board and
+  banks team-value when the board breaks (the realistic Phase-11 behavioral room) — see findings 2026-07-12.
 - **Risk dial** — the floor↔ceiling (and correlation-appetite) control, powered by our per-player
   distributions; sets the value/variance tradeoff and the make-playoffs vs championship-or-bust objective.
 - **Lockbox** — recent season(s) frozen and untouched during development; the final chosen stack is
@@ -504,3 +515,30 @@ section, not just appended.
 - **Keep-or-drop gate** — Phase 7's exit criterion: keep iff **≥ consensus proxy overall AND strictly better
   on role-changers**, else drop. **Result: DROP** — the situation swap is a wash-to-worse than naive on movers
   (the team fixed-effect adds no exploitable move-signal; consensus already prices it).
+
+## Phase 13 — in-season co-pilot terms (2026-07-12)
+The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same three signals weekly.
+- **Weekly re-projection** (`inseason/reproject.py`, 13.1) — a **scalar Kalman filter** on each player's
+  per-week scoring **level**. The preseason season-projection ÷ active weeks is the prior level `m0`, worth
+  `PRIOR_WEEKS` **pseudo-observations**; each played week `y` updates `m ← m + k·(y − m)` with Kalman gain
+  `k = p/(p+r)`, `r` the player's own 5.3 weekly observation variance. Output = a **rest-of-season** per-week
+  mean/sd (`RestOfSeason`). Beats the frozen preseason level OOS (MAE, 6/6 DEV seasons).
+- **`m0` / `p0` / `r` / `prior_weeks`** — Kalman initial state: `m0` the preseason per-active-week level,
+  `r = (wk_cov·m0)²` the week-to-week noise, `p0 = r/prior_weeks` the prior variance on the level (a stronger
+  `prior_weeks` trusts preseason more and updates slower).
+- **`process_var`** — a random-walk term added to the level variance each week; `>0` lets **recent form
+  outweigh** a hot September, `=0` is a pure "shrink preseason toward realized" update (the default).
+- **News slot** (reserved) — a per-player level-shift argument on `reproject_week`, wired through the input
+  contract now and a **no-op by default**, so a future **Phase-12** news/NLP feature plugs in without a
+  rebuild (the 2026-07-11 build-before-Phase-12 design note).
+- **Set-and-forget vs the co-pilot** — the two weekly lineups compared in 13.2: *set-and-forget* ranks the
+  mean-max lineup by the **frozen preseason** level; the *co-pilot* ranks it by 13.1's **re-projected** mean.
+  The co-pilot's edge (**+2.1 pts/lineup-week** OOS) is the whole 13.2 win — better means, ordinary lineup.
+- **Mean-max lineup** — start the highest-**projected** legal lineup (dedicated slots first, FLEX takes the
+  best leftover). The validated **default** start/sit (`optimal_lineup(objective="mean")`).
+- **Win-probability / variance tilt (lineup grain)** — the opt-in `objective="win"`: score each player by
+  `mean + lever·sd`, `lever` **+** as underdog (add variance, take a tail shot) and **−** when favored (cut
+  it), size set by the H2H edge (`tanh`, `LEV_GAMMA/LEV_SCALE`), kept only under a do-no-harm guard. **Finding
+  (2026-07-12): it does not beat mean-max OOS even for big underdogs** — a single legal swap barely moves the
+  ~35-pt team sd (cf. Phase-10.3, where leverage only bit at *whole-team* 1.6× spread changes). Retained
+  opt-in, **off by default** (the Phase-7 / props "kept, not the default" pattern).

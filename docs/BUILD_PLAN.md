@@ -605,7 +605,7 @@ model**, scored against real completed drafts.*
 # Phase 13 — In-season co-pilot [CORE — season breadth]
 *Goal: the season-long decision engine — the draft is only ~1 of 17+ decisions.*
 
-### 13.1 — Weekly re-projection → `inseason/reproject.py`
+### 13.1 — Weekly re-projection → `inseason/reproject.py` ✅ *(2026-07-12)*
 - **Do:** update player distributions each week (state-space/Kalman flavor) with new results + news (12.x).
 - **Out:** `inseason/reproject.py` (`reproject_week`); **Done:** weekly forecasts beat preseason-static OOS.
   **Reuse:** 5.x, 12.x. Create the **inseason** package.
@@ -613,11 +613,24 @@ model**, scored against real completed drafts.*
   Phase 12 exists. Build the state-space update with a generic news-feature slot in its input contract
   (even though nothing populates it yet) so that if Phase 12 survives its own keep-or-drop gate, it plugs
   in as an added feature later rather than triggering a rebuild of 13.1.
+- **DONE (2026-07-12):** a **scalar Kalman filter** on each player's per-week level (`preseason_prior` →
+  `reproject_week` → `RestOfSeason`); prior worth `PRIOR_WEEKS=5` pseudo-obs, `process_var` optional
+  random-walk; **PIT by construction** (reads only weeks ≤ t); the **`news` slot is wired and no-ops**
+  (Phase-12 hook honored). **Beats the static preseason level OOS in 6/6 DEV seasons, +0.396 ppg/wk MAE
+  gain, season-block CI [+0.32,+0.48]** (`steps/phase13_1_reproject.py`; `analysis/phase13_reproject.json`).
 
-### 13.2 — Start/sit optimizer → `inseason/lineup.py`
+### 13.2 — Start/sit optimizer → `inseason/lineup.py` ✅ *(2026-07-12 — co-pilot PASS; variance tilt = opt-in finding)*
 - **Do:** weekly lineup optimization under the **win-probability objective** + matchup + leverage (10.3).
 - **Out:** `inseason/lineup.py` (`optimal_lineup`); **Done:** beats projection-max lineup on simulated win%.
   **Reuse:** 9.4, 10.x.
+- **DONE (2026-07-12):** the **done-bar that PASSES is the co-pilot** — mean-max on 13.1's *re-projected*
+  means beats *set-and-forget* (frozen preseason) on realized points **6/6 DEV, +2.08 pts/lineup-week**
+  (CI[+1.56,+2.54]). **FINDING:** the win-probability **variance tilt** (10.3 leverage at the lineup grain)
+  does **not** beat mean-max OOS even for big underdogs (0/6; a single legal swap barely moves the ~35-pt
+  team sd — consistent with Phase-10.3, where leverage only bit at *whole-team* 1.6× spread changes). So
+  `optimal_lineup` **default = `objective="mean"`** and the tilt is retained **opt-in** `objective="win"`,
+  off by default (the Phase-7 / props "kept, not the default" pattern). `steps/phase13_2_lineup.py` reports
+  both; `analysis/phase13_lineup.json`.
 
 ### 13.3 — Waivers/FAAB → `inseason/waivers.py`
 - **Do:** sequential budget auction — **bandit + auction theory**, bid-shading, the option value of holding budget.
@@ -726,10 +739,17 @@ honest cost report — layered on Phases 0–5. Cross-phase; this is what the ne
   uses (powered by the trimmed Phase-5 distributions).
 - **Out:** `personalization/risk.py`. **Done:** raising the dial shifts the board toward higher ceiling.
 
-### S6 — Adaptive archetypes → `personalization/archetypes.py`
+### S6 — Adaptive archetypes → `draft/config.py` (`"adaptive"` + `_adaptive_tilt`) ✅ *(2026-07-12)*
 - **Do:** archetypes as configs; the **adaptive** one re-evaluates when value falls to it (elite RBs slide
-  → drop Zero RB). **Out:** `personalization/archetypes.py`. **Done:** adaptive beats its static parent
-  when the board diverges from ADP, in sim.
+  → drop Zero RB). **Out:** *(implemented in `draft/config.py`, where the spine lives, not a new
+  `personalization/` package)*. **Done:** adaptive beats its static parent when the board diverges from ADP,
+  in sim.
+- **DONE (2026-07-12):** a **wrapper on an `adaptive_parent`** that **melts a *fade*** in proportion to
+  ADP slide (`slide=(overall−adp)/n_teams`; `ADAPT_DECAY`, `ADAPT_SLIDE_WEIGHT` — sliding value melts ~2× a
+  reach; a fade only melts toward 0; reaching archetypes untouched; no board context ⇒ = parent, so
+  leave-one-out/benchmark behave). Threaded via `total_tilt_rounds(adp=, overall_pick=)` + `_greedy_eff`.
+  **Done-bar PASS** (`steps/spine_5_adaptive.py`): does no harm in the ADP room, **banks team-value in the
+  realistic Phase-11 behavioral (board-breaking) room** — adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6.
 
 ### S7 — In-season weekly-edge harvester → `inseason/*` *(the tax-loss-harvesting analog; = Phase 13, pulled in)*
 - **Do:** start/sit (floor vs ceiling by matchup), FAAB, streaming, trades respecting "never trade my

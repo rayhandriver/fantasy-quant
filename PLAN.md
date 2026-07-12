@@ -5,6 +5,30 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-12** — **SESSION A COMPLETE: S6 + Phase 13.1 + 13.2 (all DEV done-bars PASS; 261 tests, ruff
+  clean; NOT yet committed — left for user review).** Resumed the interrupted Session A: the code for all
+  three substeps pre-existed (uncommitted WIP) but was never tested, run, or linted. This session verified
+  it, added the missing unit tests + done-bar runners, fixed the lint the WIP never got, ran every
+  validation, and recorded results. Lockbox (2023+24) untouched; all tuning on DEV (2017–22 validation
+  window).
+  - **S6 adaptive archetype** — `draft/config.py` `"adaptive"` + `_adaptive_tilt` (melt a *fade* by ADP
+    slide: `ADAPT_DECAY`, `ADAPT_SLIDE_WEIGHT`; sliding value melts ~2× a reach; reaches untouched; no
+    board context ⇒ reproduces parent). Threaded through `total_tilt_rounds(adp=, overall_pick=)` and
+    `_greedy_eff`. **Done-bar** `steps/spine_5_adaptive.py`: `adaptive(zero_rb)` +2.0 / `adaptive(hero_rb)`
+    +15.6 team-value in the behavioral (board-breaking) room, ~0 / no-harm in the ADP room. **PASS.**
+  - **13.1 weekly re-projection** — `inseason/reproject.py` (scalar Kalman on the per-week level; PIT;
+    reserved Phase-12 `news` slot, no-op default). **Done-bar** `steps/phase13_1_reproject.py`: beats the
+    static preseason level OOS **6/6** seasons, +0.396 ppg/wk MAE gain, season-block CI [+0.32,+0.48]. **PASS.**
+  - **13.2 start/sit** — `inseason/lineup.py`. **DECISION (finding-driven):** the win-probability
+    **variance tilt does NOT beat mean-max OOS** even for big underdogs (0/6 seasons; a single legal swap
+    barely moves the ~35-pt team sd — consistent with Phase-10.3's whole-team-only leverage). So flipped
+    `optimal_lineup` default to `objective="mean"`; the tilt stays **opt-in** `objective="win"`, off by
+    default (Phase-7 / props "kept, not default" pattern). The **done-bar that PASSES** is the *co-pilot vs
+    set-and-forget*: mean-max on 13.1's **re-projected** means outscores the frozen-preseason lineup on
+    realized points **6/6** seasons, +2.08 pts/lineup-week (CI [+1.56,+2.54]). `steps/phase13_2_lineup.py`
+    reports both. **PASS** (on the co-pilot bar).
+  - New tests `tests/test_inseason.py` (12); S6 tests already in `tests/test_spine.py`. **Next: Session B
+    (Phase 13.3–13.5: waivers/FAAB + streaming + trades).**
 - **2026-07-11 (h)** — **SESSION SIZING GUIDE added (docs-only).** User asked how S6's size compares to
   past sessions, then how Phase 13/S7 and the rest of the remaining pipeline compare, then for a proposed
   session-bundling plan sized like the Phase-11+7 precedent (~2,000 lines). Sized every remaining item off
