@@ -374,5 +374,6 @@ ADP+noise on a real-pick availability Brier** (done 2026-07-11 — behavioral 0.
    (2026-07-11 — situation swap is a wash-to-worse than naive on role-changers; consensus already prices it).
 7. ~~**When real leagues exist:** S4/Phase 11 (T8b behavioral opponent model + availability Brier).~~
    ☑ **done (2026-07-11)** — corpus cleared the blocker; fit + availability Brier both beat ADP+noise.
-8. **Next buildable pipeline item:** Phase 13 / S7 (in-season co-pilot) → S6 → Phase 12 → Phase 15.
+8. **Next buildable pipeline item (⟳ reordered 2026-07-11 — S6 has no dependency on Phase 13/12):** S6 →
+   Phase 13 / S7 (in-season co-pilot) → Phase 12 → Phase 15.
 9. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).

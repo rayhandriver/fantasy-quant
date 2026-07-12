@@ -609,6 +609,10 @@ model**, scored against real completed drafts.*
 - **Do:** update player distributions each week (state-space/Kalman flavor) with new results + news (12.x).
 - **Out:** `inseason/reproject.py` (`reproject_week`); **Done:** weekly forecasts beat preseason-static OOS.
   **Reuse:** 5.x, 12.x. Create the **inseason** package.
+- **Design note (2026-07-11, from the S6/Phase-13-before-12 reorder):** Phase 13 is now built *before*
+  Phase 12 exists. Build the state-space update with a generic news-feature slot in its input contract
+  (even though nothing populates it yet) so that if Phase 12 survives its own keep-or-drop gate, it plugs
+  in as an added feature later rather than triggering a rebuild of 13.1.
 
 ### 13.2 — Start/sit optimizer → `inseason/lineup.py`
 - **Do:** weekly lineup optimization under the **win-probability objective** + matchup + leverage (10.3).

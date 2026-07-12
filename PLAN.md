@@ -5,6 +5,38 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-11 (h)** — **SESSION SIZING GUIDE added (docs-only).** User asked how S6's size compares to
+  past sessions, then how Phase 13/S7 and the rest of the remaining pipeline compare, then for a proposed
+  session-bundling plan sized like the Phase-11+7 precedent (~2,000 lines). Sized every remaining item off
+  `git diff --stat` on past commits (two clusters: full-phase sessions ≈700–2,000L/10–21 files/5–15 tests
+  — Phase 9 728L, Phase 8+6-wiring 1,926L, Phase 5 1,423L, MVP spine 1,496L, Phase 11+7 2,000L, T3+T4 547L
+  — vs. single-file deliverables ≈60–150L — 11.3 `personalities.py` 109L, 5.5 `utility.py` 58L). **Key
+  finding: Phase 13/S7 is greenfield** (`inseason/` package doesn't exist yet) and its 5 substeps aren't
+  uniform — 13.3 (FAAB bandit/auction theory) and 13.5 (trade market-making) are new-domain and heavy
+  (~250–400L each) — so it's **full-phase-sized on its own (~1,400–2,100L), unlike S6 or the tech-debt
+  items.** Proposed bundling (written into `ROADMAP.md` ★ SESSION SIZING GUIDE + `CLAUDE.md` next-session
+  pointer): **Session A** S6+13.1–13.2 → **Session B** 13.3–13.5 → **Session C** Phase 12+Phase 15 (bundled
+  like 11+7) → **Session D** optional MCTS/RL gate+T5+LOCKBOX (closeout) → **Session E** Phase 14.1 alone
+  (never bundle onto Phase 14) → **Session F+** Phase 14's go-live tail (14.2–14.7, multiple sessions
+  expected). Explicitly a **planning aid, not a hard rule** — re-estimate once building starts if actual
+  scope diverges. Docs-only, no code changed. **Next session: Session A (S6 + 13.1–13.2).**
+- **2026-07-11 (g)** — **PIPELINE REORDER (docs-only) — S6 moved ahead of Phase 13/S7.** A prior-session
+  review of ★ THE PIPELINE's locked order (2026-07-09), checked against actual dependencies rather than
+  write order, found one change worth making: **S6 — adaptive archetypes** has zero dependency on Phase 13
+  or 12 (its done-bar — adaptive beats its static parent when the board diverges from ADP — is detected by
+  the Phase-11 availability model and validated in the 11.3 personality-tilted simulator, both already
+  built), so it moves from between Phase 13 and Phase 12 to **immediately next**, reusing the still-warm
+  opponent-model/optimizer context instead of re-deriving it later. Everything else in the locked order
+  checks out on dependency grounds and is unchanged: **Phase 13/S7 before Phase 12** (13.1–13.5 run on
+  existing infra, nothing gated on Phase 12 — 13.1 should reserve a generic news-feature slot so Phase 12
+  plugs in later without a rebuild), **Phase 12 before Phase 15** (Phase 15's auction support extends the
+  Phase-11 opponent model, so it belongs after the draft-engine-consuming phases settle), the **optional
+  MCTS/RL research gate last among build steps** (benchmarked against the final greedy/win-prob policy),
+  and **T5 → LOCKBOX → Phase 14 as a strict tail** (T3+T4 already ☑ done 2026-07-11; only T5 pre-registration
+  remains before the one-shot lockbox). New pipeline order: **S6 → Phase 13/S7 → Phase 12 → Phase 15 →
+  optional gate → T5 → LOCKBOX → Phase 14.** Docs-only — no code changed. Updated `ROADMAP.md` (★ THE
+  PIPELINE block + Phase 12/13 stage labels + spine S6/S7 line), `CLAUDE.md` (next-session pointer), and
+  `docs/BUILD_PLAN.md` (13.1 design note re: the news-feature slot). **Next buildable item: S6.**
 - **2026-07-11 (f)** — **PHASE 11 (draft engine core) DONE + PHASE 7 (opportunity-adjusted
   projection) BUILT & DROPPED — one autonomous session.** User authorized a combined
   Phase-11→Phase-7 run **fully autonomously** (STOP gate §3.7 waived for the session), with four

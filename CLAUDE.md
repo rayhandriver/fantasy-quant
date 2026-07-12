@@ -74,12 +74,26 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > wash-to-worse than naive carry-over on role-changers (the EB-shrunk market already beats it), and skill
 > doesn't travel better than raw rate. Rookie transport works (1σ cov 0.66) but duplicates 4.3. Kept in-repo
 > like props/CFR. `steps/phase7_opportunity.py`; `analysis/phase7_opportunity.json`.
-> **What's next (THE PIPELINE, stage 5):** the next buildable item is **Phase 13 / S7 — the in-season
-> co-pilot** (re-project → start/sit → waivers/FAAB → streaming → trades), then **S6** adaptive archetypes,
-> then **Phase 12** news/NLP and **Phase 15** multi-format+auction. Then the pre-lockbox hardening — **T5**
-> pre-registration (freeze the stack, report once) — before the single lockbox eval and the Phase-14 app.
-> Corpus can be grown anytime via `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
+> **What's next (THE PIPELINE, ⟳ reordered 2026-07-11):** the next buildable item is **S6 — adaptive
+> archetypes** (moved ahead of Phase 13 on a dependency review: its done-bar is detected by the Phase-11
+> availability model and validated in the 11.3 personality-tilted simulator, both already built, with zero
+> dependency on Phase 13/12 — building it now reuses that context while warm). Then **Phase 13 / S7 — the
+> in-season co-pilot** (re-project → start/sit → waivers/FAAB → streaming → trades; 13.1 should reserve a
+> generic news-feature slot for Phase 12 to plug into later), then **Phase 12** news/NLP and **Phase 15**
+> multi-format+auction. Then the pre-lockbox hardening — **T5** pre-registration (freeze the stack, report
+> once; T3/T4 already ☑) — before the single lockbox eval and the Phase-14 app. Corpus can be grown anytime
+> via `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
 > **243 tests, ruff clean.**
+>
+> **Session bundling (★ SESSION SIZING GUIDE, ROADMAP.md, added 2026-07-11):** S6 alone is too small for a
+> full session (~150L, cf. 11.3's `personalities.py` at 109L) — Phase 13/S7 is greenfield (no `inseason/`
+> package yet) and full-phase-sized on its own (~1,400–2,100L across its 5 substeps). Recommended split:
+> **Session A = S6 + 13.1–13.2** (re-project + start/sit, ~400–600L) → **Session B = 13.3–13.5** (waivers/
+> FAAB + streaming + trades, the two new-domain substeps, ~600–1,000L) → **Session C = Phase 12 + Phase 15**
+> bundled (~1,400–2,300L, same pattern as the Phase 11+7 bundle) → **Session D = optional MCTS/RL gate + T5
+> + LOCKBOX EVAL** (closeout, ~350–850L) → **Session E = Phase 14.1 alone** (Streamlit MVP hardening — never
+> bundle onto Phase 14) → **Session F+ = Phase 14's go-live tail** (14.2–14.7, expect multiple sessions).
+> **Start here next session: Session A.**
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them

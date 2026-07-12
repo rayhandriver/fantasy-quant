@@ -24,12 +24,17 @@ Legend: ☐ todo · ◐ in progress · ☑ done · ✗ dropped · ◔ deprioriti
 **Phase 10 — Season/playoff sim** *(⟳ PROMOTED/earlier — the tracked benchmark + tail objective)* ✅ **COMPLETE** *(2026-07-09; `simulation/` package + weekly grain — the Phase-5 deferral folded in)* — ☑ **10.1 season engine** *(top-down weekly disaggregation: Phase-5 clouds + Phase-8 Σ via Iman-Conover permutation → Dirichlet(1/CoV²) week shares, real byes, uniform missed-game placement; `LeagueFormat` 14-reg/6-team/15–17 w/ top-2 byes; vectorized optimal lineups ≡ 1.3 reference; **sim-sd/realized league sd = 1.02**)* · ☑ **10.2 playoffs** *(reseeded bracket → title/playoff probs; **calibration gate on 1,800 DEV team-seasons: title Brier 0.0878 < 0.090, playoff 0.2302 < 0.240, reliability on-diagonal; stability 0.975/0.949**)* · ☑ **10.3 leverage** *(mean-preserving spread from any mid-season state: trailing +0.018 playoff prob at 1.6×, leader −0.028 — variance is about making the cut; `leverage_advice` verdict for Phase 13)* — *documented: 62.4% points coverage (Phase-5 attrition gap propagates) + −137 pt level bias; probabilities calibrate regardless*
 **Phase 11 — Draft engine** *(⟳ opponent model = core & Brier-verifiable)* — **☑ step 0.10 Sleeper ingest + 0.10b corpus crawler DONE (2026-07-11)**: the pick-by-pick data pipe (`data/sources/sleeper.py`; `sleeper_drafts`/`sleeper_draft_picks`; gsis crosswalk 100% skill; POC `sleeper_tendencies`) **+ the corpus crawler** (`steps/phase0_10b_crawl.py`: seed registry incl. `league:<id>`, iterative BFS snowball via co-managers, **human/bot ADP split** `sleeper_human` vs `sleeper_mock`, complete-draft quality filter, `sleeper_manager_profiles` behavioral seed) **+ a real live corpus** (149 human + 117 bot drafts 2017–20, 289 manager profiles, crawled from the Sleeper docs' public example leagues). · ☑ **11.1 behavioral opponent model** *(2026-07-11 — conditional/McFadden logit on 7.9k real human picks/9 szn; **beats ADP-only** walk-forward: log-loss +0.113 CI[+0.101,+0.124], Brier +0.0088 CI[+0.0076,+0.0100]; interpretable coefs — **fandom +1.03** strongest, rookie +0.45, need +0.33; `draft/opponent_model.py`)* · ☑ **11.2 per-pick availability distributions** *(2026-07-11 — MC survival under the model; **availability Brier 0.158 vs best-tuned ADP+noise 0.316**, gain +0.159 CI[+0.083,+0.264] — the owed S4 metric; promotes to the S4 default; `draft/availability.py`)* · ☑ **11.3 realistic mock** *(2026-07-11 — `Personality` tilts + `opponent_pick_fn` sim hook; behavioral RB14/WR14 vs ADP+noise RB21/WR9; `draft/personalities.py`)* · ✗ CFR *(dropped — snake draft ≈ perfect-info)* · ◔ MCTS *(deprioritized — unverifiable + live-latency risk)* · ☐ auctions (later) · ☐ self-play RL (roadmap)
 **Phase 12 — NLP/news** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 7 — the guardrail is unchanged: LLM on the edges only, never computing a number that must be correct; 12.4's bar = adds value over the structured injury/depth feeds, or ruled out)* ☐ 12.1 sources · ☐ 12.2 LLM extract · ☐ 12.3 event-study · ☐ 12.4 validate
-**Phase 13 — In-season co-pilot** *(the tax-loss-harvesting analog; pipeline stage 5)* ☐ 13.1 re-project · ☐ 13.2 start/sit · ☐ 13.3 waivers/FAAB · ☐ 13.4 streaming · ☐ 13.5 trades
+**Phase 13 — In-season co-pilot** *(the tax-loss-harvesting analog; pipeline stage 6 — reordered after S6
+2026-07-11, no dependency reason it was ahead of S6)* ☐ 13.1 re-project *(build the weekly re-projection's
+state-space update with a generic news-feature slot even though Phase 12 doesn't exist yet, so Phase 12
+plugs in later as an added feature instead of forcing a rebuild)* · ☐ 13.2 start/sit · ☐ 13.3 waivers/FAAB ·
+☐ 13.4 streaming · ☐ 13.5 trades
 **Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ☐ 14.1 **Streamlit MVP hardening** (autopilot+co-pilot, constraint-object UI, league sync, cost+risk+softness readouts, sim views, in-season dashboard, news feed, format toggles) · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
 **Phase 15 — Multi-format** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 8 — + auction draft support, absorbed from Phase 11's "later")* ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS · ☐ 15.4 auction drafts
 
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
-✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ☐ **S6** adaptive archetypes · ☐ **S7** in-season weekly-edge harvester
+✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ☐ **S6** adaptive archetypes *(pipeline stage 5,
+next — ahead of S7/Phase 13 as of 2026-07-11)* · ☐ **S7** in-season weekly-edge harvester *(= Phase 13; pipeline stage 6)*
 
 **★ THE PIPELINE (locked 2026-07-09 — engine-complete-before-app; no time crunch).** Every underlying
 function — **including the formerly-deferred Phases 12 & 15** — is built and validated before any app work;
@@ -61,16 +66,65 @@ auction stay out (deprioritized/dropped/roadmap). →
 **4) Phase 7 ✗ BUILT & DROPPED (2026-07-11)** opportunity-adjusted projection — all 4 substeps built +
 validated OOS; keep-or-drop (as-written bar) = **DROP** (situation swap is a wash-to-worse than naive on
 role-changers; consensus already prices moves). Rookie transport works but duplicates 4.3. →
-**5) Phase 13/S7** in-season co-pilot → **6) S6** adaptive archetypes →
-**7) Phase 12** news/NLP *(LLM edges-only guardrail unchanged)* → **8) Phase 15** multi-format + auction →
+**5) S6** adaptive archetypes *(⟳ reordered ahead of Phase 13 — 2026-07-11 review found no dependency that
+put Phase 13 first: S6's done-bar — "adaptive beats its static parent when the board diverges from ADP" —
+is detected by the Phase-11 availability model and validated in the Phase-11.3 personality-tilted draft
+simulator, both already built, and has zero dependency on Phase 13 or 12. Building it next reuses that
+opponent-model/optimizer context while warm.)* →
+**6) Phase 13/S7** in-season co-pilot *(13.1–13.5 all run on infrastructure that already exists — Phase 5
+distributions, 9.4 lookahead, Phase 10 sim, valuation — nothing here is gated on Phase 12; 13.1's state-space
+update should reserve a generic news-feature slot so Phase 12, if it survives its own gate, plugs in later
+without a rebuild)* →
+**7) Phase 12** news/NLP *(LLM edges-only guardrail unchanged; the project's pattern so far — 2.3 props
+shelved, Phase 7 dropped, the core Phase-2 ADP finding — means 12.4's gate has a real chance of ending the
+same way; that's the gate doing its job, not a guaranteed win)* → **8) Phase 15** multi-format + auction
+*(benefits from coming after 13 and 12 — it has to apply personalization + in-season logic across format
+variants, and auction specifically extends the Phase-11 opponent model, so it belongs after those
+draft-engine-consuming phases are settled)* →
 **9)** optional research gate (MCTS / self-play RL — only by explicit decision, **before** the lockbox;
-CFR stays dropped) →
-**➤ PRE-LOCKBOX HARDENING (`docs/TECH-DEBT.md`): T3** coverage fix (cohort availability prior + role-survival
-haircut → unconditional 44 %→≥70 %) **+ T4** sim level bias (−137 pts→~0) — done together — then **T5**
-pre-register the frozen stack + 2025 full-stack dress rehearsal. *(T7 scrape guards: opportunistic.)* →
+benchmarked against whatever the greedy/win-prob policy looks like after 13/12/15 are locked in, so it sits
+last among the build steps; CFR stays dropped) →
+**➤ PRE-LOCKBOX HARDENING (`docs/TECH-DEBT.md`):** ☑ **T3** coverage fix (cohort availability prior +
+role-survival haircut → unconditional 44 %→77 %) and ☑ **T4** sim level bias (−137 pts→−113) — both **done
+2026-07-11**; only **T5** (pre-register the frozen stack, incl. the T3/T4 params, + 2025 full-stack dress
+rehearsal) remains open, and must run strictly last among build steps — it's the mechanism that makes the
+lockbox eval meaningful, so no modeling changes after it. *(T7 scrape guards: opportunistic, done.)* →
 **10) LOCKBOX EVAL — exactly once** (freeze the stack, evaluate on 2023+2024, report as-is; nothing
 modeling-side changes after) →
-**11) Phase 14** the app with every factor embedded, then the 14.4 go-live tail.
+**11) Phase 14** the app with every factor embedded, then the 14.4 go-live tail. *(Built last by design —
+nothing here can start earlier without risking rework, since it's meant to surface every factor the engine
+ends up producing.)*
+Net change from the prior sequencing (2026-07-11 review): only S6's position moved (from between Phase
+13/12 to immediately next). Everything else — Phase 13 before 12, 12 before 15, the optional gate last
+among builds, T5 → lockbox → app as a strict tail — checks out on actual dependencies, not just write order.
+
+**★ SESSION SIZING GUIDE (2026-07-11 — a planning aid, not a hard rule; re-estimate if actual scope
+diverges once building starts).** Sized from `git diff --stat` on past commits, which cluster into two
+bands: **full-phase sessions** ≈ 700–2,000 lines / 10–21 files / 5–15 new tests (Phase 9: 728L·13f·+7t;
+Phase 8+6-wiring: 1,926L·18f; Phase 5: 1,423L·19f; MVP spine S1–S3: 1,496L·17f; **Phase 11+7 (2 phases
+bundled): 2,000L·21f·+15t**; T3+T4: 547L·11f·+6t) and **single-file/single-concept deliverables** ≈
+60–150 lines (11.3 `personalities.py`: 109L; 5.5 `utility.py`: 58L — S6 is this size, not full-phase size).
+Phase 13/S7 is greenfield (no `inseason/` package exists yet) and its 5 substeps aren't uniform — 13.3
+(FAAB bandit + auction theory) and 13.5 (trade market-making) are new-domain and heavy (~250–400L each),
+13.1 (state-space re-projection) is medium (~150–300L), 13.2/13.4 are light wiring onto existing infra
+(~100–200L each) — **estimated ~1,400–2,100L all-in, i.e. full-phase-sized on its own**, unlike every other
+remaining item. Proposed bundling to land future sessions in the ~1,500–2,200-line target band, mirroring
+how 11+7 combined a spine-completion phase with a 4-substep exploratory phase:
+- **Session A:** S6 + Phase 13.1–13.2 (re-project + start/sit). S6 alone (~150L) is sub-session-sized;
+  13.1/13.2 lean on existing Phase-5/9.4/10.x infra → **~400–600L combined**, likely light enough to pull
+  13.3 in too if there's room.
+- **Session B:** Phase 13.3–13.5 (waivers/FAAB, streaming, trades) — the two heavy new-domain substeps
+  plus streaming → **~600–1,000L**, a full session on its own.
+- **Session C:** Phase 12 + Phase 15 (news/NLP + multi-format/auction) — two medium 4-substep phases
+  (~700–1,200L each) bundled the same way 11+7 was → **~1,400–2,300L**.
+- **Session D:** optional MCTS/RL gate + T5 pre-registration + LOCKBOX EVAL — three small, sequential,
+  gated items → **~350–850L**, a closeout bundle like the T1/T2/T7 housekeeping session.
+- **Session E:** Phase 14.1 (Streamlit MVP hardening) **alone** — do not bundle anything onto Phase 14;
+  it's the largest remaining phase by scope.
+- **Session F+:** Phase 14's go-live tail (14.2–14.7: personalization tiers, explain, FastAPI backend,
+  Next.js frontend, live-draft sync, widget, mock-draft sim) — expect **multiple sessions**, each
+  comparable to or larger than any single phase built so far.
+
 Working rules throughout: DEV-only, STOP gates between sub-steps, findings/glossary/PLAN/ROADMAP per step.
 **Known-problem register (the exact fix per item): `docs/TECH-DEBT.md` (T1–T8).**
 
