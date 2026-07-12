@@ -32,7 +32,11 @@ PIT; **reserved Phase-12 `news` slot**, no-op default; **beats static preseason 
 6/6 DEV, **+2.08 pts/lineup-week** CI[+1.56,+2.54]. **FINDING**: the win-prob **variance tilt** does NOT
 beat mean-max even for big underdogs (0/6; single-swap barely moves team sd — cf. Phase-10.3 whole-team-only
 leverage) → `optimal_lineup` default = `objective="mean"`, tilt kept opt-in `objective="win"` off by
-default; `inseason/lineup.py`)* · ☐ 13.3 waivers/FAAB · ☐ 13.4 streaming · ☐ 13.5 trades **← NOW (Session B)**
+default; `inseason/lineup.py`)* · ☑ **13.3 waivers/FAAB** *(2026-07-12 — `faab_bid` = marginal value +
+budget option-value + first-price shading; **mixed-field** sim, **beats naive %-of-budget 5/6 DEV**, mean
++30.0 value/szn CI[+21.7,+38.8]; key finding: model **diminishing returns** (top-`n_useful` scoring) or
+volume wins. **Pragmatic** — rigorous auction theory owed to Phase 15.4 / TECH-DEBT **T9**; `inseason/waivers.py`)*
+· ☐ 13.4 streaming · ☐ 13.5 trades **← NOW (Session B, 13.3 ☑ · 13.4/13.5 remaining)**
 **Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ☐ 14.1 **Streamlit MVP hardening** (autopilot+co-pilot, constraint-object UI, league sync, cost+risk+softness readouts, sim views, in-season dashboard, news feed, format toggles) · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
 **Phase 15 — Multi-format** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 8 — + auction draft support, absorbed from Phase 11's "later")* ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS · ☐ 15.4 auction drafts
 
@@ -76,8 +80,11 @@ Phase-11 behavioral room). →
 A):** weekly Kalman re-projection beats static preseason 6/6 DEV (+0.396 ppg/wk); the co-pilot (mean-max on
 re-projected means) beats set-and-forget +2.08 pts/lineup-week; **the win-prob variance tilt was tried and
 does not pay at the lineup grain (kept opt-in, off by default — the Phase-7/props pattern)**; 13.1 reserved
-the Phase-12 news slot. **← NOW: Session B = 13.3 waivers/FAAB + 13.4 streaming + 13.5 trades** (all on
-existing infra; nothing gated on Phase 12). →
+the Phase-12 news slot. **☑ 13.3 waivers/FAAB DONE (2026-07-12, Session B):** `faab_bid` (marginal value +
+budget option-value + first-price shading) beats naive %-of-budget 5/6 DEV in a mixed-field sim; the key
+finding was that the sim needs **diminishing returns** (top-`n_useful` scoring) or it rewards volume; shipped
+**pragmatic**, with rigorous auction theory owed to Phase 15.4 (TECH-DEBT **T9**). **← NOW: Session B
+remainder = 13.4 streaming + 13.5 trades** (all on existing infra; nothing gated on Phase 12). →
 **7) Phase 12** news/NLP *(LLM edges-only guardrail unchanged; the project's pattern so far — 2.3 props
 shelved, Phase 7 dropped, the core Phase-2 ADP finding — means 12.4's gate has a real chance of ending the
 same way; that's the gate doing its job, not a guaranteed win)* → **8) Phase 15** multi-format + auction

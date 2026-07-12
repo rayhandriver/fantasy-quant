@@ -1504,3 +1504,32 @@ tests + done-bar runners, ran the validations, and recorded the results. Lockbox
   default — the Phase-7 / props pattern (kept, not the default). *No amount of tuning `LEV_GAMMA/LEV_SCALE`
   rescues it: a bigger tilt makes bigger bad swaps, a smaller one makes no swaps → gain → 0.*
 - **Design note honored:** 13.1's `news` slot reserves the Phase-12 hook per the 2026-07-11 reorder note.
+
+**13.3 — waivers / FAAB (`inseason/waivers.py`; `steps/phase13_3_waivers.py`). Done-bar PASS.**
+- **What it is.** A pure `faab_bid(value, budget, weeks_remaining, …)` that turns three forces into one
+  sealed first-price bid: (1) **marginal value** (rest-of-season points over the freely-available
+  replacement, from 13.1's re-projection) → willingness-to-pay via `value_scale`; (2) the **option value of
+  budget** — a closed-form ration `1/(1+κ·(weeks−1))` (`OPTION_KAPPA=0.15`) that shades every bid down early
+  (many future pickups) and → 1 in the final week (use-it-or-lose-it); (3) **first-price shading** — bid the
+  surplus-maximiser `argmax_b (value−b)·P(win|b)` against a belief `opp_bids` about the field (else a flat
+  `SHADE_FRAC=0.9`). Naive %-of-budget ignores all three.
+- **Done-bar (PASS)**: in `n_leagues=200` **mixed-field** waiver seasons per DEV year (sharp `faab_bid` in
+  seat 0, naive %-of-budget in seat 1, the rest alternating — so the sharp agent competes with equally-sharp
+  opponents, not only fish), the sharp agent acquires **more realized rest-of-season value** than naive in
+  **5/6** seasons — mean gain **+30.0** value/season, season-block CI **[+21.7,+38.8]** — and at a higher
+  value-per-dollar (e.g. 3.47 vs 2.94). PIT: perceived value from 13.1 (weeks ≤ t); realized (weeks > t)
+  only scores.
+- **KEY FINDING — the objective must have diminishing returns or *volume* wins.** The first cut banked the
+  full value of **every** acquisition; the naive agent then won on sheer aggression (25 %/round grabs more
+  players) despite a tie on value-per-dollar → **smart lost 0/6**. Real FAAB has limited startable slots, so
+  only your **best few** pickups actually contribute. Modeling that — score = **top-`n_useful`=4** realized
+  pickups, and the sharp agent bids **marginal value over the pickups it already holds** (a 13th add that
+  won't start is worth ~0) — makes budget genuinely scarce, rewards selectivity, and flips the result to
+  **5/6 PASS**. Lesson (reusable for 13.4/13.5): a waiver/streaming/trade sim without a roster/slot constraint
+  rewards churn, not skill.
+- **Scope (user decision 2026-07-12): pragmatic now, rigor owed.** 13.3's spec said "reuse 11.4", but 11.4
+  (auction support) was deferred to **Phase 15.4** and `draft/auction.py` doesn't exist. So `faab_bid` uses
+  fixed/heuristic params (linear `value_scale`, closed-form ration, static `opp_bids`), **not** an equilibrium
+  / budget-state DP. The rigorous upgrade is logged as **`docs/TECH-DEBT.md` T9** (fold into Phase 15.4). No
+  real FAAB transaction data exists (the Sleeper corpus is draft picks only), so the field is synthetic and
+  the done-bar is a relative sim result, not a Brier-verified fit.

@@ -632,9 +632,21 @@ model**, scored against real completed drafts.*
   off by default (the Phase-7 / props "kept, not the default" pattern). `steps/phase13_2_lineup.py` reports
   both; `analysis/phase13_lineup.json`.
 
-### 13.3 — Waivers/FAAB → `inseason/waivers.py`
+### 13.3 — Waivers/FAAB → `inseason/waivers.py` ✅ *(2026-07-12 — pragmatic FAAB; rigor owed to 15.4 / T9)*
 - **Do:** sequential budget auction — **bandit + auction theory**, bid-shading, the option value of holding budget.
 - **Out:** `inseason/waivers.py` (`faab_bid`); **Done:** beats naive %-of-budget bidding in sims. **Reuse:** 11.4.
+- **⚠ stale reuse pointer:** "11.4" was **auction-draft support**, which was **deferred out of Phase 11 into
+  Phase 15.4** — `draft/auction.py` does **not** exist. Per user decision (2026-07-12), 13.3 shipped the
+  **pragmatic** bidder now; the rigorous equilibrium/DP version is owed → **`docs/TECH-DEBT.md` T9** (15.4).
+- **DONE (2026-07-12):** pure `faab_bid(value, budget_remaining, weeks_remaining, *, value_scale, opp_bids,
+  option_kappa, shade_frac)` — (1) marginal rest-of-season value (over replacement, from 13.1) → `value_scale`
+  willingness-to-pay, (2) **rationed** by the option value of budget `1/(1+κ·(weeks−1))`, (3) **first-price
+  shaded** to `argmax_b (value−b)·P(win|b)` vs a belief about the field. Done-bar `faab_skill` /
+  `steps/phase13_3_waivers.py`: a **mixed-field** waiver sim (sharp agent vs a naive %-of-budget bidder, rest
+  alternating — user decision) → the sharp agent acquires more realized value **5/6 DEV, +30.0/szn CI
+  [+21.7,+38.8]**, higher value-per-dollar. **Key modeling finding:** score only a team's **top-`n_useful`=4**
+  pickups (diminishing returns) + bid **marginal-over-roster**, else the objective rewards *volume* and naive
+  aggression wins (0/6 → 5/6). `analysis/phase13_waivers.json`.
 
 ### 13.4 — Streaming bandit → `inseason/streaming.py`
 - **Do:** explore/exploit over the waiver pool for QB/TE/DST streaming.

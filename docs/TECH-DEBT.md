@@ -2,7 +2,7 @@
 
 The durable, dated register of every known problem in the engine and **exactly what to do about it in
 the long run**. Opened after a full-codebase audit (2026-07-10). One entry per problem, stable id
-`T1…T8`, newest facts appended in place. This is the "what do we still have to fix" source of truth;
+`T1…T9`, newest facts appended in place. This is the "what do we still have to fix" source of truth;
 `ROADMAP.md ★ THE PIPELINE` sequences these against the phase build, `PLAN.md` logs the work as it's done.
 
 **Severity:** 🔴 loss/operational (fix now) · 🟠 validity (fix before the lockbox eval) · 🟡 quality (opportunistic).
@@ -20,6 +20,7 @@ At a glance:
 | **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☑ |
 | **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
 | **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit open**) | 9.5 done / data ready / fit is next | ◐ |
+| **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☐ |
 
 ---
 
@@ -364,6 +365,33 @@ ADP+noise on a real-pick availability Brier** (done 2026-07-11 — behavioral 0.
 
 ---
 
+## 🟡 T9 — Phase 13.3 FAAB bidder is pragmatic; rigorous auction theory owed
+**Status ☐ · opportunistic, folds into Phase 15.4 (auction support).** Opened 2026-07-12 (Session B, 13.3).
+
+**Symptom / decision.** 13.3's spec (`docs/BUILD_PLAN.md`) said "reuse 11.4", but **11.4 (auction-draft
+support) was deferred out of Phase 11 into Phase 15.4** and `draft/auction.py` does not exist. Per the user
+decision (2026-07-12), 13.3 shipped the **pragmatic** FAAB bidder (`inseason/waivers.py::faab_bid`) — enough
+to clear the done-bar — and the **rigorous** version is explicitly owed here.
+
+**What's pragmatic (and its limitation).** `faab_bid` combines three forces with **fixed/heuristic**
+parameters, not an equilibrium: (1) marginal value → willingness-to-pay via a linear `value_scale`; (2) the
+option value of budget as a closed-form ration `1/(1+κ·(weeks−1))` (a monotone hoard-early curve, **not** a
+budget-state dynamic program); (3) first-price shading against a **fixed belief** `opp_bids` (a static
+naive-field sample, **not** a fitted/equilibrium opponent-bid distribution). Also: the sim's smart agent bids
+marginal-value-over-its-own-roster, but against a **synthetic** field (no real FAAB transaction data exists —
+the Sleeper corpus is draft picks only), so the done-bar is a relative sim result, not a Brier-verified fit.
+
+**The exact fix (at Phase 15.4).** Build `draft/auction.py` with a real auction-value engine (budget-state
+DP or an equilibrium bid-shading model calibrated to an opponent-bid distribution), then have 13.3 reuse it:
+replace the `value_scale` map with auction values, the closed-form ration with the DP's continuation value,
+and the fixed `opp_bids` with the fitted field. If/when real FAAB transaction logs are ever sourced (Sleeper
+transactions endpoint), fit and Brier-score the opponent-bid model like the draft opponent model (11.1/11.2).
+
+**Done-when.** `draft/auction.py` exists and `faab_bid` consumes auction values + a fitted/DP continuation
+value; the FAAB sim still passes its done-bar under the upgraded machinery.
+
+---
+
 ## Ordering (see `ROADMAP.md ★ THE PIPELINE` for the full sequence)
 1. ~~**Now:** T1 (commit), T2 (backup).~~ ☑ both done (2026-07-10).
 2. ~~**Opportunistic:** T7 (scrape guards + raw-payload archival + props shelved).~~ ☑ done (2026-07-10).
@@ -375,5 +403,7 @@ ADP+noise on a real-pick availability Brier** (done 2026-07-11 — behavioral 0.
 7. ~~**When real leagues exist:** S4/Phase 11 (T8b behavioral opponent model + availability Brier).~~
    ☑ **done (2026-07-11)** — corpus cleared the blocker; fit + availability Brier both beat ADP+noise.
 8. **Next buildable pipeline item (⟳ reordered 2026-07-11 — S6 has no dependency on Phase 13/12):** S6 →
-   Phase 13 / S7 (in-season co-pilot) → Phase 12 → Phase 15.
-9. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).
+   Phase 13 / S7 (in-season co-pilot) → Phase 12 → Phase 15. **S6 + 13.1 + 13.2 ☑ (Session A, 2026-07-12);
+   13.3 ☑ (Session B, 2026-07-12); 13.4 + 13.5 next.**
+9. **At Phase 15.4 (auction support):** T9 (upgrade the pragmatic 13.3 FAAB bidder to real auction theory).
+10. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).

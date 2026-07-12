@@ -1,0 +1,127 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "per_season": [
+    {
+      "season": 2017,
+      "n_leagues": 200,
+      "n_teams": 10,
+      "n_pool": 588,
+      "value_scale": 0.5054939555712022,
+      "smart_value": 250.0571319320586,
+      "naive_value": 232.7241783685248,
+      "value_gain": 17.33295356353382,
+      "value_gain_ci": [
+        -0.2761314066241587,
+        35.45522718940989
+      ],
+      "frac_leagues_smart_wins": 0.56,
+      "smart_value_per_dollar": 2.778412453537875,
+      "naive_value_per_dollar": 2.574233366063443,
+      "beats_naive": false
+    },
+    {
+      "season": 2018,
+      "n_leagues": 200,
+      "n_teams": 10,
+      "n_pool": 591,
+      "value_scale": 0.5907756641091877,
+      "smart_value": 312.57875321579576,
+      "naive_value": 270.1796223399297,
+      "value_gain": 42.39913087586603,
+      "value_gain_ci": [
+        23.419651739049524,
+        61.2788075647696
+      ],
+      "frac_leagues_smart_wins": 0.625,
+      "smart_value_per_dollar": 3.4730971035934144,
+      "naive_value_per_dollar": 2.939649824238994,
+      "beats_naive": true
+    },
+    {
+      "season": 2019,
+      "n_leagues": 200,
+      "n_teams": 10,
+      "n_pool": 602,
+      "value_scale": 0.6126431182753246,
+      "smart_value": 312.6478812395686,
+      "naive_value": 290.33082143411013,
+      "value_gain": 22.317059805458513,
+      "value_gain_ci": [
+        6.021341884482741,
+        38.72159974919084
+      ],
+      "frac_leagues_smart_wins": 0.58,
+      "smart_value_per_dollar": 3.4738651927123088,
+      "naive_value_per_dollar": 3.19305022515799,
+      "beats_naive": true
+    },
+    {
+      "season": 2020,
+      "n_leagues": 200,
+      "n_teams": 10,
+      "n_pool": 598,
+      "value_scale": 0.5962550212270203,
+      "smart_value": 294.41918410989047,
+      "naive_value": 273.81933073088015,
+      "value_gain": 20.599853379010284,
+      "value_gain_ci": [
+        4.006439534850502,
+        36.88574582244466
+      ],
+      "frac_leagues_smart_wins": 0.61,
+      "smart_value_per_dollar": 3.2713241224954883,
+      "naive_value_per_dollar": 2.9816764405443608,
+      "beats_naive": true
+    },
+    {
+      "season": 2021,
+      "n_leagues": 200,
+      "n_teams": 10,
+      "n_pool": 611,
+      "value_scale": 0.5986886247103945,
+      "smart_value": 321.917580895453,
+      "naive_value": 276.6015682640723,
+      "value_gain": 45.31601263138069,
+      "value_gain_ci": [
+        27.73176112439897,
+        63.12770808275857
+      ],
+      "frac_leagues_smart_wins": 0.625,
+      "smart_value_per_dollar": 3.5768618509778394,
+      "naive_value_per_dollar": 3.014600194842986,
+      "beats_naive": true
+    },
+    {
+      "season": 2022,
+      "n_leagues": 200,
+      "n_teams": 10,
+      "n_pool": 642,
+      "value_scale": 0.5894579008360901,
+      "smart_value": 311.80009573148436,
+      "naive_value": 279.520260463296,
+      "value_gain": 32.2798352681883,
+      "value_gain_ci": [
+        13.561229007186947,
+        51.18198816796373
+      ],
+      "frac_leagues_smart_wins": 0.595,
+      "smart_value_per_dollar": 3.4644453541522546,
+      "naive_value_per_dollar": 3.0408659504128326,
+      "beats_naive": true
+    }
+  ],
+  "n_seasons_beating_naive": 5,
+  "mean_value_gain": 30.040807587239602,
+  "mean_value_gain_ci": [
+    21.743751493122506,
+    38.82401064060915
+  ],
+  "PASS": true
+}

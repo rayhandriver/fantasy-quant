@@ -542,3 +542,22 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   (2026-07-12): it does not beat mean-max OOS even for big underdogs** — a single legal swap barely moves the
   ~35-pt team sd (cf. Phase-10.3, where leverage only bit at *whole-team* 1.6× spread changes). Retained
   opt-in, **off by default** (the Phase-7 / props "kept, not the default" pattern).
+- **FAAB / `faab_bid`** (13.3, `inseason/waivers.py`) — Free-Agent Acquisition Budget: a fixed season-long
+  wallet spent in weekly sealed **first-price** auctions for waiver-wire pickups. `faab_bid` sets one bid from
+  three forces — **marginal value** (rest-of-season points over replacement, from 13.1) → `value_scale` →
+  willingness-to-pay; the **option value of budget**; **first-price shading**. The *pragmatic* bidder
+  (`docs/TECH-DEBT.md` **T9**: rigorous auction theory owed to Phase 15.4). Beats naive %-of-budget 5/6 DEV.
+- **Option value of budget / rationing** — a spent dollar can't win a *better* later pickup, so bids are
+  shaded down early and freed at season's end. Encoded as `ration = 1/(1+OPTION_KAPPA·(weeks_remaining−1))`
+  (→ 1 in the final week). The intertemporal-budget half of `faab_bid`.
+- **First-price shading** — in a pay-what-you-bid auction you never bid your full value; you bid the
+  surplus-maximiser `argmax_b (value−b)·P(win|b)` against a belief `opp_bids` about the field (else a flat
+  `SHADE_FRAC`). The competitive half of `faab_bid`.
+- **`n_useful` / diminishing returns (waivers)** — the FAAB sim scores only a team's **top-`n_useful`=4**
+  realized pickups (limited startable slots; a 13th add rides the bench at ~0) and the sharp agent bids
+  **marginal value over what it already holds**. Without this the objective rewards raw *volume* and naive
+  aggression wins — the load-bearing modeling choice that makes budget scarce (finding 2026-07-12).
+- **Mixed field (sim opponents)** — the 13.3 done-bar's opponent set: the sharp agent (seat 0) vs a naive
+  bidder (seat 1) with the remaining seats alternating sharp/naive, so the edge is measured against
+  *equally-sharp* opponents, not only fish (user decision 2026-07-12). No real FAAB transaction data exists
+  (Sleeper corpus = draft picks only), so the field is synthetic — a relative sim result, not a Brier fit.

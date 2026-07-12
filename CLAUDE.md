@@ -61,11 +61,12 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **Next-session pointer (2026-07-12, updated post-Session-A).** **SESSION A ☑ COMPLETE — S6 + Phase 13.1 +
-> 13.2** (all DEV done-bars PASS; **261 tests, ruff clean**; committed? **NOT yet — left for user review**).
-> The code for all three pre-existed as uncommitted WIP from the interrupted session; this session verified
-> it, added the missing unit tests (`tests/test_inseason.py`, +12) + done-bar runners, linted the WIP, ran
-> every validation, and recorded results. Lockbox (2023+24) untouched; DEV-only (2017–22 validation window).
+> **Next-session pointer (2026-07-12, updated mid-Session-B).** **SESSION A ☑ COMPLETE** (S6 + 13.1 + 13.2,
+> committed `87e6bae`). **SESSION B IN PROGRESS — 13.3 ☑ DONE; 13.4 + 13.5 remaining** (paused for user
+> permission before 13.4, per the agreed cadence: 13.3 straight-through → ask → 13.4+13.5 straight-through).
+> **267 tests, ruff clean; 13.3 NOT yet committed — left for user review.** Lockbox (2023+24) untouched;
+> DEV-only (2017–22 validation window). Session-A recap (S6 fade-melt archetype; 13.1 Kalman re-projection;
+> 13.2 co-pilot start/sit + the variance-tilt "kept-not-default" finding):
 > - **S6 adaptive archetypes** (`draft/config.py` `"adaptive"` + `_adaptive_tilt`; `steps/spine_5_adaptive.py`)
 >   — a wrapper that **melts a static parent's *fade* by how far a candidate has slid off ADP** (`ADAPT_DECAY`,
 >   `ADAPT_SLIDE_WEIGHT`; sliding value melts ~2× a reach; reaches untouched; no board context ⇒ = parent).
@@ -81,14 +82,21 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 >   (0/6; a single legal swap barely moves the ~35-pt team sd — cf. Phase-10.3 whole-team-only leverage), so
 >   `optimal_lineup` default is now `objective="mean"`; the tilt is kept **opt-in** `objective="win"`, off by
 >   default (the Phase-7 / props "kept, not the default" pattern).
-> **What's next (THE PIPELINE):** **Session B = Phase 13.3 waivers/FAAB + 13.4 streaming + 13.5 trades** — the
-> two heavy new-domain substeps (FAAB bandit + auction theory; trade market-making) plus streaming, all on
-> existing infra, nothing gated on Phase 12 (~600–1,000L). Then **Session C = Phase 12 news/NLP + Phase 15
-> multi-format+auction**, **Session D = optional MCTS/RL gate + T5 pre-registration + LOCKBOX EVAL**, then
-> **Session E = Phase 14.1** and **F+ = the go-live tail**. **T5** pre-registration (freeze the stack, report
-> once; T3/T4 already ☑) is the only hard gate before the single lockbox eval. Corpus can be grown anytime via
-> `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
-> **Start here next session: Session B (Phase 13.3–13.5).** (Full session-sizing guide in `ROADMAP.md`.)
+> - **13.3 waivers/FAAB ☑** (`inseason/waivers.py`; `steps/phase13_3_waivers.py`) — pure `faab_bid` =
+>   **marginal value** (rest-of-season over replacement, from 13.1) → `value_scale` willingness-to-pay,
+>   **rationed** by the option value of budget `1/(1+κ·(weeks−1))`, **first-price shaded** vs a belief about
+>   the field. **Beats naive %-of-budget 5/6 DEV** in a **mixed-field** sim (mean +30.0 value/szn, CI
+>   [+21.7,+38.8]). **KEY FINDING:** the sim needs **diminishing returns** — score only a team's **top-4**
+>   pickups + bid marginal-over-roster — or it rewards *volume* and naive aggression wins (0/6 → 5/6).
+>   **DECISIONS (user, upfront):** *pragmatic now* (11.4/auction was deferred to 15.4, `draft/auction.py`
+>   doesn't exist → rigor owed as **TECH-DEBT T9**); *mixed field* (sharp vs naive + alternating).
+> **What's next (THE PIPELINE):** **finish Session B = 13.4 streaming + 13.5 trades** (both on existing infra,
+> nothing gated on Phase 12; 13.5 = **full market-making** per user). Then **Session C = Phase 12 news/NLP +
+> Phase 15 multi-format+auction** (Phase 15.4 discharges T9), **Session D = optional MCTS/RL gate + T5
+> pre-registration + LOCKBOX EVAL**, then **Session E = Phase 14.1** and **F+ = the go-live tail**. **T5**
+> pre-registration (freeze the stack; T3/T4 already ☑) is the only hard gate before the single lockbox eval.
+> Corpus can be grown anytime via `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
+> **Resume here: Session B remainder (13.4 → 13.5).** (Full session-sizing guide in `ROADMAP.md`.)
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them

@@ -5,6 +5,25 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-12 (Session B, part 1 of 3)** — **Phase 13.3 waivers/FAAB DONE (DEV done-bar PASS; 267 tests,
+  ruff clean; NOT committed — paused for user permission before 13.4 per the session cadence).** Greenfield
+  `inseason/waivers.py`. Lockbox untouched; all tuning on DEV (2017–22).
+  - **`faab_bid`** (pure): marginal value → `value_scale` willingness-to-pay, **rationed** by the option
+    value of budget `1/(1+OPTION_KAPPA·(weeks−1))` (`OPTION_KAPPA=0.15`), then **first-price shaded** to
+    `argmax_b (value−b)·P(win|b)` vs a belief `opp_bids` (else flat `SHADE_FRAC=0.9`). 6 pure unit tests.
+  - **DECISION (user, upfront):** *pragmatic now, rigor owed.* 13.3's "reuse 11.4" is stale — 11.4/auction
+    was deferred to **Phase 15.4** (`draft/auction.py` doesn't exist). So `faab_bid` uses fixed/heuristic
+    params, **not** an equilibrium/budget-state DP. Logged as **`docs/TECH-DEBT.md` T9** (fold into 15.4).
+  - **DECISION (user, upfront):** *mixed field* — `faab_skill` seats the sharp agent (0) vs a naive
+    %-of-budget bidder (1), the rest alternating, so the edge is measured against equally-sharp opponents.
+  - **KEY FINDING (in-session):** the first cut banked **every** acquisition's value → the objective rewarded
+    raw *volume* and naive aggression won **0/6**. Fix = model **diminishing returns**: score only a team's
+    **top-`n_useful`=4** realized pickups and have the sharp agent bid **marginal value over what it already
+    holds** (a bench add is worth ~0). That makes budget scarce and flips it to **5/6 PASS** (mean gain +30.0
+    value/szn, season-block CI [+21.7,+38.8]; higher value-per-dollar). *Reusable lesson for 13.4/13.5: a
+    waiver/streaming/trade sim needs a roster/slot constraint or it rewards churn, not skill.*
+  - `steps/phase13_3_waivers.py` done-bar runner; `analysis/phase13_waivers.json`. **Next (pending user go):
+    13.4 streaming, then 13.5 trades — straight-through.**
 - **2026-07-12** — **SESSION A COMPLETE: S6 + Phase 13.1 + 13.2 (all DEV done-bars PASS; 261 tests, ruff
   clean; NOT yet committed — left for user review).** Resumed the interrupted Session A: the code for all
   three substeps pre-existed (uncommitted WIP) but was never tested, run, or linted. This session verified

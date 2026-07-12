@@ -20,6 +20,7 @@ from fantasy_quant.inseason.reproject import (
     preseason_prior,
     reproject_week,
 )
+from fantasy_quant.inseason.waivers import faab_bid
 from fantasy_quant.simulation.weekly import WeeklyModel
 
 
@@ -196,3 +197,45 @@ def test_coin_flip_does_no_harm():
     win_c = optimal_lineup(weekly, ["RB", "RB"], slots, opp, objective="win")
     mean_c = optimal_lineup(weekly, ["RB", "RB"], slots, opp, objective="mean")
     assert win_c.win_prob >= mean_c.win_prob     # guard holds regardless of which lineup it keeps
+
+
+# ------------------------------------------------------------------------------------------------
+# 13.3 — waivers / FAAB bidding
+# ------------------------------------------------------------------------------------------------
+def test_faab_bid_no_bid_on_worthless_pickup_or_empty_wallet():
+    assert faab_bid(0.0, 100, 1, value_scale=10.0) == 0.0        # zero marginal value
+    assert faab_bid(-5.0, 100, 1, value_scale=10.0) == 0.0       # a bust (below replacement)
+    assert faab_bid(100.0, 0.0, 1, value_scale=10.0) == 0.0      # no budget left
+
+
+def test_faab_bid_increases_with_value():
+    lo = faab_bid(30.0, 100, 1, value_scale=10.0)
+    hi = faab_bid(90.0, 100, 1, value_scale=10.0)
+    assert 0.0 < lo < hi                                 # a better pickup draws a bigger bid
+
+
+def test_faab_bid_never_exceeds_budget():
+    # willingness-to-pay (value/scale = 100) dwarfs the wallet -> bid is capped at the budget
+    assert faab_bid(1000.0, 15.0, 1, value_scale=10.0) <= 15.0
+
+
+def test_faab_bid_rations_budget_early_and_spends_late():
+    """The option value of budget: with many weeks (and future pickups) ahead you shade down; in the
+    final week it is use-it-or-lose-it, so you bid more for the identical pickup."""
+    early = faab_bid(90.0, 100, 13, value_scale=10.0)           # 12 weeks of future options
+    late = faab_bid(90.0, 100, 1, value_scale=10.0)             # last week
+    assert 0.0 < early < late
+
+
+def test_faab_bid_no_field_uses_fixed_shade():
+    # wtp = 90/10 = 9, weeks_remaining=1 -> ration=1 -> v_eff=9 -> shade 0.9 -> 8.1
+    assert faab_bid(90.0, 100, 1, value_scale=10.0, shade_frac=0.9) == pytest.approx(8.1)
+
+
+def test_faab_bid_shades_harder_against_a_soft_field():
+    """First-price shading: you bid only enough to likely clear the field, so a soft field is won
+    cheaply and a tough field forces a higher bid — but never above your effective value."""
+    v_eff = 90.0 / 10.0                                          # weeks_remaining=1 -> ration=1
+    soft = faab_bid(90.0, 100, 1, value_scale=10.0, opp_bids=[1.0, 2.0, 3.0])
+    tough = faab_bid(90.0, 100, 1, value_scale=10.0, opp_bids=[7.0, 8.0, 9.0])
+    assert 0.0 < soft < tough <= v_eff
