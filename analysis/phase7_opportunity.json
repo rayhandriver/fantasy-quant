@@ -1,0 +1,47 @@
+{
+  "overall": {
+    "n": 1868,
+    "opp_mae": 2.874874688367017,
+    "naive_mae": 2.857121940884971,
+    "market_mae": 2.762022353379321,
+    "opp_minus_market_gain": -0.11262971068583051,
+    "opp_minus_market_ci": [
+      -0.18743942983377285,
+      -0.036303926333454216
+    ]
+  },
+  "movers": {
+    "n": 466,
+    "n_with_market": 466,
+    "opp_mae": 2.975310390599571,
+    "naive_mae": 2.9041470165728285,
+    "market_mae": 2.820319405625987,
+    "opp_vs_naive_gain": -0.0700578406327845,
+    "opp_vs_naive_ci": [
+      -0.16416768505502144,
+      0.02073636549185812
+    ],
+    "opp_vs_market_gain": -0.15434100153835761,
+    "opp_vs_market_ci": [
+      -0.30021549036462397,
+      -0.0022622770011983206
+    ]
+  },
+  "skill_travels": {
+    "n_movers": 466,
+    "corr_skill_vs_realized": 0.4579948024110112,
+    "corr_priorrate_vs_realized": 0.5875286494868123,
+    "skill_more_stable": false
+  },
+  "rookie": {
+    "n": 316,
+    "interval_coverage_1sigma": 0.6613924050632911,
+    "spearman_pred_vs_real": 0.5327860841257799
+  },
+  "verdict": {
+    "overall_not_worse_than_market": true,
+    "movers_strictly_beat_naive": false,
+    "KEEP": false,
+    "rationale": "DROP: fails the as-written bar (needs \u2265 consensus overall AND better on movers)."
+  }
+}

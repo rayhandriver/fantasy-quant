@@ -1390,3 +1390,62 @@ Brier is computable). Enhanced the crawler + ran it live.
   auctions/linear. Fix: derived artifacts (ADP boards, manager profiles) use **complete snake/linear only**;
   the integrity gate checks **no duplicate `pick_no`** (real corruption) and *reports* incompleteness rather
   than failing it. **234 tests, ruff clean, all data-health gates PASS.**
+
+## Phase 11 — behavioral opponent model + availability (2026-07-11) ☑ core DONE
+The reframe's promise cashed: the opponent model's job (who gets picked, given the board) has hard ground
+truth, so it is **Brier-verifiable** — and it verifies.
+- **11.1 fit — a conditional (McFadden) logit beats ADP.** At each pick the manager chooses one of the
+  top-40 available-by-ADP skill players; utility = β·features, choice prob = softmax over the *candidate
+  set* (grouped-softmax NLL + L2, vectorized `np.*.reduceat`, scipy L-BFGS). Fit on **7,900 real human picks
+  across 9 seasons**, using **FFC as the ADP board** (external consensus → no circularity with the Sleeper
+  corpus that the `sleeper_human` board would introduce). **Walk-forward (leave-one-season-out) log-loss
+  3.613→3.501, gain +0.113 CI[+0.101,+0.124]; Brier +0.0088 CI[+0.0076,+0.0100]** — beats the ADP-only
+  baseline (a logit on ADP alone ≡ "ADP + logistic noise", strictly stronger than the sim's ADP+Gaussian).
+- **The behavioral story (interpretable coefs):** **fandom +1.03 is the *strongest* signal** — managers
+  reach hard for players on their favorite teams; then **rookie hype +0.45**, **roster need +0.33**, mild
+  positional-run chasing +0.07; TE/QB go a touch earlier than raw ADP, RB/WR a touch later.
+- **Two bugs the real data exposed (both fixed):** (1) a scalar-reduction `TypeError` in the NLL
+  (`X[chosen] @ beta` is a vector — needed `.sum()`); (2) **`fav_teams` is stored comma-separated**
+  (`"CLE,MIA,DET"`), not JSON — the `json.loads` silently fell back to empty, zeroing fandom across 307k
+  rows (statistically impossible → the tell). Fixing the `.split(",")` **~tripled** the log-loss gain
+  (+0.040→+0.113): fandom was the single biggest missing signal.
+- **Candidate-set gotcha:** with K/DST as candidates but never as (skill-only) *choices*, the never-pick-
+  K/DST signal inflated every skill position dummy (+3 to +3.9) and *hurt* top-1 accuracy while helping
+  log-loss. Restricting the candidate universe to skill players fixed the dummies to interpretable relative
+  preferences. Absolute log-loss is high (~3.5, near ln 40) because the exact pick among ~40 similar players
+  is genuinely high-entropy — the **proper-scoring gain over ADP** is the deliverable, not top-1.
+- **11.2 availability Brier — the owed S4 metric, and it's a rout.** MC-simulate the intervening opponent
+  picks under the fitted model → per-player survival to your next pick; score on real windows vs the
+  incumbent `survival_prob`. **Behavioral Brier 0.158 vs best-tuned ADP+noise 0.316** (swept noise 3–36 so
+  the baseline isn't a strawman; **default noise-5 is 0.419 — worse than a base-rate constant**, i.e. the
+  MVP placeholder is badly overconfident on the contested band). **Gain +0.159 CI[+0.083,+0.264].** Promotes
+  from opt-in to the S4 default.
+- **11.3 realistic mock — personalities differentiate.** A `Personality` tilts the fitted β (scale/override,
+  temperature, round-dependent positional penalty); plugged into `simulate_draft` via a new backward-
+  compatible `opponent_pick_fn` hook. Behavioral opponents draft a human-like first-3-rounds mix
+  (**RB14/WR14**) where pure ADP+noise robotically takes **RB21/WR9**; `zero_rb` drops early RBs to 5.
+- **Scope kept honest:** MCTS/CFR/auction/self-play stay out (deprioritized/dropped/roadmap) — the
+  *verifiable* core (fit + availability + configurable mocks) is what Phase 11 owed, and it's done + green.
+
+## Phase 7 — opportunity-adjusted projection (2026-07-11) ✗ BUILT & DROPPED
+A keep-or-drop gate that **dropped** — a clean negative result, exactly what the gate is for.
+- **7.1 skill÷opportunity decomposition** = a **two-way fixed-effects (AKM worker/firm) split** of
+  position-and-season-relative log-ppg into a per-player **skill** effect (transferable) × a per-team
+  **situation** multiplier (opportunity); ridge-regularized (weak identification for non-movers), movers
+  identify the split. Face-valid: top skill = **Kelce, McCaffrey, A.Brown, Kamara, Elliott, Cook,
+  Jefferson, Barkley, Hill, Bell** (elite, team-independent). **But skill does NOT travel better than raw
+  production** across moves (Spearman skill↔realized **0.458** < prior-rate↔realized **0.587**) — the
+  ridge-shrunk skill estimate is noisier than just last year's rate.
+- **7.2 re-projection** done right as an **information-preserving delta** (`log opp = log prior_rate −
+  situation[old] + situation[new]`; non-movers ≡ naive). On **466 role-changers** the situation swap is a
+  **wash-to-slightly-worse than naive carry-over** (ppg-MAE 2.972 vs 2.901; gain −0.070 **CI[−0.152,+0.014]
+  includes 0**), and the existing **EB-shrunk market baseline beats it** (2.821). *(First-pass reconstruction
+  from scratch — `pos_base + skill + situation` — was much worse, MAE 3.29; the delta form is the fair test.)*
+- **7.3 rookie transport** *works* but duplicates Phase 4.3: draft-capital + landing-spot situation + combine
+  forty → a rookie **distribution** (point + 1σ band). Held-out **1σ coverage 0.66** (≈ target 0.68, well-
+  calibrated) and **Spearman(pred, realized) +0.53** (vs 4.3's +0.62). Conditional-on-playing (documented
+  survivorship: never-play draftees are out of sample).
+- **Verdict (as-written bar): DROP.** Overall it's within tolerance of the consensus proxy, but it is not
+  *strictly better on role-changers* (the second half of the bar). **Thesis-consistent:** a team fixed-effect
+  carries no exploitable move-signal beyond carrying the player's realized rate forward — consensus already
+  prices situation changes. Code stays in-repo as a validated-and-dropped experiment (cf. props/CFR).

@@ -462,3 +462,45 @@ section, not just appended.
 - **Data appetite (Sleeper)** — board mean-ADP error ≈ σ_pick/√N (mid-round σ≈15 → N=20 ⇒ ±3–4 picks); a
   **Brier-verifiable opponent model needs ~50 real human drafts min, ~100–150 ideal**. Bot mocks add ADP only
   (cap ~10–20; FFC covers production ADP). Cheapest real-signal source = human mock lobbies + participant crawl.
+
+### Phase 11 — behavioral opponent model
+- **Behavioral opponent model** (`draft/opponent_model.py`) — the reframe's upgrade of "ADP + Gaussian
+  noise": a model of *who each manager actually picks*, fit on real drafts and **Brier/log-loss-scored** on
+  held-out picks. Keeps ADP as the dominant term, learns the human deviations (fandom, rookie hype, roster
+  need, positional runs).
+- **Conditional (McFadden) logit / discrete-choice model** — the estimator: at a pick, the manager chooses
+  **one** player from the set on the board; utility of each candidate = β·features, and P(pick=p) =
+  **softmax over the available candidate set** (not an independent per-player probability). Fit by MLE of the
+  grouped-softmax negative log-likelihood; the gradient is `Xᵀ(softmax − chosen)`.
+- **Candidate set** — per pick, the **top-K available-by-ADP** skill players (K=40; the realized pick is in-
+  set ~100 %). Conditioning both models on the same set makes "behavioral vs ADP-only" a fair comparison;
+  it also means absolute log-loss is high (≈ ln K) because the exact pick among K similar players is high-
+  entropy — the **gain over ADP** (a proper-scoring rule) is the deliverable, not top-1 accuracy.
+- **Tier-A / Tier-B features** — Tier-A (`adp`, position dummies, positional-run) are computable from any
+  live `DraftState` board, so the fitted β also drives availability sim + mock opponents; Tier-B (`mgr_lean`,
+  `rookie`, `fandom`, `need`) need manager/player metadata and are set to **0** (the exact "no info"
+  marginalization, utility being linear) when unknown live.
+- **Fandom (home-team reach)** — a manager drafting a player on one of their favorite NFL teams; empirically
+  the **strongest** behavioral coefficient (+1.03). Note: `sleeper_manager_profiles.fav_teams` is stored
+  **comma-separated** (`"CLE,MIA,DET"`), not JSON — parse with `.split(",")`.
+- **Availability Brier** — the S4-owed metric: for each real draft window, predict P(each contested player
+  still available at your next pick) and Brier-score vs realized. Behavioral **0.158** vs best-tuned ADP+noise
+  **0.316** (default noise-5 is 0.419 — worse than a base-rate constant). Computed by MC-simulating the
+  intervening opponent picks under the model (`draft/availability.py`).
+- **Personality (mock opponent)** (`draft/personalities.py`) — a named tilt on the fitted β (scale/override a
+  coefficient, softmax temperature, a round-dependent positional penalty) → a heterogeneous opponent
+  (`chalk`, `zero_rb`, `reacher`, `homer`, …) pluggable into `simulate_draft` via the new `opponent_pick_fn`
+  hook. Makes practice drafts feel like a real room.
+
+### Phase 7 — opportunity-adjusted projection (dropped)
+- **Skill ÷ opportunity decomposition** (`causal/decompose.py`) — production = a player-intrinsic **skill**
+  effect (transferable) × a team-conferred **situation multiplier** (opportunity). Estimated as a **two-way
+  fixed-effects (AKM) model** — the labor-economics worker/firm decomposition, here players/teams — on
+  position-and-season-relative log-ppg; **movers identify the split** (a player seen in two situations pins
+  down which part is his). Ridge-regularized ⇒ a *regularized estimate*, **not** an identified causal effect.
+- **Situation swap (re-projection)** — projecting a mover by keeping his realized rate and swapping the team
+  situation: `log opp_rate = log prior_rate − situation[old_team] + situation[new_team]` (non-movers get a
+  zero delta ⇒ ≡ naive carry-over). The information-preserving form; the from-scratch reconstruction is worse.
+- **Keep-or-drop gate** — Phase 7's exit criterion: keep iff **≥ consensus proxy overall AND strictly better
+  on role-changers**, else drop. **Result: DROP** — the situation swap is a wash-to-worse than naive on movers
+  (the team fixed-effect adds no exploitable move-signal; consensus already prices it).

@@ -216,12 +216,13 @@ def _prepare_board(board: pd.DataFrame) -> pd.DataFrame:
 
 def simulate_draft(board: pd.DataFrame, your_pick_fn=None, n_teams: int = 10, rounds: int = 15,
                    slots: RosterSlots | None = None, your_team: int = 0, noise: float = 5.0,
-                   seed: int | None = None) -> DraftState:
+                   seed: int | None = None, opponent_pick_fn=None) -> DraftState:
     """Simulate a full ``n_teams`` x ``rounds`` snake draft.
 
     ``your_pick_fn(state) -> board_label`` drives your seat (defaults to :func:`adp_pick_fn`);
-    every other seat picks via :func:`pick_by_adp` with ``noise``. Reproducible given ``seed``.
-    Returns the final :class:`DraftState` (``.your_roster()``, ``.pick_log()``, ``.rosters``).
+    every other seat picks via ``opponent_pick_fn(state, team) -> board_label`` when supplied
+    (Phase 11.3 behavioral/personality opponents), else :func:`pick_by_adp` with ``noise``.
+    Reproducible given ``seed``. Returns the final :class:`DraftState`.
     """
     slots = slots or RosterSlots()
     b = _prepare_board(board)
@@ -230,15 +231,16 @@ def simulate_draft(board: pd.DataFrame, your_pick_fn=None, n_teams: int = 10, ro
         rng=np.random.default_rng(seed), noise=noise,
         available=set(b.index), rosters=[[] for _ in range(n_teams)],
     )
-    return run_to_completion(state, your_pick_fn)
+    return run_to_completion(state, your_pick_fn, opponent_pick_fn)
 
 
-def run_to_completion(state: DraftState, your_pick_fn=None) -> DraftState:
+def run_to_completion(state: DraftState, your_pick_fn=None, opponent_pick_fn=None) -> DraftState:
     """Drive ``state`` from its current pick to the end of the draft, in place (and return it).
 
-    Your seat uses ``your_pick_fn`` (defaults to :func:`adp_pick_fn`); every other seat picks via
-    :func:`pick_by_adp` with ``state.noise``. :func:`simulate_draft` runs this from a fresh state;
-    the 9.5 win-prob policy runs it on a :meth:`DraftState.clone` to finish a *tentative* draft.
+    Your seat uses ``your_pick_fn`` (defaults to :func:`adp_pick_fn`); every other seat uses
+    ``opponent_pick_fn(state, team)`` when supplied (11.3), else :func:`pick_by_adp` with
+    ``state.noise`` — the MVP ADP+noise baseline. :func:`simulate_draft` runs this from a fresh
+    state; the 9.5 win-prob policy runs it on a :meth:`DraftState.clone`.
     """
     pick_fn = your_pick_fn or adp_pick_fn
     while not state.is_done() and state.available:
@@ -247,6 +249,10 @@ def run_to_completion(state: DraftState, your_pick_fn=None) -> DraftState:
             idx = int(pick_fn(state))
             if idx not in state.available:
                 raise ValueError(f"your_pick_fn returned unavailable pick {idx}")
+        elif opponent_pick_fn is not None:
+            idx = int(opponent_pick_fn(state, team))
+            if idx not in state.available:
+                raise ValueError(f"opponent_pick_fn returned unavailable pick {idx}")
         else:
             idx = pick_by_adp(state, team, noise=state.noise)
         _apply_pick(state, team, idx)

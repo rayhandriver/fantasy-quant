@@ -5,6 +5,64 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-11 (f)** — **PHASE 11 (draft engine core) DONE + PHASE 7 (opportunity-adjusted
+  projection) BUILT & DROPPED — one autonomous session.** User authorized a combined
+  Phase-11→Phase-7 run **fully autonomously** (STOP gate §3.7 waived for the session), with four
+  up-front decisions: **all 149 human drafts** in the fit pool (opponent model predicts *draft
+  flow*, not player value → treated as outside the value-stack lockbox; every reported metric is
+  still walk-forward), the **as-written** keep-or-drop bar, and the **full 4-substep** Phase 7
+  (incl. a fresh rookie transport).
+  - **Phase 11.1 — behavioral opponent model (`draft/opponent_model.py`)** ✅ **DONE-when MET.**
+    A **conditional (McFadden) logit**: at each pick the manager chooses one of the top-40 available-
+    by-ADP skill candidates; utility = β·features, choice prob = softmax over the candidate set;
+    fit by MLE (grouped-softmax NLL + L2, vectorized `reduceat`, scipy L-BFGS) on **7,900 real
+    human picks / 9 seasons** (FFC as the *external* ADP board — no corpus circularity). Coefs
+    tell the behavioral story: **fandom +1.03** (home-team reach — the strongest signal),
+    **rookie hype +0.45**, **roster need +0.33**, mild run-chasing +0.07, TE/QB go a touch earlier
+    than raw ADP. **Beats the ADP-only baseline** (a logit on ADP alone = "ADP + logistic noise")
+    leave-one-season-out: **log-loss 3.613→3.501, gain +0.113 CI[+0.101,+0.124]; Brier gain
+    +0.0088 CI[+0.0076,+0.0100]** — CIs exclude 0. *(Two bugs found+fixed mid-build: a scalar-
+    reduction in the NLL; and `fav_teams` is stored **comma-separated**, not JSON — the broken
+    `json.loads` had silently zeroed fandom, and fixing it ~tripled the log-loss gain.)*
+  - **Phase 11.2 — availability distributions + the owed availability Brier (`draft/availability.py`)**
+    ✅ **DONE-when MET.** MC-simulates the intervening opponent picks under the fitted model to get
+    per-player **survival to your next pick**; scored on real draft windows vs the incumbent
+    `survival_prob` (ADP+noise). Compared against the **best-tuned** noise (grid 3–36) to avoid
+    strawmanning: **behavioral Brier 0.158 vs best-tuned ADP+noise 0.316** (default-noise-5 is a
+    dismal 0.419 — the MVP placeholder is badly overconfident on the contested band), **gain +0.159
+    CI[+0.083,+0.264]**. The behavioral availability oracle earns promotion from opt-in to the S4
+    default.
+  - **Phase 11.3 — realistic mock opponents (`draft/personalities.py`)** ✅ capability delivered.
+    A `Personality` = a light tilt on the fitted β (scale/override a coef, temperature, round-
+    dependent positional penalty); `make_opponent_pick_fn` plugs into `simulate_draft` via a new
+    **backward-compatible `opponent_pick_fn` hook** in the simulator. Behavioral opponents draft a
+    realistic first-3-rounds mix (**RB14/WR14**) vs pure ADP+noise's robotic **RB21/WR9**; `zero_rb`
+    collapses early RBs to 5 — personalities differentiate as designed. (Tier-B tilts fandom/rookie
+    need an enriched board to express; documented.) *MCTS/CFR/auction/self-play remain deliberately
+    out of scope — deprioritized/dropped/roadmap per the reframe; Phase 11's verifiable core is
+    complete.*
+  - **Phase 7 — opportunity-adjusted projection (`causal/`, 4 substeps)** ✅ built, **VERDICT =
+    DROP.** 7.1 `decompose.py`: a **two-way fixed-effects (AKM worker/firm) split** of position-and-
+    season-relative log-ppg into **skill** (per player, transferable) × **situation** (per team),
+    ridge-regularized, movers identify the split — top skill = Kelce/CMC/A.Brown/Kamara (elite,
+    team-independent → face-valid). 7.2 `counterfactual.py`: situation swap as an **information-
+    preserving delta** on the player's realized prior rate (`log opp = log prior − sit_old +
+    sit_new`; non-movers ≡ naive). 7.3 `rookie_transport.py`: draft-capital + landing-spot situation
+    + combine → rookie **distribution** (point+interval) — *this one works* (1σ coverage 0.66,
+    Spearman +0.53) but duplicates Phase 4.3. 7.4 `validate.py`: strict walk-forward.
+    **The gate:** on role-changers (466 movers) the situation swap is a **wash-to-slightly-worse
+    than naive** (ppg-MAE 2.972 vs 2.901, gain −0.070 **CI[−0.152,+0.014] includes 0**), and the
+    existing **EB-shrunk market baseline actually beats it** on movers (2.821). Overall it's within
+    tolerance of market, but it fails the "strictly better on role-changers" half → **DROP** on the
+    as-written bar. Also 7.1's estimated skill does **not** travel better than raw prior production
+    (Spearman 0.458 vs 0.587). **Honest, thesis-consistent negative result** (the keep-or-drop gate
+    doing its job — a team fixed-effect carries no exploitable move signal beyond carrying the rate
+    forward; consensus already prices it). Code kept in-repo as a validated-and-dropped experiment
+    (like props/CFR).
+  - **Integration/discipline:** the behavioral model ships **opt-in** and only *displaces* ADP+noise
+    where it won its Brier gate (calibration > edge). Scorecards: `analysis/phase11_opponent_model.json`,
+    `analysis/phase7_opportunity.json`. **+15 tests (9 new, all green), 243 total, ruff clean.**
+    Runnable: `steps/phase11_opponent_model.py`, `steps/phase7_opportunity.py`.
 - **2026-07-11 (e)** — **0.10c: LEAGUE-SEEDING + REAL LIVE CORPUS.** User couldn't find live human mock
   lobbies (too early in season) → chose to **web-search public leagues**. Reframe: live mocks are moot — the
   crawler reads *historical* leagues (all public now, and better: realized outcomes for the Brier). Enhanced

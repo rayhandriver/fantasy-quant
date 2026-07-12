@@ -341,9 +341,12 @@ consumes `title_probability`/`playoff_prob` directly"):
 - 0.10 ☑ (2026-07-11): ingest built + verified — pick-by-pick JSON shape confirmed, `sleeper_id → gsis`
   crosswalk ingested (100 % skill), per-slot/reach behavior + `sleeper_mock` ADP board derived. See the
   "Done — 8b step 0.10" note above.
-- Phase 11 ☐ (needs a real league): fit the behavioral opponent model; **report the availability Brier**
-  owed from spine-4 (the open S4 item), verifying it beats ADP+noise on real picks. 2025→2026 becomes a full
-  backtest season once a real board lands.
+- Phase 11 ☑ (2026-07-11 — fit on the real corpus): the behavioral opponent model (conditional/McFadden
+  logit) **beats ADP-only** walk-forward (log-loss +0.113 CI[+0.101,+0.124]) and the **availability Brier**
+  owed from spine-4 **beats best-tuned ADP+noise** (0.158 vs 0.316, +0.159 CI[+0.083,+0.264]) → the S4
+  availability oracle promotes from opt-in to the default. `draft/opponent_model.py`, `draft/availability.py`,
+  `draft/personalities.py`; `steps/phase11_opponent_model.py`. (2025→2026 still becomes a full backtest
+  season once a real *2026* ADP board lands.)
 
 **Blocker → CLEARED for a first fit (2026-07-11).** The crawler (0.10b/0.10c) + a live crawl from the
 Sleeper docs' **public example leagues** built a real corpus — **149 human + 117 bot drafts (2017–2020),
@@ -355,8 +358,9 @@ component off 2 seeds) — add `league:<id>`/usernames to `reference/sleeper_see
 `steps/phase0_10b_crawl.py`.
 
 **Done-when.** 8a: switching `objective` measurably changes the drafted roster on DEV, consuming calibrated
-probs. 8b: ☑ ingest + crawler verified on real drafts; a real corpus exists; **☐ the opponent model beats
-ADP+noise on a real-pick availability Brier** (the fit itself — now runnable, next modeling step).
+probs. 8b: ☑ ingest + crawler verified on real drafts; a real corpus exists; **☑ the opponent model beats
+ADP+noise on a real-pick availability Brier** (done 2026-07-11 — behavioral 0.158 vs best-tuned ADP+noise
+0.316, +0.159 CI[+0.083,+0.264]). **T8b CLOSED.**
 
 ---
 
@@ -366,7 +370,9 @@ ADP+noise on a real-pick availability Brier** (the fit itself — now runnable, 
 3. ~~**Phase 9 completion:** T8a (win-prob objective) with T6 (MC consolidation) folded in.~~ ☑ done (2026-07-10).
 4. ~~**Before the lockbox:** T3 + T4 together (coverage + level bias).~~ ☑ done (2026-07-11).
 5. ~~**Next build:** step 0.10 Sleeper ingest (the pick-by-pick data pipe).~~ ☑ done (2026-07-11).
-6. **Next build (buildable now):** Phase 7 (opportunity-adjusted projection, keep-or-drop) — the next
-   pipeline phase while the Phase-11 **fit** (T8b) waits on real-league data.
-7. **When real leagues exist:** S4/Phase 11 (**T8b** behavioral opponent model + availability Brier).
-8. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).
+6. ~~**Next build:** Phase 7 (opportunity-adjusted projection, keep-or-drop).~~ ✗ **built & DROPPED**
+   (2026-07-11 — situation swap is a wash-to-worse than naive on role-changers; consensus already prices it).
+7. ~~**When real leagues exist:** S4/Phase 11 (T8b behavioral opponent model + availability Brier).~~
+   ☑ **done (2026-07-11)** — corpus cleared the blocker; fit + availability Brier both beat ADP+noise.
+8. **Next buildable pipeline item:** Phase 13 / S7 (in-season co-pilot) → S6 → Phase 12 → Phase 15.
+9. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).

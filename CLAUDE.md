@@ -61,20 +61,25 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **Next-session pointer (2026-07-11, updated post-0.10).** T3 + T4 **done** (2025 holdout uncond coverage
-> 44 %→77 %; Phase-10 points coverage 62 %→77 %, bias −137→−113). **Step 0.10 Sleeper ingest is now ☑ done**
-> — the pick-by-pick data pipe is built + verified on 3 real mock drafts (100 % skill crosswalk;
-> `sleeper_mock` ADP board into `adp_snapshots`; POC tendencies; corpus-ready). See `data/sources/sleeper.py`,
-> `steps/phase0_10_sleeper_ingest.py`, `docs/SLEEPER.md`. **What's left / next:** the Phase-11 behavioral
-> opponent-model **fit** + availability Brier (**T8b**) is **blocked on real-league data** (bot mocks carry no
-> persistent `picked_by` identity). **So the next *buildable* pipeline item is Phase 7** (opportunity-adjusted
-> projection, keep-or-drop). Also open: **T5** pre-registration whenever the lockbox eval is imminent.
-> **Sleeper corpus EXISTS (2026-07-11):** a live crawl from the docs' public example leagues built **149
-> human + 117 bot drafts (2017–20), 289 manager profiles** (`sleeper_human`/`sleeper_mock` ADP boards) — the
-> **Phase-11 data blocker is cleared**, so the behavioral opponent-model **fit + availability Brier is now a
-> runnable modeling step**. Grow/broaden the corpus by adding `league:<id>` / usernames to
-> `reference/sleeper_seeds.txt` then `uv run python steps/phase0_10b_crawl.py` (iterative snowball through
-> co-managers; complete snake/linear drafts feed the boards). See `docs/SLEEPER.md`.
+> **Next-session pointer (2026-07-11, updated post-Phase-11+7).** **Phase 11 (draft-engine core) ☑ DONE**
+> and **Phase 7 (opportunity-adjusted projection) ✗ BUILT & DROPPED** — one autonomous session.
+> **Phase 11 (T8b):** the behavioral opponent model (`draft/opponent_model.py`, a conditional/McFadden logit
+> on 7.9k real human picks/9 szn) **beats ADP-only** walk-forward (log-loss +0.113 CI[+0.101,+0.124]; Brier
+> +0.0088) with interpretable coefs (**fandom +1.03** strongest, rookie +0.45, need +0.33); the **availability
+> Brier** (`draft/availability.py`) **beats best-tuned ADP+noise** 0.158 vs 0.316 (+0.159 CI[+0.083,+0.264])
+> → the behavioral availability oracle is the **S4 default**; 11.3 personality mocks plug into `simulate_draft`
+> via a new `opponent_pick_fn` hook. MCTS/CFR/auction/RL stay out (deprioritized/dropped/roadmap).
+> `steps/phase11_opponent_model.py`; `analysis/phase11_opponent_model.json`. **Phase 7 (`causal/`):** all 4
+> substeps built + validated OOS; keep-or-drop (as-written bar) = **DROP** — the team-situation swap is a
+> wash-to-worse than naive carry-over on role-changers (the EB-shrunk market already beats it), and skill
+> doesn't travel better than raw rate. Rookie transport works (1σ cov 0.66) but duplicates 4.3. Kept in-repo
+> like props/CFR. `steps/phase7_opportunity.py`; `analysis/phase7_opportunity.json`.
+> **What's next (THE PIPELINE, stage 5):** the next buildable item is **Phase 13 / S7 — the in-season
+> co-pilot** (re-project → start/sit → waivers/FAAB → streaming → trades), then **S6** adaptive archetypes,
+> then **Phase 12** news/NLP and **Phase 15** multi-format+auction. Then the pre-lockbox hardening — **T5**
+> pre-registration (freeze the stack, report once) — before the single lockbox eval and the Phase-14 app.
+> Corpus can be grown anytime via `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
+> **243 tests, ruff clean.**
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them
