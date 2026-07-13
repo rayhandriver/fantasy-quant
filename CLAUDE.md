@@ -61,10 +61,10 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **Next-session pointer (2026-07-12, updated mid-Session-B).** **SESSION A ☑ COMPLETE** (S6 + 13.1 + 13.2,
-> committed `87e6bae`). **SESSION B IN PROGRESS — 13.3 ☑ DONE; 13.4 + 13.5 remaining** (paused for user
-> permission before 13.4, per the agreed cadence: 13.3 straight-through → ask → 13.4+13.5 straight-through).
-> **267 tests, ruff clean; 13.3 NOT yet committed — left for user review.** Lockbox (2023+24) untouched;
+> **Next-session pointer (2026-07-12, Session B COMPLETE).** **SESSION A ☑ COMPLETE** (S6 + 13.1 + 13.2,
+> committed `87e6bae`). **SESSION B ☑ COMPLETE — 13.3 + 13.4 + 13.5 all DONE → Phase 13 / S7 COMPLETE.**
+> **276 tests, ruff clean; 13.3 committed; 13.4 + 13.5 NOT yet committed — left for user review.** Lockbox
+> (2023+24) untouched;
 > DEV-only (2017–22 validation window). Session-A recap (S6 fade-melt archetype; 13.1 Kalman re-projection;
 > 13.2 co-pilot start/sit + the variance-tilt "kept-not-default" finding):
 > - **S6 adaptive archetypes** (`draft/config.py` `"adaptive"` + `_adaptive_tilt`; `steps/spine_5_adaptive.py`)
@@ -90,13 +90,32 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 >   pickups + bid marginal-over-roster — or it rewards *volume* and naive aggression wins (0/6 → 5/6).
 >   **DECISIONS (user, upfront):** *pragmatic now* (11.4/auction was deferred to 15.4, `draft/auction.py`
 >   doesn't exist → rigor owed as **TECH-DEBT T9**); *mixed field* (sharp vs naive + alternating).
-> **What's next (THE PIPELINE):** **finish Session B = 13.4 streaming + 13.5 trades** (both on existing infra,
-> nothing gated on Phase 12; 13.5 = **full market-making** per user). Then **Session C = Phase 12 news/NLP +
-> Phase 15 multi-format+auction** (Phase 15.4 discharges T9), **Session D = optional MCTS/RL gate + T5
-> pre-registration + LOCKBOX EVAL**, then **Session E = Phase 14.1** and **F+ = the go-live tail**. **T5**
+> - **13.4 streaming ☑** (`inseason/streaming.py`; `steps/phase13_4_streaming.py`) — pure, position-agnostic
+>   `stream_pick`: a **contextual bandit** over the waiver pool = greedy exploit on `matchup_projection = own +
+>   (opp_allow − league_mean)` (both empirical-Bayes shrunk toward the prior season, `PRIOR_GAMES=4`), with a
+>   **switch-margin hysteresis** (`SWITCH_MARGIN=1.0`; UCB explore off by default). **Demonstrated on DST**:
+>   matchup-streaming beats **static-hold 6/6 DEV, +1.46 pts/wk (CI[+0.88,+2.09])**, and beats a
+>   **random-streaming** control 5/6 — so the *matchup signal*, not just the churn, pays (the 13.3 anti-churn
+>   lesson: switch cost + random control). **Scope:** DST demo; `stream_pick` position-agnostic (QB/TE feed
+>   13.1 means as `proj`) — documented extension, not built.
+> - **13.5 trades ☑** (`inseason/trades.py`; `steps/phase13_5_trades.py`) — the **market-maker**. Three pure
+>   kernels: `lineup_value` (a roster's value = its optimal starting-lineup sum only — reuses the 13.2 `_fill`;
+>   the diminishing-returns lesson made positional), `evaluate_trade` (a swap's *change* in each side's
+>   `lineup_value`; `mutual` iff both gain > `ACCEPT_MARGIN=5`), `find_trades` (searches every opponent's
+>   surplus `_benched` for mutual **1-for-1 / 2-for-1** legal deals arbitraging complementary positional
+>   surpluses, ranked by the **worse-off side's** gain `min(mine, theirs)`, with a sell-high/buy-low `market`
+>   tilt). Done-bar via the **Phase-10 MC season sim**: proposed trades **raise both teams' playoff prob 6/6
+>   DEV** (maker season-block CI **[+0.014,+0.021]**, partner **[+0.012,+0.021]**) vs a **random-trade** control
+>   that lifts both ~never. **KEY CORRECTION:** ranking by the *maker's own* gain only cleared a marginal
+>   partner floor (worse side died in MC noise) → rank by `min(maker, partner)` so the objective rewards
+>   *mutual* benefit. **Scope:** value = preseason model ros mean (self-consistent → PIT-trivial); in-season
+>   this `values` slot is 13.1's re-projected mean. Sim trades 1-for-1; 2-for-1 kernel-supported + unit-tested.
+> **What's next (THE PIPELINE):** **Session B done → Phase 13 / S7 COMPLETE.** Next = **Session C = Phase 12
+> news/NLP + Phase 15 multi-format+auction** (Phase 15.4 discharges T9), **Session D = optional MCTS/RL gate +
+> T5 pre-registration + LOCKBOX EVAL**, then **Session E = Phase 14.1** and **F+ = the go-live tail**. **T5**
 > pre-registration (freeze the stack; T3/T4 already ☑) is the only hard gate before the single lockbox eval.
 > Corpus can be grown anytime via `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
-> **Resume here: Session B remainder (13.4 → 13.5).** (Full session-sizing guide in `ROADMAP.md`.)
+> **Resume here: commit 13.4 + 13.5, then Session C (Phase 12 news/NLP + Phase 15).** (Full session-sizing guide in `ROADMAP.md`.)
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them

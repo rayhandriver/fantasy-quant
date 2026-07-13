@@ -1,0 +1,152 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "per_season": [
+    {
+      "season": 2017,
+      "n_managers": 300,
+      "pool_size": 8,
+      "n_pool": 20,
+      "stream_ppw": 9.241190476190477,
+      "static_ppw": 6.5321428571428575,
+      "random_ppw": 7.008571428571429,
+      "stream_minus_static_ppw": 2.709047619047619,
+      "static_gain_ci": [
+        2.524035714285714,
+        2.8766845238095233
+      ],
+      "stream_minus_random_ppw": 2.2326190476190475,
+      "random_gain_ci": [
+        2.021160714285714,
+        2.4407619047619047
+      ],
+      "avg_switches": 9.906666666666666,
+      "beats_static": true,
+      "beats_random": true
+    },
+    {
+      "season": 2018,
+      "n_managers": 300,
+      "pool_size": 8,
+      "n_pool": 21,
+      "stream_ppw": 6.252142857142857,
+      "static_ppw": 5.826428571428571,
+      "random_ppw": 6.0564285714285715,
+      "stream_minus_static_ppw": 0.4257142857142857,
+      "static_gain_ci": [
+        0.22666071428571427,
+        0.6228690476190476
+      ],
+      "stream_minus_random_ppw": 0.1957142857142857,
+      "random_gain_ci": [
+        -0.022654761904761903,
+        0.41645833333333315
+      ],
+      "avg_switches": 9.383333333333333,
+      "beats_static": true,
+      "beats_random": false
+    },
+    {
+      "season": 2019,
+      "n_managers": 300,
+      "pool_size": 8,
+      "n_pool": 21,
+      "stream_ppw": 8.05,
+      "static_ppw": 6.823333333333333,
+      "random_ppw": 6.583809523809524,
+      "stream_minus_static_ppw": 1.2266666666666666,
+      "static_gain_ci": [
+        0.9833273809523809,
+        1.4655178571428569
+      ],
+      "stream_minus_random_ppw": 1.4661904761904763,
+      "random_gain_ci": [
+        1.238077380952381,
+        1.685267857142857
+      ],
+      "avg_switches": 9.483333333333333,
+      "beats_static": true,
+      "beats_random": true
+    },
+    {
+      "season": 2020,
+      "n_managers": 300,
+      "pool_size": 8,
+      "n_pool": 21,
+      "stream_ppw": 7.297142857142857,
+      "static_ppw": 5.078809523809523,
+      "random_ppw": 5.244047619047619,
+      "stream_minus_static_ppw": 2.2183333333333333,
+      "static_gain_ci": [
+        1.9797321428571428,
+        2.454065476190476
+      ],
+      "stream_minus_random_ppw": 2.053095238095238,
+      "random_gain_ci": [
+        1.841184523809524,
+        2.260958333333333
+      ],
+      "avg_switches": 7.796666666666667,
+      "beats_static": true,
+      "beats_random": true
+    },
+    {
+      "season": 2021,
+      "n_managers": 300,
+      "pool_size": 8,
+      "n_pool": 22,
+      "stream_ppw": 8.421904761904761,
+      "static_ppw": 7.422857142857143,
+      "random_ppw": 5.935,
+      "stream_minus_static_ppw": 0.9990476190476191,
+      "static_gain_ci": [
+        0.8511488095238094,
+        1.1407202380952381
+      ],
+      "stream_minus_random_ppw": 2.486904761904762,
+      "random_gain_ci": [
+        2.1878214285714286,
+        2.783815476190476
+      ],
+      "avg_switches": 8.176666666666666,
+      "beats_static": true,
+      "beats_random": true
+    },
+    {
+      "season": 2022,
+      "n_managers": 300,
+      "pool_size": 8,
+      "n_pool": 22,
+      "stream_ppw": 6.4904761904761905,
+      "static_ppw": 5.284761904761905,
+      "random_ppw": 5.776428571428571,
+      "stream_minus_static_ppw": 1.2057142857142857,
+      "static_gain_ci": [
+        1.0366607142857143,
+        1.3838749999999997
+      ],
+      "stream_minus_random_ppw": 0.714047619047619,
+      "random_gain_ci": [
+        0.5173690476190477,
+        0.9086011904761904
+      ],
+      "avg_switches": 8.143333333333333,
+      "beats_static": true,
+      "beats_random": true
+    }
+  ],
+  "n_seasons_beating_static": 6,
+  "n_seasons_beating_random": 5,
+  "mean_gain_ppw": 1.4640873015873017,
+  "mean_gain_ci": [
+    0.8838095238095237,
+    2.091706349206349
+  ],
+  "PASS": true
+}

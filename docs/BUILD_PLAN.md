@@ -648,15 +648,54 @@ model**, scored against real completed drafts.*
   pickups (diminishing returns) + bid **marginal-over-roster**, else the objective rewards *volume* and naive
   aggression wins (0/6 → 5/6). `analysis/phase13_waivers.json`.
 
-### 13.4 — Streaming bandit → `inseason/streaming.py`
+### 13.4 — Streaming bandit → `inseason/streaming.py` ✅ *(2026-07-12 — matchup-streaming beats static-hold 6/6 DEV on DST)*
 - **Do:** explore/exploit over the waiver pool for QB/TE/DST streaming.
 - **Out:** `inseason/streaming.py` (`stream_pick`); **Done:** beats static-hold in sims. **Reuse:** 5.x.
+- **DONE (2026-07-12):** pure, position-agnostic `stream_pick(proj, *, held, switch_margin, n_seen, ucb_c)` —
+  a contextual **bandit** over the waiver pool: greedy **exploit** on `matchup_projection = own +
+  (opp_allow − league_mean)` (own scoring level + opponent-offense generosity, both **empirical-Bayes** shrunk
+  toward the prior season via `_shrink`, `PRIOR_GAMES=4` — the soft **explore**; optional `ucb_c` optimism
+  bonus for explicit explore, off by default), with a **switch-margin hysteresis** (`SWITCH_MARGIN=1.0`) so we
+  don't churn the wire for a trivial upgrade. Done-bar `streaming_skill` / `steps/phase13_4_streaming.py`,
+  demonstrated on **DST** (strongest matchup signal + real `dst_weekly_points` scores; schedule from
+  `game_lines`): `n_managers=300`, each a random 8-unit slice of the waiver-tier defenses (outside top-10 by
+  prior-season points) → matchup-streaming beats **static-hold** (roster the preseason-best unit, start every
+  week, eat its bye) **6/6 DEV, +1.46 DST pts/wk CI[+0.88,+2.09]**. **Signal isolation (13.3 anti-churn lesson
+  applied):** a **random-streaming** control (random available unit each week) — matchup beats random **5/6**
+  (2018 miss +0.2; the opponent signal is real but modest) — proving the *matchup signal*, not just the churn,
+  adds value. **Scope:** DST demonstration; `stream_pick` is position-agnostic (QB/TE would feed 13.1
+  re-projected means as `proj`) — a documented extension, not built (the 13.2 "one passing bar + noted
+  extension" pattern). PIT throughout. `analysis/phase13_streaming.json`.
 
-### 13.5 — Trade finder → `inseason/trades.py`
+### 13.5 — Trade finder → `inseason/trades.py` ✅ *(2026-07-12 — market-making; proposed trades raise both teams' sim win% 6/6 DEV)*
 - **Do:** value trades by **surplus**, surface **mutually-beneficial** deals (market-making), flag buy-low/
   sell-high on model-vs-perception gaps.
 - **Out:** `inseason/trades.py` (`evaluate_trade`, `find_trades`); **Done:** proposed trades raise both teams'
   simulated win% (or yours, for buy-low). **Reuse:** 10.x values.
+- **DONE (2026-07-12):** three pure kernels. `lineup_value(values, pos, slots)` = a roster's value counting
+  **only its optimal starting lineup** (reuses the 13.2 greedy `_fill`) — a player's worth is his *marginal*
+  starting-lineup contribution, ~0 past positional need (the 13.3/13.4 diminishing-returns lesson made
+  positional). `evaluate_trade(...)` prices a swap as the *change* in each side's `lineup_value`; `mutual` iff
+  **both** gain > `ACCEPT_MARGIN=5` (anti-churn hysteresis). `find_trades(my, opponents, values, *, market,
+  rank)` = the **market-maker**: searches each opponent's surplus (`_benched`) for mutual **1-for-1 / 2-for-1**
+  legal deals that arbitrage **complementary positional surpluses**, ranks by the **worse-off side's** gain
+  `min(mine, theirs)` (`rank="balanced"` — the fairest win-win a two-signature trade needs; `rank="mine"` is a
+  self-interested skim), and — given a `market` perception — tilts toward **selling high / buying low** on the
+  model-vs-market `edge`. Done-bar `trade_skill` / `steps/phase13_5_trades.py`: `n_leagues=40` snake-drafted
+  **imbalanced** leagues/season, `n_focal=4` maker seats run `find_trades`, execute the top proposal, and
+  re-simulate the **Phase-10 MC season** (shared player-weekly cache + fixed schedule → pre/post differ *only*
+  by the two swapped rosters, a paired low-variance comparison). **Both** teams' mean playoff-prob **rise 6/6
+  DEV** — maker season-block CI **[+0.014,+0.021]**, partner **[+0.012,+0.021]**, weaker side **[+0.011,+0.019]**.
+  **Signal isolation (13.3/13.4 anti-churn control):** a **random-trade** control lifts both sides ~never
+  (~0–10%); proposed trades beat it **6/6**, so it is the *surplus signal*, not roster churn. **Key correction:**
+  ranking by the maker's own gain only cleared a *marginal* partner floor (worse side died in MC noise) →
+  ranking by `min(maker, partner)` makes both sides gain robustly — the objective must reward *mutual* benefit
+  or the maker just skims. **Scope:** value currency = preseason model ros mean (self-consistent with the sim →
+  PIT-trivial); in-season this `values` slot is 13.1's re-projected mean (fed in, the 13.4→13.1 pattern). Sim
+  trades **1-for-1** (count-neutral); **2-for-1** consolidation supported by kernels + unit-tested, not simmed.
+  Gate = **season-block bootstrap on each side's gain** (per-season two-CI test underpowered at n≈14–48/season;
+  2018 partner grazes 0, echoing 13.4's 2018 miss). PIT throughout. `analysis/phase13_trades.json`.
+  **→ Phase 13 / S7 COMPLETE.**
 
 ---
 

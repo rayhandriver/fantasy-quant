@@ -5,8 +5,59 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-12 (Session B, part 3 of 3)** — **Phase 13.5 trades / market-making DONE (DEV done-bar PASS; 276
+  tests, ruff clean; NOT committed — left for user review with 13.4).** Greenfield `inseason/trades.py`.
+  Lockbox untouched; all tuning on DEV (2017–22). **Session B (13.3+13.4+13.5) complete → S7/Phase 13 done.**
+  - **Pure kernels:** `lineup_value` (roster value = its optimal starting-lineup sum only — reuses the 13.2
+    greedy `_fill`; the diminishing-returns lesson made positional); `evaluate_trade` (a swap's *change* in
+    each side's `lineup_value`; `mutual` iff **both** gain > `ACCEPT_MARGIN=5`); `find_trades` (the market-
+    maker — searches every opponent's surplus `_benched` for mutual 1-for-1 / 2-for-1 legal deals, ranks by
+    the **worse-off side's** gain `min(mine, theirs)`, tilts to sell-high/buy-low on a `market` gap). 4 pure
+    unit tests.
+  - **DONE-BAR (PASS):** proposed trades **raise both teams' simulated playoff prob** in the Phase-10 MC sim.
+    `n_leagues=40` snake-drafted imbalanced leagues/season, `n_focal=4` maker seats; execute the top proposal
+    and re-sim (shared player-weekly cache + fixed schedule → pre/post differ *only* by the two swapped
+    rosters, a paired comparison). **6/6 DEV** both maker & partner mean playoff-prob rise (maker season-block
+    CI **[+0.014,+0.021]**, partner **[+0.012,+0.021]**, weaker side **[+0.011,+0.019]**). **Random-trade
+    control** lifts both sides ~never (~0–10%) → proposed beat random **6/6** (the surplus *signal*, not
+    churn). Sell-high tilt modest (`sell_high_rate` ~0.5–0.6).
+  - **KEY DESIGN CORRECTION (in-session):** ranking proposals by the **maker's own** gain made the maker
+    reliably gain but only cleared a *marginal* partner floor → the worse-off side's sim gain died in MC noise
+    (pair_min ~0). Switching `find_trades` to rank by `min(maker, partner)` — the fairest win-win a two-
+    signature trade actually needs — makes **both** sides gain robustly. The 13.3/13.4 lesson generalized: the
+    objective must reward the *right* thing (mutual benefit) or the maker just skims.
+  - **STATS NOTE:** per-season trade counts are small/jittery (n≈14–48; upstream `cached_distribution` board-
+    ordering wobbles run-to-run), so the per-season two-CI test is underpowered (2018 partner grazes 0 — an
+    honest weak-surplus season, echoing 13.4's 2018 miss). Gate = **season-block bootstrap on each side's
+    gain** (the 13.4 device, decisive & rerun-stable) + the 6/6 random control.
+  - **DECISION (scope):** value currency = preseason model ros mean (self-consistent with the sim → PIT-
+    trivial, fair); in-season this `values` slot is 13.1's re-projected mean (fed in, 13.4→13.1 pattern). Sim
+    trades **1-for-1** (count-neutral); **2-for-1** consolidation supported by kernels + unit-tested, not simmed.
+  - `steps/phase13_5_trades.py` runner; `analysis/phase13_trades.json`. **Next: Session C = Phase 12 news/NLP
+    + Phase 15 multi-format/auction (discharges T9).**
+- **2026-07-12 (Session B, part 2 of 3)** — **Phase 13.4 streaming DONE (DEV done-bar PASS; 272 tests, ruff
+  clean; NOT committed — left for user review with 13.5).** Greenfield
+  `inseason/streaming.py`. Lockbox untouched; all tuning on DEV (2017–22).
+  - **`stream_pick`** (pure, position-agnostic): greedy exploit on `matchup_projection = own +
+    (opp_allow − league_mean)` (both terms empirical-Bayes shrunk toward the prior season via `_shrink`,
+    `PRIOR_GAMES=4`), with a **switch-margin hysteresis** (`SWITCH_MARGIN=1.0`) and an optional UCB explore
+    bonus (`UCB_C=0`, off — shrinkage explores softly). 5 pure unit tests (`_shrink`, `matchup_projection`,
+    `stream_pick` exploit/hysteresis/UCB).
+  - **DECISION (scope):** demonstrate on **DST** — the strongest matchup signal + real weekly scores
+    (`dst_weekly_points` + the schedule from `game_lines`). `stream_pick` is position-agnostic; QB/TE
+    streaming would feed 13.1 re-projected means in as `proj` (documented extension, not built — the 13.2
+    "one passing bar + noted extension" pattern).
+  - **DONE-BAR (PASS):** `n_managers=300` each with a random 8-unit slice of the waiver-tier defenses; matchup
+    -streaming beats **static-hold** (roster the preseason-best unit, start it every week, eat its bye) **6/6
+    DEV**, mean **+1.46 DST pts/wk**, season-block CI **[+0.88,+2.09]**. Signal control: matchup beats
+    **random**-streaming **5/6** (the 2018 miss = +0.2; the opponent-offense signal is real but modest).
+  - **LESSON APPLIED (from 13.3):** the `switch_margin` hysteresis + the random-streaming control are how 13.4
+    keeps the sim from "rewarding churn, not skill" — streaming's raw edge over static-hold is partly just
+    roster churn, so `beats_random` isolates that the matchup *signal* itself adds value.
+  - `steps/phase13_4_streaming.py` done-bar runner; `analysis/phase13_streaming.json`. **13.5 trades done next
+    (part 3 of 3, above).**
 - **2026-07-12 (Session B, part 1 of 3)** — **Phase 13.3 waivers/FAAB DONE (DEV done-bar PASS; 267 tests,
-  ruff clean; NOT committed — paused for user permission before 13.4 per the session cadence).** Greenfield
+  ruff clean; committed.)** Greenfield
   `inseason/waivers.py`. Lockbox untouched; all tuning on DEV (2017–22).
   - **`faab_bid`** (pure): marginal value → `value_scale` willingness-to-pay, **rationed** by the option
     value of budget `1/(1+OPTION_KAPPA·(weeks−1))` (`OPTION_KAPPA=0.15`), then **first-price shaded** to

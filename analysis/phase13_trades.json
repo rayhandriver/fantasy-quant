@@ -1,0 +1,166 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "per_season": [
+    {
+      "season": 2017,
+      "n_leagues": 40,
+      "n_trades": 28,
+      "maker_gain": 0.02404761904761905,
+      "maker_ci": [
+        0.015555555555555555,
+        0.03428659611992945
+      ],
+      "partner_gain": 0.025833333333333337,
+      "partner_ci": [
+        0.015182222222222201,
+        0.03628240740740741
+      ],
+      "weaker_side_gain": 0.02404761904761905,
+      "pair_min_gain": 0.009642857142857135,
+      "both_rise_rate": 0.75,
+      "random_both_rise_rate": 0.03571428571428571,
+      "sell_high_rate": 0.5714285714285714,
+      "raises_both": true,
+      "raises_both_ci": true,
+      "beats_random": true
+    },
+    {
+      "season": 2018,
+      "n_leagues": 40,
+      "n_trades": 24,
+      "maker_gain": 0.011666666666666672,
+      "maker_ci": [
+        0.0024630713489409255,
+        0.021333333333333322
+      ],
+      "partner_gain": 0.00708333333333334,
+      "partner_ci": [
+        -0.0013888888888888866,
+        0.01783486842105262
+      ],
+      "weaker_side_gain": 0.00708333333333334,
+      "pair_min_gain": -0.004444444444444434,
+      "both_rise_rate": 0.375,
+      "random_both_rise_rate": 0.0,
+      "sell_high_rate": 0.5416666666666666,
+      "raises_both": true,
+      "raises_both_ci": false,
+      "beats_random": true
+    },
+    {
+      "season": 2019,
+      "n_leagues": 40,
+      "n_trades": 44,
+      "maker_gain": 0.019696969696969692,
+      "maker_ci": [
+        0.012295799457994581,
+        0.02775258397932816
+      ],
+      "partner_gain": 0.01757575757575758,
+      "partner_ci": [
+        0.009754258614014725,
+        0.02537124624624625
+      ],
+      "weaker_side_gain": 0.01757575757575758,
+      "pair_min_gain": -0.004242424242424251,
+      "both_rise_rate": 0.4318181818181818,
+      "random_both_rise_rate": 0.022727272727272728,
+      "sell_high_rate": 0.45454545454545453,
+      "raises_both": true,
+      "raises_both_ci": true,
+      "beats_random": true
+    },
+    {
+      "season": 2020,
+      "n_leagues": 40,
+      "n_trades": 48,
+      "maker_gain": 0.02090277777777778,
+      "maker_ci": [
+        0.015404875283446725,
+        0.02702954292084727
+      ],
+      "partner_gain": 0.013749999999999997,
+      "partner_ci": [
+        0.007605978260869561,
+        0.0200642006802721
+      ],
+      "weaker_side_gain": 0.013749999999999997,
+      "pair_min_gain": -0.0011805555555555586,
+      "both_rise_rate": 0.4791666666666667,
+      "random_both_rise_rate": 0.020833333333333332,
+      "sell_high_rate": 0.5625,
+      "raises_both": true,
+      "raises_both_ci": true,
+      "beats_random": true
+    },
+    {
+      "season": 2021,
+      "n_leagues": 40,
+      "n_trades": 30,
+      "maker_gain": 0.014000000000000004,
+      "maker_ci": [
+        0.002435000000000005,
+        0.023448378489326762
+      ],
+      "partner_gain": 0.019555555555555562,
+      "partner_ci": [
+        0.009655172413793106,
+        0.03000268817204301
+      ],
+      "weaker_side_gain": 0.014000000000000004,
+      "pair_min_gain": -0.012444444444444444,
+      "both_rise_rate": 0.26666666666666666,
+      "random_both_rise_rate": 0.0,
+      "sell_high_rate": 0.5,
+      "raises_both": true,
+      "raises_both_ci": true,
+      "beats_random": true
+    },
+    {
+      "season": 2022,
+      "n_leagues": 40,
+      "n_trades": 26,
+      "maker_gain": 0.013846153846153843,
+      "maker_ci": [
+        0.0004933862433862386,
+        0.027334027777777777
+      ],
+      "partner_gain": 0.014615384615384606,
+      "partner_ci": [
+        0.002690476190476177,
+        0.027144841269841253
+      ],
+      "weaker_side_gain": 0.013846153846153843,
+      "pair_min_gain": -0.010512820512820514,
+      "both_rise_rate": 0.3076923076923077,
+      "random_both_rise_rate": 0.0,
+      "sell_high_rate": 0.6153846153846154,
+      "raises_both": true,
+      "raises_both_ci": true,
+      "beats_random": true
+    }
+  ],
+  "n_seasons_raising_both": 6,
+  "n_seasons_raising_both_ci": 5,
+  "n_seasons_beating_random": 6,
+  "maker_gain_ci": [
+    0.013958155270655274,
+    0.020922799422799423
+  ],
+  "partner_gain_ci": [
+    0.011816239316239313,
+    0.02098821548821549
+  ],
+  "weaker_side_ci": [
+    0.011086344211344213,
+    0.019111444111444113
+  ],
+  "PASS": true
+}

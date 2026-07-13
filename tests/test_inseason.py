@@ -20,6 +20,8 @@ from fantasy_quant.inseason.reproject import (
     preseason_prior,
     reproject_week,
 )
+from fantasy_quant.inseason.streaming import _shrink, matchup_projection, stream_pick
+from fantasy_quant.inseason.trades import evaluate_trade, find_trades, lineup_value
 from fantasy_quant.inseason.waivers import faab_bid
 from fantasy_quant.simulation.weekly import WeeklyModel
 
@@ -239,3 +241,96 @@ def test_faab_bid_shades_harder_against_a_soft_field():
     soft = faab_bid(90.0, 100, 1, value_scale=10.0, opp_bids=[1.0, 2.0, 3.0])
     tough = faab_bid(90.0, 100, 1, value_scale=10.0, opp_bids=[7.0, 8.0, 9.0])
     assert 0.0 < soft < tough <= v_eff
+
+
+# ------------------------------------------------------------------------------------------------
+# 13.4 — streaming (the weekly matchup pick over the waiver pool)
+# ------------------------------------------------------------------------------------------------
+def test_shrink_blends_data_toward_the_prior():
+    assert _shrink(20.0, 0, 5.0, 4.0) == pytest.approx(5.0)      # no games -> pure prior
+    assert _shrink(20.0, 4, 5.0, 4.0) == pytest.approx(12.5)     # 4 games vs 4 prior -> midpoint
+    assert _shrink(20.0, 400, 5.0, 4.0) == pytest.approx(20.0, abs=0.2)  # heavy data -> the mean
+
+
+def test_matchup_projection_rewards_a_soft_opponent_and_own_level():
+    mu = 7.0
+    # a defense facing an offense that concedes above the league average projects up
+    tough_opp = matchup_projection(8.0, opp_allow=10.0, league_mean=mu)   # +3 matchup
+    soft_opp = matchup_projection(8.0, opp_allow=4.0, league_mean=mu)     # -3 matchup
+    assert tough_opp == pytest.approx(11.0)
+    assert soft_opp == pytest.approx(5.0)
+    assert tough_opp > soft_opp
+    # the own scoring level adds directly (same matchup, a better unit projects higher)
+    assert matchup_projection(9.0, 7.0, mu) > matchup_projection(6.0, 7.0, mu)
+
+
+def test_stream_pick_exploits_the_projected_best_and_handles_empty():
+    assert stream_pick([]) is None
+    assert stream_pick([3.0, 9.0, 5.0]) == 1                     # greedy argmax with no held unit
+
+
+def test_stream_pick_hysteresis_keeps_the_held_unit_for_a_trivial_upgrade():
+    # held index 0 (proj 8.0); a challenger at 8.5 does not clear the +1 switch margin -> stay put
+    assert stream_pick([8.0, 8.5], held=0, switch_margin=1.0) == 0
+    # a challenger at 9.5 clears the margin -> switch
+    assert stream_pick([8.0, 9.5], held=0, switch_margin=1.0) == 1
+
+
+def test_stream_pick_ucb_bonus_favors_the_under_observed_streamer():
+    # equal projections, but candidate 1 has been seen far less -> optimism tips the pick to it
+    tie = stream_pick([6.0, 6.0], n_seen=[50, 0], ucb_c=0.0)     # no bonus -> argmax ties to first
+    lean = stream_pick([6.0, 6.0], n_seen=[50, 0], ucb_c=3.0)    # bonus lifts the thin sample
+    assert tie == 0
+    assert lean == 1
+
+
+# ------------------------------------------------------------------------------------------------
+# 13.5 — trades (market-making across the league)
+# ------------------------------------------------------------------------------------------------
+_TRADE_SLOTS = RosterSlots(qb=1, rb=1, wr=1, te=0, flex=0, k=0, dst=0, bench=1)
+
+
+def test_lineup_value_counts_only_the_starting_lineup():
+    # one QB slot, one RB slot, one WR slot: the second (weaker) RB is bench -> contributes 0
+    vals = [3.0, 10.0, 4.0, 5.0]
+    pos = ["QB", "RB", "RB", "WR"]
+    assert lineup_value(vals, pos, _TRADE_SLOTS) == pytest.approx(3.0 + 10.0 + 5.0)
+
+
+def test_evaluate_trade_rewards_a_complementary_surplus_swap():
+    # A is RB-rich / WR-poor, B is WR-rich / RB-poor: swapping benched surplus lifts both lineups
+    a_val, a_pos = [3.0, 10.0, 9.0, 2.0], ["QB", "RB", "RB", "WR"]
+    b_val, b_pos = [3.0, 2.0, 10.0, 9.0], ["QB", "RB", "WR", "WR"]
+    ev = evaluate_trade(a_val, a_pos, b_val, b_pos, [2], [3], _TRADE_SLOTS, accept_margin=5.0)
+    assert ev.delta_a == pytest.approx(7.0)     # A's WR2 -> a 9-point WR starter
+    assert ev.delta_b == pytest.approx(7.0)     # B's RB2 -> a 9-point RB starter
+    assert ev.mutual
+    # the transaction-cost hysteresis: a +7/+7 deal is not "mutual" if the bar is +10
+    assert not evaluate_trade(a_val, a_pos, b_val, b_pos, [2], [3], _TRADE_SLOTS,
+                              accept_margin=10.0).mutual
+
+
+def test_find_trades_surfaces_the_mutually_beneficial_swap():
+    values = {"qb_a": 3.0, "rb1_a": 10.0, "rb2_a": 9.0, "wr_a": 2.0,
+              "qb_b": 3.0, "rb_b": 2.0, "wr1_b": 10.0, "wr2_b": 9.0}
+    my = [("qb_a", "QB"), ("rb1_a", "RB"), ("rb2_a", "RB"), ("wr_a", "WR")]
+    opp = [("qb_b", "QB"), ("rb_b", "RB"), ("wr1_b", "WR"), ("wr2_b", "WR")]
+    props = find_trades(my, [opp], values, _TRADE_SLOTS, accept_margin=5.0)
+    assert props
+    top = props[0]
+    assert top.partner == 0
+    assert top.give == ("rb2_a",) and top.receive == ("wr2_b",)   # ship the surplus, fill the hole
+    assert top.my_gain == pytest.approx(7.0) and top.their_gain == pytest.approx(7.0)
+    # nothing clears a sky-high bar -> the maker walks away rather than churn
+    assert find_trades(my, [opp], values, _TRADE_SLOTS, accept_margin=100.0) == []
+
+
+def test_find_trades_captures_sell_high_buy_low_edge():
+    values = {"qb_a": 3.0, "rb1_a": 10.0, "rb2_a": 9.0, "wr_a": 2.0,
+              "qb_b": 3.0, "rb_b": 2.0, "wr1_b": 10.0, "wr2_b": 9.0}
+    my = [("qb_a", "QB"), ("rb1_a", "RB"), ("rb2_a", "RB"), ("wr_a", "WR")]
+    opp = [("qb_b", "QB"), ("rb_b", "RB"), ("wr1_b", "WR"), ("wr2_b", "WR")]
+    # the market over-rates the player we ship (12 > 9) and under-rates the one we get (6 < 9)
+    market = {"rb2_a": 12.0, "wr2_b": 6.0}
+    top = find_trades(my, [opp], values, _TRADE_SLOTS, accept_margin=5.0, market=market)[0]
+    assert top.edge == pytest.approx((12.0 - 9.0) + (9.0 - 6.0))   # sell-high + buy-low both banked

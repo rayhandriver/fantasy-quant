@@ -561,3 +561,41 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   bidder (seat 1) with the remaining seats alternating sharp/naive, so the edge is measured against
   *equally-sharp* opponents, not only fish (user decision 2026-07-12). No real FAAB transaction data exists
   (Sleeper corpus = draft picks only), so the field is synthetic — a relative sim result, not a Brier fit.
+- **Streaming / `stream_pick`** (13.4, `inseason/streaming.py`) — not rostering one unit at a matchup-driven
+  position (classically **DST**, a bye-week QB/TE) all year, but each week picking up whichever
+  freely-available unit has the best matchup. A **contextual bandit** over the waiver pool: `stream_pick`
+  starts the projected-best available streamer, keeping the currently-held one unless a challenger clears the
+  `switch_margin`. Beats static-hold **6/6 DEV** on DST (+1.46 pts/wk).
+- **`matchup_projection`** — a streamer's projected points = `own + (opp_allow − league_mean)`: the unit's own
+  scoring level plus how much more (or fewer) points this week's **opponent offense** concedes to defenses
+  than a league-average offense. Both terms are season-to-date rates **empirical-Bayes shrunk** (`_shrink`,
+  `PRIOR_GAMES=4`) toward the prior season — the shrinkage is the soft **explore** (don't chase thin samples);
+  the argmax is the **exploit**.
+- **Static-hold vs matchup-streaming** — the 13.4 done-bar's two strategies: *static-hold* rosters the
+  preseason-best waiver unit and starts it every week (eating its bye at 0); *matchup-streaming* starts each
+  week's projected-best available unit. A third **random-streaming** control (a random available unit each
+  week) isolates that the matchup *signal*, not just the churn, adds value (matchup beats random 5/6 DEV).
+- **Switch margin / streaming hysteresis** — the transaction-cost knob (`SWITCH_MARGIN=1.0` pts): keep the
+  held streamer unless a challenger's projection beats it by the margin. The 13.3 anti-churn lesson applied to
+  13.4 — without it, the sim just rewards volume of waiver moves, not matchup skill.
+- **Trade / market-making** (13.5, `inseason/trades.py`) — the one *cooperative* in-season move: both GMs
+  must agree, so a completed trade helps **both** rosters. Possible because a team scores its optimal starting
+  lineup, so a player's worth is his *marginal* starting-lineup value (a benched surplus is worth ~0). Trades
+  arbitrage **complementary surpluses** — each side ships from a position it is deep and fills a hole.
+- **`lineup_value` / `evaluate_trade`** — `lineup_value` = a roster's value counting only its optimal starting
+  lineup (reuses the 13.2 greedy fill — the diminishing-returns lesson made positional). `evaluate_trade`
+  prices a swap as the *change* in each side's `lineup_value`; `mutual` iff **both** gain more than
+  `ACCEPT_MARGIN` (the anti-churn hysteresis).
+- **`find_trades` / balanced ranking** — the market-maker: searches every opponent's surplus for mutual
+  1-for-1 (and 2-for-1 consolidation) deals, keeping only ones that leave both rosters legal. Default
+  `rank="balanced"` ranks by the **worse-off side's** gain `min(mine, theirs)` — the fairest win-win a
+  two-signature trade needs (vs `rank="mine"`, a self-interested skim that only clears a marginal partner
+  floor). The 13.3/13.4 anti-churn lesson: the objective must reward *mutual* benefit or the maker just skims.
+- **Buy-low / sell-high (`edge`)** — when a **market perception** diverges from model value, `find_trades`
+  tilts toward shipping players the market over-rates (sell high) and acquiring ones it under-rates (buy low);
+  `edge` = the captured gap. A tiebreak on top of mutual benefit, not a substitute for it.
+- **13.5 done-bar** — proposed trades **raise both teams' simulated playoff probability** in the Phase-10 MC
+  season sim (not just the additive proxy). **6/6 DEV** seasons both sides' mean win% rises (maker +0.014→
+  +0.021, partner +0.012→+0.021 playoff prob; season-block CIs > 0), vs a **random-trade control** that lifts
+  both sides ~never — so it is the surplus *signal*, not roster churn. Value currency = preseason model ros
+  mean (in-season this slot is 13.1's re-projected mean).

@@ -1533,3 +1533,68 @@ tests + done-bar runners, ran the validations, and recorded the results. Lockbox
   / budget-state DP. The rigorous upgrade is logged as **`docs/TECH-DEBT.md` T9** (fold into Phase 15.4). No
   real FAAB transaction data exists (the Sleeper corpus is draft picks only), so the field is synthetic and
   the done-bar is a relative sim result, not a Brier-verified fit.
+
+**13.4 — streaming (`inseason/streaming.py`; `steps/phase13_4_streaming.py`). Done-bar PASS.**
+- **What it is.** *Streaming* = not rostering one unit at a matchup-driven position all year, but picking up
+  whichever freely-available unit has the **best matchup this week**. A contextual bandit over the waiver
+  pool: the pure `stream_pick(proj, held, switch_margin, …)` starts the projected-best available streamer,
+  keeping the currently-held one unless a challenger beats it by `SWITCH_MARGIN=1.0` pts (hysteresis). The
+  projection is `matchup_projection = own + (opp_allow − league_mean)` — the unit's own scoring level plus how
+  generous this week's opponent offense is to opposing defenses — with both terms **empirical-Bayes** shrunk
+  (`PRIOR_GAMES=4`) toward the prior season (`_shrink`), so one flukey game doesn't crown a streamer (the
+  shrinkage *is* the soft-explore; an optional `UCB_C` optimism bonus makes explore explicit).
+- **Done-bar (PASS)**: demonstrated on **DST** (strongest matchup signal + real weekly scores from
+  `dst_weekly_points`). Per DEV year, `n_managers=300` managers each get a random 8-unit slice of the
+  waiver-tier defenses (outside the top-10 by prior-season points); we score **realized** DST points for
+  matchup-streaming vs **static-hold** (roster the preseason-best unit, start it every week, eat its bye).
+  Matchup-streaming wins **6/6** seasons — mean **+1.46 DST pts/week**, season-block CI **[+0.88, +2.09]**.
+- **Signal isolation (the 13.3 anti-churn lesson applied).** Streaming's edge over static-hold is partly just
+  churn (more roster moves = more weekly selection), so a second control — matchup-streaming vs
+  **random**-streaming (pick a random available unit each week) — isolates the *signal*: matchup beats random
+  **5/6** seasons (+0.2 to +2.5 pts/wk). The one miss (2018, +0.2) is an honest finding: the opponent-offense
+  signal is real but **modest**, biting hardest in seasons where defenses are dispersed. The `switch_margin`
+  hysteresis + the random control are how 13.4 avoids "rewarding churn, not skill."
+- **Scope.** The done-bar runs on DST; `stream_pick` is **position-agnostic** (QB/TE streaming would feed
+  13.1 re-projected means in as `proj`), but no separate QB/TE matchup model is built here — a documented
+  extension, the Phase-13.2 "one passing bar + noted extension" pattern. PIT throughout: ratings read only
+  weeks strictly before the decision week; the schedule (who plays whom) is public pre-season; realized points
+  only ever *score*.
+
+**13.5 — trades / market-making (`inseason/trades.py`; `steps/phase13_5_trades.py`). Done-bar PASS.**
+- **What it is.** A trade is the one *cooperative* in-season move — both GMs must agree, so a completed trade
+  is one that helps **both** rosters. That's possible because a team scores its **optimal starting lineup**,
+  not its raw talent, so a player's worth is his *marginal* contribution to a startable lineup, which collapses
+  past a roster's positional need (a 4th good RB rides the bench at ~0). Trades arbitrage **complementary
+  surpluses**: each side ships from a position it is deep and fills a hole. The pure kernels: `lineup_value`
+  (roster value = its optimal-lineup sum only, reusing the 13.2 greedy fill — the diminishing-returns lesson
+  made positional); `evaluate_trade` (a swap's *change* in each side's lineup value; `mutual` iff **both** gain
+  more than `ACCEPT_MARGIN`, the anti-churn hysteresis); `find_trades` (the market-maker — searches every
+  opponent's surplus for mutual 1-for-1 / 2-for-1 deals, ranks by the **worse-off side's** gain — the fairest
+  win-win a completed trade needs — and tilts toward **selling high / buying low** on a model-vs-market gap).
+- **Done-bar (PASS)**: proposed trades must **raise both teams' simulated playoff probability** in the Phase-10
+  MC season engine (schedule, H2H variance, playoffs — everything the additive lineup-value proxy ignores).
+  Per DEV year, `n_leagues=40` snake-drafted **imbalanced** leagues; for `n_focal=4` maker seats we run
+  `find_trades`, execute the top proposal, and re-simulate (a shared player-weekly cache + fixed schedule, so
+  pre/post differ *only* by the two swapped rosters — a paired, low-variance comparison). Result: **6/6**
+  seasons both the maker's and the partner's mean playoff-prob **rise** — maker across-season gain
+  **+0.014→+0.021**, partner **+0.012→+0.021** (season-block CIs excluding 0; weaker side **[+0.011, +0.019]**).
+- **Signal isolation (the 13.3/13.4 anti-churn control).** A **random-trade** control (swap equal counts at
+  random) lifts both sides essentially never (~0–10%); proposed trades lift both sides **6/6** seasons far more
+  often (`both_rise` 0.27–0.75). So it is the *surplus logic*, not mere roster shuffling, that creates the
+  mutual gains. The sell-high/buy-low tilt is real but modest (`sell_high_rate` ~0.5–0.6: the maker ships the
+  market-overvalued asset a slim majority of the time).
+- **KEY design correction — "fair" ranking, not "greedy" ranking.** The first cut ranked proposals by the
+  **maker's own** gain: the maker then reliably gained (+0.02 playoff prob) but only cleared a *marginal* floor
+  for the partner, whose sim gain didn't survive MC noise → the worse-off side sat at ~0. Ranking by
+  `min(maker, partner)` — the fairest win-win a two-signature trade actually needs — makes both sides gain
+  robustly. This is the market-making analog of the 13.3 diminishing-returns lesson: the objective has to
+  reward the *right* thing (mutual benefit), or the maker just skims.
+- **Statistics note.** Per-season trade counts are small and jittery (n≈14–48; upstream `cached_distribution`
+  board-ordering wobbles run-to-run), so the per-season two-CI test is underpowered (2018's partner CI grazes 0,
+  an honest weak-surplus season echoing 13.4's 2018 miss). The **load-bearing test is the season-block bootstrap
+  on each side's gain** (the 13.4 device) — decisive and stable across reruns — plus the 6/6 random control.
+- **Scope.** Value currency = the preseason model rest-of-season mean, **self-consistent** with the sim that
+  scores it (so the bar is PIT-trivial and fair). In-season this `values` slot is 13.1's re-projected mean over
+  weeks ≤ t — fed in, not re-derived (the 13.4→13.1 extension pattern). The done-bar trades **1-for-1** (count-
+  neutral, no roster-size bookkeeping); **2-for-1** consolidation is supported by the kernels and unit-tested
+  but left out of the sim. PIT throughout; lockbox unread.

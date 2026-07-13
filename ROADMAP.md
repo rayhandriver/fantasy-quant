@@ -36,12 +36,22 @@ default; `inseason/lineup.py`)* · ☑ **13.3 waivers/FAAB** *(2026-07-12 — `f
 budget option-value + first-price shading; **mixed-field** sim, **beats naive %-of-budget 5/6 DEV**, mean
 +30.0 value/szn CI[+21.7,+38.8]; key finding: model **diminishing returns** (top-`n_useful` scoring) or
 volume wins. **Pragmatic** — rigorous auction theory owed to Phase 15.4 / TECH-DEBT **T9**; `inseason/waivers.py`)*
-· ☐ 13.4 streaming · ☐ 13.5 trades **← NOW (Session B, 13.3 ☑ · 13.4/13.5 remaining)**
+· ☑ 13.4 streaming *(2026-07-12 — a **matchup-streaming** contextual bandit over the waiver pool:
+`stream_pick` on `matchup_projection = own + (opp_allow − league_mean)`, empirical-Bayes shrunk, with a
+switch-margin hysteresis; demonstrated on **DST** — **beats static-hold 6/6 DEV**, +1.46 pts/wk CI[+0.88,+2.09],
+and beats random-streaming 5/6 so the matchup signal itself pays; `stream_pick` position-agnostic (QB/TE feed
+13.1 means); `inseason/streaming.py`)* · ☑ 13.5 trades *(2026-07-12 — **market-making**: `find_trades` searches
+every opponent's surplus for mutual 1-for-1/2-for-1 deals that arbitrage complementary positional surpluses,
+ranked by the worse-off side's gain (`min(mine, theirs)`) with a sell-high/buy-low tilt; `lineup_value` +
+`evaluate_trade` price a swap by each side's optimal-starting-lineup change (the diminishing-returns lesson).
+Done-bar: proposed trades **raise both teams' simulated playoff prob** in the Phase-10 sim — **6/6 DEV** both
+sides (maker +0.014→+0.021, partner +0.012→+0.021 win%; season-block CIs>0), vs a random-trade control that
+lifts both ~never; `inseason/trades.py`)* — **Phase 13 / S7 COMPLETE ← Session B done**
 **Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ☐ 14.1 **Streamlit MVP hardening** (autopilot+co-pilot, constraint-object UI, league sync, cost+risk+softness readouts, sim views, in-season dashboard, news feed, format toggles) · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
 **Phase 15 — Multi-format** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 8 — + auction draft support, absorbed from Phase 11's "later")* ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS · ☐ 15.4 auction drafts
 
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
-✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ✅ **S6** adaptive archetypes *(2026-07-12 — a fade-melt wrapper on a static parent, keyed to how far a candidate has slid off ADP; **does no harm on an ADP board, banks team-value when the board breaks** — the realistic Phase-11 behavioral room: adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6; `draft/config.py` + `steps/spine_5_adaptive.py`)* · ◐ **S7** in-season weekly-edge harvester *(= Phase 13; **13.1+13.2 done 2026-07-12**, 13.3–13.5 = Session B)*
+✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ✅ **S6** adaptive archetypes *(2026-07-12 — a fade-melt wrapper on a static parent, keyed to how far a candidate has slid off ADP; **does no harm on an ADP board, banks team-value when the board breaks** — the realistic Phase-11 behavioral room: adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6; `draft/config.py` + `steps/spine_5_adaptive.py`)* · ✅ **S7** in-season weekly-edge harvester *(= Phase 13, **COMPLETE 2026-07-12**; 13.1 re-project + 13.2 start/sit, then Session B: **13.3 waivers + 13.4 streaming + 13.5 trades** all DONE — every done-bar PASS on DEV)*
 
 **★ THE PIPELINE (locked 2026-07-09 — engine-complete-before-app; no time crunch).** Every underlying
 function — **including the formerly-deferred Phases 12 & 15** — is built and validated before any app work;
@@ -83,8 +93,18 @@ does not pay at the lineup grain (kept opt-in, off by default — the Phase-7/pr
 the Phase-12 news slot. **☑ 13.3 waivers/FAAB DONE (2026-07-12, Session B):** `faab_bid` (marginal value +
 budget option-value + first-price shading) beats naive %-of-budget 5/6 DEV in a mixed-field sim; the key
 finding was that the sim needs **diminishing returns** (top-`n_useful` scoring) or it rewards volume; shipped
-**pragmatic**, with rigorous auction theory owed to Phase 15.4 (TECH-DEBT **T9**). **← NOW: Session B
-remainder = 13.4 streaming + 13.5 trades** (all on existing infra; nothing gated on Phase 12). →
+**pragmatic**, with rigorous auction theory owed to Phase 15.4 (TECH-DEBT **T9**). **☑ 13.4 streaming DONE
+(2026-07-12, Session B):** a matchup-streaming contextual bandit (`stream_pick` on `own + opp-generosity`,
+empirical-Bayes shrunk, switch-margin hysteresis) beats static-hold 6/6 DEV on DST (+1.46 pts/wk) and beats a
+random-streaming control 5/6 (the switch cost + random control are the 13.3 anti-churn lesson applied). **☑
+13.5 trades DONE (2026-07-12, Session B):** the market-maker `find_trades` searches every opponent's surplus
+for mutual 1-for-1/2-for-1 deals that arbitrage complementary positional surpluses (`lineup_value` +
+`evaluate_trade` price a swap by each side's optimal-starting-lineup change — the diminishing-returns lesson),
+ranked by the *worse-off side's* gain with a sell-high/buy-low tilt; proposed trades **raise both teams'
+simulated playoff prob 6/6 DEV** (maker +0.014→+0.021, partner +0.012→+0.021 win%) vs a random-trade control
+that lifts both ~never — the key correction was ranking by `min(maker, partner)`, not the maker's own gain, so
+the objective rewards *mutual* benefit. **Phase 13 / S7 COMPLETE — Session B done. ← NOW: Session C = Phase
+12 news/NLP + Phase 15 multi-format/auction (discharges T9).** →
 **7) Phase 12** news/NLP *(LLM edges-only guardrail unchanged; the project's pattern so far — 2.3 props
 shelved, Phase 7 dropped, the core Phase-2 ADP finding — means 12.4's gate has a real chance of ending the
 same way; that's the gate doing its job, not a guaranteed win)* → **8) Phase 15** multi-format + auction
