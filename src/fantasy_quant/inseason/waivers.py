@@ -24,12 +24,21 @@ shading). The 13.3 done-bar (:func:`faab_skill`) is that a bidder using :func:`f
 naive %-of-budget** for total realized value acquired, in a *mixed* league (both sharp and naive
 opponents), on DEV seasons.
 
-Scope note (user decision 2026-07-12): this is the **pragmatic** FAAB bidder — a marginal-value +
-option-value + fixed-belief-shading heuristic, enough to clear the done-bar. The **rigorous**
-version (an equilibrium opponent-bid model, budget-state dynamic programming) is **owed** and
-deferred to **Phase 15.4 / auction support** (``draft/auction.py``, which does not exist yet) — see
-``docs/TECH-DEBT.md`` **T9**. Everything here is PIT: perceived values come from 13.1 re-projection
-on weeks ``≤ t``; realized value (weeks ``> t``) is only ever used to *score* the sim, never to bid.
+Scope note (user decision 2026-07-12): this shipped as the **pragmatic** FAAB bidder — a
+marginal-value
++ option-value + fixed-belief-shading heuristic. **T9 discharged (2026-07-13):**
+``draft/auction.py``
+(Phase 15.4) now exists, so :func:`faab_bid` can consume the rigorous **budget-state continuation
+cap**
+(:func:`fantasy_quant.draft.auction.endgame_cap`, the exact stochastic-knapsack "$1 endgame") in
+place
+of the closed-form option-value ration — pass ``slots_remaining`` (the number of useful pickups
+still
+ahead) and the willingness-to-pay is capped so you can always still make them. The closed-form
+ration
+stays the default (so the validated 13.3 done-bar is untouched); :func:`faab_skill` exercises the
+upgraded path under ``use_auction=True``. Everything here is PIT: perceived values come from 13.1
+re-projection on weeks ``≤ t``; realized value (weeks ``> t``) is only ever used to *score* the sim.
 """
 
 from __future__ import annotations
@@ -53,7 +62,7 @@ NAIVE_FRAC = 0.25       # the baseline strategy: bid this fraction of remaining 
 
 def faab_bid(value: float, budget_remaining: float, weeks_remaining: int, *,
              value_scale: float, opp_bids=None, option_kappa: float = OPTION_KAPPA,
-             shade_frac: float = SHADE_FRAC) -> float:
+             shade_frac: float = SHADE_FRAC, slots_remaining: int | None = None) -> float:
     """The bid (in $) for one free agent — marginal value, rationed and shaded.
 
     ``value`` is the pickup's marginal rest-of-season value **in points** (points over replacement ×
@@ -62,16 +71,25 @@ def faab_bid(value: float, budget_remaining: float, weeks_remaining: int, *,
     if given, is a sample of anticipated opponent bids ($) used to shade in a first-price auction;
     if omitted we fall back to a flat ``shade_frac``.
 
-    The pipeline: ``wtp = value / value_scale`` (dollar willingness-to-pay) → **ration** it by the
-    option value of budget ``1/(1 + option_kappa·(weeks_remaining − 1))`` (→ 1 in the final week,
-    smaller with more weeks ahead) and cap at the budget → ``v_eff`` → **shade** to the surplus-
-    maximising bid against ``opp_bids`` (or ``shade_frac·v_eff``). Returns 0 when the pickup isn't
-    worth bidding. Pure; the sim and any caller round to integer dollars if their league does."""
+    The pipeline: ``wtp = value / value_scale`` (dollar willingness-to-pay) → cap it by the option
+    value of budget → ``v_eff`` → **shade** to the surplus-maximising bid against ``opp_bids`` (or
+    ``shade_frac·v_eff``). The cap has two forms: the default **closed-form ration**
+    ``1/(1 + option_kappa·(weeks_remaining − 1))`` × budget; or, when ``slots_remaining`` is given
+    (T9), the **exact budget-state continuation cap**
+    :func:`~fantasy_quant.draft.auction.endgame_cap`
+    — never spend so much you can't still make ``slots_remaining − 1`` future pickups at $1.
+    Returns 0
+    when the pickup isn't worth bidding. Pure; callers round to integer dollars if their league
+    does."""
     if value <= 0 or budget_remaining <= 0 or value_scale <= 0:
         return 0.0
     wtp = value / value_scale
-    ration = 1.0 / (1.0 + max(option_kappa, 0.0) * max(weeks_remaining - 1, 0))
-    v_eff = min(wtp * ration, float(budget_remaining))
+    if slots_remaining is not None:                     # T9: rigorous budget-state continuation cap
+        from fantasy_quant.draft.auction import endgame_cap
+        v_eff = min(wtp, endgame_cap(budget_remaining, slots_remaining))
+    else:                                               # default: closed-form option-value ration
+        ration = 1.0 / (1.0 + max(option_kappa, 0.0) * max(weeks_remaining - 1, 0))
+        v_eff = min(wtp * ration, float(budget_remaining))
     if v_eff <= 0:
         return 0.0
 
@@ -135,7 +153,8 @@ def _topk_sum(vals: list[float], k: int) -> float:
 
 
 def _run_league(rounds, v_perc, v_real, universe, *, n_teams, total_budget, value_scale,
-                naive_frac, option_kappa, opp_bids_ref, perc_noise, reg_weeks, n_useful, rng):
+                naive_frac, option_kappa, opp_bids_ref, perc_noise, reg_weeks, n_useful, rng,
+                use_auction=False):
     """One league: N teams bid into the shared, depleting FA pool across the waiver ``rounds``.
 
     Seat 0 is the sharp :func:`faab_bid` agent, seat 1 the naive %-of-budget baseline, the rest
@@ -175,8 +194,13 @@ def _run_league(rounds, v_perc, v_real, universe, *, n_teams, total_budget, valu
                 held = sorted(held_perc[seat], reverse=True)
                 floor = held[n_useful - 1] if len(held) >= n_useful else 0.0
                 marginal = max(0.0, float(seen[j]) - floor)
+                # T9: the auction path caps by the exact budget-state continuation (slots still
+                # ahead = useful pickups not yet held); the default path uses the closed-form
+                # ration.
+                slots_left = max(1, n_useful - len(held_perc[seat])) if use_auction else None
                 bid = faab_bid(marginal, budgets[seat], weeks_left, value_scale=value_scale,
-                               opp_bids=opp_bids_ref, option_kappa=option_kappa)
+                               opp_bids=opp_bids_ref, option_kappa=option_kappa,
+                               slots_remaining=slots_left)
             if bid > 0:
                 bids_by_target.setdefault(target, []).append((seat, bid))
 
@@ -203,7 +227,8 @@ def faab_skill(con, season: int, *, n_leagues: int = 200, n_teams: int = 10,
                total_budget: float = 100.0, reg_weeks: int = 14, rounds=None, n_useful: int = 4,
                naive_frac: float = NAIVE_FRAC, option_kappa: float = OPTION_KAPPA,
                perc_noise: float = 0.25, ruleset: RuleSet | None = None, n_draws: int = 600,
-               prior_weeks: float = PRIOR_WEEKS, n_boot: int = 2000, seed: int = 0) -> dict:
+               prior_weeks: float = PRIOR_WEEKS, n_boot: int = 2000, seed: int = 0,
+               use_auction: bool = False) -> dict:
     """Walk-forward: does :func:`faab_bid` beat naive %-of-budget over a season of waivers?
 
     Builds the season's weekly model + 13.1 prior, defines the FA universe
@@ -242,7 +267,7 @@ def faab_skill(con, season: int, *, n_leagues: int = 200, n_teams: int = 10,
             rounds, v_perc, v_real, universe, n_teams=n_teams, total_budget=total_budget,
             value_scale=value_scale, naive_frac=naive_frac, option_kappa=option_kappa,
             opp_bids_ref=opp_bids_ref, perc_noise=perc_noise, reg_weeks=reg_weeks,
-            n_useful=n_useful, rng=rng)
+            n_useful=n_useful, rng=rng, use_auction=use_auction)
         smart_v.append(values[0])
         naive_v.append(values[1])
         smart_sp.append(spent[0])

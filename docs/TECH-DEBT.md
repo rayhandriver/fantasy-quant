@@ -19,8 +19,8 @@ At a glance:
 | **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ☐ |
 | **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☑ |
 | **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
-| **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit open**) | 9.5 done / data ready / fit is next | ◐ |
-| **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☐ |
+| **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit ☑**) | 9.5 done / fit done | ◐→☑ |
+| **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☑ |
 
 ---
 
@@ -366,7 +366,20 @@ ADP+noise on a real-pick availability Brier** (done 2026-07-11 — behavioral 0.
 ---
 
 ## 🟡 T9 — Phase 13.3 FAAB bidder is pragmatic; rigorous auction theory owed
-**Status ☐ · opportunistic, folds into Phase 15.4 (auction support).** Opened 2026-07-12 (Session B, 13.3).
+**Status ☑ done (2026-07-13, Session C — Phase 15.4).** `draft/auction.py` now exists (auction values,
+the exact `endgame_cap` budget-state continuation, winner's-curse-shaded `auction_bid`, `nominate`), and
+its own done-bar PASSES 6/6 DEV seasons (a budget-state bidder beats naive budget-splitting by +66→+128
+realized starting-lineup pts, season-block CI [+78, +108]). **`inseason/waivers.faab_bid` consumes it**:
+pass `slots_remaining` and it caps the willingness-to-pay by `auction.endgame_cap` instead of the
+closed-form ration (the rigorous continuation value the pragmatic bidder lacked); `faab_skill(use_auction=
+True)` exercises the path. The FAAB *value* done-bar is unchanged under the upgrade — winner-selection is
+scale-invariant among symmetric bidders, so the continuation form changes prices (budget efficiency), not
+who wins, and the sim passes identically (no regression). The closed-form ration stays the default so the
+committed 13.3 result is untouched. **Done-when met:** `draft/auction.py` exists, `faab_bid` consumes
+auction values + a DP continuation cap, the FAAB sim still passes. **T9 CLOSED.**
+
+<details><summary>Original entry (kept for the record)</summary>
+**Opened 2026-07-12 (Session B, 13.3).**
 
 **Symptom / decision.** 13.3's spec (`docs/BUILD_PLAN.md`) said "reuse 11.4", but **11.4 (auction-draft
 support) was deferred out of Phase 11 into Phase 15.4** and `draft/auction.py` does not exist. Per the user
@@ -390,6 +403,8 @@ transactions endpoint), fit and Brier-score the opponent-bid model like the draf
 **Done-when.** `draft/auction.py` exists and `faab_bid` consumes auction values + a fitted/DP continuation
 value; the FAAB sim still passes its done-bar under the upgraded machinery.
 
+</details>
+
 ---
 
 ## Ordering (see `ROADMAP.md ★ THE PIPELINE` for the full sequence)
@@ -402,8 +417,10 @@ value; the FAAB sim still passes its done-bar under the upgraded machinery.
    (2026-07-11 — situation swap is a wash-to-worse than naive on role-changers; consensus already prices it).
 7. ~~**When real leagues exist:** S4/Phase 11 (T8b behavioral opponent model + availability Brier).~~
    ☑ **done (2026-07-11)** — corpus cleared the blocker; fit + availability Brier both beat ADP+noise.
-8. **Next buildable pipeline item (⟳ reordered 2026-07-11 — S6 has no dependency on Phase 13/12):** S6 →
-   Phase 13 / S7 (in-season co-pilot) → Phase 12 → Phase 15. **S6 + 13.1 + 13.2 ☑ (Session A, 2026-07-12);
-   13.3 ☑ (Session B, 2026-07-12); 13.4 + 13.5 next.**
-9. **At Phase 15.4 (auction support):** T9 (upgrade the pragmatic 13.3 FAAB bidder to real auction theory).
-10. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).
+8. ~~**Next buildable pipeline item:** S6 → Phase 13/S7 → Phase 12 → Phase 15.~~ ☑ **all done**
+   (Session A 2026-07-12: S6+13.1+13.2; Session B 2026-07-12: 13.3+13.4+13.5; **Session C 2026-07-13:
+   Phase 12 news/NLP + Phase 15.2/15.3/15.4**).
+9. ~~**At Phase 15.4 (auction support):** T9.~~ ☑ **done (2026-07-13, Session C)** — `draft/auction.py`
+   built; `faab_bid` consumes `endgame_cap`; auction done-bar 6/6 DEV.
+10. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params) — **the only
+    open pre-lockbox tech-debt item.** (Optional MCTS/RL research gate sits just before it.)

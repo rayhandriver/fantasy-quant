@@ -1598,3 +1598,59 @@ tests + done-bar runners, ran the validations, and recorded the results. Lockbox
   weeks ≤ t — fed in, not re-derived (the 13.4→13.1 extension pattern). The done-bar trades **1-for-1** (count-
   neutral, no roster-size bookkeeping); **2-for-1** consolidation is supported by the kernels and unit-tested
   but left out of the sim. PIT throughout; lockbox unread.
+
+---
+
+## Session C (2026-07-13) — Phase 12 news/NLP + Phase 15 multi-format/auction (all done-bars PASS; ruff clean; 306 tests)
+
+**Overall.** Built the whole session straight through (user authorization). Ran the overdue Stage-0 FFC ADP
+snapshot chore first (banked the 2026-07-18 boards, 99.2% gsis). Then Phase 12 (news/NLP) and Phase 15
+(15.2 best-ball, 15.3 DFS, 15.4 auction; 15.1 dynasty deferred per user scope). +30 tests (19 `test_news`,
+11 `test_phase15`), all DEV-only, lockbox untouched.
+
+### Phase 12 — news/NLP: a **qualified KEEP** (injury signal pays; depth-chart signal doesn't)
+- **12.3 event study — the load-bearing finding.** On the historical, PIT structured feeds (2017–22):
+  **an injury designation predicts a large, significant production loss the stale set-and-forget lineup
+  hasn't priced** — Out plays 0% and loses **+8.4 pts** vs the player's own clean-week baseline, Doubtful
+  +8.2, Questionable plays 55% and loses **+3.9**; the overall exploitable lag is **+5.86 pts/start, CI
+  [+5.5,+6.2]**. In contrast, **depth-chart changes do NOT separate** (promotion −0.87 vs demotion −0.77,
+  separation −0.10, not directional) — nflverse depth-team ranks are too noisy/lagging → **DROP the depth
+  signal** (the gate doing its job, like props/Phase 7).
+- **12.4 keep-or-drop gate — PASS.** Priced status→availability multiplier on DEV (Out≈0.001, Doubtful≈0.01,
+  Questionable≈0.56 — exactly `E[pts|status]/baseline`), filled 13.1's reserved `news` slot with a per-week
+  level shift, and walk-forward-scored a news-aware weekly forecast vs the injury-blind 13.1. **On the
+  designated subset (where it applies): MAE 6.5→2.5, gain +3.4→+4.3 pts/player-week, 6/6 DEV, season-block
+  CI [+3.4,+4.0].** Diluted leaguewide gain +0.5 (also CI-clear). The scoring universe per week = players
+  who played OR carried a designation (byes excluded).
+- **The guardrail, literalized.** `extract.py` splits the two jobs the reframe demands: the LLM (a gated
+  `ClaudeClient`, Haiku 4.5, behind `ANTHROPIC_API_KEY`) only turns fuzzy free-text into a structured
+  `ExtractedSignal` (extraction); the deterministic core prices the signal into points (calibrated on DEV).
+  The default path is the offline **rules** extractor — runs in every test, no network — so the core stays
+  LLM-free. Free-text RSS is forward-only (109 rows, can't be backfilled) → the validated signal is the
+  structured injury feed; the LLM path is a real but forward-only seam (the honest free-data consequence).
+
+### Phase 15 — multi-format + auction
+- **15.4 auction (+ T9). PASS 6/6.** A budget-state bidder — auction values (VOR→$, studs soak the surplus,
+  last slots ≈$1) + the exact **$1-endgame** continuation (`endgame_cap`: never bid so much you can't fill
+  the other slots at $1) + winner's-curse-shaded English bidding on **marginal** value (a 4th RB is worth
+  $1 to a full backfield) — beats **naive budget-splitting** (bid `budget/slots`, value-blind) by **+66→
+  +128 realized starting-lineup pts, season-block CI [+78,+108]**. **Discharges T9:** `faab_bid` now
+  consumes `endgame_cap` (pass `slots_remaining`); the FAAB *value* done-bar is unchanged under the upgrade
+  because winner-selection is **scale-invariant among symmetric bidders** (the continuation form changes
+  prices/budget-efficiency, not who wins) — so the committed 13.3 result is untouched (no regression).
+- **15.2 best-ball. PASS 6/6 — "variance is GOOD," the exact mirror of the 13.2 managed-lineup finding.**
+  Best-ball auto-keeps each week's boom and discards the duds, so the weekly total is **convex** in a
+  player's spread. A ceiling-aware drafter (rank `mean·(1+κ·wk_cov)`, κ=0.1) beats mean-only by **+37→+104
+  pts/season, CI [+55,+93]**. **Key correction:** the signal is **weekly CoV**, *not* season-total sd —
+  tilting on season sd (which carries injury/bust downside) drafts *worse* players and lost by −90; switching
+  to `wk_cov` flipped it to a clean win. The convexity accrues to swing/depth slots (a locked starter's
+  best-ball value ≈ his season total regardless of variance) — hence the small κ.
+- **15.3 DFS GPP. PASS 6/6 — MECHANICS ONLY (honest data caveat).** No free DK/FD salary or ownership feed
+  exists (the same gap that shelved props) → salaries synthesised monotone-in-projection, ownership modeled
+  projection-driven. Under those mechanics a **leverage** lineup (fade high-owned studs) beats **chalk**
+  (projection-max) by **+0.71→+1.12 payout, CI [+0.79,+1.01]**. The load-bearing mechanic is **duplication +
+  prize-splitting**: the field folds to chalk (a 40% duplicate share) so a high-scoring chalk lineup splits
+  first place ~80 ways (payout ~0.01) while the unique contrarian keeps it (~1.1). Not Brier-validated —
+  wire a real DFS feed and the same kernels become validatable. Two build corrections en route: ownership
+  had to chase **projection** (studs=chalk), not points-per-$ (which made scrubs "chalk"); and the salary
+  cap must bind on the **weekly** projection scale (season-mean ÷16) with a wide-enough pool for cheap punts.

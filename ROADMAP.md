@@ -23,7 +23,19 @@ Legend: ☐ todo · ◐ in progress · ☑ done · ✗ dropped · ◔ deprioriti
 **Phase 9 — Valuation & draft policy** *(⟳ + constrained optimizer + cost report)* ✅ **COMPLETE** *(2026-07-10)* — ☑ **9.1 conditional-VBD** *(covariance half pulled forward 2026-07-09; **scarcity half done 2026-07-10**: a positional value-cliff `positional_cliff` gated by 9.4 availability → an urgency term in `RiskModel.effective_rank`, `scarcity_w=0` reproduces the covariance-only greedy)* · ☑ **9.2 constrained optimizer** *(= spine S2)* · ☑ **9.3 cost-of-personalization report** *(= spine S3; headline **portfolio CE** + risk profile)* · ☑ **9.4 lookahead** *(`survival_prob`: snake-aware ADP+noise survival to your next pick; scarce **and** vanishing = draft now; regression-tested to flip a pick)* · ☑ **9.5 win-prob objective** *(opt-in `winprob_pick_fn`: portfolio-CE prefilter → top-k greedy-completion rollout → Phase-10 mini-sim; **makes `DraftConfig.objective` real** — `make_playoffs`→playoff_prob, `championship_or_bust`→title_prob, T8a; 2022 DEV: objective swings 8–9 roster slots, title-max +0.09 title prob at 250 sims; title is resolution-limited → needs ≥~200 sims)*
 **Phase 10 — Season/playoff sim** *(⟳ PROMOTED/earlier — the tracked benchmark + tail objective)* ✅ **COMPLETE** *(2026-07-09; `simulation/` package + weekly grain — the Phase-5 deferral folded in)* — ☑ **10.1 season engine** *(top-down weekly disaggregation: Phase-5 clouds + Phase-8 Σ via Iman-Conover permutation → Dirichlet(1/CoV²) week shares, real byes, uniform missed-game placement; `LeagueFormat` 14-reg/6-team/15–17 w/ top-2 byes; vectorized optimal lineups ≡ 1.3 reference; **sim-sd/realized league sd = 1.02**)* · ☑ **10.2 playoffs** *(reseeded bracket → title/playoff probs; **calibration gate on 1,800 DEV team-seasons: title Brier 0.0878 < 0.090, playoff 0.2302 < 0.240, reliability on-diagonal; stability 0.975/0.949**)* · ☑ **10.3 leverage** *(mean-preserving spread from any mid-season state: trailing +0.018 playoff prob at 1.6×, leader −0.028 — variance is about making the cut; `leverage_advice` verdict for Phase 13)* — *documented: 62.4% points coverage (Phase-5 attrition gap propagates) + −137 pt level bias; probabilities calibrate regardless*
 **Phase 11 — Draft engine** *(⟳ opponent model = core & Brier-verifiable)* — **☑ step 0.10 Sleeper ingest + 0.10b corpus crawler DONE (2026-07-11)**: the pick-by-pick data pipe (`data/sources/sleeper.py`; `sleeper_drafts`/`sleeper_draft_picks`; gsis crosswalk 100% skill; POC `sleeper_tendencies`) **+ the corpus crawler** (`steps/phase0_10b_crawl.py`: seed registry incl. `league:<id>`, iterative BFS snowball via co-managers, **human/bot ADP split** `sleeper_human` vs `sleeper_mock`, complete-draft quality filter, `sleeper_manager_profiles` behavioral seed) **+ a real live corpus** (149 human + 117 bot drafts 2017–20, 289 manager profiles, crawled from the Sleeper docs' public example leagues). · ☑ **11.1 behavioral opponent model** *(2026-07-11 — conditional/McFadden logit on 7.9k real human picks/9 szn; **beats ADP-only** walk-forward: log-loss +0.113 CI[+0.101,+0.124], Brier +0.0088 CI[+0.0076,+0.0100]; interpretable coefs — **fandom +1.03** strongest, rookie +0.45, need +0.33; `draft/opponent_model.py`)* · ☑ **11.2 per-pick availability distributions** *(2026-07-11 — MC survival under the model; **availability Brier 0.158 vs best-tuned ADP+noise 0.316**, gain +0.159 CI[+0.083,+0.264] — the owed S4 metric; promotes to the S4 default; `draft/availability.py`)* · ☑ **11.3 realistic mock** *(2026-07-11 — `Personality` tilts + `opponent_pick_fn` sim hook; behavioral RB14/WR14 vs ADP+noise RB21/WR9; `draft/personalities.py`)* · ✗ CFR *(dropped — snake draft ≈ perfect-info)* · ◔ MCTS *(deprioritized — unverifiable + live-latency risk)* · ☐ auctions (later) · ☐ self-play RL (roadmap)
-**Phase 12 — NLP/news** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 7 — the guardrail is unchanged: LLM on the edges only, never computing a number that must be correct; 12.4's bar = adds value over the structured injury/depth feeds, or ruled out)* ☐ 12.1 sources · ☐ 12.2 LLM extract · ☐ 12.3 event-study · ☐ 12.4 validate
+**Phase 12 — NLP/news** *(⟳ stage 7; LLM on the edges only)* ✅ **COMPLETE** *(2026-07-13, Session C — a
+qualified KEEP: the injury signal pays, the depth-chart signal doesn't)* — ☑ **12.1 sources** *(`news/sources.py`:
+the PIT, deduped news stream — 18k injury_status + 16k depth_change events 2016–22, native-gsis, + forward-only
+RSS headlines; PIT-guarded)* · ☑ **12.2 extract** *(`news/extract.py`: deterministic offline **rules** extractor
+(the default, runs in tests) + a **gated `ClaudeClient`** LLM seam (Haiku 4.5, behind ANTHROPIC_API_KEY — never
+in the core) + the deterministic `structured_injury_signal` — the validated path; the guardrail literalized:
+the LLM only extracts, the core prices)* · ☑ **12.3 event-study** *(`news/event_study.py`: **injury exploitable
+lag = +5.86 pts/start, sig** (Out +8.4 / Questionable +3.9, both CI-clear); **depth-chart change does NOT
+separate** promo−demo −0.10 → **DROP** the depth signal, noisy nflverse ranks — the gate doing its job)* · ☑
+**12.4 validate** *(`news/validate.py`: prices status→availability multiplier (Out≈0, Q≈0.56, DEV-calibrated),
+fills 13.1's reserved `news` slot; the news-aware weekly forecast **beats the injury-blind 13.1 on the
+designated subset +3.4→4.3 pts/player-week, 6/6 DEV, season-block CI [+3.4,+4.0]** (diluted leaguewide +0.5).
+Injury = KEEP; depth = drop — unlike Phase 7/props, the gate says a qualified yes)*
 **Phase 13 — In-season co-pilot** *(the tax-loss-harvesting analog; pipeline stage 6 — reordered after S6
 2026-07-11)* — ☑ **13.1 re-project** *(2026-07-12 — scalar **Kalman** on each player's per-week level;
 PIT; **reserved Phase-12 `news` slot**, no-op default; **beats static preseason OOS 6/6 DEV seasons,
@@ -48,7 +60,18 @@ Done-bar: proposed trades **raise both teams' simulated playoff prob** in the Ph
 sides (maker +0.014→+0.021, partner +0.012→+0.021 win%; season-block CIs>0), vs a random-trade control that
 lifts both ~never; `inseason/trades.py`)* — **Phase 13 / S7 COMPLETE ← Session B done**
 **Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ☐ 14.1 **Streamlit MVP hardening** (autopilot+co-pilot, constraint-object UI, league sync, cost+risk+softness readouts, sim views, in-season dashboard, news feed, format toggles) · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
-**Phase 15 — Multi-format** *(⟳ PROMOTED into the pre-app pipeline 2026-07-09, stage 8 — + auction draft support, absorbed from Phase 11's "later")* ☐ 15.1 dynasty · ☐ 15.2 best-ball · ☐ 15.3 DFS · ☐ 15.4 auction drafts
+**Phase 15 — Multi-format** *(⟳ stage 8; + auction draft support)* ✅ **CORE COMPLETE** *(2026-07-13, Session C
+— 15.2/15.3/15.4 built; 15.1 dynasty stays roadmap per user scope)* — ◔ **15.1 dynasty** *(deferred — user
+scoped Session C to auction+best-ball+DFS)* · ☑ **15.2 best-ball** *(`formats/bestball.py`: **variance is GOOD
+in best-ball** — the mirror of the 13.2 managed-lineup finding; a ceiling-aware drafter (rank `mean·(1+κ·wk_cov)`,
+**weekly** CoV not season sd) beats mean-only **6/6 DEV, +37→+104 pts/season, CI [+55,+93]**; reuses the draft
+sim + WeeklyModel + lineup_points_matrix)* · ☑ **15.3 DFS GPP** *(`formats/dfs.py`: salary-cap optimizer +
+modeled ownership + leverage + prize-splitting field sim; **leverage beats chalk 6/6 DEV** (chalk is duplicated
+→ splits its prize ~0; the contrarian keeps it) — **MECHANICS, not Brier-validated: no free DK/FD salary/
+ownership feed** (the props gap), salaries synthesised + ownership modeled)* · ☑ **15.4 auction** *(`draft/
+auction.py`: auction values + the exact `endgame_cap` $1-endgame continuation + winner's-curse `auction_bid` +
+`nominate`; a budget-state bidder beats naive budget-splitting **6/6 DEV, +66→+128 lineup pts, CI [+78,+108]**;
+**discharges TECH-DEBT T9** — `faab_bid` now consumes `endgame_cap`)*
 
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
 ✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ✅ **S6** adaptive archetypes *(2026-07-12 — a fade-melt wrapper on a static parent, keyed to how far a candidate has slid off ADP; **does no harm on an ADP board, banks team-value when the board breaks** — the realistic Phase-11 behavioral room: adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6; `draft/config.py` + `steps/spine_5_adaptive.py`)* · ✅ **S7** in-season weekly-edge harvester *(= Phase 13, **COMPLETE 2026-07-12**; 13.1 re-project + 13.2 start/sit, then Session B: **13.3 waivers + 13.4 streaming + 13.5 trades** all DONE — every done-bar PASS on DEV)*
@@ -103,15 +126,23 @@ for mutual 1-for-1/2-for-1 deals that arbitrage complementary positional surplus
 ranked by the *worse-off side's* gain with a sell-high/buy-low tilt; proposed trades **raise both teams'
 simulated playoff prob 6/6 DEV** (maker +0.014→+0.021, partner +0.012→+0.021 win%) vs a random-trade control
 that lifts both ~never — the key correction was ranking by `min(maker, partner)`, not the maker's own gain, so
-the objective rewards *mutual* benefit. **Phase 13 / S7 COMPLETE — Session B done. ← NOW: Session C = Phase
-12 news/NLP + Phase 15 multi-format/auction (discharges T9).** →
-**7) Phase 12** news/NLP *(LLM edges-only guardrail unchanged; the project's pattern so far — 2.3 props
-shelved, Phase 7 dropped, the core Phase-2 ADP finding — means 12.4's gate has a real chance of ending the
-same way; that's the gate doing its job, not a guaranteed win)* → **8) Phase 15** multi-format + auction
-*(benefits from coming after 13 and 12 — it has to apply personalization + in-season logic across format
-variants, and auction specifically extends the Phase-11 opponent model, so it belongs after those
-draft-engine-consuming phases are settled)* →
-**9)** optional research gate (MCTS / self-play RL — only by explicit decision, **before** the lockbox;
+the objective rewards *mutual* benefit. **Phase 13 / S7 COMPLETE — Session B done.** →
+**7+8) Phase 12 + Phase 15 ✅ DONE (2026-07-13, Session C).** Phase 12 news/NLP = a **qualified KEEP** (injury
+exploitable lag +5.86 pts/start sig → the news-aware weekly forecast beats injury-blind 13.1 +3.4→4.3 pts/pw
+on the designated subset 6/6 DEV; depth-chart signal DROPPED, no separation; LLM edge-only via a gated
+`ClaudeClient`, core stays deterministic). Phase 15 = 15.2 best-ball (variance-is-good, ceiling beats mean 6/6),
+15.3 DFS GPP (leverage beats chalk 6/6 — **mechanics only**, no free salary/ownership feed), 15.4 auction
+(budget-state bidder beats naive 6/6, **T9 discharged**). 15.1 dynasty stays roadmap. **← NOW: Session D =
+optional MCTS/RL research gate + T5 pre-registration + LOCKBOX EVAL.** →
+**7) Phase 12** news/NLP ✅ **DONE (2026-07-13, Session C)** — the gate said a **qualified yes**: the injury
+signal is a real, significant KEEP (exploitable lag +5.86 pts/start → news-aware 13.1 forecast beats
+injury-blind +3.4→4.3 pts/pw on the designated subset 6/6 DEV), the depth-chart signal a DROP (no
+separation). LLM edge-only via a gated `ClaudeClient`; the deterministic core prices the signal (the
+guardrail, literalized). → **8) Phase 15** multi-format + auction ✅ **DONE (2026-07-13, Session C)** — 15.2
+best-ball (variance-is-good, 6/6), 15.3 DFS GPP (leverage>chalk 6/6, mechanics only — no free salary/
+ownership feed), 15.4 auction (budget-state bidder>naive 6/6, **T9 discharged**). 15.1 dynasty stays roadmap
+(user-scoped). →
+**9) ← NOW:** optional research gate (MCTS / self-play RL — only by explicit decision, **before** the lockbox;
 benchmarked against whatever the greedy/win-prob policy looks like after 13/12/15 are locked in, so it sits
 last among the build steps; CFR stays dropped) →
 **➤ PRE-LOCKBOX HARDENING (`docs/TECH-DEBT.md`):** ☑ **T3** coverage fix (cohort availability prior +

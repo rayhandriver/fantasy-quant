@@ -1,0 +1,94 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "injury": {
+    "seasons": [
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "n_events": 4477,
+    "per_status": {
+      "Doubtful": {
+        "n": 282,
+        "play_rate": 0.010638297872340425,
+        "mean_points": 0.08581560284744763,
+        "baseline_points": 8.255966664686627,
+        "expected_loss": 8.170151061839178,
+        "expected_loss_ci": [
+          7.186425709500668,
+          9.218759973533896
+        ]
+      },
+      "Out": {
+        "n": 1694,
+        "play_rate": 0.0005903187721369539,
+        "mean_points": 0.007615112216863891,
+        "baseline_points": 8.376956895539308,
+        "expected_loss": 8.369341783322445,
+        "expected_loss_ci": [
+          7.838252480637573,
+          8.91787296153648
+        ]
+      },
+      "Questionable": {
+        "n": 2501,
+        "play_rate": 0.5517792882846861,
+        "mean_points": 5.041055608000078,
+        "baseline_points": 8.942681524124328,
+        "expected_loss": 3.901625916124251,
+        "expected_loss_ci": [
+          3.5795482909507492,
+          4.236209177834323
+        ]
+      }
+    },
+    "exploitable_loss": 5.860981460043247,
+    "exploitable_loss_ci": [
+      5.49543720331332,
+      6.228312158854027
+    ],
+    "exploitable_significant": true
+  },
+  "depth": {
+    "seasons": [
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "n_events": 6188,
+    "window": 3,
+    "promotion": {
+      "n": 3291,
+      "change_ci": [
+        -1.0572598059133604,
+        -0.687166587217627
+      ],
+      "mean_change": -0.8709044909780297
+    },
+    "demotion": {
+      "n": 2897,
+      "change_ci": [
+        -0.9505547057715665,
+        -0.5943031325822323
+      ],
+      "mean_change": -0.7726889925906756
+    },
+    "separation": -0.0982154983873541,
+    "directional": false
+  },
+  "injury_keep": true,
+  "depth_keep": false
+}

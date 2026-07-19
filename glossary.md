@@ -599,3 +599,46 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   +0.021, partner +0.012→+0.021 playoff prob; season-block CIs > 0), vs a **random-trade control** that lifts
   both sides ~never — so it is the surplus *signal*, not roster churn. Value currency = preseason model ros
   mean (in-season this slot is 13.1's re-projected mean).
+
+## Phase 12 — news / NLP (2026-07-13)
+
+- **Exploitable lag** — the fantasy points a stale set-and-forget lineup loses by starting a player a
+  structured news event has already flagged, measured against realized points (`news/event_study.py`).
+  The "market" proxy the reframe leaves us (props shelved, no in-season ADP re-draft). **Injury lag =
+  +5.86 pts/start, sig** (Out +8.4, Questionable +3.9); **depth-chart change does not separate** (DROP).
+- **Availability multiplier** — the deterministic price of an injury status = `E[pts|status] / clean-week
+  baseline`, calibrated on DEV (Out≈0, Doubtful≈0.01, Questionable≈0.56; `news/validate.injury_multipliers`).
+  Fills 13.1's reserved `news` slot as a per-week level shift `level·(mult−1)`. The **core prices**, the
+  **LLM only extracts** — the reframe guardrail literalized.
+- **Extraction seam / gated `ClaudeClient`** — `news/extract.py` splits extraction (fuzzy text → a
+  structured `ExtractedSignal`) from pricing (core). Default = an **offline rules extractor** (runs in
+  tests, no network); the LLM path is a `ClaudeClient` (Haiku 4.5) gated behind `ANTHROPIC_API_KEY` +
+  the `anthropic` SDK, invoked only when a caller passes it in → the core stays LLM-free. `structured_
+  injury_signal` is the deterministic, validatable historical path (the injury feed already IS structured).
+- **News keep-or-drop gate (12.4)** — walk-forward: does a news-aware weekly forecast beat the injury-blind
+  13.1 forecast on realized points? **On the designated subset (where it applies): +3.4→4.3 pts/pw, 6/6
+  DEV.** A qualified KEEP (injury) + a DROP (depth) — the gate saying a *conditional* yes.
+
+## Phase 15 — multi-format + auction (2026-07-13)
+
+- **Auction value** — VOR expressed in dollars: every rosterable player costs ≥ `$min_bid`, the surplus
+  budget (total wallets − $1/slot) split ∝ VOR, so studs soak the money and the last slots go for $1
+  (`draft/auction.auction_values`). Replaces 13.3's fixed points→$ `value_scale`.
+- **$1 endgame / `endgame_cap`** — the exact budget-state (stochastic-knapsack) continuation constraint:
+  never bid so much you can't still fill every *other* remaining slot at $1 → `budget − $1·(slots−1)`.
+  The rigorous continuation value the pragmatic FAAB bidder lacked; **T9 discharged** — `faab_bid` now
+  consumes it (`slots_remaining`).
+- **Winner's-curse-aware bidding** — you only win when everyone else drops (evidence your estimate was
+  high); shade the max bid toward the field. In an English (pay-second-price) auction the load-bearing
+  skill is bidding *marginal* value (value to your own roster — a 4th RB is worth $1 to a full backfield)
+  under the endgame cap; `draft/auction.auction_bid`. **Budget-state bidder beats naive budget-splitting
+  6/6 DEV, +66→+128 lineup pts.**
+- **Variance is good in best-ball** — best-ball auto-keeps each week's boom and discards duds, so the
+  weekly total is **convex** in a player's spread — the exact **mirror of the 13.2 managed-lineup finding**
+  (variance hurt there, forced to start). A ceiling-aware drafter (`mean·(1+κ·wk_cov)`, κ=0.1, **weekly**
+  CoV not season sd — season sd carries injury downside and lost) beats mean-only 6/6 DEV, +37→+104 pts/szn.
+- **Leverage vs chalk (DFS GPP)** — in a top-heavy field you win by being *different and right*: the field
+  duplicates chalk (projection-max) so it splits its prize; a contrarian **leverage** lineup (`proj·(1−λ·
+  own)`, fading high-owned studs) is unique and keeps it. The mechanic is **prize-splitting among duplicate
+  lineups**. **MECHANICS only** — no free DK/FD salary or ownership feed (the props gap), so salaries are
+  synthesised (monotone in weekly projection) and ownership modeled (projection-driven); not Brier-validated.

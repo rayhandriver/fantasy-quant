@@ -1,0 +1,108 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "per_season": [
+    {
+      "season": 2017,
+      "n_drafts": 40,
+      "n_teams": 12,
+      "kappa": 0.1,
+      "ceiling_total": 2204.6200464337767,
+      "mean_total": 2167.143244430563,
+      "bestball_gain": 37.47680200321368,
+      "gain_ci": [
+        26.03495290178485,
+        48.739191551501
+      ],
+      "frac_drafts_ceiling_wins": 0.85,
+      "beats_mean_only": true
+    },
+    {
+      "season": 2018,
+      "n_drafts": 40,
+      "n_teams": 12,
+      "kappa": 0.1,
+      "ceiling_total": 2049.389678697783,
+      "mean_total": 1983.8373079148846,
+      "bestball_gain": 65.55237078289865,
+      "gain_ci": [
+        52.78566202167851,
+        78.16181641006658
+      ],
+      "frac_drafts_ceiling_wins": 0.925,
+      "beats_mean_only": true
+    },
+    {
+      "season": 2019,
+      "n_drafts": 40,
+      "n_teams": 12,
+      "kappa": 0.1,
+      "ceiling_total": 2239.728922091166,
+      "mean_total": 2158.928979210257,
+      "bestball_gain": 80.79994288090954,
+      "gain_ci": [
+        66.2340588701705,
+        95.65858216176527
+      ],
+      "frac_drafts_ceiling_wins": 0.95,
+      "beats_mean_only": true
+    },
+    {
+      "season": 2020,
+      "n_drafts": 40,
+      "n_teams": 12,
+      "kappa": 0.1,
+      "ceiling_total": 2255.3414319319736,
+      "mean_total": 2150.8820384567675,
+      "bestball_gain": 104.45939347520641,
+      "gain_ci": [
+        91.21695830122027,
+        118.45501123154105
+      ],
+      "frac_drafts_ceiling_wins": 1.0,
+      "beats_mean_only": true
+    },
+    {
+      "season": 2021,
+      "n_drafts": 40,
+      "n_teams": 12,
+      "kappa": 0.1,
+      "ceiling_total": 2259.85758616748,
+      "mean_total": 2203.1476808195052,
+      "bestball_gain": 56.70990534797444,
+      "gain_ci": [
+        43.160416774582984,
+        70.72990475251605
+      ],
+      "frac_drafts_ceiling_wins": 0.85,
+      "beats_mean_only": true
+    },
+    {
+      "season": 2022,
+      "n_drafts": 40,
+      "n_teams": 12,
+      "kappa": 0.1,
+      "ceiling_total": 2239.3022861559343,
+      "mean_total": 2137.3514178014457,
+      "bestball_gain": 101.95086835448868,
+      "gain_ci": [
+        85.11088674883189,
+        119.03235318787422
+      ],
+      "frac_drafts_ceiling_wins": 0.9,
+      "beats_mean_only": true
+    }
+  ],
+  "n_seasons_beating_mean": 6,
+  "gain_ci": [
+    55.44300320804215,
+    92.77738536708011
+  ],
+  "PASS": true
+}

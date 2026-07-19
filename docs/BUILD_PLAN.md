@@ -574,29 +574,31 @@ model**, scored against real completed drafts.*
 
 ---
 
-# Phase 12 — NLP / live-news pipeline *(◔ DEFERRED post-MVP)*
+# Phase 12 — NLP / live-news pipeline ✅ **COMPLETE** *(2026-07-13, Session C — a qualified KEEP)*
 *Goal: convert unstructured news into timestamped, PIT structured signal — the freshest-information edge.*
 
-> **◔ DEFERRED (2026-07-04).** Not in the near-term scope — **keep the core LLM-free**. When built (after
-> the deterministic app), it obeys **AI on the edges, deterministic core**: the LLM only extracts a
-> timestamped fact; the model prices the impact. It never computes a number that must be correct.
+> **✅ DONE (2026-07-13).** The gate said a **qualified yes**: the **injury** signal is a real, significant
+> KEEP; the **depth-chart** signal a DROP. **AI on the edges, deterministic core** was literalized — the LLM
+> (a gated `ClaudeClient`, Haiku 4.5, behind `ANTHROPIC_API_KEY`) only extracts a structured fact; the
+> deterministic core prices the impact (a DEV-calibrated availability multiplier). The default extractor is
+> offline rules (runs in tests) so the core stays LLM-free. See `findings.md`/`glossary.md` (Phase 12).
 
-### 12.1 — Source scrapers/streams → `news/sources.py`
+### 12.1 — Source scrapers/streams → `news/sources.py` ✅ *(2026-07-13 — the PIT news stream: 18k injury + 16k depth events, native-gsis; forward-only RSS)*
 - **Do:** robust collectors for beat writers, injury reports, depth charts, **inactives**, transactions —
   timestamped, deduped, rate-limited.
 - **Out:** `news/sources.py`; **Done:** continuous capture; each item has a reliable `captured_at`. **Reuse:** 0.6.
 
-### 12.2 — LLM extraction → `news/extract.py`
+### 12.2 — LLM extraction → `news/extract.py` ✅ *(2026-07-13 — offline rules default + gated `ClaudeClient` seam + deterministic `structured_injury_signal`)*
 - **Do:** **use Claude** to extract structured fields from text — role change, projected snap/route share,
   injury severity/timeline, "coachspeak" decoded — into PIT features with confidence.
 - **Out:** `news/extract.py` (`extract_signal`); **Done:** extracted fields agree with hand-labeled samples;
   features are timestamped. **Reuse:** Claude API (see `/claude-api`); 12.1.
 
-### 12.3 — Event-study → `news/event_study.py`
+### 12.3 — Event-study → `news/event_study.py` ✅ *(2026-07-13 — injury exploitable lag +5.86 pts/start sig; depth-chart change DOES NOT separate → DROP)*
 - **Do:** measure how ADP/props move on news and the **exploitable lag**; quantify which news types move markets.
 - **Out:** `news/event_study.py`; **Done:** documented lag/impact per news type. **Reuse:** 0.4/0.5 markets; 12.2.
 
-### 12.4 — Signal validation → `news/validate.py`
+### 12.4 — Signal validation → `news/validate.py` ✅ *(2026-07-13 — news-aware forecast beats injury-blind 13.1 +3.4→4.3 pts/pw designated, 6/6 DEV; injury KEEP, depth drop)*
 - **Do:** does an extracted signal improve projections/decisions OOS on the walk-forward? Kill signals that don't.
 - **Out:** `news/validate.py`; **Done:** only validated signals feed the model. **Reuse:** 1.3, 1.5.
 
@@ -747,11 +749,12 @@ production web stack.*
 
 ---
 
-# Phase 15 — Multi-format (roadmap)
-- **15.1 Dynasty/keeper** → `formats/dynasty.py`: multi-year asset pricing (closest to your equity work).
-- **15.2 Best-ball** → `formats/bestball.py`: no in-season management; pure draft + variance.
-- **15.3 DFS GPP** → `formats/dfs.py`: ownership/leverage, game stacks, field-relative scoring.
-- *Only after the redraft co-pilot (0–14) is proven.*
+# Phase 15 — Multi-format (roadmap) → ✅ **CORE COMPLETE** *(2026-07-13, Session C: 15.2/15.3/15.4; dynasty deferred)*
+- ◔ **15.1 Dynasty/keeper** → `formats/dynasty.py`: multi-year asset pricing (closest to your equity work).
+- ☑ **15.2 Best-ball** → `formats/bestball.py`: **DONE 2026-07-13** — variance-is-good (ceiling beats mean 6/6 DEV, weekly CoV). no in-season management; pure draft + variance.
+- ☑ **15.3 DFS GPP** → `formats/dfs.py`: **DONE 2026-07-13** — leverage beats chalk 6/6 (MECHANICS; no free salary/ownership feed). ownership/leverage, game stacks, field-relative scoring.
+- ☑ **15.4 Auction drafts** → `draft/auction.py` (absorbed from Phase 11.4): **DONE 2026-07-13** — auction values + the exact `endgame_cap` $1-endgame continuation + winner's-curse `auction_bid` + `nominate`; budget-state bidder beats naive budget-splitting 6/6 DEV (+66→+128 lineup pts). **Discharges TECH-DEBT T9** (`faab_bid` now consumes `endgame_cap`).
+- *15.1 dynasty deferred (user scope, Session C); the rest done.*
 
 ---
 

@@ -57,11 +57,27 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
    before starting the next sub-step.** Never chain sub-steps without that approval. This applies across the
    **entire** project, every phase. (User instruction, 2026-06-30.)
 
-> **Known problems & their exact fixes live in `docs/TECH-DEBT.md` (register T1–T8, opened 2026-07-10).**
+> **Known problems & their exact fixes live in `docs/TECH-DEBT.md` (register T1–T9, opened 2026-07-10).**
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **Next-session pointer (2026-07-12, Session B COMPLETE).** **SESSION A ☑ COMPLETE** (S6 + 13.1 + 13.2,
+> **★ Next-session pointer (2026-07-13, SESSION C COMPLETE — not yet committed, left for user review).**
+> **Session C = Phase 12 news/NLP + Phase 15 multi-format/auction — all done-bars PASS, ruff clean, 306
+> tests (was 276; +19 `test_news`, +11 `test_phase15`).** Ran the overdue Stage-0 FFC snapshot chore first.
+> **Phase 12 = a qualified KEEP:** the injury signal is real (exploitable lag +5.86 pts/start sig → the
+> news-aware weekly forecast beats injury-blind 13.1 **+3.4→4.3 pts/pw on the designated subset, 6/6 DEV**),
+> the depth-chart signal a DROP (no separation). LLM edge-only via a **gated `ClaudeClient`** (Haiku 4.5,
+> behind `ANTHROPIC_API_KEY`); the deterministic **rules** extractor is the default and the core prices the
+> signal — the guardrail literalized. `news/{sources,extract,event_study,validate}.py`; `steps/phase12_*`.
+> **Phase 15:** 15.4 auction (`draft/auction.py` — budget-state bidder beats naive 6/6; **T9 discharged**,
+> `faab_bid` consumes `endgame_cap`), 15.2 best-ball (`formats/bestball.py` — **variance-is-good**, ceiling
+> beats mean 6/6; **weekly** CoV not season sd), 15.3 DFS GPP (`formats/dfs.py` — leverage beats chalk 6/6
+> via duplication/prize-splitting, **MECHANICS only — no free DFS salary/ownership feed**). 15.1 dynasty
+> deferred (user scope). **What's next: Session D = optional MCTS/RL research gate (explicit decision) → T5
+> pre-registration (the only open pre-lockbox tech-debt) → the single LOCKBOX EVAL on 2023+2024 → then Phase
+> 14 the app.** Analysis JSON: `analysis/phase12_*`, `analysis/phase15_*`. **Resume: commit Session C.**
+>
+> _(Prior pointers, kept as history.)_ **SESSION A ☑ COMPLETE** (S6 + 13.1 + 13.2,
 > committed `87e6bae`). **SESSION B ☑ COMPLETE — 13.3 + 13.4 + 13.5 all DONE → Phase 13 / S7 COMPLETE.**
 > **276 tests, ruff clean; 13.3 committed; 13.4 + 13.5 NOT yet committed — left for user review.** Lockbox
 > (2023+24) untouched;
@@ -110,12 +126,13 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 >   partner floor (worse side died in MC noise) → rank by `min(maker, partner)` so the objective rewards
 >   *mutual* benefit. **Scope:** value = preseason model ros mean (self-consistent → PIT-trivial); in-season
 >   this `values` slot is 13.1's re-projected mean. Sim trades 1-for-1; 2-for-1 kernel-supported + unit-tested.
-> **What's next (THE PIPELINE):** **Session B done → Phase 13 / S7 COMPLETE.** Next = **Session C = Phase 12
-> news/NLP + Phase 15 multi-format+auction** (Phase 15.4 discharges T9), **Session D = optional MCTS/RL gate +
-> T5 pre-registration + LOCKBOX EVAL**, then **Session E = Phase 14.1** and **F+ = the go-live tail**. **T5**
-> pre-registration (freeze the stack; T3/T4 already ☑) is the only hard gate before the single lockbox eval.
-> Corpus can be grown anytime via `reference/sleeper_seeds.txt` + `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`.
-> **Resume here: commit 13.4 + 13.5, then Session C (Phase 12 news/NLP + Phase 15).** (Full session-sizing guide in `ROADMAP.md`.)
+> **What's next (THE PIPELINE):** **Sessions A/B/C done → Phases 12, 13/S7, 15 (core) COMPLETE; T9 ☑.**
+> Next = **Session D = optional MCTS/RL research gate (explicit decision) + T5 pre-registration + the single
+> LOCKBOX EVAL on 2023+2024**, then **Session E = Phase 14.1** (Streamlit MVP) and **F+ = the go-live tail**.
+> **T5** pre-registration (freeze the stack; T3/T4/T9 already ☑) is the **only open pre-lockbox item**, and
+> must run strictly last among build steps. Corpus can be grown anytime via `reference/sleeper_seeds.txt` +
+> `steps/phase0_10b_crawl.py`; `docs/SLEEPER.md`. **Resume here: commit Session C, then Session D.** (Full
+> session-sizing guide in `ROADMAP.md`.)
 
 ## 4. Watch out for
 - **Look-ahead via "current" snapshots.** End-of-season stats, final ADP, injury outcomes — never let them
@@ -156,12 +173,12 @@ phase** — do not pre-create empty trees.
 | Player-week covariance + shrinkage + copulas | `src/fantasy_quant/covariance/` | exists |
 | Valuation (VBD, conditional-VBD, structural-alpha, utility, objective, handcuff) | `src/fantasy_quant/valuation/` | exists |
 | Draft (simulator, greedy policy, opponent model, MCTS, CFR, auction) | `src/fantasy_quant/draft/` | exists |
-| Season/playoff **simulation** + leverage | `src/fantasy_quant/simulation/` | planned |
-| **In-season** co-pilot (re-project, lineup, waivers, streaming, trades) | `src/fantasy_quant/inseason/` | planned |
+| Season/playoff **simulation** + leverage | `src/fantasy_quant/simulation/` | exists |
+| **In-season** co-pilot (re-project, lineup, waivers, streaming, trades) | `src/fantasy_quant/inseason/` | exists |
 | PIT walk-forward **backtest** harness + metrics + significance | `src/fantasy_quant/backtest/` | exists |
 | **ADP-bias mining** | `src/fantasy_quant/adp/` | exists |
 | The **app** (FastAPI backend, Next.js frontend, widget) | `src/fantasy_quant/app/` (+ `app/frontend`) | planned |
-| Multi-format (dynasty/best-ball/DFS) | `src/fantasy_quant/formats/` | roadmap |
+| Multi-format (dynasty/best-ball/DFS) + auction | `src/fantasy_quant/formats/`, `draft/auction.py` | exists (best-ball/DFS/auction; dynasty roadmap) |
 | Phased runnable scripts (one per step) | `steps/` | exists |
 | Results / scorecards | `analysis/` | exists |
 

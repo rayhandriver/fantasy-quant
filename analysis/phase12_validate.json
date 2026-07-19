@@ -1,0 +1,190 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "per_season": [
+    {
+      "season": 2017,
+      "n_player_weeks": 3892,
+      "n_designated": 504,
+      "base_mae": 4.9867466222960335,
+      "news_mae": 4.554198394985675,
+      "mae_gain": 0.4325482273103597,
+      "mae_gain_ci": [
+        0.3390930145220006,
+        0.5401461229685823
+      ],
+      "designated_base_mae": 6.023695755240008,
+      "designated_news_mae": 2.6834622221211197,
+      "designated_gain": 3.3402335331188886,
+      "designated_gain_ci": [
+        2.80392447508208,
+        3.8690464135607123
+      ],
+      "multipliers": {
+        "Out": 0.0006717177086406328,
+        "Injured Reserve": 0.0,
+        "IR": 0.0,
+        "Doubtful": 0.004092470315098882,
+        "Questionable": 0.5586812511039763,
+        "Probable": 0.8293697034854532
+      },
+      "beats_on_designated": true
+    },
+    {
+      "season": 2018,
+      "n_player_weeks": 3772,
+      "n_designated": 538,
+      "base_mae": 5.283938257877939,
+      "news_mae": 4.813961205515138,
+      "mae_gain": 0.46997705236279974,
+      "mae_gain_ci": [
+        0.37565794994065266,
+        0.5776474861335047
+      ],
+      "designated_base_mae": 6.0189889882646765,
+      "designated_news_mae": 2.7239082419589504,
+      "designated_gain": 3.295080746305726,
+      "designated_gain_ci": [
+        2.8017534512029445,
+        3.806783269602527
+      ],
+      "multipliers": {
+        "Out": 0.0006919806921988721,
+        "Injured Reserve": 0.0,
+        "IR": 0.0,
+        "Doubtful": 0.007108015965343061,
+        "Questionable": 0.5589409031366688,
+        "Probable": 0.8293697034854532
+      },
+      "beats_on_designated": true
+    },
+    {
+      "season": 2019,
+      "n_player_weeks": 3876,
+      "n_designated": 573,
+      "base_mae": 5.268121620073809,
+      "news_mae": 4.628964145345128,
+      "mae_gain": 0.6391574747286801,
+      "mae_gain_ci": [
+        0.5013974257199612,
+        0.7817502013843638
+      ],
+      "designated_base_mae": 6.677175687344428,
+      "designated_news_mae": 2.3536602038394303,
+      "designated_gain": 4.323515483504997,
+      "designated_gain_ci": [
+        3.6203034157726006,
+        4.990598587632745
+      ],
+      "multipliers": {
+        "Out": 0.0007097585094024166,
+        "Injured Reserve": 0.0,
+        "IR": 0.0,
+        "Doubtful": 0.00487594316227983,
+        "Questionable": 0.5598596936834489,
+        "Probable": 0.8293697034854532
+      },
+      "beats_on_designated": true
+    },
+    {
+      "season": 2020,
+      "n_player_weeks": 3941,
+      "n_designated": 545,
+      "base_mae": 5.2894382087912994,
+      "news_mae": 4.757394071081423,
+      "mae_gain": 0.5320441377098762,
+      "mae_gain_ci": [
+        0.42714671575202107,
+        0.6404316060730396
+      ],
+      "designated_base_mae": 6.4336886554651995,
+      "designated_news_mae": 2.586374991768645,
+      "designated_gain": 3.8473136636965544,
+      "designated_gain_ci": [
+        3.2717709231724457,
+        4.423178590269301
+      ],
+      "multipliers": {
+        "Out": 0.0006925071169945044,
+        "Injured Reserve": 0.0,
+        "IR": 0.0,
+        "Doubtful": 0.005198360721407872,
+        "Questionable": 0.5608766672616053,
+        "Probable": 0.8293697034854532
+      },
+      "beats_on_designated": true
+    },
+    {
+      "season": 2021,
+      "n_player_weeks": 3918,
+      "n_designated": 568,
+      "base_mae": 5.158666105533809,
+      "news_mae": 4.613562158326787,
+      "mae_gain": 0.5451039472070233,
+      "mae_gain_ci": [
+        0.4474688868628597,
+        0.6515081752793948
+      ],
+      "designated_base_mae": 6.4786111633378365,
+      "designated_news_mae": 2.718545555666855,
+      "designated_gain": 3.760065607670982,
+      "designated_gain_ci": [
+        3.2546466091869446,
+        4.243800956238394
+      ],
+      "multipliers": {
+        "Out": 0.0,
+        "Injured Reserve": 0.0,
+        "IR": 0.0,
+        "Doubtful": 0.007449628439689454,
+        "Questionable": 0.5552624104060175,
+        "Probable": 0.8293697034854532
+      },
+      "beats_on_designated": true
+    },
+    {
+      "season": 2022,
+      "n_player_weeks": 3947,
+      "n_designated": 593,
+      "base_mae": 4.970395377565856,
+      "news_mae": 4.439581380582222,
+      "mae_gain": 0.5308139969836342,
+      "mae_gain_ci": [
+        0.4363496777523827,
+        0.6281661396287223
+      ],
+      "designated_base_mae": 6.142427599787998,
+      "designated_news_mae": 2.609336796930655,
+      "designated_gain": 3.533090802857342,
+      "designated_gain_ci": [
+        3.0924405127560393,
+        3.981425710710172
+      ],
+      "multipliers": {
+        "Out": 0.0007056471343359359,
+        "Injured Reserve": 0.0,
+        "IR": 0.0,
+        "Doubtful": 0.007139492982365024,
+        "Questionable": 0.5618358091020179,
+        "Probable": 0.8293697034854532
+      },
+      "beats_on_designated": true
+    }
+  ],
+  "n_seasons_keep": 6,
+  "designated_gain_ci": [
+    3.421611239050394,
+    3.980674377098977
+  ],
+  "overall_gain_ci": [
+    0.47407942534529374,
+    0.5772279034565829
+  ],
+  "PASS": true
+}

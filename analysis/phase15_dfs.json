@@ -1,0 +1,127 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "per_season": [
+    {
+      "season": 2017,
+      "field_size": 200,
+      "n_contests": 4000,
+      "chalk_dupes": 80,
+      "chalk_salary": 50000.0,
+      "leverage_salary": 49100.0,
+      "chalk_own": 0.869264958728837,
+      "leverage_own": 0.6766947963333564,
+      "chalk_payout": 0.016271604938271605,
+      "leverage_payout": 0.85925,
+      "payout_gain": 0.8429783950617284,
+      "payout_gain_ci": [
+        0.6506896604938271,
+        1.0736734567901236
+      ],
+      "beats_chalk": true
+    },
+    {
+      "season": 2018,
+      "field_size": 200,
+      "n_contests": 4000,
+      "chalk_dupes": 80,
+      "chalk_salary": 49200.0,
+      "leverage_salary": 49100.0,
+      "chalk_own": 0.8301099116885828,
+      "leverage_own": 0.789200712638046,
+      "chalk_payout": 0.015632716049382715,
+      "leverage_payout": 0.83125,
+      "payout_gain": 0.8156172839506172,
+      "payout_gain_ci": [
+        0.6267153549382716,
+        1.0233984567901233
+      ],
+      "beats_chalk": true
+    },
+    {
+      "season": 2019,
+      "field_size": 200,
+      "n_contests": 4000,
+      "chalk_dupes": 80,
+      "chalk_salary": 48300.0,
+      "leverage_salary": 49500.0,
+      "chalk_own": 0.7362966983747151,
+      "leverage_own": 0.6205864320118217,
+      "chalk_payout": 0.008672839506172838,
+      "leverage_payout": 0.71625,
+      "payout_gain": 0.707577160493827,
+      "payout_gain_ci": [
+        0.5531898919753085,
+        0.889391049382716
+      ],
+      "beats_chalk": true
+    },
+    {
+      "season": 2020,
+      "field_size": 200,
+      "n_contests": 4000,
+      "chalk_dupes": 80,
+      "chalk_salary": 46500.0,
+      "leverage_salary": 48700.0,
+      "chalk_own": 0.6769658501133666,
+      "leverage_own": 0.5894995845176809,
+      "chalk_payout": 0.011919753086419753,
+      "leverage_payout": 0.9135,
+      "payout_gain": 0.9015802469135802,
+      "payout_gain_ci": [
+        0.7142007716049382,
+        1.113857407407407
+      ],
+      "beats_chalk": true
+    },
+    {
+      "season": 2021,
+      "field_size": 200,
+      "n_contests": 4000,
+      "chalk_dupes": 80,
+      "chalk_salary": 49500.0,
+      "leverage_salary": 49700.0,
+      "chalk_own": 0.7110546498923156,
+      "leverage_own": 0.6055800669093832,
+      "chalk_payout": 0.011370370370370371,
+      "leverage_payout": 1.0115,
+      "payout_gain": 1.0001296296296296,
+      "payout_gain_ci": [
+        0.7854574074074073,
+        1.2378955246913579
+      ],
+      "beats_chalk": true
+    },
+    {
+      "season": 2022,
+      "field_size": 200,
+      "n_contests": 4000,
+      "chalk_dupes": 80,
+      "chalk_salary": 46700.0,
+      "leverage_salary": 49500.0,
+      "chalk_own": 0.5154712943955454,
+      "leverage_own": 0.6263798549328212,
+      "chalk_payout": 0.00970679012345679,
+      "leverage_payout": 1.12625,
+      "payout_gain": 1.116543209876543,
+      "payout_gain_ci": [
+        0.8710215277777777,
+        1.3661774691358026
+      ],
+      "beats_chalk": true
+    }
+  ],
+  "n_seasons_beating_chalk": 6,
+  "payout_gain_ci": [
+    0.7948117283950616,
+    1.0059526748971193
+  ],
+  "PASS": true,
+  "data_caveat": "modeled salaries + ownership (no free DFS feed); mechanics not Brier-validated"
+}

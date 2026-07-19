@@ -5,6 +5,23 @@ step**. This file does **not** restate the goal, scope, decisions, or phase plan
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
 ## Current state
+- **2026-07-13 (Session C)** — **Phase 12 news/NLP + Phase 15 multi-format/auction DONE (all done-bars PASS;
+  306 tests, ruff clean; NOT committed — left for user review).** Ran the overdue Stage-0 FFC snapshot chore
+  first (banked 2026-07-18 boards). Lockbox untouched; DEV-only (2017–22). Full detail in `findings.md`
+  (Session C) + `glossary.md` (Phase 12 / Phase 15). Headlines:
+  - **Phase 12 — a qualified KEEP.** `news/{sources,extract,event_study,validate}.py`. Injury designations
+    carry a **significant exploitable lag (+5.86 pts/start)** → a news-aware weekly forecast (13.1's reserved
+    `news` slot, priced by a DEV-calibrated availability multiplier) **beats injury-blind 13.1 +3.4→4.3
+    pts/pw on the designated subset, 6/6 DEV**. Depth-chart changes don't separate → **DROP** that signal.
+    LLM edge-only via a **gated `ClaudeClient`** (Haiku 4.5, behind `ANTHROPIC_API_KEY`); the deterministic
+    **rules** extractor is the default and the core prices the signal — the reframe guardrail, literalized.
+    Free-text RSS is forward-only (can't be backfilled) → the validated signal is the structured injury feed.
+  - **Phase 15.** 15.4 auction (`draft/auction.py` — budget-state bidder beats naive 6/6, +66→+128 lineup
+    pts; **T9 discharged**, `faab_bid` consumes `endgame_cap`), 15.2 best-ball (`formats/bestball.py` —
+    **variance-is-good**, ceiling beats mean 6/6; **weekly** CoV not season sd), 15.3 DFS GPP
+    (`formats/dfs.py` — leverage beats chalk 6/6 via duplication/prize-splitting; **MECHANICS only, no free
+    DFS salary/ownership feed**). 15.1 dynasty deferred (user scope). **Next: Session D = optional MCTS/RL
+    gate → T5 pre-registration → LOCKBOX EVAL → Phase 14 app.**
 - **2026-07-12 (Session B, part 3 of 3)** — **Phase 13.5 trades / market-making DONE (DEV done-bar PASS; 276
   tests, ruff clean; NOT committed — left for user review with 13.4).** Greenfield `inseason/trades.py`.
   Lockbox untouched; all tuning on DEV (2017–22). **Session B (13.3+13.4+13.5) complete → S7/Phase 13 done.**

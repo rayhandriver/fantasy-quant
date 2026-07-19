@@ -1,0 +1,114 @@
+{
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "per_season": [
+    {
+      "season": 2017,
+      "n_auctions": 40,
+      "n_pool": 75,
+      "vor_per_dollar": 1.2816549057890796,
+      "top_value_dollars": 141.91494020140226,
+      "smart_value": 273.25232566852185,
+      "naive_value": 182.8607863928423,
+      "value_gain": 90.39153927567953,
+      "value_gain_ci": [
+        78.88493770624136,
+        102.40725202608819
+      ],
+      "frac_auctions_smart_wins": 1.0,
+      "beats_naive": true
+    },
+    {
+      "season": 2018,
+      "n_auctions": 40,
+      "n_pool": 75,
+      "vor_per_dollar": 1.3938169420977056,
+      "top_value_dollars": 129.0941811427831,
+      "smart_value": 282.7348010603938,
+      "naive_value": 216.41240915104692,
+      "value_gain": 66.32239190934689,
+      "value_gain_ci": [
+        52.95086241371742,
+        80.50452491107909
+      ],
+      "frac_auctions_smart_wins": 1.0,
+      "beats_naive": true
+    },
+    {
+      "season": 2019,
+      "n_auctions": 40,
+      "n_pool": 75,
+      "vor_per_dollar": 1.7175915963501387,
+      "top_value_dollars": 100.66275022260486,
+      "smart_value": 378.12092810680423,
+      "naive_value": 250.51930488634608,
+      "value_gain": 127.6016232204581,
+      "value_gain_ci": [
+        106.79191229429499,
+        150.47447136032523
+      ],
+      "frac_auctions_smart_wins": 1.0,
+      "beats_naive": true
+    },
+    {
+      "season": 2020,
+      "n_auctions": 40,
+      "n_pool": 75,
+      "vor_per_dollar": 1.3785875682413318,
+      "top_value_dollars": 154.30249221135284,
+      "smart_value": 291.9886814606826,
+      "naive_value": 207.80492027112533,
+      "value_gain": 84.18376118955723,
+      "value_gain_ci": [
+        72.52581660400352,
+        96.34622954701322
+      ],
+      "frac_auctions_smart_wins": 1.0,
+      "beats_naive": true
+    },
+    {
+      "season": 2021,
+      "n_auctions": 40,
+      "n_pool": 75,
+      "vor_per_dollar": 1.2617708092064337,
+      "top_value_dollars": 120.07679215397914,
+      "smart_value": 265.9278515697748,
+      "naive_value": 171.55600963128546,
+      "value_gain": 94.37184193848934,
+      "value_gain_ci": [
+        83.0422514496434,
+        107.01406390108771
+      ],
+      "frac_auctions_smart_wins": 1.0,
+      "beats_naive": true
+    },
+    {
+      "season": 2022,
+      "n_auctions": 40,
+      "n_pool": 75,
+      "vor_per_dollar": 1.2562822402903686,
+      "top_value_dollars": 119.8461830330011,
+      "smart_value": 262.29945419279,
+      "naive_value": 178.0237345664108,
+      "value_gain": 84.27571962637921,
+      "value_gain_ci": [
+        70.91573605477166,
+        98.84318632006578
+      ],
+      "frac_auctions_smart_wins": 1.0,
+      "beats_naive": true
+    }
+  ],
+  "n_seasons_beating_naive": 6,
+  "value_gain_ci": [
+    77.9857196886278,
+    107.60603206930001
+  ],
+  "PASS": true
+}
