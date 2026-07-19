@@ -16,11 +16,12 @@ At a glance:
 | **T2** | 🔴 | Irreplaceable data (2026 ADP series, 2025 backfill) has no backup | now | ☑ |
 | **T3** | 🟠 | Downside under-modeled — unconditional coverage 44 % / points coverage 62 % | before lockbox | ☑ |
 | **T4** | 🟠 | Season-sim level bias −137 pts/team/season | before lockbox (with T3) | ☑ |
-| **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ◐→☑ |
+| **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ☑ |
 | **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☑ |
 | **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
 | **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit ☑**) | 9.5 done / fit done | ◐→☑ |
 | **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☑ |
+| **T10** | 🟡 | `validate_archetypes`/`spine_4_validate` sweep S6's `adaptive` archetype → crash (needs `adaptive_parent`) | opportunistic (post-lockbox) | ☐ |
 
 ---
 
@@ -196,13 +197,15 @@ holds. (Widening spread also lifts T3 coverage — that's why they're done toget
 ---
 
 ## 🟠 T5 — De-risk the one-shot lockbox
-**Status ◐ (2026-07-19, Session D) — pre-registration committed BEFORE the eval; the one-shot eval runs
-next in the same session.** Pre-registration in `PLAN.md` §"⭐ T5 PRE-REGISTRATION": the exact frozen
-stack + the exact metrics + the 2025 dress rehearsal + the ≈35–40 DEV-decision count. **2025 dress
-rehearsal recorded** (`analysis/lockbox_dress_2025.json`): projection bias 0.575 / Spearman 0.568,
-distribution coverage 75.5 % uncond / 81.5 % cond — the assembled value+risk stack is well-calibrated on
-unseen data. Next: `steps/lockbox_eval.py --which lockbox` — run **once**, report as-is, then T5 ☑ and
-**no modeling change after**.
+**Status ☑ (2026-07-19, Session D). Pre-registration committed BEFORE the eval (`7bd6e10`); lockbox
+evaluated EXACTLY ONCE and reported as-is.** Pre-registration in `PLAN.md` §"⭐ T5 PRE-REGISTRATION": the
+exact frozen stack + the exact metrics + the 2025 dress rehearsal + the ≈35–40 DEV-decision count. **2025
+dress rehearsal** (`analysis/lockbox_dress_2025.json`): projection bias 0.575 / Spearman 0.568, coverage
+75.5 % uncond / 81.5 % cond. **Lockbox result** (`steps/lockbox_eval.py --which lockbox`,
+`analysis/lockbox_eval.json`, `findings.md` §"LOCKBOX EVALUATION"): **title Brier 0.088 < 0.09 (holds OOS,
+≈ DEV) · conditional coverage 80.1 % · projection Spearman 0.54 · cheap personalization**; known
+level-optimism / unconditional-attrition limitation persists (bias 0.62, uncond coverage 72 %, a marginal
+playoff Brier 0.240). **No modeling change after this — the stack is frozen.**
 
 <details><summary>Original plan (kept for the record)</summary>
 
@@ -414,6 +417,27 @@ transactions endpoint), fit and Brier-score the opponent-bid model like the draf
 value; the FAAB sim still passes its done-bar under the upgraded machinery.
 
 </details>
+
+---
+
+## 🟡 T10 — the archetype sweep crashes on S6's `adaptive`
+**Status ☐ · opportunistic (found during the lockbox eval; worked around there).**
+
+**Symptom.** `valuation/cost_validation.validate_archetypes` defaults its sweep to `[a for a in ARCHETYPES
+if a != "bpa"]` — which now includes **`adaptive`** (added by S6 in Session A). `replace(bench,
+archetype="adaptive")` raises: the `adaptive` archetype requires an `adaptive_parent`. So the archetype
+cost-report done-bar `steps/spine_4_validate.py` (and any default call) crashes post-S6 — a latent
+regression the DEV done-bar hasn't re-run since 2026-07-09 (pre-S6). The lockbox eval hit it and worked
+around it at the harness level (`steps/lockbox_eval.py::cost_report_par` passes an explicit
+`archetypes=list(ADAPTIVE_PARENTS)`), so the frozen stack was untouched.
+
+**Fix (opportunistic, post-lockbox — a harness/utility fix, not the modeling stack).** Either exclude
+`adaptive` from `validate_archetypes`' default names, or price it against each of its parents (sweep
+`adaptive(zero_rb)`, `adaptive(hero_rb)`, … as distinct subjects — the more informative option). Update
+`spine_4_validate.py` to match.
+
+**Done-when.** `steps/spine_4_validate.py` runs green again; the sweep either skips `adaptive` or prices it
+per parent.
 
 ---
 

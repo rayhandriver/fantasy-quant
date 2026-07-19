@@ -1687,3 +1687,49 @@ board + same room (common random numbers), each roster scored three ways (`steps
   the covariance-aware greedy (+ 9.1/9.4 scarcity, 9.5 win-prob opt-in) is the frozen policy. Self-play RL
   (11.5) stays roadmap a fortiori — a heavier bet on the same objective whose OOS edge just failed to
   resolve. **This closes the optional research gate: no MCTS/RL in the frozen stack.**
+
+### LOCKBOX EVALUATION — 2023 + 2024 — spent EXACTLY ONCE (2026-07-19)
+The single held-out measurement of the frozen stack, pre-registered in `PLAN.md` §"⭐ T5
+PRE-REGISTRATION" (committed `7bd6e10` *before* this ran) and reported **as-is** — no tuning, no
+re-run of any metric. `steps/lockbox_eval.py --which lockbox` (30 ADP+noise leagues × 500 sims,
+matching the DEV calibration gate; `analysis/lockbox_eval.json`). **Read against the decision-count
+caveat: ≈35–40 selection decisions were made on DEV, so a *marginal* number is weak evidence and a
+*decisive* one is strong.**
+
+- **(1) Season/playoff sim — the north-star (600 team-seasons).** **Title Brier 0.0884 < 0.09 baseline
+  — BEATS, and essentially identical to DEV (0.0881): the championship-probability calibration HOLDS
+  OUT OF SAMPLE** (the single most important result — the reframe's north-star generalises). Playoff
+  Brier **0.2398 vs 0.24 — a *marginal* beat** (DEV was a clearer 0.2342); by the decision-count caveat
+  this is weak, honest evidence the playoff-cut calibration is near the baseline on these two seasons.
+  Seed stability 0.945 (≥0.9 ✓); leverage directions correct (trailing +0.003 playoff prob at 1.6×,
+  leader −0.017 ✓). Level bias **−76 pts** (smaller than DEV's −113). Points coverage **89.2 %** and
+  spread ratio **1.40** — the sim slightly **over**-disperses on the lockbox (the mirror of DEV's
+  *under*-coverage; the T4 κ inflation, tuned to lift DEV coverage 62→77 %, over-shoots to 89 % here).
+  **Every hard gate the DEV gate defines PASSES on the lockbox.**
+- **(2) Projection calibration — value = consensus→VBD (n=848).** Rank **Spearman 0.538** (holds; DEV/2025
+  ≈0.57), overall **bias 0.620**, MAE 75.2. The value signal is **well-calibrated in rank, ~40–60 %
+  optimistic in level** — exactly the standing finding (games-played attrition), **holding out of
+  sample**, not a surprise.
+- **(2b) Distribution 80 %-interval coverage (Phase-5 + T3).** **Conditional (players who play) 80.1 % —
+  bang on the 80 % target OOS**: the risk layer is excellently calibrated for players who play.
+  Unconditional 72.1 % — the **documented residual attrition gap** (a projected body who never plays;
+  T3 lifted DEV 44→77 %) persists at a similar level OOS. Never claimed fixed → holds as the known
+  limitation.
+- **(3) Cost-of-personalization — realized-PAR archetype sweep (20 drafts each).** Per-archetype realized
+  costs are **small and noise-dominated** — hero_rb +42.8, late_qb +26.8, elite_te +19.5, zero_rb −12.6
+  PAR, **all CIs span 0** on 2 seasons. Projected→realized cross-check **Spearman +0.60, sign agreement
+  75 % (n=8)** — a *weakly positive* directional link (better than DEV's ≈0). Consistent with the S3
+  finding: **personalization is cheap and the projected cost is a draft-day aid, not a season forecast.**
+  *(Harness note: this component crashed the first run — `validate_archetypes` swept S6's `adaptive`
+  archetype, which needs an `adaptive_parent` (a latent bug from Session A that also breaks
+  `spine_4_validate.py` on DEV → logged **TECH-DEBT T10**). Fixed at the harness level — sweep the 4
+  static preference archetypes only; the **frozen modeling stack was untouched** — and computed once,
+  its first and only look.)*
+
+**Bottom line (reported as-is).** The reframe's honest-value claims **generalise out of sample**:
+**calibrated championship probabilities** (title Brier 0.088 < 0.09, ≈ DEV), a **well-calibrated
+conditional risk layer** (80.1 %), **rank-calibrated value** (Spearman 0.54), and **cheap, honestly-
+priced personalization** — with the **known level-optimism / unconditional-attrition limitation
+persisting** (projection bias 0.62; unconditional coverage 72 %; a *marginal* playoff Brier). No claim
+of out-forecasting consensus is made or needed (proven unwinnable on ~10 seasons). **The lockbox is now
+spent; the modeling stack is frozen. Nothing modeling-side changes on the basis of this result.**

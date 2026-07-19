@@ -76,6 +76,24 @@ so a *decisive* result (DEV title Brier was 0.088 ≪ 0.09) is robust and a *mar
 ---
 
 ## Current state
+- **2026-07-19 (Session D)** — **CLOSEOUT COMPLETE: MCTS research gate DROPPED + T5 pre-registration + the
+  one-shot LOCKBOX EVAL. The engine is FINAL; the lockbox is spent.** See §"⭐ T5 PRE-REGISTRATION" above,
+  `findings.md` §"Session D" + §"LOCKBOX EVALUATION", `analysis/{phase11_mcts,lockbox_eval,lockbox_dress_2025}.json`.
+  311→ (5 new `test_mcts`) tests, ruff clean. **Two local commits** (`7bd6e10` freeze, then the lockbox result);
+  **not pushed**. Lockbox now touched — by design, exactly once.
+  - **MCTS (11.2) BUILT & DROPPED** (`draft/mcts.py` determinized-UCT; `steps/phase11_2_mcts.py`). Beats the
+    greedy **in-objective** (Δ portfolio CE +77, CI[+47,+107], 89 %) but **not on realized OOS points** (Δ +32,
+    CI[−90,+145]∋0, 56 %) at 8.5 s/pick → near-perfect-info thesis measured; greedy stays the policy. **Key
+    build lesson:** at low iters (15) MCTS *underperforms* the greedy even in-objective (resolution-limited,
+    the 9.5 title-objective lesson); needs ~100 iters to reliably beat it on CE.
+  - **T5** pre-registration + 2025 dress rehearsal (`steps/lockbox_eval.py --which dress`): projection bias
+    0.575 / Spearman 0.568, distribution coverage 75.5 % uncond / 81.5 % cond — well-calibrated on unseen data.
+  - **LOCKBOX (2023+2024, as-is):** title Brier **0.088 < 0.09** (champ calibration holds OOS, ≈ DEV),
+    conditional coverage **80.1 %**, projection Spearman **0.54**, cheap noise-dominated personalization;
+    **known level-optimism / attrition limitation persists** (bias 0.62, uncond 72 %, marginal playoff Brier
+    0.240). All hard gates PASS. **Harness fix (not the stack):** the cost-report crashed on S6's `adaptive`
+    archetype in `validate_archetypes` (logged **T10**); scoped to the 4 static preference archetypes + computed
+    once. **★ Next: Session E = Phase 14.1 Streamlit MVP.**
 - **2026-07-13 (Session C)** — **Phase 12 news/NLP + Phase 15 multi-format/auction DONE (all done-bars PASS;
   306 tests, ruff clean; NOT committed — left for user review).** Ran the overdue Stage-0 FFC snapshot chore
   first (banked 2026-07-18 boards). Lockbox untouched; DEV-only (2017–22). Full detail in `findings.md`

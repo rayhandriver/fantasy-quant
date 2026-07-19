@@ -146,16 +146,19 @@ ownership feed), 15.4 auction (budget-state bidder>naive 6/6, **T9 discharged**)
 build the benchmark, not defer): a determinized-UCT beats the greedy in-objective (Δ CE +77 sig) but not
 on realized OOS points (Δ +32, CI∋0) at 8.5 s/pick → greedy stays the policy; self-play RL stays roadmap;
 CFR stays dropped. The gate is spent — **no MCTS/RL in the frozen stack.** →
-**➤ PRE-LOCKBOX HARDENING (`docs/TECH-DEBT.md`):** ☑ **T3** coverage fix (cohort availability prior +
-role-survival haircut → unconditional 44 %→77 %) and ☑ **T4** sim level bias (−137 pts→−113) — both **done
-2026-07-11**; only **T5** (pre-register the frozen stack, incl. the T3/T4 params, + 2025 full-stack dress
-rehearsal) remains open, and must run strictly last among build steps — it's the mechanism that makes the
-lockbox eval meaningful, so no modeling changes after it. *(T7 scrape guards: opportunistic, done.)* →
-**10) LOCKBOX EVAL — exactly once** (freeze the stack, evaluate on 2023+2024, report as-is; nothing
-modeling-side changes after) →
-**11) Phase 14** the app with every factor embedded, then the 14.4 go-live tail. *(Built last by design —
-nothing here can start earlier without risking rework, since it's meant to surface every factor the engine
-ends up producing.)*
+**➤ PRE-LOCKBOX HARDENING (`docs/TECH-DEBT.md`):** ☑ **T3** coverage fix (→ uncond 44 %→77 %) · ☑ **T4** sim
+level bias (−137→−113) · ☑ **T5** *(2026-07-19, Session D)* — the frozen stack + metrics + the ≈35–40
+DEV-decision count pre-registered in `PLAN.md` and committed (`7bd6e10`) **before** the eval; 2025 dress
+rehearsal recorded. →
+**10) LOCKBOX EVAL — spent EXACTLY ONCE ✅ DONE (2026-07-19, Session D)** — `steps/lockbox_eval.py`,
+`analysis/lockbox_eval.json`, `findings.md` §"LOCKBOX EVALUATION"; reported **as-is**. **Result: the
+reframe's honest-value claims GENERALISE OOS** — title Brier **0.088 < 0.09** (championship calibration
+holds, ≈ DEV), conditional distribution coverage **80.1 %**, projection rank Spearman **0.54**, cheap
+noise-dominated personalization cost; **known level-optimism / unconditional-attrition limitation persists**
+(projection bias 0.62, uncond coverage 72 %, a *marginal* playoff Brier 0.240). All hard gates PASS. **The
+stack is frozen — nothing modeling-side changes on the basis of this result.** →
+**11) ← NOW: Phase 14** the app with every factor embedded (Session E = 14.1 Streamlit MVP; F+ = the 14.4
+go-live tail). *(Built last by design — it surfaces every factor the now-final engine produces.)*
 Net change from the prior sequencing (2026-07-11 review): only S6's position moved (from between Phase
 13/12 to immediately next). Everything else — Phase 13 before 12, 12 before 15, the optional gate last
 among builds, T5 → lockbox → app as a strict tail — checks out on actual dependencies, not just write order.

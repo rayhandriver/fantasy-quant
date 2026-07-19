@@ -1,0 +1,44 @@
+{
+  "which": "lockbox",
+  "seasons": [2023, 2024],
+  "board_source": "ffc",
+  "leagues": 30,
+  "sims": 500,
+  "note": "One-shot lockbox eval (2026-07-19, Session D). Components 1/2/2b computed in the first (and only) run of `steps/lockbox_eval.py --which lockbox`; component 3 (cost report) crashed that run on a HARNESS bug (validate_archetypes swept S6's `adaptive` archetype, which needs an `adaptive_parent`), was fixed at the harness level (sweep the 4 static preference archetypes only — frozen stack untouched), and computed once. No modeling change after the T5 pre-registration.",
+  "season_sim": {
+    "n_team_seasons": 600,
+    "seasons": [2023, 2024],
+    "playoff_brier": {"brier": 0.2397719466666667, "baseline": 0.24, "beats": true},
+    "title_brier": {"brier": 0.08836006666666667, "baseline": 0.09, "beats": true},
+    "points_coverage": 0.8916666666666667,
+    "spread_ratio": 1.40393427894291,
+    "level_bias": -76.02094874872675,
+    "stability_playoff": 0.9454545454545453,
+    "leverage_dog_playoff": 0.002666666666666675,
+    "leverage_fav_playoff": -0.01733333333333333
+  },
+  "projection_calibration": {
+    "n": 848,
+    "overall_bias": 0.620,
+    "spearman": 0.538,
+    "mae": 75.15
+  },
+  "distribution_coverage": {
+    "unconditional_coverage": 0.721,
+    "conditional_coverage": 0.801,
+    "n": 1325,
+    "n_played": 1025
+  },
+  "cost_report": {
+    "n_drafts_each": 20,
+    "per_archetype": [
+      {"archetype": "hero_rb", "realized_cost": 42.80, "ci": [-75.09, 160.69]},
+      {"archetype": "late_qb", "realized_cost": 26.84, "ci": [-100.14, 153.83]},
+      {"archetype": "elite_te", "realized_cost": 19.46, "ci": [-30.46, 69.38]},
+      {"archetype": "zero_rb", "realized_cost": -12.61, "ci": [-127.08, 101.86]}
+    ],
+    "cross_spearman": 0.595,
+    "cross_sign_agreement": 0.75,
+    "cross_n": 8
+  }
+}

@@ -212,7 +212,12 @@ def distribution_coverage(con, seasons, ruleset=None) -> dict:
 
 
 def cost_report_par(con, seasons, k_drafts: int = 10) -> dict:
-    res = validate_archetypes(con, seasons=tuple(seasons), k_drafts=k_drafts, n_boot=10000)
+    # Sweep the static *preference* archetypes only: `bpa` is the value-optimal benchmark and
+    # `adaptive` (S6) is a meta-wrapper needing an `adaptive_parent` — neither a standalone
+    # preference to price (a harness scoping choice; the frozen stack is untouched).
+    from fantasy_quant.draft.config import ADAPTIVE_PARENTS
+    res = validate_archetypes(con, archetypes=list(ADAPTIVE_PARENTS), seasons=tuple(seasons),
+                              k_drafts=k_drafts, n_boot=10000)
     per = [{"archetype": v.subject, "realized_cost": float(v.realized_cost),
             "ci": [float(v.ci.lo), float(v.ci.hi)]} for v in res.per_archetype]
     return {"n_drafts_each": res.per_archetype[0].n_drafts if res.per_archetype else 0,

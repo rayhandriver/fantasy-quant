@@ -61,7 +61,26 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★ Next-session pointer (2026-07-13, SESSION C COMPLETE — not yet committed, left for user review).**
+> **★ Next-session pointer (2026-07-19, SESSION D COMPLETE — the engine is FINAL and the lockbox is spent).**
+> Session D closed the pre-app pipeline: **(1) the optional MCTS research gate — BUILT & DROPPED** (user chose
+> to build the benchmark; a determinized-UCT beats the greedy in-objective Δ CE +77 but not on realized OOS
+> points Δ +32 CI∋0 at 8.5 s/pick → greedy stays the policy; CFR/self-play-RL stay out; `draft/mcts.py`,
+> `steps/phase11_2_mcts.py`); **(2) T5 pre-registration** of the exact frozen stack + metrics + the ≈35–40
+> DEV-decision count (`PLAN.md` §"⭐ T5 PRE-REGISTRATION"), committed **before** the eval; **(3) the LOCKBOX
+> EVAL — spent EXACTLY ONCE** on 2023+2024 (`steps/lockbox_eval.py`, `analysis/lockbox_eval.json`,
+> `findings.md` §"LOCKBOX EVALUATION"). **Result, as-is: the honest-value claims GENERALISE OOS** — title
+> Brier **0.088 < 0.09** (championship calibration holds ≈ DEV), conditional coverage **80.1 %**, projection
+> Spearman **0.54**, cheap personalization; **known level-optimism / unconditional-attrition limitation
+> persists** (bias 0.62, uncond 72 %, marginal playoff Brier 0.240). **The modeling stack is FROZEN — nothing
+> changes model-side on the basis of this result.** **★ WHAT'S NEXT: Session E = Phase 14.1 (Streamlit MVP
+> hardening) — the app, built strictly last with every factor embedded; do not bundle anything onto it. Then
+> F+ = the 14.2–14.4 go-live tail.** Two commits landed locally (`7bd6e10` freeze, then the lockbox-result
+> commit) — **not pushed** (user's review-then-push habit). Opportunistic tech-debt left: **T10** (the S6
+> `adaptive` archetype crashes `spine_4_validate`/`validate_archetypes` — worked around in the lockbox
+> harness; fix before re-running the DEV cost-report). Run the Stage-0 FFC snapshot chore if >6 days stale
+> (§2). **Resume: Phase 14.1.**
+>
+> _(Prior pointer — history.)_ **★ Next-session pointer (2026-07-13, SESSION C COMPLETE — not yet committed, left for user review).**
 > **Session C = Phase 12 news/NLP + Phase 15 multi-format/auction — all done-bars PASS, ruff clean, 306
 > tests (was 276; +19 `test_news`, +11 `test_phase15`).** Ran the overdue Stage-0 FFC snapshot chore first.
 > **Phase 12 = a qualified KEEP:** the injury signal is real (exploitable lag +5.86 pts/start sig → the
