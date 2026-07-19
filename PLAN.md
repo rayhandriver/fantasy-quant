@@ -4,6 +4,77 @@ Working notes only: implementation choices, parameter picks, and dead ends **as 
 step**. This file does **not** restate the goal, scope, decisions, or phase plan — those live in
 `PROJECT.md` (§1–§5). Keep it terse; newest at the bottom.
 
+## ⭐ T5 PRE-REGISTRATION OF THE FROZEN STACK (2026-07-19, Session D — committed BEFORE the lockbox eval)
+
+**Purpose (TECH-DEBT T5).** The lockbox (2023+2024) is evaluated **exactly once**. PIT-clean ≠
+out-of-sample-clean: every phase was selected/tuned on the same ~9 DEV seasons (2014–2022), so the
+multiple-testing burden is real. This block **freezes the exact stack and the exact metrics before
+the eval** so nothing is chosen post-hoc. **No modeling change after this commit.** Whatever the
+lockbox prints is reported as-is with the decision-count caveat below.
+
+**THE FROZEN STACK (component · file · key params):**
+- **Value** = consensus→VBD. `projections/consensus.py` (`consensus_projection`: live FantasyPros
+  re-scored to full-PPR; historical = Phase-2 baseline **proxy**) → `valuation/value_board.py`
+  (draft-time replacement **from projections**; frozen contract) → rookie ridge `projections/rookie.py`
+  (4.3) → calibration correction `projections/calibration.py` (4.4, per-pos bias→~0.96).
+- **Distributions** = `projections/{quantile,conformal,variance,injury,distribution}.py` (5.1 QuantReg
+  median slope ≈1.10 · 5.2 CQR · 5.3 wk_cov+boom/bust · 5.4 logistic-hazard→Beta-Binomial) **+ T3**
+  (`injury.cohort_availability_prior` pos×draft-capital tier; `injury.role_retention` washout at
+  played<40 %) assembled by `distribution.assemble_distribution` → `player_distributions`; utility CE
+  `valuation/utility.py` (5.5, `E[Y]−λ·Var[Y]`, λ default from `DraftConfig.risk_lambda`).
+- **Covariance** = `covariance/{estimate,shrinkage,copula}.py` (8.1 relationship-typed pooled ρ · 8.2 EB
+  shrink `w=n/(n+κ)` · 8.3 handcuff rotated-Clayton), Σ Higham-repaired.
+- **Draft policy** = covariance-aware greedy `draft/optimizer.py` (`personalized_pick_fn`+`RiskModel`;
+  9.1/9.4 scarcity+lookahead `scarcity_w=0.5`, `SCARCITY_HORIZON=3`, `DEFAULT_NOISE=5.0`) · archetypes
+  incl. **S6 adaptive** `draft/config.py` (`ADAPT_DECAY=0.5`, `ADAPT_SLIDE_WEIGHT=2.0`) · **9.5 win-prob
+  objective opt-in** (`winprob_pick_fn`, k=6, sims=200; CE the default). **MCTS (11.2): DROPPED per the
+  Session-D research gate `steps/phase11_2_mcts.py` — greedy is the frozen policy.** The determinized-UCT
+  MCTS beats the greedy **in-objective** (Δ portfolio CE **+77**, CI[+47,+107], 89 % win-rate over 9
+  DEV seat-seasons) but the gain **does not survive to realized OOS points** (Δ realized **+32**,
+  CI[−90,+145] ∋ 0, 56 % win-rate) at 8.5 s/pick — the near-perfect-info + can't-out-resolve-consensus
+  thesis, measured. Kept in-repo like Phase 7 / props (`analysis/phase11_mcts.json`; findings). CFR stays
+  dropped.
+- **Season sim** = `simulation/{weekly,season,playoffs,leverage}.py` (top-down weekly disaggregation:
+  Phase-5 clouds + Phase-8 Σ via Iman-Conover permutation → Dirichlet(1/CoV²) week shares; `LeagueFormat`
+  14-reg / 6-playoff / wks 15–17 / top-2 byes) **+ T4** `weekly.SPREAD_KAPPA={QB 1.4, RB 1.8, WR 1.8,
+  TE 1.7}` + 2-season CoV pooling.
+- **Opponent model** = `draft/{opponent_model,availability,personalities}.py` (11.1 conditional-logit fit
+  on the Sleeper human corpus 2017–20; 11.2 availability oracle; 11.3 personalities).
+- **Cost report** = spine S3 `valuation/cost_validation.py` + Phase-6 softness `adp/softness.py`
+  (frozen `DURABILITY` +14.6 VOR/SD credit); headline = portfolio CE + risk profile.
+- **Config** = `config.py`: DEV 2014–2022 · **LOCKBOX 2023+2024** · CALIBRATION 2025 · full-PPR, 10-team,
+  1-QB, 9-starter.
+
+**THE METRICS TO BE REPORTED (on 2023+2024, via `steps/lockbox_eval.py --which lockbox`):**
+1. **Season/playoff sim (north-star):** title Brier & playoff Brier vs the 0.09 / 0.24 format baselines,
+   reliability, points coverage, sim/realized spread ratio, seed stability, wk-8 leverage direction.
+2. **Projection calibration:** overall bias ratio, rank Spearman, MAE.
+3. **Distribution 80 %-interval coverage:** unconditional + conditional.
+4. **Cost-of-personalization:** per-archetype realized-PAR cost + CI, projected→realized cross-check.
+No other metric is added after seeing the result; no threshold is moved.
+
+**2025 FULL-STACK DRESS REHEARSAL (recorded 2026-07-19, `analysis/lockbox_dress_2025.json`).** Board-free
+value+risk layers on the 2025 calibration holdout: projection **bias 0.575 · Spearman 0.568 · MAE 78.2**
+(n=448); distribution **80 % coverage unconditional 75.5 % · conditional 81.5 %** (n=673). Both well-
+calibrated on unseen data → the lockbox is not the assembled system's first contact with a held-out year.
+*(2025's draft-backtest parts — season sim, cost report — await a 10-team 2025 ADP board: the only 2025
+boards are a 16-team `sleeper_human` and a 32-row `sleeper_mock`; those parts dress-rehearsed on DEV. The
+`lockbox_eval` season-sim harness itself is validated to reproduce the frozen `phase10_sim` gate within its
+own run-to-run noise — level bias matches exactly; threshold metrics wobble ~±0.002 Brier from BLAS float
+ordering, a pre-existing property of the frozen stack.)*
+
+**DEV SELECTION-DECISION COUNT (the multiple-testing caveat).** ≈**35–40** distinct selection/tuning
+decisions were made on DEV across 15 phases (ensemble w · EB/shrinkage κ · feature set · rookie ridge ·
+per-pos calibration · quantile/CQR/hazard forms · λ default · Phase-6 BH-FDR survivor · copula target ·
+`scarcity_w` · win-prob sims · **T4 κ grid** · **T3 tier thresholds** · **S6 ADAPT params** · opponent
+features · 13.x hyper-params · Phase-12 status multipliers · Phase-15 κ · the Phase-7 and MCTS keep-or-drop
+gates · …). **Read a marginal lockbox number (e.g. title Brier just under 0.09) with that skepticism.**
+Mitigant: the reframe deliberately targets **calibration**, not a single OOS edge — a much lower
+overfitting surface than point-estimate ADP-beating (which our own Phase-2 backtest showed is unwinnable),
+so a *decisive* result (DEV title Brier was 0.088 ≪ 0.09) is robust and a *marginal* one is not over-read.
+
+---
+
 ## Current state
 - **2026-07-13 (Session C)** — **Phase 12 news/NLP + Phase 15 multi-format/auction DONE (all done-bars PASS;
   306 tests, ruff clean; NOT committed — left for user review).** Ran the overdue Stage-0 FFC snapshot chore

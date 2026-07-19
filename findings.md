@@ -1654,3 +1654,36 @@ snapshot chore first (banked the 2026-07-18 boards, 99.2% gsis). Then Phase 12 (
   wire a real DFS feed and the same kernels become validatable. Two build corrections en route: ownership
   had to chase **projection** (studs=chalk), not points-per-$ (which made scrubs "chalk"); and the salary
   cap must bind on the **weekly** projection scale (season-mean ÷16) with a wide-enough pool for cheap punts.
+
+## Session D — MCTS research gate → T5 pre-registration → LOCKBOX EVAL (2026-07-19)
+The engine-complete-before-app pipeline's closeout: the explicit MCTS research gate (before the
+lockbox; CFR stays dropped), the T5 freeze/pre-registration + 2025 dress rehearsal, and the single
+one-shot lockbox evaluation on 2023+2024. DEV-only until the lockbox line.
+
+### 11.2 — MCTS draft engine: the research gate → **DROP** (a *textured* drop, not a flat one)
+Built a genuine **determinized-UCT** (single-observer information-set MCTS / PIMC) over snake-draft
+states (`draft/mcts.py`): top-K greedy candidates as actions, the ADP+noise room determinized per
+iteration, **greedy rollouts**, and the **portfolio-CE** leaf value — i.e. the tree searches *on top of*
+the exact Phase-9 greedy it is benchmarked against, optimising the same covariance-aware objective the
+greedy climbs. Head-to-head on **9 DEV seat-seasons** (2020–22 × slots 1/6/10, k=5, 100 iters), same
+board + same room (common random numbers), each roster scored three ways (`steps/phase11_2_mcts.py`,
+`analysis/phase11_mcts.json`):
+- **In-objective (portfolio CE): MCTS beats greedy +77.2, season-block CI [+46.9, +106.8], 89 % win-rate.**
+  The search is *correct and works* — with a real iteration budget it reliably finds higher-CE rosters
+  than the myopic greedy (a myopic greedy leaves plannable CE on the table; lookahead recovers it). At
+  low budget (15 iters, the smoke) it *underperformed* the greedy even in-objective (−9 CE) — resolution-
+  limited, the same lesson as the 9.5 title objective.
+- **Out-of-sample (realized optimal-lineup points): Δ +31.9, CI [−90.3, +145.4] ∋ 0, 56 % win-rate.** The
+  in-model CE gain **does not survive to realized points** — a coin flip. The greedy already banks the
+  *realizable* plannable value; the extra CE the search extracts is largely in-model (optimising the
+  covariance/CE objective harder), and that objective's residual edge over consensus is **unresolvable on
+  ~10 seasons** (the standing Phase-2 / reframe finding). Predicted playoff prob rose +0.050 (89 %), but
+  that is the model scoring its own rosters — circular with the CE it maximised.
+- **Live budget: 8.5 s/pick (max 9.4).** ~100× the greedy's instant pick.
+- **Verdict (as-written bar — beat greedy on realized pts OOS with a CI clear of 0): DROP.** Not because
+  the search is broken (it demonstrably improves the objective) but because a snake draft is
+  **near-perfect-information** and the objective's OOS link is too noisy for harder optimisation to pay —
+  paying 100× the compute buys **no measurable realized edge**. Kept in-repo like Phase 7 / props / CFR;
+  the covariance-aware greedy (+ 9.1/9.4 scarcity, 9.5 win-prob opt-in) is the frozen policy. Self-play RL
+  (11.5) stays roadmap a fortiori — a heavier bet on the same objective whose OOS edge just failed to
+  resolve. **This closes the optional research gate: no MCTS/RL in the frozen stack.**

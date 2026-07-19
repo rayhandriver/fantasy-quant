@@ -1,0 +1,31 @@
+{
+  "which": "dress",
+  "seasons": [
+    2025
+  ],
+  "board_source": "sleeper_human",
+  "leagues": 2,
+  "sims": 50,
+  "season_sim": {
+    "n": 0
+  },
+  "projection_calibration": {
+    "n": 448,
+    "overall_bias": 0.5752868841455996,
+    "spearman": 0.5679239157994892,
+    "mae": 78.15606371978315,
+    "by_position_bias": {
+      "QB": 0.5284671111898656,
+      "RB": 0.6427193817083448,
+      "TE": 0.5755532022076983,
+      "WR": 0.5623783775285434
+    }
+  },
+  "distribution_coverage": {
+    "unconditional_coverage": 0.7548291233283804,
+    "conditional_coverage": 0.8148820326678766,
+    "n": 673,
+    "n_played": 551
+  },
+  "cost_report": null
+}

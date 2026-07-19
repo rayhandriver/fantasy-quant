@@ -1,0 +1,30 @@
+{
+  "seasons": [
+    2020,
+    2021,
+    2022
+  ],
+  "slots": [
+    1,
+    6,
+    10
+  ],
+  "k": 5,
+  "iters": 100,
+  "n_seat_seasons": 9,
+  "delta_ce_mean": 77.22616129696365,
+  "delta_ce_ci": [
+    46.88396387181746,
+    106.8075835215003
+  ],
+  "delta_realized_mean": 31.877778275145424,
+  "delta_realized_ci": [
+    -90.31466646699435,
+    145.39583533667027
+  ],
+  "delta_realized_winrate": 0.5555555555555556,
+  "delta_playoff_mean": 0.050370370370370364,
+  "delta_title_mean": 0.04814814814814815,
+  "sec_per_pick_mean": 8.504893200485796,
+  "verdict": "DROP"
+}

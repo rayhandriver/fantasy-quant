@@ -16,7 +16,7 @@ At a glance:
 | **T2** | 🔴 | Irreplaceable data (2026 ADP series, 2025 backfill) has no backup | now | ☑ |
 | **T3** | 🟠 | Downside under-modeled — unconditional coverage 44 % / points coverage 62 % | before lockbox | ☑ |
 | **T4** | 🟠 | Season-sim level bias −137 pts/team/season | before lockbox (with T3) | ☑ |
-| **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ☐ |
+| **T5** | 🟠 | Lockbox is a one-shot; researcher-degrees-of-freedom accumulating on DEV | pre-register right before lockbox | ◐→☑ |
 | **T6** | 🟡 | Monte-Carlo draws recomputed / silently diverge across consumers | with Phase 9.5 | ☑ |
 | **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
 | **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit ☑**) | 9.5 done / fit done | ◐→☑ |
@@ -196,7 +196,15 @@ holds. (Widening spread also lifts T3 coverage — that's why they're done toget
 ---
 
 ## 🟠 T5 — De-risk the one-shot lockbox
-**Status ☐ · execute right before the lockbox eval (~1 hr of discipline).**
+**Status ◐ (2026-07-19, Session D) — pre-registration committed BEFORE the eval; the one-shot eval runs
+next in the same session.** Pre-registration in `PLAN.md` §"⭐ T5 PRE-REGISTRATION": the exact frozen
+stack + the exact metrics + the 2025 dress rehearsal + the ≈35–40 DEV-decision count. **2025 dress
+rehearsal recorded** (`analysis/lockbox_dress_2025.json`): projection bias 0.575 / Spearman 0.568,
+distribution coverage 75.5 % uncond / 81.5 % cond — the assembled value+risk stack is well-calibrated on
+unseen data. Next: `steps/lockbox_eval.py --which lockbox` — run **once**, report as-is, then T5 ☑ and
+**no modeling change after**.
+
+<details><summary>Original plan (kept for the record)</summary>
 
 **Symptom.** By design everything is developed on DEV 2014–2022 and 2023+2024 is evaluated **exactly once**
 at the end (`config.LOCKBOX_SEASONS`, CLAUDE.md §4). Every phase has been selected/tuned on the same ~9 DEV
@@ -216,6 +224,8 @@ single eval with no retry. PIT-clean ≠ out-of-sample-clean.
 
 **Done-when.** A committed, dated pre-registration exists; 2025 dress-rehearsal numbers are recorded; the
 lockbox is evaluated once and reported as-is with the decision-count caveat.
+
+</details>
 
 ---
 

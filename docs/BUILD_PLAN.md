@@ -551,11 +551,16 @@ model**, scored against real completed drafts.*
 - **Out:** `draft/opponent_model.py` (`OpponentModel.update/predict`); **Done:** predicts held-out league picks
   better than ADP-noise. **Reuse:** 1.2; mock data (14.7).
 
-### 11.2 — MCTS draft engine → `draft/mcts.py`
-- **Do:** **Monte-Carlo Tree Search** over draft states — top-K branching, cheap rollout policy (9.3), value
-  caching; opponents sampled from 11.1.
-- **Out:** `draft/mcts.py` (`mcts_pick`); **Done:** beats greedy (9.3) vs realistic opponents OOS; meets the
-  live time budget (pruned). **Reuse:** 9.x, 10.x, 11.1.
+### 11.2 — MCTS draft engine → `draft/mcts.py` ✗ **BUILT & DROPPED** *(2026-07-19, Session D research gate)*
+- **Built:** a **determinized-UCT** (PIMC / SO-ISMCTS) over draft states — top-K greedy candidates as actions,
+  the ADP+noise room determinized per iteration, greedy rollouts, portfolio-CE leaf value, UCB1 selection
+  (`draft/mcts.py::mcts_pick`/`mcts_pick_fn`). **Reused:** 9.x greedy + `portfolio_value`, 1.2 sim, 10.x sim.
+- **Gate (`steps/phase11_2_mcts.py`, `analysis/phase11_mcts.json`):** vs the greedy over 9 DEV seat-seasons
+  (2020–22 × slots 1/6/10, k=5, 100 iters). **Beats greedy IN-OBJECTIVE** (Δ portfolio CE +77, CI[+47,+107],
+  89 %) **but NOT on realized OOS points** (Δ +32, CI[−90,+145]∋0, 56 %) at 8.5 s/pick. **Verdict: DROP** —
+  a snake draft is near-perfect-info and the objective's OOS link is unresolvable on ~10 seasons, so harder
+  search buys no realized edge. Kept in-repo like Phase 7 / props / CFR. **11.5 self-play RL stays roadmap
+  a fortiori.** *(User chose to build the benchmark rather than defer the gate.)*
 
 ### 11.3 — CFR / exploitative refinement → `draft/cfr.py`
 - **Do:** **counterfactual regret minimization** (poker-AI) for the imperfect-information structure; exploit

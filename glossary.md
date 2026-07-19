@@ -4,10 +4,12 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-12 — **Session A terms**: adaptive archetype (implemented — fade-melt / slide /
+> **Last updated:** 2026-07-19 — **Session D terms** (bottom section): MCTS / determinized-UCT (PIMC /
+> SO-ISMCTS) / UCB1, the in-objective-vs-OOS-gain lesson, research gate, T5 pre-registration, dress
+> rehearsal, lockbox eval. *(Prior: 2026-07-12 — **Session A terms**: adaptive archetype (implemented — fade-melt / slide /
 > `adaptive_parent`), Phase-13 in-season section (weekly Kalman re-projection, `m0`/`p0`/`r`/`prior_weeks`,
 > `process_var`, reserved news slot, set-and-forget vs co-pilot, mean-max lineup, lineup-grain variance tilt
-> finding). *(Prior: 2026-07-11 (e) — **crawler league-seeding + real corpus terms**: iterative BFS snowball /
+> finding).)* *(Prior: 2026-07-11 (e) — **crawler league-seeding + real corpus terms**: iterative BFS snowball /
 > `league:<id>` seeding, complete-draft quality filter, type-drift-safe upsert.)* *(Prior: 2026-07-11 (d) —
 > Sleeper corpus-crawler terms: corpus crawler / participant expansion, `is_human` + human-vs-bot ADP,
 > `sleeper_manager_profiles`, data appetite.)* *(Prior: 2026-07-11 (c) — step
@@ -642,3 +644,35 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   own)`, fading high-owned studs) is unique and keeps it. The mechanic is **prize-splitting among duplicate
   lineups**. **MECHANICS only** — no free DK/FD salary or ownership feed (the props gap), so salaries are
   synthesised (monotone in weekly projection) and ownership modeled (projection-driven); not Brier-validated.
+
+## Session D — MCTS research gate + lockbox terms (2026-07-19)
+- **MCTS (Monte-Carlo Tree Search)** — a search that estimates each move's value by many random
+  playouts, growing a tree biased toward promising branches. Here (`draft/mcts.py`) it searches snake-
+  draft states: actions = the **top-K greedy candidates**, rollouts = the greedy policy, leaf value = the
+  roster's **portfolio CE** — so it searches *on top of* the greedy it is benchmarked against.
+- **Determinized UCT / PIMC (perfect-information Monte-Carlo) / SO-ISMCTS** — the technique for an
+  imperfect-information game (you don't know opponents' boards): each search iteration **determinizes** the
+  chance (samples one ADP+noise room), turning the draft deterministic for that iteration; candidates an
+  opponent happens to take simply don't appear that iteration (availability handling). Averaged over
+  iterations it approximates searching the real stochastic game.
+- **UCB1 selection** — the tree's explore/exploit rule: pick the child maximising
+  `mean_value + c·√(ln N_parent / n_child)`. Leaf values here are on the VBD-points scale, so the
+  exploitation term is **min-max-normalised** over the values seen in the search to make `c` meaningful.
+- **In-objective vs out-of-sample gain (the MCTS gate lesson)** — a search can beat the greedy on **the
+  objective it optimises** (MCTS: Δ portfolio CE **+77**, sig) yet **not** on **realized OOS outcomes**
+  (Δ realized **+32**, CI∋0). When the objective's link to reality is noisy (a near-perfect-info snake
+  draft + a model edge unresolvable on ~10 seasons), harder optimisation buys no realized edge → **DROP**.
+  The same shape as the 9.5 title-objective resolution limit, made a keep-or-drop verdict.
+- **Research gate** — an *explicit-decision* build step (MCTS / self-play RL, before the lockbox): build
+  the benchmark, measure it against the incumbent policy, keep-or-drop. CFR stays dropped (a snake draft is
+  ≈ perfect-information — a category error for regret minimisation).
+- **T5 pre-registration** — freezing the *exact* stack + the *exact* metrics in a dated, committed block
+  **before** the one-shot lockbox eval, so nothing is chosen post-hoc; plus a **running count of DEV
+  selection decisions** (≈35–40) so a marginal held-out number is read with the right multiple-testing
+  skepticism. PIT-clean ≠ out-of-sample-clean.
+- **Dress rehearsal** — running the *assembled* system against the **2025 calibration holdout** before the
+  lockbox, so the lockbox isn't the system's first contact with unseen data. Board-free here (2025 has no
+  10-team ADP board): projection calibration + distribution coverage.
+- **Lockbox eval** — the single, irreversible evaluation of the frozen stack on the held-out seasons
+  (**2023+2024**), reported **as-is** (`steps/lockbox_eval.py`, `analysis/lockbox_eval.json`). Spending it
+  twice destroys the external-validity claim it certifies.
