@@ -4,9 +4,18 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-19 — **Session D terms** (bottom section): MCTS / determinized-UCT (PIMC /
+> **Last updated:** 2026-07-23 — **Phase-16 opponent personalities** (bottom section, planned 16.13–16.15):
+> opponent personality vs archetype, the 5 headliners (Autopilot / Balanced / Upside Chaser / Safe-Floor /
+> Homer-Narrative-Chaser), opponent-board enrichment, `signal_weights`, face-validity bar, mock-room
+> composition. *(Same day earlier: **Phase-16 availability-drift terms** (planned 16.7–16.12):
+> draft-slot drift, availability drift vs value alpha, ADP velocity/momentum (forward-only), source
+> divergence, VBD-ADP gap (ECR proxy), correlated per-draft narrative shock, hype board, drift MAE. *(Same
+> day: **player-view / app-card terms**: player card (hover
+> overview) / player deep page (click-through), quasi-bar meter, green=good convention, dual-baseline bar,
+> bargain bar, walled-off situation-change bar, confidence indicator.)* *(Prior: 2026-07-19 — **Session D terms**:
+> MCTS / determinized-UCT (PIMC /
 > SO-ISMCTS) / UCB1, the in-objective-vs-OOS-gain lesson, research gate, T5 pre-registration, dress
-> rehearsal, lockbox eval. *(Prior: 2026-07-12 — **Session A terms**: adaptive archetype (implemented — fade-melt / slide /
+> rehearsal, lockbox eval.)* *(Prior: 2026-07-12 — **Session A terms**: adaptive archetype (implemented — fade-melt / slide /
 > `adaptive_parent`), Phase-13 in-season section (weekly Kalman re-projection, `m0`/`p0`/`r`/`prior_weeks`,
 > `process_var`, reserved news slot, set-and-forget vs co-pilot, mean-max lineup, lineup-grain variance tilt
 > finding).)* *(Prior: 2026-07-11 (e) — **crawler league-seeding + real corpus terms**: iterative BFS snowball /
@@ -676,3 +685,102 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
 - **Lockbox eval** — the single, irreversible evaluation of the frozen stack on the held-out seasons
   (**2023+2024**), reported **as-is** (`steps/lockbox_eval.py`, `analysis/lockbox_eval.json`). Spending it
   twice destroys the external-validity claim it certifies.
+
+## Player-view / app-card terms (2026-07-23, spec `docs/PLAYER-VIEW.md`)
+- **Player card (hover overview)** — the glanceable card shown when a user *hovers* a player on a board:
+  **5 quasi-bars** (impact, upside, downside, injury, bargain), each a **bar + a number**, no prose. The
+  *draft-now* read, deliberately not exhaustive.
+- **Player deep page (click-through)** — the dedicated per-player route (`/player/<key>`) opened on
+  *click*: **all 8 bars** with numbers **and** a one-line plain-English "why," plus a weekly-distribution
+  band, situation context, opportunity breakdown, and a limitations footer. The scouting-report tier. The
+  hover→page split is the "simple **yet** detailed" resolution.
+- **Quasi-bar / meter** — a three-tier (green/yellow/red) bar rendering one per-player trait read off a
+  frozen contract; length and color track the same scale. Not a chart axis — a glance meter.
+- **green = good (bar convention)** — green/large **always** means "good for the drafter." Risk traits
+  (injury, downside) are **inverted** so a durable, high-floor player shows a big green bar, not a big red
+  "risk" bar. One consistent reading everywhere: more green = more you want him.
+- **Dual-baseline bar** — every bar carries **two** percentile references: **overall** (vs the whole
+  draftable pool) as the primary/top fill, and **within-position** (vs same-position peers, "top-15% at
+  WR") as the secondary marker/label below. Overall keeps cross-position slot comparisons honest;
+  positional gives the "great for a TE" read. (User decision 2026-07-23.)
+- **Bargain bar** — the draft-cost value meter: `value_board.overall_rank` vs the ADP-board rank ("+1.5
+  rounds of value"). Draft-cost is its **own bar**, kept separate from the trait bars (which grade the
+  trait, not the price).
+- **Situation-change bar (walled-off)** — the deep-page-only bar fed by Phase 16 (team/QB/competition/
+  scheme change). Renders **visually distinct + tagged "directional context — not a calibrated
+  projection,"** never feeds a cost/value/impact number or the optimizer. Scouting color, not a rec — the
+  UI literalization of Phase 16's unvalidated, read-only status.
+- **Confidence indicator** — a card/page marker on rookie / `no_prior` / `source=proxy|rookie` players,
+  whose estimates are genuinely softer ("thin data — read the bars as wide"), so a shaky estimate is never
+  shown with false crispness. The UI analog of the engine's calibration discipline.
+
+## Phase 16 availability-drift terms (2026-07-23, planned 16.7–16.12, spec `PROJECT.md` §5)
+- **Availability drift (draft-slot drift)** — how much *earlier or later* a player is actually **drafted**
+  than his consensus ADP, `drift = actual_draft_slot − preseason_ADP` (negative = drafted earlier / reached
+  for). The **availability**-signal phenomenon: media narrative / changed circumstance (the McConkey case)
+  makes drafters reach, so the player is gone before his ADP says he should be. **Distinct from value alpha**
+  (Phase 6 / 16.1–16.6), which asks whether he *out-earns* his ADP in realized points. A player can drift
+  early (hyped) without any real value alpha, and vice-versa.
+- **Value alpha vs availability drift** — the two sibling mispricings this project separates. *Value alpha* =
+  realized VOR − ADP-implied VOR (is the price wrong about how *good* he is?). *Availability drift* = draft
+  slot − ADP (is the price wrong about how *early he goes*?). Phase 16 now mines both: 16.1–16.6 value,
+  16.7–16.12 availability.
+- **ADP velocity / momentum** — the slope of a player's ADP across a within-season snapshot **series** (rising
+  = the market is moving him up, i.e. narrative already being priced by other drafters). The most direct
+  "media already moved it" signal. **Forward-only:** only the Stage-0 2026 series is a true time series;
+  historical FFC is one ~Sep-1 board/season, so momentum is **not backtestable** and is validated live on
+  2026 (16.11).
+- **Source divergence** — the gap between a *public* ADP board (FFC) and a *sharper* one (`sleeper_human`).
+  A player much earlier on the sharp board is a **leading indicator** the public will over-draft him as it
+  catches up. A market-derived, backtestable narrative proxy (16.8).
+- **VBD-ADP gap (ECR proxy)** — `value_board.overall_rank` minus the ADP-board rank: "our projections rank
+  him well ahead of where he's drafted." A free stand-in for the classic **expert-rank-minus-ADP** value gap,
+  since we store projections (points), **not** FantasyPros' expert *rank* (ECR). Computable historically →
+  the backbone drift feature (16.8). *(A true-ECR scrape is optional future work, live-only.)*
+- **Correlated per-draft narrative shock** — the simulator fix for the user's key insight: sampling each AI
+  opponent **independently** understates clustering, so a hyped player *always* falls to you. Instead draw
+  **one shared hype shock per simulated draft**, applied to every opponent, so a hyped player goes early
+  **consistently within that draft** — reproducing the realized cross-draft **dispersion** of a player's
+  slot (some drafts he's gone early, some he lasts), i.e. the "sniped by a like-minded drafter" outcome (16.9).
+- **Hype board** — a small, hand-maintainable override table (`reference/hype_board.csv`: `player_key ·
+  pick_delta · note · source`), Claude-web-research-drafted + **user-reviewed before use** (same contract as
+  the 16.3 playcaller table), capturing the **qualitative** narrative residual pure market signals miss.
+  Applied as a bias on opponent utility / survival on top of the quantitative drift signals; live-season,
+  curated, explicitly **not** a backtested claim (16.10).
+- **Drift MAE / drift Spearman** — the own held-out metric for the availability-drift model: mean-absolute
+  error (and rank correlation) of predicted vs realized `drift` on the Sleeper human corpus, walk-forward,
+  vs a naive `drift = 0` baseline. The "does it actually predict who gets over-drafted?" gate (16.8), the
+  availability analog of Phase-6's VOR-alpha scorecard.
+- **P(available at your pick) / reach-risk readout** — the honest app surfacing (16.12): instead of a
+  yes/no "he falls to you," report the **probability** the player survives to your next pick (from the 11.2
+  availability oracle, drift-adjusted), plus a reach-risk flag ("going ~1 round early in sharp drafts —
+  consider reaching"). Sets expectations with a number, directly defusing the "fell in 10 mocks then got
+  sniped" bad experience.
+
+## Phase 16 — opponent personalities (2026-07-23, planned 16.13–16.15, spec `PROJECT.md` §5 / `BUILD_PLAN.md`)
+- **Opponent personality** — a named, interpretable **tilt on the fitted behavioral opponent model** used to
+  make a mock-draft room *heterogeneous* (`draft/personalities.py`, Phase 11.3). **Distinct from an
+  archetype** (`config.py`): an archetype is the *user's own* draft strategy; a personality is *another seat*
+  in the room. Existing six (`balanced`, `chalk`, `zero_rb`, `reacher`, `homer`, `rookie_hawk`) tilt only on
+  ADP/behavioral features; 16.13–16.15 add **risk/value** personalities.
+- **The 5 headline personalities (16.14)** — the curated set surfaced in the app: **Autopilot** (deterministic
+  lowest-ADP-available — the literal Sleeper autopick, "BPA every time" in the *ADP* sense), **Balanced** (the
+  fitted average human), **Upside Chaser** (ceiling — tilts to `boom_prob`/`q90` + youth, punts floor), **Safe
+  / Floor** (floor/durability — tilts to `q10`/`games_played_mean`/DURABILITY, low `bust_prob`, veterans), and
+  **Homer / Narrative-Chaser** (favorite-team `fandom` + hyped names off the 16.10 hype board — the seat the
+  16.9 narrative shock rides through). *(Value-BPA was considered and cut — user chose "ADP autopilot only,"
+  no value-board opponent.)*
+- **Opponent-board enrichment (16.13)** — attaching the frozen, **read-only** Phase-5 distribution
+  (`boom_prob`/`q90`/`bust_prob`/`q10`/`games_played_mean`) + `value_board` (`vbd`/`overall_rank`) fields to
+  the sim board, so risk/value personalities have signal to tilt on (the live board otherwise carries only
+  `adp`/`pos`). No modeling change.
+- **`signal_weights` (personality term)** — the new `Personality` field that lets a personality add a linear
+  bonus/penalty on the *enriched* columns (e.g. Upside Chaser `+boom_prob`, Safe `+q10 −bust_prob`), beyond
+  the existing β-scale/override/temperature/early-pos-penalty tilts.
+- **Face-validity bar (personalities)** — the validation the user chose for 16.14: verify each personality
+  drafts *sensibly* (Upside skews young/high-`q90`, Safe durable/high-`q10`, Autopilot pure ADP order, Homer
+  reaches for `fandom`/hype) + unit-test the tilt mechanics — **no corpus Brier gate** (a realism/UX feature,
+  unlike the walk-forward-gated 16.7/16.8 drift model).
+- **Mock-room composition (16.15)** — the configurable assignment of the 9 opponent seats to personalities (a
+  default realistic mix, user-overridable), plus the coupling that routes the 16.9 per-draft narrative shock
+  through the Upside/Homer seats, plus the Phase-14 app selector.

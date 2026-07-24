@@ -72,13 +72,50 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > Brier **0.088 < 0.09** (championship calibration holds ≈ DEV), conditional coverage **80.1 %**, projection
 > Spearman **0.54**, cheap personalization; **known level-optimism / unconditional-attrition limitation
 > persists** (bias 0.62, uncond 72 %, marginal playoff Brier 0.240). **The modeling stack is FROZEN — nothing
-> changes model-side on the basis of this result.** **★ WHAT'S NEXT: Session E = Phase 14.1 (Streamlit MVP
-> hardening) — the app, built strictly last with every factor embedded; do not bundle anything onto it. Then
-> F+ = the 14.2–14.4 go-live tail.** Two commits landed locally (`7bd6e10` freeze, then the lockbox-result
-> commit) — **not pushed** (user's review-then-push habit). Opportunistic tech-debt left: **T10** (the S6
-> `adaptive` archetype crashes `spine_4_validate`/`validate_archetypes` — worked around in the lockbox
-> harness; fix before re-running the DEV cost-report). Run the Stage-0 FFC snapshot chore if >6 days stale
-> (§2). **Resume: Phase 14.1.**
+> changes model-side on the basis of this result.** **★ WHAT'S NEXT (revised 2026-07-19): Session E = Phase
+> 16 — Situation-Change Beta Lab** (new, non-core research track, user request — mine whether ADP misprices
+> "changed situation" events: team change, QB change, teammate competition change, coaching/scheme change;
+> ship as a walled-off, read-only tab, never wired into the frozen optimizer/VBD/cost-report). **Scoped, not
+> yet built** — 4 scoping questions answered 2026-07-19 (`PLAN.md`): competition-change is **dual-sourced**
+> (roster-turnover-derived + depth-chart-derived, compared, since the depth-chart source already failed once
+> in Phase 12.3); the coaching/playcaller history table is **Claude-drafted via web research, user-reviewed
+> before use** (no free source exists); the scheme-fingerprint/transport piece ships **descriptive-only,
+> explicitly unvalidated** (thin sample, no FDR gate); **this year's (2026) real situation-change events are
+> populated now**, not deferred. Substeps 16.1–16.6 in `PROJECT.md` §5 / `ROADMAP.md`. **★ EXPANDED
+> 2026-07-23 — Phase 16 now has a second, AVAILABILITY-SIDE track (substeps 16.7–16.12):** where 16.1–16.6
+> ask "does a changed situation make a player *out-earn* ADP?", 16.7–16.12 ask the sibling "does narrative/
+> situation make a player *drafted earlier* than ADP (draft-slot **drift**)?" — the fix for the user's UX
+> failure (a target falls in 10 mock drafts, then gets sniped in the real draft). It **extends the
+> availability/opponent model** (`draft/opponent_model.py`, `draft/availability.py`, `draft/simulator.py`),
+> which is **already OUTSIDE the value lockbox** (predicts draft flow, walk-forward-scored) — so it doesn't
+> spend/contaminate the frozen value eval. 4 decisions (user 2026-07-23): fold into Phase 16 · walk-forward +
+> own held-out metric (momentum live-only on 2026 — no historical intra-season ADP series) · a curated
+> `reference/hype_board.csv` override · BOTH realism (mocks) + advice (9.4 lookahead) + honest `P(available)`.
+> Substeps: 16.7 drift panel (`adp/drift_panel.py`) · 16.8 drift model (`adp/drift_model.py`) · 16.9
+> correlated per-draft narrative shock · 16.10 hype board (`adp/hype_board.py`) · 16.11 live momentum
+> (`adp/momentum.py`) · 16.12 consumption. **★ ALSO ADDED 2026-07-23 — opponent-personality set (16.13–16.15),
+> folded into the same availability track:** heterogeneous mock-draft opponents extending the existing
+> `draft/personalities.py` (Phase 11.3, which already has 6 ADP/behavioral tilts but none on risk/value). The
+> **5 headliners**: Autopilot (deterministic ADP autopick), Balanced, Upside Chaser (boom/q90), Safe/Floor
+> (q10/durability), Homer/Narrative-Chaser (fandom + hype board — the seat the 16.9 shock rides). Decisions
+> (user 2026-07-23): BPA = **ADP autopilot only** (no value-board opponent) · **enrich the sim board with the
+> real frozen Phase-5 dist + value_board fields** (read-only) · validation = **face-validity + unit-tested
+> mechanics** (no Brier gate). 16.13 board enrichment · 16.14 the personalities · 16.15 mock-room composition
+> + hype coupling + app selector. Full scope: `PLAN.md` 2026-07-23 (personalities) + `PROJECT.md` §5 /
+> `BUILD_PLAN.md`. Still awaiting
+> go-ahead to build. **Session F = Phase
+> 14.1** (Streamlit MVP hardening) comes *after* Phase 16, so its tab ships in the app from day one; do not
+> bundle anything else onto 14.1. Then G+ = the 14.2–14.4 go-live tail. **App-UI spec added 2026-07-23:
+> `docs/PLAYER-VIEW.md`** — the interactive player card (hover → 5-bar overview) + per-player deep page
+> (click → all 8 bars); quasi-bars over frozen contracts, green=good, dual-baseline (overall + within-pos),
+> the Phase-16 situation bar walled-off + tagged unvalidated. Its **one gating dependency is bar #6 →
+> Phase 16** (a further reason 16 goes next); it lands in the Next.js frontend at **14.3**, fed by a
+> per-player endpoint at **14.1**. See `PLAN.md` 2026-07-23. Two commits landed locally
+> (`7bd6e10` freeze, then the lockbox-result commit) — **not pushed** (user's review-then-push habit).
+> Opportunistic tech-debt left: **T10** (the S6 `adaptive` archetype crashes
+> `spine_4_validate`/`validate_archetypes` — worked around in the lockbox harness; fix before re-running the
+> DEV cost-report). Run the Stage-0 FFC snapshot chore if >6 days stale (§2). **Resume: Phase 16 (awaiting
+> user go-ahead to start coding).**
 >
 > _(Prior pointer — history.)_ **★ Next-session pointer (2026-07-13, SESSION C COMPLETE — not yet committed, left for user review).**
 > **Session C = Phase 12 news/NLP + Phase 15 multi-format/auction — all done-bars PASS, ruff clean, 306

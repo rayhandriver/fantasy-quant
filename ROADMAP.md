@@ -73,6 +73,38 @@ auction.py`: auction values + the exact `endgame_cap` $1-endgame continuation + 
 `nominate`; a budget-state bidder beats naive budget-splitting **6/6 DEV, +66→+128 lineup pts, CI [+78,+108]**;
 **discharges TECH-DEBT T9** — `faab_bid` now consumes `endgame_cap`)*
 
+**Phase 16 — Situation-Change Beta Lab** *(new 2026-07-19; non-core research track, scoped not yet built —
+sequenced after the lockbox eval, before Phase 14 per user decision. **Two tracks: value-side 16.1–16.6 +
+availability-side 16.7–16.12, added 2026-07-23.**)*
+**Value-side (does situation change make a player out-*earn* ADP?):** ☐ **16.1** team-change +
+new-starting-QB ADP-alpha extension (Phase 6.1/6.2 panel+regression) · ☐ **16.2** competition-change signal,
+**dual-sourced** (roster-turnover-derived vs depth-chart-derived, compared — the latter mirrors Phase
+12.3's already-null signal) · ☐ **16.3** playcaller/coaching history table (Claude-drafted via web
+research, user-reviewed before use) · ☐ **16.4** scheme fingerprint + transport (descriptive-only, no
+statistical gate — thin sample) · ☐ **16.5** 2026 live situation-change event board · ☐ **16.6** Beta Lab
+Streamlit tab (`app/streamlit_app.py`, read-only, no optimizer/VBD/cost-report coupling).
+**Availability-side (does narrative/situation make a player *drafted earlier* than ADP? — folds in the
+"McConkey falls in mocks then gets sniped" fix; extends the opponent/availability model, which is already
+OUTSIDE the value lockbox):** ☐ **16.7** draft-slot-drift panel & target (`drift = actual_slot − ADP` on the
+Sleeper human corpus 2017–20; `adp/drift_panel.py`) · ☐ **16.8** drift feature model (VBD-ADP gap + source
+divergence + situation flags; walk-forward, own held-out drift MAE/Spearman; `adp/drift_model.py`) · ☐
+**16.9** correlated per-draft narrative shock (one shared hype draw per sim draft → hyped players go early
+consistently; reproduces realized draft-slot dispersion; `draft/simulator.py`+`opponent_model.py`) · ☐
+**16.10** curated hype-board override (`reference/hype_board.csv`, web-research-drafted + user-reviewed;
+`adp/hype_board.py`) · ☐ **16.11** live 2026 momentum/ADP-velocity (`adp/momentum.py`; **forward-only — NOT
+backtestable**, validated live on 2026) · ☐ **16.12** consumption = realism (mocks) + opt-in advice (9.4
+lookahead) + app readout (`P(available)` + reach-risk in `docs/PLAYER-VIEW.md`). **Validation bar (user
+2026-07-23): walk-forward + own held-out metric.**
+**Opponent-personality set (16.13–16.15; added 2026-07-23 — heterogeneous mock-draft opponents; extends the
+existing `draft/personalities.py`, Phase 11.3):** ☐ **16.13** opponent-board enrichment (attach frozen
+read-only Phase-5 dist + `value_board` fields to the sim board; `draft/simulator.py`) · ☐ **16.14** the 5
+headline personalities — **Autopilot** (deterministic ADP autopick), **Balanced**, **Upside Chaser** (boom/
+q90), **Safe/Floor** (q10/durability), **Homer/Narrative-Chaser** (fandom + hype board; `draft/personalities.py`)
+· ☐ **16.15** mock-room composition + hype-shock coupling + app selector. Decisions (user 2026-07-23): BPA =
+**ADP autopilot only** · enrich with **real frozen fields** · validation = **face-validity + unit-tested
+mechanics** (no Brier gate). Scoping questions answered 2026-07-19 (value) + 2026-07-23
+(availability) (see `PLAN.md`); **not yet coded — awaiting go-ahead.**
+
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
 ✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ✅ **S6** adaptive archetypes *(2026-07-12 — a fade-melt wrapper on a static parent, keyed to how far a candidate has slid off ADP; **does no harm on an ADP board, banks team-value when the board breaks** — the realistic Phase-11 behavioral room: adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6; `draft/config.py` + `steps/spine_5_adaptive.py`)* · ✅ **S7** in-season weekly-edge harvester *(= Phase 13, **COMPLETE 2026-07-12**; 13.1 re-project + 13.2 start/sit, then Session B: **13.3 waivers + 13.4 streaming + 13.5 trades** all DONE — every done-bar PASS on DEV)*
 
@@ -157,11 +189,23 @@ holds, ≈ DEV), conditional distribution coverage **80.1 %**, projection rank S
 noise-dominated personalization cost; **known level-optimism / unconditional-attrition limitation persists**
 (projection bias 0.62, uncond coverage 72 %, a *marginal* playoff Brier 0.240). All hard gates PASS. **The
 stack is frozen — nothing modeling-side changes on the basis of this result.** →
-**11) ← NOW: Phase 14** the app with every factor embedded (Session E = 14.1 Streamlit MVP; F+ = the 14.4
-go-live tail). *(Built last by design — it surfaces every factor the now-final engine produces.)*
-Net change from the prior sequencing (2026-07-11 review): only S6's position moved (from between Phase
-13/12 to immediately next). Everything else — Phase 13 before 12, 12 before 15, the optional gate last
-among builds, T5 → lockbox → app as a strict tail — checks out on actual dependencies, not just write order.
+**11) ← NOW: Phase 16 — Situation-Change Beta Lab** *(inserted 2026-07-19, user decision — before Phase 14,
+after the lockbox; **availability-side track 16.7–16.12 folded in 2026-07-23**)*. A non-core research track
+with two sibling questions: **value-side (16.1–16.6)** — does ADP misprice situation-change events
+(team/QB/competition/coaching changes) as realized-points alpha?; **availability-side (16.7–16.12)** — does
+narrative/situation make players *drafted earlier* than ADP (draft-slot drift), so mocks reflect that a
+hyped target gets sniped rather than always falling to you? The availability track extends the
+opponent/availability model (already **outside** the value lockbox) + the simulator + the app, held to a
+walk-forward + own-held-out-metric bar (momentum live-only on 2026). Both ship walled-off from the frozen
+optimizer/VBD/cost-report stack. Scoped (`PLAN.md` 2026-07-19 + 2026-07-23 entries); **awaiting go-ahead to
+build.**
+→ **12) Phase 14** the app with every factor embedded, **now including the Phase-16 tab from the start**
+(Session E = 14.1 Streamlit MVP; F+ = the 14.4 go-live tail). *(Built last by design — it surfaces every
+factor the now-final engine, plus the beta lab, produces.)*
+Net change from the prior sequencing (2026-07-11 review): S6's position moved (from between Phase 13/12 to
+immediately next); Phase 16 inserted after the lockbox, before Phase 14 (2026-07-19). Everything else —
+Phase 13 before 12, 12 before 15, the optional gate last among builds, T5 → lockbox as a strict tail —
+checks out on actual dependencies, not just write order.
 
 **★ SESSION SIZING GUIDE (2026-07-11 — a planning aid, not a hard rule; re-estimate if actual scope
 diverges once building starts).** Sized from `git diff --stat` on past commits, which cluster into two

@@ -53,6 +53,17 @@ self-play RL; paid/tracking data; auctions; multi-format (dynasty / best-ball / 
 - **UI = Streamlit/Gradio first**, not FastAPI+Next.js (validate the idea before a production frontend). *(2026-07-04)*
 - **Draft engine:** **drop CFR**, **deprioritize live MCTS**; the opponent model is core & Brier-verifiable. *(2026-07-04)*
 - **Own the contracts:** the human owns the constraint object + projection output shape; delegate interiors. *(2026-07-04)*
+- **Phase 16 (situation-change beta lab) is a separate, non-core research track** — walled off from the
+  frozen post-lockbox stack, never wired into the optimizer/VBD/cost report. *(2026-07-19)*
+- **Competition-change signal is dual-sourced** (roster-turnover-derived **and** depth-chart-derived,
+  compared side by side) rather than assumed to fail like Phase 12.3's depth-chart signal. *(2026-07-19)*
+- **The coaching/playcaller history table is Claude-drafted via web research, user-reviewed before use** —
+  no free source exists and playcalling duty is often ambiguous. *(2026-07-19)*
+- **The scheme-fingerprint/transport hypothesis ships descriptive-only, explicitly labeled unvalidated** —
+  the sample (~20–30 DEV transport events) is too thin for the FDR-gated bar the rest of the mining uses.
+  *(2026-07-19)*
+- **Phase 16 includes populating this year's (2026) real situation-change events**, not just the historical
+  mining methodology, so the beta tab is immediately useful for this year's draft. *(2026-07-19)*
 
 ## 4. Ground rules
 PIT everywhere · walk-forward never in-sample · **calibration > edge** (well-calibrated, not ADP-beating) ·
@@ -217,9 +228,128 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 ### Phase 15 — Multi-format (roadmap)
 - 15.1 Dynasty/keeper multi-year asset pricing · 15.2 Best-ball · 15.3 DFS GPP (ownership/leverage) → `formats/`
 
+### ★ Phase 16 — Situation-Change Beta Lab *(new 2026-07-19; non-core, exploratory — a separate research
+track, not a change to the frozen stack)*
+*Goal: test whether ADP misprices offseason "changed situation" events (team change, QB change, teammate
+competition change, coaching/scheme change) that consensus year after year seems to over/under-react to —
+and surface any real signal (or an honest non-signal) on a walled-off, read-only tab, never wired into the
+optimizer/VBD/cost report. Distinct from Phase 7 (which tested a blunt team-fixed-effect re-projection and
+was dropped) — this asks whether **ADP itself**, not the projection, is mispriced by these events, using
+Phase 6's already-validated ADP-alpha mining methodology extended with new features.*
+- 16.1 Team-change + new-starting-QB ADP-alpha extension — add `team_changed`, `new_starting_qb` (>50%
+  team-attempts threshold) to the Phase 6.1 panel; refit 6.2's regression + 6.3's BH-FDR scorecard,
+  DEV-only, same season-block-bootstrap discipline → `adp/panel.py`, `adp/regression.py`.
+- 16.2 Competition-change signal, **dual-sourced** — build both a **roster-turnover-derived** feature
+  (via `draft_picks` + team roster deltas year-over-year, meaningful-prior-usage threshold) and a
+  **depth-chart-derived** one (reusing `depth_charts_ts`, the same source Phase 12.3 already found doesn't
+  separate for in-season promo/demo) side by side in the same mining framework, to see empirically whether
+  roster-turnover avoids that null result rather than assuming it does.
+- 16.3 Playcaller/coaching history table — Claude-drafted via web research (HC/OC · team · seasons ·
+  playcaller y/n, ambiguous cases flagged), **delivered for user review/correction before use**. Feeds
+  16.4 only, not the FDR-gated ADP-alpha regression (sample too thin for that bar).
+- 16.4 Scheme fingerprint + transport — per-playcaller-regime role-share aggregates (WR1/2/3 target share,
+  RB carry share, TE target/route share, team pass rate/PROE, RZ split), reusing Phase 3.1/3.4 features; a
+  transport function reweighting a new team's personnel by an incoming playcaller's historical fingerprint.
+  **Shipped as descriptive/labeled-hypothesis, not a backtested claim** (thin sample, ~20–30 clean DEV
+  transport events) — no formal statistical gate, unlike 16.1/16.2.
+- 16.5 2026 live situation-change board — identify this year's actual offseason events (trades, FA
+  signings, coaching hires), hand-researched like 16.3, so the tab has real current content for this
+  year's draft, not just a historical proof of concept.
+- 16.6 Beta Lab tab → `app/streamlit_app.py` — a clearly-labeled, **read-only** tab (no optimizer/VBD/
+  cost-report coupling) showing 2026-flagged players, whichever of 16.1/16.2's signals survived their gate
+  (with CI + sign-stability, same as DURABILITY), and the 16.4 fingerprints framed as hypotheses.
+
+*Availability-side track (16.7–16.12; added 2026-07-23, user request — folded into Phase 16). The 16.1–16.6
+track asks "does a changed situation make a player **out-earn** his ADP (realized-points alpha)?"; this track
+asks the sibling question "does narrative/situation make a player **drafted earlier** than his ADP (draft-slot
+drift)?" — the availability signal, not the value signal. It fixes the concrete UX failure the user named: a
+target falls to you in 10 mock drafts, then gets sniped in the real draft because many drafters share the
+read. It extends the **availability/opponent model** (`draft/opponent_model.py`, `draft/availability.py`,
+`draft/simulator.py`), which is **already outside the value-stack lockbox** (it predicts draft flow, not
+player value, and is walk-forward-scored) — so none of this spends or contaminates the frozen value eval.
+Validation bar (user, 2026-07-23): **walk-forward + an own held-out metric** on what is backtestable; the
+momentum signal is validated **live on 2026 only** (see 16.11's data constraint).*
+- 16.7 Draft-slot-drift panel & target — the availability twin of 16.1's VOR-alpha panel. Build
+  `drift = actual_draft_slot − preseason_ADP` per (player, draft) from the **Sleeper human corpus** (149
+  human drafts, 2017–2020, real pick-by-pick slots via `sleeper_draft_picks`) joined to the FFC/`sleeper_human`
+  ADP board, aggregated to a per-player-season mean drift (the backtestable target). → `adp/drift_panel.py`
+  (new), reusing `adp/panel.py` join machinery. **Data note:** this is the only historical draft-slot ground
+  truth we have (2017–2020); documented as thin.
+- 16.8 Drift feature model (market-derived, backtestable) — fit `drift ~ features` walk-forward, season-block
+  bootstrap, same discipline as 6.2. Features: **VBD-ADP gap** (`value_board.overall_rank` − ADP rank — "the
+  projections say he's underpriced," a free ECR proxy since we store projections, not FantasyPros' expert
+  *rank*), **source divergence** (FFC public ADP vs `sleeper_human` sharper ADP), and the **situation-change
+  flags** reused from 16.1/16.2. Own held-out metric: drift MAE / Spearman vs a naive `drift=0` baseline →
+  an honest predicts-or-doesn't verdict. → `adp/drift_model.py` (new).
+- 16.9 Correlated per-draft narrative shock (simulator realism) — the user's key insight: independent
+  per-opponent sampling washes out clustering, so a hyped player *always* falls. Draw **one shared hype shock
+  per simulated draft**, applied to all AI opponents (a `hype` term in the conditional-logit
+  `candidate_utility` / a survival-mean shift), so hyped players go early **consistently within a draft**.
+  Done-bar: the simulator reproduces the **realized cross-draft dispersion** of a player's draft slot in the
+  Sleeper corpus, and availability Brier does not regress vs the current 11.2 default. → extend
+  `draft/simulator.py`, `draft/opponent_model.py`, `draft/availability.py`.
+- 16.10 Curated hype-board override — `reference/hype_board.csv` (`player_key · pick_delta · note · source`),
+  Claude-drafted via web research + **user-reviewed before use** (same contract as the 16.3 playcaller table),
+  the qualitative residual pure market signals miss (the McConkey case). Applied as a bias on the opponent
+  utility / survival on top of the quantitative signals, live-season only, PIT-stamped. → `adp/hype_board.py`
+  (loader + wiring).
+- 16.11 Live 2026 momentum signal (forward-only) — ADP **velocity** = slope of a player's ADP across the
+  Stage-0 2026 snapshot **series** (`adp_snapshots`, banked weekly since 2026-07-09). **Hard data constraint:
+  NOT backtestable** — FFC history is one ~Sep-1 board per season, so there is no historical intra-season ADP
+  series; momentum is validated **live on 2026 only** as snapshots accrue (documented, like 16.4's descriptive
+  bar). → `adp/momentum.py` reading the snapshot series.
+- 16.12 Consumption — realism + advice + app (user chose **both**). **Realism:** mock-draft opponents reflect
+  16.8/16.9/16.10/16.11 drift. **Advice (opt-in, never touches frozen value):** drift feeds the Phase-9.4
+  `survival_prob`/lookahead so your *own* pick advice accounts for it ("he won't last — consider reaching").
+  **App:** an honest `P(available at your pick)` + a "draft-market drift / reach-risk" readout on the player
+  deep page (extends `docs/PLAYER-VIEW.md`, walled-off + tagged like the situation bar), and the drift board
+  on the 16.6 Beta Lab tab.
+- **Done when** (value-side, unchanged) 16.1/16.2 report an honest survive-or-drop verdict (same discipline as
+  Phase 6/7/12); 16.3 is user-approved; 16.4 computes for the 2026-relevant coaching moves; 16.5 is populated;
+  16.6 ships in the app, provably isolated from the frozen core. **(availability-side)** 16.7/16.8 report an
+  honest walk-forward drift-predictability verdict on the Sleeper corpus; 16.9 reproduces realized draft-slot
+  dispersion without regressing availability Brier; 16.10 loads + applies a user-reviewed hype board; 16.11
+  computes live 2026 momentum; 16.12 wires realism + opt-in advice + the app readout — **all outside the
+  frozen value stack**, all walk-forward or explicitly labeled live-only.
+
+*Opponent-personality set (16.13–16.15; added 2026-07-23, user request — folded into the availability track).
+The behavioral opponent model (11.1) predicts the *average* manager; a realistic practice room also wants
+*heterogeneous* opponents. `draft/personalities.py` (Phase 11.3) already ships six ADP/behavioral tilts
+(`balanced`, `chalk`, `zero_rb`, `reacher`, `homer`, `rookie_hawk`) — but **none tilt on risk or value**
+(the live sim board carries only `adp`/`pos`), so an "upside chaser" (ceiling) and a "safe" (floor) drafter
+can't be expressed. This cluster enriches the opponent board with the frozen Phase-5/value fields and ships
+the 5 headline personalities the user asked for. **Decisions (user 2026-07-23):** the "auto-draft/BPA"
+personality = **ADP autopilot only** (no value-board opponent); **enrich with the real frozen distribution/
+value fields**; **validation = face-validity + unit-tested mechanics** (no corpus Brier gate — a realism/UX
+feature); the 16.9 narrative shock expresses **through** the ceiling/hype personalities.*
+- 16.13 Opponent-board enrichment — attach the frozen, **read-only** Phase-5 distribution (`boom_prob`,
+  `q90`, `bust_prob`, `q10`, `games_played_mean`) + `value_board` (`vbd`, `overall_rank`) fields to the sim
+  opponent board (`DraftState.draftable_pool` source), PIT, so risk/value personalities have signal to tilt
+  on. → `draft/simulator.py` board build + a join helper. **No modeling change** (read-only).
+- 16.14 Risk/value personality set — extend `Personality` to tilt on the enriched columns (a `signal_weights`
+  term beyond the β-tilt), and ship the **5 headline personalities**: (1) **Autopilot** — deterministic
+  lowest-ADP-available (the literal Sleeper autopick; behavioral features zeroed, argmax); (2) **Balanced** —
+  the fitted average human (already exists); (3) **Upside Chaser** — tilts to `boom_prob`/`q90` + youth/
+  rookies, punts floor; (4) **Safe / Floor** — tilts to `q10`/`games_played_mean`/Phase-6 DURABILITY, low
+  `bust_prob`, veterans; (5) **Homer / Narrative-Chaser** — favorite-team (`fandom`) + hyped names (the 16.10
+  hype board), the channel the 16.9 shock rides through. → `draft/personalities.py`. `zero_rb`/`reacher`/
+  `rookie_hawk` stay as library extras.
+- 16.15 Mock-room composition + hype coupling + app — a **configurable opponent seat-assignment** (a default
+  realistic mix, user-overridable), the wiring where the 16.9 per-draft narrative shock is applied **through**
+  the Upside/Homer personalities, and the Phase-14 app control to pick/see opponent personalities in a mock.
+  → `draft/simulator.py` seat assignment + `app/` / `docs/PLAYER-VIEW.md`.
+- **Done when** (personalities) 16.13 enriches the board read-only; 16.14's 5 personalities pass **face-
+  validity** checks (Upside skews young / high-`q90`, Safe skews durable / high-`q10`, Autopilot draws pure
+  ADP order, Homer reaches for `fandom`/hype names, Balanced ≈ the fitted model) + unit-tested tilt mechanics;
+  16.15 assigns a realistic room, couples the hype shock, and exposes the selector in the app — **all
+  read-only w.r.t. the frozen value stack.**
+
 **Sequencing:** 0 → 1 gate everything. Phase 6 (ADP-bias) can run right after Phase 1. Phases 7 (causal)
 and 12 (NLP) are **cross-cutting workstreams** — start them alongside, not strictly after, the modeling
-phases. The app (14) consumes whatever modeling exists; a thin v1 can wrap Phases 1–2 early.
+phases. **Phase 16 runs after the lockbox eval and before Phase 14** (user decision, 2026-07-19) — it's a
+new research track built on the now-frozen stack, and its tab ships inside the Phase-14 app from day one
+rather than being retrofitted later. The app (14) consumes whatever modeling exists; a thin v1 can wrap
+Phases 1–2 early.
 
 ## 6. Definition of done (reframed 2026-07-04)
 **v1:** a league-usable, season-long **personalization co-pilot** that (a) produces **well-calibrated**
