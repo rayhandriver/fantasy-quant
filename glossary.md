@@ -4,7 +4,10 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-23 — **Phase-16 opponent personalities** (bottom section, planned 16.13–16.15):
+> **Last updated:** 2026-07-23 — **Phase-17 / 0.11 / Phase-14-surfacing terms** (bottom section, planned):
+> League-Format Fidelity, superflex/OP, multi-flex, `LeagueSettings` contract, keeper effective-ADP inflation,
+> ECR, Underdog ADP, run detection, decision-support surfacing (tier-cliff / roster-risk / uncertainty /
+> playoff-SOS / draft-grade). *(Earlier same day: **Phase-16 opponent personalities** (planned 16.13–16.15):
 > opponent personality vs archetype, the 5 headliners (Autopilot / Balanced / Upside Chaser / Safe-Floor /
 > Homer-Narrative-Chaser), opponent-board enrichment, `signal_weights`, face-validity bar, mock-room
 > composition. *(Same day earlier: **Phase-16 availability-drift terms** (planned 16.7–16.12):
@@ -784,3 +787,37 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
 - **Mock-room composition (16.15)** — the configurable assignment of the 9 opponent seats to personalities (a
   default realistic mix, user-overridable), plus the coupling that routes the 16.9 per-draft narrative shock
   through the Upside/Homer seats, plus the Phase-14 app selector.
+
+## Phase 17 / 0.11 / Phase-14 surfacing terms (2026-07-23, planned — spec `PROJECT.md` §5 / `BUILD_PLAN.md`)
+- **League-Format Fidelity (Phase 17)** — making the engine give **correct** advice for *any* league, not just
+  the vanilla 10-team full-PPR 1-QB it hard-codes today. A **config generalization, not a modeling change** —
+  the lockbox-validated default stays valid; non-default formats are supported but **labeled
+  not-lockbox-validated** (the eval was one format). Broadly helps *every* non-vanilla user.
+- **Superflex / OP slot** — a lineup slot that can start a QB *in addition to* the dedicated QB slot (OP =
+  "offensive player," QB-eligible). It roughly **doubles QB demand** and lifts QBs into the early rounds —
+  which today's fixed `RosterSlots.qb=1` / single-FLEX solver gets **silently wrong** (17.1 fixes it).
+- **Multi-flex** — more than one FLEX slot (e.g. 2 FLEX, or a superflex + FLEX). `simulation/season.py`
+  currently raises `NotImplementedError` for `flex>1`; 17.1 generalizes the vectorized optimal-lineup solver.
+- **`LeagueSettings` contract (17.3)** — the **platform-agnostic** object a user's league maps onto (built from
+  a manual form — presets *or* full custom: scoring values, roster positions, superflex, no-kicker, team/bench
+  count), which the engine turns into `RuleSet` + `RosterSlots` + `LeagueFormat`. Deliberately **not** tied to
+  Sleeper/ESPN/Yahoo (users hand-enter); optional platform auto-import is a secondary future convenience.
+- **Keeper (effective-ADP inflation) (17.4)** — a keeper league **removes kept players from the pool** and
+  **re-inflates everyone else's effective ADP** (the board shifts up); a keeper's cost = the forfeited pick.
+  The nearer-term subset of the deferred Phase-15.1 dynasty.
+- **ECR (expert consensus rank)** — FantasyPros' expert *ranking* (distinct from the projection *points* pages
+  `consensus.py` already scrapes). The *true* expert-rank-minus-ADP signal that 16.8 currently proxies with the
+  VBD-ADP gap; ingested by **0.11**, live-only.
+- **Underdog ADP** — the sharp best-ball market's ADP (deferred back in Phase 0.4). The cleanest
+  `source_divergence` input for 16.8 and the realistic board for best-ball (15.2); ingested by **0.11**.
+- **Run detection (16.16)** — mid-draft, spotting a **positional run** (elevated recent pick-rate for a
+  position vs its ADP-implied rate) and reactively updating the room's availability forecast live ("RBs are
+  flying — your window is closing faster than ADP says"). Extends the 11.1/11.2 opponent model; face-validity in
+  replay.
+- **Decision-support surfacing (14.E–14.I)** — five broadly-useful app readouts that **read already-frozen
+  machinery** (near-zero modeling risk): **tier-cliff board** (positional value cliffs, from 9.1
+  `positional_cliff`), **roster-construction risk readout** (bye clustering / team concentration / handcuff
+  gaps, from `roster_risk.py` + 8.5), **uncertainty-aware board** (q10..q90 ranges not false-precise ranks,
+  from Phase-5), **playoff-week SOS lens** (weeks-15–17 matchup difficulty, keyed to `LeagueFormat`), **draft
+  grade / team report** (post-mock grade vs the room, from the Phase-10 sim + cost report). All land in the
+  Phase-14 app (app strictly last).

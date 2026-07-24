@@ -102,8 +102,24 @@ headline personalities — **Autopilot** (deterministic ADP autopick), **Balance
 q90), **Safe/Floor** (q10/durability), **Homer/Narrative-Chaser** (fandom + hype board; `draft/personalities.py`)
 · ☐ **16.15** mock-room composition + hype-shock coupling + app selector. Decisions (user 2026-07-23): BPA =
 **ADP autopilot only** · enrich with **real frozen fields** · validation = **face-validity + unit-tested
-mechanics** (no Brier gate). Scoping questions answered 2026-07-19 (value) + 2026-07-23
-(availability) (see `PLAN.md`); **not yet coded — awaiting go-ahead.**
+mechanics** (no Brier gate).
+**Live reactivity + data (added 2026-07-23):** ☐ **0.11** ECR + Underdog ADP ingest (true expert-rank + sharp
+best-ball board; feeds 16.8; `data/sources/`) · ☐ **16.16** live-draft run-detection (mid-draft positional-run
+reactive availability; face-validity replay; `draft/opponent_model.py` → surfaced in 14.4). Scoping questions
+answered 2026-07-19 (value) + 2026-07-23 (availability + personalities + formats) (see `PLAN.md`); **not yet
+coded — awaiting go-ahead.**
+
+**Phase 17 — League-Format Fidelity & Custom Settings** *(new 2026-07-23; broad all-users **correctness** track
+— make the engine give correct advice for ANY league, not just 10-team full-PPR 1-QB; NOT a modeling change to
+the frozen stack — a config generalization, non-default formats labeled not-lockbox-validated)* ☐ **17.1**
+roster + lineup generalization (superflex/multi-flex/OP/no-K; remove the `season.py` single-FLEX
+`NotImplementedError`; format-aware VBD replacement — superflex lifts QBs; `draft/simulator.py`,
+`simulation/season.py`) · ☐ **17.2** custom scoring generalization (`RuleSet` arbitrary per-stat values +
+presets; `backtest/scoring.py`) · ☐ **17.3** generic **platform-agnostic** league-settings input contract
+(`LeagueSettings` builder — presets or full custom; the Phase-14 form binds to it; `draft/config.py`) · ☐
+**17.4** keeper support (remove kept players + re-inflate effective ADP; `draft/simulator.py`, `adp/`).
+Decisions (user 2026-07-23): platform-agnostic manual form (not Sleeper auto-import) · IDP deferred (data gap)
+· optional platform auto-import is a secondary future convenience. **Awaiting go-ahead.**
 
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
 ✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ✅ **S6** adaptive archetypes *(2026-07-12 — a fade-melt wrapper on a static parent, keyed to how far a candidate has slid off ADP; **does no harm on an ADP board, banks team-value when the board breaks** — the realistic Phase-11 behavioral room: adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6; `draft/config.py` + `steps/spine_5_adaptive.py`)* · ✅ **S7** in-season weekly-edge harvester *(= Phase 13, **COMPLETE 2026-07-12**; 13.1 re-project + 13.2 start/sit, then Session B: **13.3 waivers + 13.4 streaming + 13.5 trades** all DONE — every done-bar PASS on DEV)*
@@ -189,23 +205,20 @@ holds, ≈ DEV), conditional distribution coverage **80.1 %**, projection rank S
 noise-dominated personalization cost; **known level-optimism / unconditional-attrition limitation persists**
 (projection bias 0.62, uncond coverage 72 %, a *marginal* playoff Brier 0.240). All hard gates PASS. **The
 stack is frozen — nothing modeling-side changes on the basis of this result.** →
-**11) ← NOW: Phase 16 — Situation-Change Beta Lab** *(inserted 2026-07-19, user decision — before Phase 14,
-after the lockbox; **availability-side track 16.7–16.12 folded in 2026-07-23**)*. A non-core research track
-with two sibling questions: **value-side (16.1–16.6)** — does ADP misprice situation-change events
-(team/QB/competition/coaching changes) as realized-points alpha?; **availability-side (16.7–16.12)** — does
-narrative/situation make players *drafted earlier* than ADP (draft-slot drift), so mocks reflect that a
-hyped target gets sniped rather than always falling to you? The availability track extends the
-opponent/availability model (already **outside** the value lockbox) + the simulator + the app, held to a
-walk-forward + own-held-out-metric bar (momentum live-only on 2026). Both ship walled-off from the frozen
-optimizer/VBD/cost-report stack. Scoped (`PLAN.md` 2026-07-19 + 2026-07-23 entries); **awaiting go-ahead to
-build.**
-→ **12) Phase 14** the app with every factor embedded, **now including the Phase-16 tab from the start**
-(Session E = 14.1 Streamlit MVP; F+ = the 14.4 go-live tail). *(Built last by design — it surfaces every
-factor the now-final engine, plus the beta lab, produces.)*
-Net change from the prior sequencing (2026-07-11 review): S6's position moved (from between Phase 13/12 to
-immediately next); Phase 16 inserted after the lockbox, before Phase 14 (2026-07-19). Everything else —
-Phase 13 before 12, 12 before 15, the optional gate last among builds, T5 → lockbox as a strict tail —
-checks out on actual dependencies, not just write order.
+**11) ← NOW: the remaining engine work, then the app last.** Scope **expanded 2026-07-23** — the post-lockbox
+backlog is now: **Phase 16** (three tracks: value-side 16.1–16.6, availability-side 16.7–16.12, opponent
+personalities 16.13–16.15, + 0.11 data + 16.16 live reactivity), **Phase 17** (League-Format Fidelity —
+superflex/custom-settings/keeper correctness for any league), and **Phase 14** (the app + all decision-support
+surfacing E–I, built strictly last). Sequencing decisions (user 2026-07-23): **dependency-optimal order**, **app
+strictly last**, **same ~1.5–2.2k-line one-concept sessions**. The one cross-track dependency that pins the
+lead: **16.8's drift model reuses 16.1/16.2's situation-change features**, and **0.11 (ECR/Underdog) feeds
+16.8** — so value-side → data+drift → apply-drift → personalities → formats → app. **Full session breakdown in
+the ★ SESSION PLAN below.** All of Phase 16/17 ships walled-off from the frozen optimizer/VBD/cost-report stack;
+Phase 17 is a config generalization (non-default formats labeled not-lockbox-validated), not a modeling change.
+Scoped in `PLAN.md` (2026-07-19 + the three 2026-07-23 entries); **awaiting go-ahead to build.**
+Net change from the prior sequencing: Phase 16 grew from one track to three + data/live; Phase 17 (formats) is
+new and slots after Phase 16, before the app; all UI/surfacing consolidated into Phase 14 (app strictly last).
+Everything else checks out on actual dependencies, not just write order.
 
 **★ SESSION SIZING GUIDE (2026-07-11 — a planning aid, not a hard rule; re-estimate if actual scope
 diverges once building starts).** Sized from `git diff --stat` on past commits, which cluster into two
@@ -219,23 +232,44 @@ Phase 13/S7 is greenfield (no `inseason/` package exists yet) and its 5 substeps
 (~100–200L each) — **estimated ~1,400–2,100L all-in, i.e. full-phase-sized on its own**, unlike every other
 remaining item. Proposed bundling to land future sessions in the ~1,500–2,200-line target band, mirroring
 how 11+7 combined a spine-completion phase with a 4-substep exploratory phase:
-- **Session A:** S6 + Phase 13.1–13.2 (re-project + start/sit). S6 alone (~150L) is sub-session-sized;
-  13.1/13.2 lean on existing Phase-5/9.4/10.x infra → **~400–600L combined**, likely light enough to pull
-  13.3 in too if there's room.
-- **Session B:** Phase 13.3–13.5 (waivers/FAAB, streaming, trades) — the two heavy new-domain substeps
-  plus streaming → **~600–1,000L**, a full session on its own.
-- **Session C:** Phase 12 + Phase 15 (news/NLP + multi-format/auction) — two medium 4-substep phases
-  (~700–1,200L each) bundled the same way 11+7 was → **~1,400–2,300L**.
-- **Session D:** optional MCTS/RL gate + T5 pre-registration + LOCKBOX EVAL — three small, sequential,
-  gated items → **~350–850L**, a closeout bundle like the T1/T2/T7 housekeeping session.
-- **Session E:** Phase 14.1 (Streamlit MVP hardening) **alone** — do not bundle anything onto Phase 14;
-  it's the largest remaining phase by scope.
-- **Session F+:** Phase 14's go-live tail (14.2–14.7: personalization tiers, explain, FastAPI backend,
-  Next.js frontend, live-draft sync, widget, mock-draft sim) — expect **multiple sessions**, each
-  comparable to or larger than any single phase built so far.
+- **Sessions A–D ☑ DONE** (S6+13.1–13.2 · 13.3–13.5 · Phase 12+15 · MCTS gate+T5+LOCKBOX). *(kept for the
+  record; sizing held.)*
 
-Working rules throughout: DEV-only, STOP gates between sub-steps, findings/glossary/PLAN/ROADMAP per step.
-**Known-problem register (the exact fix per item): `docs/TECH-DEBT.md` (T1–T8).**
+**★ SESSION PLAN (re-ordered 2026-07-23 — the full remaining backlog, dependency-optimal, app strictly last,
+same ~1.5–2.2k-line one-concept discipline).** Covers everything not done: Phase 16 (3 tracks) + 0.11 + 16.16,
+Phase 17, Phase 14, T10, and the deferred 15.1 dynasty. The lead is pinned by real dependencies
+(16.1/16.2 features → 16.8; 0.11 → 16.8; 16.13 → 16.14; availability → 16.16). Each session: STOP-gates between
+substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report + questions.
+- **Session E — Phase 16 value-side (16.1–16.5) + T10 warm-up.** Situation-change ADP-alpha mining (16.1
+  team/QB, 16.2 competition dual-sourced), 16.3 coaching table (user-reviewed), 16.4 scheme fingerprint, 16.5
+  2026 event board. **16.6 tab → deferred to the Phase-14 app block** (app strictly last). T10 (adaptive-
+  archetype validate crash) as a quick warm-up. **First** because it builds the situation features 16.8 reuses.
+  **~full-phase (700–1,400L).**
+- **Session F — data 0.11 + availability drift 16.7–16.8.** 0.11 ECR + Underdog ingest, 16.7 drift panel
+  (`actual_slot−ADP` on the Sleeper corpus), 16.8 drift model (VBD-gap + source-divergence + 16.1/16.2 situation
+  flags + the new ECR; walk-forward drift MAE/Spearman). **~full-phase (700–1,200L).**
+- **Session G — apply the drift 16.9–16.12 + 16.16.** 16.9 correlated per-draft narrative shock, 16.10 curated
+  hype board, 16.11 live 2026 momentum, 16.12 consumption (engine half: opponent flow + opt-in 9.4 advice;
+  app readout → Phase 14), 16.16 live run-detection (engine; alert → 14.4). Several light substeps.
+  **~full-phase (800–1,400L); may split if 16.9/16.16 run heavy.**
+- **Session H — opponent personalities 16.13–16.15.** 16.13 board enrichment (frozen dist/value fields), 16.14
+  the 5 personalities (`signal_weights`), 16.15 mock-room composition + hype coupling (engine; selector → 14).
+  **~full-phase (600–1,200L).**
+- **Session I — Phase 17 League-Format Fidelity 17.1–17.4.** 17.1 roster+lineup generalization (superflex/
+  multi-flex; the `season.py` solver + format-aware VBD replacement — the meaty bit), 17.2 custom scoring, 17.3
+  generic settings contract (engine/parser; form UI → 14), 17.4 keeper. **~full-phase (1,000–1,800L).**
+- **Session J — (optional) Phase 15.1 dynasty.** Multi-year asset pricing; deferred/optional per user scope —
+  a short session or skipped. Keeper (17.4) already covers the nearer-term need.
+- **Session K — Phase 14.1 Streamlit MVP + all surfacing (do NOT bundle — the largest phase).** The app shell +
+  the 17.3 custom-settings form + PLAYER-VIEW cards + surfacing E/F/G/I + the 16.6 Beta Lab tab + the 16.12
+  availability/reach-risk readout + the 16.15 personality selector. **Multiple-session-sized on its own.**
+- **Session L+ — Phase 14 go-live tail (14.2–14.7).** Personalization tiers, explain, FastAPI backend, Next.js
+  frontend (PLAYER-VIEW deep pages + 14.H playoff-SOS lens), Sleeper live-draft sync (+ 16.16 run-detection
+  alert, item D), widget, mock-draft sim. **Expect multiple sessions**, each ≥ a single past phase.
+
+Working rules throughout: DEV-only (lockbox 2023+24 untouched — Phase 16/17 are walled-off/config-only), STOP
+gates between sub-steps, findings/glossary/PLAN/ROADMAP/BUILD_PLAN per step.
+**Known-problem register (the exact fix per item): `docs/TECH-DEBT.md` (T1–T10).**
 
 **Open decisions (reframe §10 — tracked in `PLAN.md`):** real completed-draft data (Sleeper) for the
 behavioral model; a **consensus-projections source** (FantasyPros aggregate — free/PIT?); the benchmark

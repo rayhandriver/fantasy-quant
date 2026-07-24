@@ -103,9 +103,23 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > mechanics** (no Brier gate). 16.13 board enrichment · 16.14 the personalities · 16.15 mock-room composition
 > + hype coupling + app selector. Full scope: `PLAN.md` 2026-07-23 (personalities) + `PROJECT.md` §5 /
 > `BUILD_PLAN.md`. Still awaiting
-> go-ahead to build. **Session F = Phase
-> 14.1** (Streamlit MVP hardening) comes *after* Phase 16, so its tab ships in the app from day one; do not
-> bundle anything else onto 14.1. Then G+ = the 14.2–14.4 go-live tail. **App-UI spec added 2026-07-23:
+> go-ahead to build.
+> **★★ BACKLOG EXPANDED + FULL SESSION RE-ORDER (2026-07-23) — the current source of truth for what's next.**
+> User added 10 broadly-useful "better for all users" items (explicitly NOT anything personal to the user —
+> league-mate/self models were excluded). **New Phase 17 — League-Format Fidelity** (superflex/multi-flex/
+> custom-scoring/**platform-agnostic manual settings form**/keeper — correct advice for ANY league; a config
+> generalization, NOT a modeling change; non-default formats labeled not-lockbox-validated). **New data 0.11**
+> (ECR + Underdog ADP → feeds 16.8). **New 16.16** (live run-detection). **New Phase-14 surfacing 14.E–14.I**
+> (tier-cliff / roster-risk / uncertainty / playoff-SOS / draft-grade — all read frozen machinery). Decisions
+> (user 2026-07-23): new Phase 17 + distribute the rest · **app strictly last** (all UI/tabs/surfacing → Phase
+> 14) · same ~1.5–2.2k one-concept sessions · **dependency-optimal order**. **★ THE SESSION PLAN (full detail
+> in `ROADMAP.md` ★ SESSION PLAN): E** Phase-16 value-side 16.1–16.5 (+T10 warm-up; 16.6 tab→app) — **RESUME
+> HERE** · **F** data 0.11 + drift 16.7–16.8 · **G** apply drift 16.9–16.12 + 16.16 · **H** personalities
+> 16.13–16.15 · **I** Phase 17 formats 17.1–17.4 · **J** (optional) dynasty 15.1 · **K** Phase 14.1 MVP + all
+> surfacing (do not bundle) · **L+** Phase 14 go-live tail. Lead pinned by: 16.8 reuses 16.1/16.2 features;
+> 0.11 feeds 16.8. Scoping in `PLAN.md` (2026-07-23 backlog-expansion entry) + `PROJECT.md` §5 + `BUILD_PLAN.md`.
+> **Prior pointer (Session E = Phase 16) still valid — value-side is the lead; the plan just now spells out E→L+.**
+> **App-UI spec added 2026-07-23:
 > `docs/PLAYER-VIEW.md`** — the interactive player card (hover → 5-bar overview) + per-player deep page
 > (click → all 8 bars); quasi-bars over frozen contracts, green=good, dual-baseline (overall + within-pos),
 > the Phase-16 situation bar walled-off + tagged unvalidated. Its **one gating dependency is bar #6 →
@@ -114,8 +128,9 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > (`7bd6e10` freeze, then the lockbox-result commit) — **not pushed** (user's review-then-push habit).
 > Opportunistic tech-debt left: **T10** (the S6 `adaptive` archetype crashes
 > `spine_4_validate`/`validate_archetypes` — worked around in the lockbox harness; fix before re-running the
-> DEV cost-report). Run the Stage-0 FFC snapshot chore if >6 days stale (§2). **Resume: Phase 16 (awaiting
-> user go-ahead to start coding).**
+> DEV cost-report — now folded into Session E as a warm-up). Run the Stage-0 FFC snapshot chore if >6 days
+> stale (§2). **Resume: Session E = Phase 16 value-side 16.1–16.5 + T10 (awaiting user go-ahead to start
+> coding). Full E→L+ ordering in `ROADMAP.md` ★ SESSION PLAN.**
 >
 > _(Prior pointer — history.)_ **★ Next-session pointer (2026-07-13, SESSION C COMPLETE — not yet committed, left for user review).**
 > **Session C = Phase 12 news/NLP + Phase 15 multi-format/auction — all done-bars PASS, ruff clean, 306

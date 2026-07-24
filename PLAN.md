@@ -76,6 +76,44 @@ so a *decisive* result (DEV title Brier was 0.088 ≪ 0.09) is robust and a *mar
 ---
 
 ## Current state
+- **2026-07-23 — BACKLOG EXPANDED (10 broad "better for all users" additions) + FULL SESSION RE-ORDER
+  (docs-only, no code; makes the md base rock-solid before coding resumes).** After the two Phase-16 scoping
+  passes, user asked for more realism/personalization ideas that **broadly help every user regardless of
+  background** (explicitly **not** anything keyed to the user's own identity/history — so league-mate models
+  and a personal self-model were proposed then **excluded** for now). Ten additions accepted (A–J), with one
+  revision:
+  - **A** superflex/multi-flex/roster generalization · **B (revised)** a **platform-agnostic manual
+    league-settings form** (user is on ESPN/Yahoo, not Sleeper — so NOT auto-import; scoring PPR/half/standard/
+    **custom per-stat values** + fully custom roster: add superflex/multi-flex, drop the kicker, change team/
+    bench count) · **J** keeper support — **these three = new Phase 17 "League-Format Fidelity."**
+  - **C** true FantasyPros **ECR** + **Underdog** ADP → **data step 0.11**, feeds 16.8 (replaces the VBD-ADP
+    proxy with the real expert-rank signal + the sharp best-ball divergence source).
+  - **D** live-draft **run-detection** (reactive availability mid-draft) → **Phase 16.16** (engine) + surfaced
+    in 14.4.
+  - **E** tier-cliff board · **F** roster-construction risk readout · **G** uncertainty-aware board · **H**
+    playoff-week SOS lens · **I** draft grade/team report → **Phase 14 surfacing (14.E–14.I)** — all read
+    already-frozen machinery (positional_cliff/roster_risk/handcuff/distributions/sim/cost_report), near-zero
+    modeling risk.
+  - **Scope assumptions (stated, user didn't object):** IDP deferred (nflverse IDP data too thin); optional
+    platform auto-import is a secondary future convenience, not the primary path; Phase-15.1 dynasty stays
+    optional (keeper 17.4 covers the near-term need).
+  - **4 structural decisions (user, 2026-07-23):** (1) **new Phase 17 for formats (A+B+J) + distribute the rest**
+    (C→0.11 data, D→16.16, E–I→Phase 14); (2) **app strictly last** — all UI/tabs/surfacing consolidate into
+    Phase 14 (so 16.6 tab, 16.12 readout, 16.15 selector, 17.3 form all defer to the app block); (3) **same
+    ~1.5–2.2k-line one-concept session discipline** with STOP-gates; (4) **dependency-optimal order**.
+  - **Frozen-stack posture:** Phase 16 is walled-off (availability model is outside the value lockbox); **Phase
+    17 is a config generalization, NOT a modeling change** — the lockbox-validated 10-team full-PPR 1-QB result
+    stays valid; non-default formats are supported but **labeled not-lockbox-validated** (the eval was one
+    format). Surfacing E–I read frozen outputs (no new modeling).
+  - **THE RE-ORDERED SESSION PLAN (full detail in `ROADMAP.md` ★ SESSION PLAN).** Dependency lead is pinned by:
+    16.8 reuses 16.1/16.2 situation features; 0.11 feeds 16.8; 16.13→16.14; availability→16.16. →
+    **E** Phase-16 value-side 16.1–16.5 (+T10 warm-up; 16.6 tab→app) · **F** data 0.11 + drift 16.7–16.8 ·
+    **G** apply drift 16.9–16.12 + 16.16 · **H** personalities 16.13–16.15 · **I** Phase 17 formats 17.1–17.4 ·
+    **J** (optional) dynasty 15.1 · **K** Phase 14.1 Streamlit MVP + all surfacing (E/F/G/I + tabs, do not
+    bundle) · **L+** Phase 14 go-live tail 14.2–14.7 (incl. 14.H SOS lens, D run-detection alert, deep pages,
+    live-draft, widget). **Written into** `PROJECT.md` §5 (Phase 17, 16.16, 0.11, 14.E–14.I), `BUILD_PLAN.md`
+    (per-step detail for all), `ROADMAP.md` (phase lines + pipeline step 11 + the ★ SESSION PLAN), `glossary.md`,
+    `CLAUDE.md` pointer, and this entry. **Docs-only — no code, awaiting go-ahead; resume at Session E.**
 - **2026-07-23 — Phase 16 OPPONENT-PERSONALITY set SCOPED (docs-only; substeps 16.13–16.15, folded into the
   availability track; NOT built).** User loved the AI mock-drafter "personalities" idea and asked for ~5 (upside
   chaser, normal, auto-draft/BPA, safe, …). **Checked first:** `draft/personalities.py` (Phase 11.3) already

@@ -225,6 +225,59 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 - 14.7 Mock-draft simulator (also feeds Phase-11 opponent models) → `app/backend/mock_draft.py`
 - **Done when** my league can run a live draft + manage the season through it with personalized recs.
 
+*Decision-support surfacing + consolidated UI (added 2026-07-23; **all app/UI work lands here — "app strictly
+last"**). Every UI/tab/readout deferred out of the engine phases consolidates into the app: the Phase-16.6 Beta
+Lab tab, the 16.12 availability/reach-risk readout + `P(available at your pick)`, the 16.15 opponent-personality
+selector, the 17.3 custom-league-settings form, and the `docs/PLAYER-VIEW.md` cards/deep-pages. Plus five
+broadly-useful **surfacing readouts (E–I)** that read already-frozen machinery (near-zero modeling risk):*
+- 14.E **Tier-cliff / scarcity board** — surface positional value cliffs ("after these 3 RBs, a drop"); reuses
+  the `positional_cliff` already built for 9.1. Helps novices see *why* to draft a position now.
+- 14.F **Roster-construction risk readout** — a live "your team" panel: bye-week clustering, team
+  over-concentration, handcuff gaps; reuses `valuation/roster_risk.py` + the 8.5 handcuff engine.
+- 14.G **Uncertainty-aware board** — ranges not false-precise ranks ("these three are a coin-flip"); reuses the
+  Phase-5 distributions + the PLAYER-VIEW confidence flags.
+- 14.H **Playoff-week SOS lens** — each player's weeks-15–17 matchup difficulty, keyed to the league's playoff
+  weeks (`LeagueFormat`); descriptive/face-validity (a schedule lens, like 16.4). Lands in the Next.js frontend.
+- 14.I **Draft grade / team report** — after any mock, grade the roster vs the room (projected wins, title odds,
+  positional holes, biggest reach & best value) via the Phase-10 sim + cost report. Closes the learning loop.
+- **Done-when (surfacing):** E/F/G/I render in the Streamlit MVP (14.1) reading frozen outputs, unit-tested for
+  correct wiring (no new modeling gate); H lands in the frontend (14.3); D's live run-detection alert (16.16)
+  surfaces in the live-draft view (14.4).
+
+### Phase 17 — League-Format Fidelity & Custom Settings *(new 2026-07-23; makes the engine give **correct**
+advice for ANY league, not just 10-team full-PPR 1-QB — a broad, all-users correctness track, not a personal
+preference)*
+*Goal: the engine today hard-codes the vanilla format (`RosterSlots.qb=1`, `flex=1`, `season.py` raises
+`NotImplementedError` for multi-flex), so it gives **silently wrong** advice for superflex / custom leagues.
+This track generalizes the format contracts so any user's league maps on cleanly. **Not a modeling change to
+the frozen stack** — it's a config generalization; the lockbox-validated 10-team full-PPR 1-QB result stays
+valid, and non-default formats are supported but **labeled "not lockbox-validated"** (the eval was one format).
+IDP (individual defensive players) is **flagged future-work** — nflverse IDP data is too thin to project
+honestly.*
+- 17.1 Roster + lineup generalization — generalize `RosterSlots` (arbitrary `qb` count, multiple flex,
+  superflex/OP slot, no-kicker, bench/team-count) and the vectorized optimal-lineup solver in
+  `simulation/season.py` (remove the single-FLEX `NotImplementedError`); recompute VBD replacement levels per
+  format so the value board is correct (superflex → QBs rise into the top tier). → `draft/simulator.py`
+  (`RosterSlots`), `simulation/season.py`, `backtest/metrics.py` (replacement).
+- 17.2 Custom scoring generalization — extend `RuleSet` to arbitrary per-stat point values (TE-premium, custom
+  passing-TD, PPR variants, bonuses) with standard/half/full presets; re-score consensus + realized through the
+  chosen `RuleSet` (already partly supported — `rec` is configurable; extend to the full stat map). →
+  `backtest/scoring.py`.
+- 17.3 Generic league-settings input contract — a **platform-agnostic** settings object + parser/validator that
+  builds `RuleSet` + `RosterSlots` + `LeagueFormat` from arbitrary user input (presets **or** full custom: add
+  superflex/multi-flex, drop the kicker, change team/bench count, custom scoring). The contract the Phase-14
+  app form binds to; NOT tied to any platform (ESPN/Yahoo/Sleeper users all hand-enter). → `draft/config.py`
+  (a `LeagueSettings` builder). *(Optional future: a Sleeper free-API auto-import convenience on top — secondary,
+  never the primary path.)*
+- 17.4 Keeper support — remove kept players from the draftable pool and **re-inflate everyone's effective ADP**;
+  price a keeper's cost as the forfeited draft pick. → `draft/simulator.py` (pool init), `adp/` (effective-ADP
+  recompute). *(The nearer-term subset of the deferred Phase-15.1 dynasty.)*
+- **Done when** a superflex mock drafts QBs into the early rounds (17.1), the lineup solver matches a
+  brute-force optimum on random multi-flex rosters (17.1), a custom-scoring board re-ranks sensibly (17.2), the
+  settings contract round-trips presets + a fully-custom league (17.3), and a keeper league removes kept players
+  + shifts ADP (17.4) — each with face-validity / correctness unit tests; non-default formats labeled
+  **not-lockbox-validated**.
+
 ### Phase 15 — Multi-format (roadmap)
 - 15.1 Dynasty/keeper multi-year asset pricing · 15.2 Best-ball · 15.3 DFS GPP (ownership/leverage) → `formats/`
 
@@ -311,6 +364,16 @@ momentum signal is validated **live on 2026 only** (see 16.11's data constraint)
   dispersion without regressing availability Brier; 16.10 loads + applies a user-reviewed hype board; 16.11
   computes live 2026 momentum; 16.12 wires realism + opt-in advice + the app readout — **all outside the
   frozen value stack**, all walk-forward or explicitly labeled live-only.
+- **Data prerequisite 0.11 (ECR + Underdog ADP; added 2026-07-23, feeds 16.8).** A FantasyPros **ECR**
+  (expert-consensus-rank) scrape — the *true* expert-rank-minus-ADP signal 16.8 currently proxies with the
+  VBD-ADP gap — plus **Underdog** ADP (the sharp best-ball market — the cleanest `source_divergence` input, and
+  it makes best-ball realistic). Extends the Phase-0 data foundation (`data/sources/`); ECR is live-only,
+  Underdog backfills where available. → `steps/phase0_11_ecr_underdog.py`, `data/sources/`.
+- **16.16 Live-draft reactive re-estimation (run detection; added 2026-07-23, item D).** Mid-draft, detect a
+  positional **run** and update the room's tendencies live ("4 RBs gone in 6 picks — your RB window is closing
+  faster than ADP says"). The engine logic extends the 11.1/11.2 opponent/availability model; the alert surfaces
+  in the Phase-14.4 live-draft view. **Face-validity in replay** against real Sleeper drafts. → extend
+  `draft/opponent_model.py` / `draft/availability.py`; surface in `app/`.
 
 *Opponent-personality set (16.13–16.15; added 2026-07-23, user request — folded into the availability track).
 The behavioral opponent model (11.1) predicts the *average* manager; a realistic practice room also wants
