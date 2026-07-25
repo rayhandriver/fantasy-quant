@@ -1,0 +1,352 @@
+{
+  "skill_bar": 0.02,
+  "verdict": "DOES NOT PREDICT (honest null)",
+  "headline": {
+    "features": [
+      "vbd_gap",
+      "source_divergence",
+      "team_changed",
+      "new_starting_qb",
+      "competition_change_roster",
+      "competition_change_depth",
+      "rookie",
+      "adp_rounds",
+      "adp_stdev",
+      "days_to_board"
+    ],
+    "mae": 1.0493647000070214,
+    "mae_baseline": 1.06050825003432,
+    "skill": 0.010507744778918804,
+    "skill_ci": [
+      -0.014771694187163625,
+      0.04964288650726887
+    ],
+    "spearman": 0.20809167552328298,
+    "spearman_p": 2.3852463218116797e-42,
+    "n": 4204,
+    "n_seasons": 7,
+    "per_season": [
+      {
+        "season": 2018,
+        "n": 576,
+        "mae": 1.0371666962696076,
+        "mae_baseline": 1.036202421604331
+      },
+      {
+        "season": 2019,
+        "n": 377,
+        "mae": 1.296087523597065,
+        "mae_baseline": 1.230238347549453
+      },
+      {
+        "season": 2020,
+        "n": 1065,
+        "mae": 1.019482693092607,
+        "mae_baseline": 1.0073557299658444
+      },
+      {
+        "season": 2021,
+        "n": 427,
+        "mae": 1.1962379755735675,
+        "mae_baseline": 1.225200216444165
+      },
+      {
+        "season": 2022,
+        "n": 521,
+        "mae": 1.0215900659641646,
+        "mae_baseline": 1.1401984806152226
+      },
+      {
+        "season": 2023,
+        "n": 960,
+        "mae": 0.9773884729668211,
+        "mae_baseline": 0.9742472365477572
+      },
+      {
+        "season": 2024,
+        "n": 278,
+        "mae": 0.9295400836442912,
+        "mae_baseline": 0.9798889602603632
+      }
+    ]
+  },
+  "ablation": {
+    "features": [
+      "vbd_gap",
+      "team_changed",
+      "new_starting_qb",
+      "competition_change_roster",
+      "competition_change_depth",
+      "rookie",
+      "adp_rounds",
+      "adp_stdev",
+      "days_to_board"
+    ],
+    "mae": 1.0785343035964532,
+    "mae_baseline": 1.059967260722442,
+    "skill": -0.017516619203272743,
+    "skill_ci": [
+      -0.04099963923746278,
+      0.00744488144842358
+    ],
+    "spearman": 0.08401824659877073,
+    "spearman_p": 2.225736136002954e-08,
+    "n": 4419
+  },
+  "coefficients": [
+    {
+      "term": "intercept",
+      "coef": -0.27005740896007985,
+      "ci_lo": -0.5886794533524453,
+      "ci_hi": 0.0231471740922231,
+      "p_value": 0.072,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "z_vbd_gap",
+      "coef": 0.09965353466989393,
+      "ci_lo": -0.013753445736561485,
+      "ci_hi": 0.2366247279089157,
+      "p_value": 0.093,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "z_source_divergence",
+      "coef": 0.33582820425973275,
+      "ci_lo": 0.19889907332922496,
+      "ci_hi": 0.4358051564328619,
+      "p_value": 0.0005,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "team_changed",
+      "coef": 0.08127413335958424,
+      "ci_lo": -0.0829017030733536,
+      "ci_hi": 0.20113014869631982,
+      "p_value": 0.315,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "new_starting_qb",
+      "coef": -0.02629734263450708,
+      "ci_lo": -0.1279469090652561,
+      "ci_hi": 0.10320184327113718,
+      "p_value": 0.702,
+      "stability": 0.7142857142857143,
+      "sig": false
+    },
+    {
+      "term": "competition_change_roster",
+      "coef": 0.03211115750271335,
+      "ci_lo": -0.09805383453296386,
+      "ci_hi": 0.13666186773592345,
+      "p_value": 0.594,
+      "stability": 0.8571428571428571,
+      "sig": false
+    },
+    {
+      "term": "competition_change_depth",
+      "coef": -0.027289943915448266,
+      "ci_lo": -0.0840596895049482,
+      "ci_hi": 0.029334300102052034,
+      "p_value": 0.349,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "rookie",
+      "coef": 0.5236921780928749,
+      "ci_lo": 0.39572141474357847,
+      "ci_hi": 0.7416180602029901,
+      "p_value": 0.0005,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "z_adp_rounds",
+      "coef": -0.30974572414699186,
+      "ci_lo": -0.5321541360484237,
+      "ci_hi": -0.13306968278071588,
+      "p_value": 0.001,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "z_adp_stdev",
+      "coef": 0.38299869071953757,
+      "ci_lo": 0.22063475599999471,
+      "ci_hi": 0.6557225406891665,
+      "p_value": 0.0005,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "z_days_to_board",
+      "coef": 0.04021042332300366,
+      "ci_lo": 0.015327548732978124,
+      "ci_hi": 0.07707684477787291,
+      "p_value": 0.003,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "pos_RB",
+      "coef": 0.10255982248397187,
+      "ci_lo": -0.23447364886203764,
+      "ci_hi": 0.5230093308860156,
+      "p_value": 0.543,
+      "stability": 0.8571428571428571,
+      "sig": false
+    },
+    {
+      "term": "pos_WR",
+      "coef": 0.3486556608616333,
+      "ci_lo": -0.02988525150682198,
+      "ci_hi": 0.8324162386274115,
+      "p_value": 0.078,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "pos_TE",
+      "coef": 0.4117590359762592,
+      "ci_lo": 0.009820947037584241,
+      "ci_hi": 0.7503586057219249,
+      "p_value": 0.049,
+      "stability": 1.0,
+      "sig": true
+    }
+  ],
+  "coefficients_ablation": [
+    {
+      "term": "intercept",
+      "coef": -0.3579564135556927,
+      "ci_lo": -0.7533373630338731,
+      "ci_hi": -0.028715821132627106,
+      "p_value": 0.03,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "z_vbd_gap",
+      "coef": 0.18250212776457847,
+      "ci_lo": 0.03752292311169319,
+      "ci_hi": 0.35888104592294484,
+      "p_value": 0.006,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "team_changed",
+      "coef": 0.09089680289744398,
+      "ci_lo": -0.12424271193379685,
+      "ci_hi": 0.25684375693639805,
+      "p_value": 0.427,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "new_starting_qb",
+      "coef": -0.05495482006412978,
+      "ci_lo": -0.19285984582867477,
+      "ci_hi": 0.10596084182038813,
+      "p_value": 0.51,
+      "stability": 0.875,
+      "sig": false
+    },
+    {
+      "term": "competition_change_roster",
+      "coef": 0.00030964284279011564,
+      "ci_lo": -0.1705790867716979,
+      "ci_hi": 0.11823596082544387,
+      "p_value": 0.921,
+      "stability": 0.5,
+      "sig": false
+    },
+    {
+      "term": "competition_change_depth",
+      "coef": -0.022863552707938124,
+      "ci_lo": -0.06532936772639539,
+      "ci_hi": 0.052818041072639085,
+      "p_value": 0.501,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "rookie",
+      "coef": 0.7254400859779778,
+      "ci_lo": 0.5397721576053152,
+      "ci_hi": 0.965212033706879,
+      "p_value": 0.0005,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "z_adp_rounds",
+      "coef": -0.19090404324699864,
+      "ci_lo": -0.40053401404443856,
+      "ci_hi": -0.055059660741292336,
+      "p_value": 0.002,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "z_adp_stdev",
+      "coef": 0.35347274271656026,
+      "ci_lo": 0.16332926734372788,
+      "ci_hi": 0.6676652839581542,
+      "p_value": 0.0005,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "z_days_to_board",
+      "coef": -0.007306267137673074,
+      "ci_lo": -0.034738279434940976,
+      "ci_hi": 0.01448600731066949,
+      "p_value": 0.481,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "pos_RB",
+      "coef": 0.17020358098033386,
+      "ci_lo": -0.2416863355422283,
+      "ci_hi": 0.6721325016913865,
+      "p_value": 0.406,
+      "stability": 1.0,
+      "sig": false
+    },
+    {
+      "term": "pos_WR",
+      "coef": 0.4682745388607854,
+      "ci_lo": 0.007952939976774785,
+      "ci_hi": 1.0559779836302776,
+      "p_value": 0.047,
+      "stability": 1.0,
+      "sig": true
+    },
+    {
+      "term": "pos_TE",
+      "coef": 0.5142504089065189,
+      "ci_lo": -0.00415803965249017,
+      "ci_hi": 0.9244617422823688,
+      "p_value": 0.053,
+      "stability": 1.0,
+      "sig": false
+    }
+  ],
+  "survivors_without_leak_prone_feature": [
+    "z_vbd_gap",
+    "rookie",
+    "z_adp_rounds",
+    "z_adp_stdev",
+    "pos_WR"
+  ],
+  "r2": 0.08549111509527718,
+  "r2_ablation": 0.043446249952138416
+}

@@ -31,14 +31,20 @@ _POS_DUMMIES = ("RB", "WR", "TE")   # QB is the baseline
 # ------------------------------------------------------------------------------------------------
 # design matrix + a bare-metal OLS (fast enough to refit thousands of times)
 # ------------------------------------------------------------------------------------------------
-def prepare(panel: pd.DataFrame,
-            features: Sequence[str] = FEATURES) -> tuple[pd.DataFrame, list[str]]:
+def prepare(panel: pd.DataFrame, features: Sequence[str] = FEATURES,
+            continuous: Sequence[str] | None = None) -> tuple[pd.DataFrame, list[str]]:
     """Return (augmented panel, design-column names): z-score the continuous features on the **full
-    panel** (so pooled and per-season fits share one scale) and one-hot the position controls."""
+    panel** (so pooled and per-season fits share one scale) and one-hot the position controls.
+
+    ``continuous`` names which features are continuous (the rest are taken to be 0/1 already) and
+    defaults to the Phase-6 alpha set. Phase 16.8 passes its own; the frozen softness path never
+    does, so its z-scores are untouched.
+    """
     aug = panel.copy()
+    cont = set(_CONTINUOUS if continuous is None else continuous)
     cols: list[str] = []
     for f in features:
-        if f in _CONTINUOUS:
+        if f in cont:
             mu, sd = aug[f].mean(), aug[f].std(ddof=0) or 1.0
             aug[f"z_{f}"] = (aug[f] - mu) / sd
             cols.append(f"z_{f}")
@@ -94,12 +100,18 @@ class RegressionResult:
 
 
 def fit_alpha_regression(panel: pd.DataFrame, features: Sequence[str] = FEATURES,
-                         n_boot: int = 2000, seed: int = 0, ci: float = 0.95) -> RegressionResult:
+                         n_boot: int = 2000, seed: int = 0, ci: float = 0.95,
+                         target: str = "alpha",
+                         continuous: Sequence[str] | None = None) -> RegressionResult:
     """Fit alpha ~ traits on the pooled panel; bootstrap CIs by resampling whole **seasons** (so the
-    uncertainty respects the ~9-season effective sample, not the ~1,500 correlated player rows)."""
-    aug, cols = prepare(panel, features)
+    uncertainty respects the ~9-season effective sample, not the ~1,500 correlated player rows).
+
+    ``target``/``continuous`` let Phase 16.8 reuse this harness for the drift target without
+    forking it; both default to the Phase-6 behaviour the frozen softness constant was fit under.
+    """
+    aug, cols = prepare(panel, features, continuous)
     terms = ["intercept", *cols]
-    beta = _ols(aug, cols)
+    beta = _ols(aug, cols, target)
 
     seasons = aug["season"].unique()
     rng = np.random.default_rng(seed)
@@ -107,7 +119,7 @@ def fit_alpha_regression(panel: pd.DataFrame, features: Sequence[str] = FEATURES
     for b in range(n_boot):
         draw = rng.choice(seasons, size=len(seasons), replace=True)
         samp = pd.concat([aug[aug["season"] == s] for s in draw], ignore_index=True)
-        boot[b] = _ols(samp, cols)
+        boot[b] = _ols(samp, cols, target)
 
     alpha = (1 - ci) / 2
     lo, hi = np.quantile(boot, [alpha, 1 - alpha], axis=0)
@@ -115,5 +127,5 @@ def fit_alpha_regression(panel: pd.DataFrame, features: Sequence[str] = FEATURES
     p = 2.0 * np.minimum((boot <= 0).mean(axis=0), (boot >= 0).mean(axis=0))
     p = np.clip(p, 1.0 / n_boot, 1.0)
     return RegressionResult(terms=terms, coef=beta, ci_lo=lo, ci_hi=hi, p_value=p,
-                            r2=_r2(aug, cols, beta), n=int(len(aug)), n_seasons=int(len(seasons)),
-                            n_boot=n_boot, ci=ci)
+                            r2=_r2(aug, cols, beta, target), n=int(len(aug)),
+                            n_seasons=int(len(seasons)), n_boot=n_boot, ci=ci)

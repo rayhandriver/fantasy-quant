@@ -1,0 +1,349 @@
+{
+  "n_rows": 17264,
+  "seasons": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "scorings": [
+    "half-ppr",
+    "ppr",
+    "standard"
+  ],
+  "coverage": [
+    {
+      "season": 2017,
+      "scoring": "half-ppr",
+      "as_of": "2017-09-07 00:00:00",
+      "is_preseason": true,
+      "n_rows": 413,
+      "experts": 93,
+      "gsis_rate": 0.9176755447941889
+    },
+    {
+      "season": 2017,
+      "scoring": "ppr",
+      "as_of": "2017-09-07 00:00:00",
+      "is_preseason": true,
+      "n_rows": 431,
+      "experts": 98,
+      "gsis_rate": 0.925754060324826
+    },
+    {
+      "season": 2017,
+      "scoring": "standard",
+      "as_of": "2017-09-07 00:00:00",
+      "is_preseason": true,
+      "n_rows": 438,
+      "experts": 130,
+      "gsis_rate": 0.9200913242009132
+    },
+    {
+      "season": 2018,
+      "scoring": "half-ppr",
+      "as_of": "2018-09-07 00:00:00",
+      "is_preseason": true,
+      "n_rows": 455,
+      "experts": 125,
+      "gsis_rate": 0.9208791208791208
+    },
+    {
+      "season": 2018,
+      "scoring": "ppr",
+      "as_of": "2018-09-07 00:00:00",
+      "is_preseason": true,
+      "n_rows": 519,
+      "experts": 129,
+      "gsis_rate": 0.930635838150289
+    },
+    {
+      "season": 2018,
+      "scoring": "standard",
+      "as_of": "2018-09-07 00:00:00",
+      "is_preseason": true,
+      "n_rows": 448,
+      "experts": 153,
+      "gsis_rate": 0.9196428571428571
+    },
+    {
+      "season": 2019,
+      "scoring": "half-ppr",
+      "as_of": "2019-09-06 00:00:00",
+      "is_preseason": true,
+      "n_rows": 573,
+      "experts": 174,
+      "gsis_rate": 0.9284467713787086
+    },
+    {
+      "season": 2019,
+      "scoring": "ppr",
+      "as_of": "2019-09-08 00:00:00",
+      "is_preseason": true,
+      "n_rows": 545,
+      "experts": 175,
+      "gsis_rate": 0.926605504587156
+    },
+    {
+      "season": 2019,
+      "scoring": "standard",
+      "as_of": "2019-09-08 00:00:00",
+      "is_preseason": true,
+      "n_rows": 623,
+      "experts": 177,
+      "gsis_rate": 0.9357945425361156
+    },
+    {
+      "season": 2020,
+      "scoring": "half-ppr",
+      "as_of": "2020-09-11 00:00:00",
+      "is_preseason": true,
+      "n_rows": 554,
+      "experts": 214,
+      "gsis_rate": 0.9296028880866426
+    },
+    {
+      "season": 2020,
+      "scoring": "ppr",
+      "as_of": "2020-09-11 00:00:00",
+      "is_preseason": true,
+      "n_rows": 544,
+      "experts": 210,
+      "gsis_rate": 0.9283088235294118
+    },
+    {
+      "season": 2020,
+      "scoring": "standard",
+      "as_of": "2020-09-11 00:00:00",
+      "is_preseason": true,
+      "n_rows": 540,
+      "experts": 208,
+      "gsis_rate": 0.9259259259259259
+    },
+    {
+      "season": 2021,
+      "scoring": "half-ppr",
+      "as_of": "2021-09-10 00:00:00",
+      "is_preseason": true,
+      "n_rows": 662,
+      "experts": 241,
+      "gsis_rate": 0.9350453172205438
+    },
+    {
+      "season": 2021,
+      "scoring": "ppr",
+      "as_of": "2021-09-10 00:00:00",
+      "is_preseason": true,
+      "n_rows": 649,
+      "experts": 238,
+      "gsis_rate": 0.9291217257318952
+    },
+    {
+      "season": 2021,
+      "scoring": "standard",
+      "as_of": "2021-09-10 00:00:00",
+      "is_preseason": true,
+      "n_rows": 662,
+      "experts": 241,
+      "gsis_rate": 0.9305135951661632
+    },
+    {
+      "season": 2022,
+      "scoring": "half-ppr",
+      "as_of": "2022-09-09 00:00:00",
+      "is_preseason": true,
+      "n_rows": 687,
+      "experts": 243,
+      "gsis_rate": 0.9359534206695779
+    },
+    {
+      "season": 2022,
+      "scoring": "ppr",
+      "as_of": "2022-09-09 00:00:00",
+      "is_preseason": true,
+      "n_rows": 580,
+      "experts": 242,
+      "gsis_rate": 0.9293103448275862
+    },
+    {
+      "season": 2022,
+      "scoring": "standard",
+      "as_of": "2022-09-09 00:00:00",
+      "is_preseason": true,
+      "n_rows": 580,
+      "experts": 243,
+      "gsis_rate": 0.9275862068965517
+    },
+    {
+      "season": 2023,
+      "scoring": "half-ppr",
+      "as_of": "2023-09-08 00:00:00",
+      "is_preseason": true,
+      "n_rows": 644,
+      "experts": 242,
+      "gsis_rate": 0.9409937888198758
+    },
+    {
+      "season": 2023,
+      "scoring": "ppr",
+      "as_of": "2024-02-12 00:00:00",
+      "is_preseason": false,
+      "n_rows": 550,
+      "experts": 237,
+      "gsis_rate": 0.9345454545454546
+    },
+    {
+      "season": 2023,
+      "scoring": "standard",
+      "as_of": "2023-09-08 00:00:00",
+      "is_preseason": true,
+      "n_rows": 552,
+      "experts": 233,
+      "gsis_rate": 0.9329710144927537
+    },
+    {
+      "season": 2024,
+      "scoring": "half-ppr",
+      "as_of": "2024-09-06 00:00:00",
+      "is_preseason": true,
+      "n_rows": 769,
+      "experts": 227,
+      "gsis_rate": 0.9310793237971391
+    },
+    {
+      "season": 2024,
+      "scoring": "ppr",
+      "as_of": "2024-09-06 00:00:00",
+      "is_preseason": true,
+      "n_rows": 724,
+      "experts": 222,
+      "gsis_rate": 0.9350828729281768
+    },
+    {
+      "season": 2024,
+      "scoring": "standard",
+      "as_of": "2024-09-06 00:00:00",
+      "is_preseason": true,
+      "n_rows": 587,
+      "experts": 224,
+      "gsis_rate": 0.938671209540034
+    },
+    {
+      "season": 2025,
+      "scoring": "half-ppr",
+      "as_of": "2025-09-05 00:00:00",
+      "is_preseason": true,
+      "n_rows": 675,
+      "experts": 209,
+      "gsis_rate": 0.9407407407407408
+    },
+    {
+      "season": 2025,
+      "scoring": "ppr",
+      "as_of": "2025-09-05 00:00:00",
+      "is_preseason": true,
+      "n_rows": 544,
+      "experts": 203,
+      "gsis_rate": 0.9283088235294118
+    },
+    {
+      "season": 2025,
+      "scoring": "standard",
+      "as_of": "2025-09-05 00:00:00",
+      "is_preseason": true,
+      "n_rows": 538,
+      "experts": 201,
+      "gsis_rate": 0.9275092936802974
+    },
+    {
+      "season": 2026,
+      "scoring": "half-ppr",
+      "as_of": "2026-07-25 00:00:00",
+      "is_preseason": true,
+      "n_rows": 773,
+      "experts": 93,
+      "gsis_rate": 0.926261319534282
+    },
+    {
+      "season": 2026,
+      "scoring": "ppr",
+      "as_of": "2026-07-25 00:00:00",
+      "is_preseason": true,
+      "n_rows": 509,
+      "experts": 90,
+      "gsis_rate": 0.9273084479371316
+    },
+    {
+      "season": 2026,
+      "scoring": "standard",
+      "as_of": "2026-07-25 00:00:00",
+      "is_preseason": true,
+      "n_rows": 496,
+      "experts": 90,
+      "gsis_rate": 0.9274193548387096
+    }
+  ],
+  "gsis_match_top150": 0.9924005364327224,
+  "share_preseason_boards": 0.9666666666666667,
+  "non_preseason_boards": [
+    {
+      "season": 2023,
+      "scoring": "ppr",
+      "as_of": "2024-02-12 00:00:00"
+    }
+  ],
+  "pit_probe": {
+    "2017": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 431,
+      "stamp": "2017-09-07 00:00:00"
+    },
+    "2018": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 519,
+      "stamp": "2018-09-07 00:00:00"
+    },
+    "2019": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 545,
+      "stamp": "2019-09-08 00:00:00"
+    },
+    "2020": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 544,
+      "stamp": "2020-09-11 00:00:00"
+    },
+    "2021": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 649,
+      "stamp": "2021-09-10 00:00:00"
+    },
+    "2022": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 580,
+      "stamp": "2022-09-09 00:00:00"
+    },
+    "2023": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 550,
+      "stamp": "2024-02-12 00:00:00"
+    },
+    "2024": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 724,
+      "stamp": "2024-09-06 00:00:00"
+    },
+    "2025": {
+      "draft_day_rows": 0,
+      "at_stamp_rows": 544,
+      "stamp": "2025-09-05 00:00:00"
+    }
+  },
+  "underdog": "deferred \u2014 no keyless endpoint (see module docstring)"
+}

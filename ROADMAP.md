@@ -277,11 +277,32 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   `carry_hhi` travel with a coach (k≈1.7–2.0); **`wr1_tgt_share` does not (k=17.9)**, i.e. the alpha WR's
   target share is a roster fact. Guard added (`assert_regime_coverage`) after an `LA`-vs-`LAR` join failure
   silently deleted Sean McVay's whole Rams tenure on the first run.
-  **★ SESSION E COMPLETE. ← RESUME AT SESSION F** (data 0.11 + drift 16.7–16.8). 16.6 tab stays deferred
-  to the Phase-14 app block.
-- **Session F — data 0.11 + availability drift 16.7–16.8.** 0.11 ECR + Underdog ingest, 16.7 drift panel
-  (`actual_slot−ADP` on the Sleeper corpus), 16.8 drift model (VBD-gap + source-divergence + 16.1/16.2 situation
-  flags + the new ECR; walk-forward drift MAE/Spearman). **~full-phase (700–1,200L).**
+  **★ SESSION E COMPLETE.** (data 0.11 + drift 16.7–16.8 = Session F, now also complete — see below).
+  16.6 tab stays deferred to the Phase-14 app block. **← RESUME AT SESSION G** (apply the drift:
+  16.9–16.12 + 16.16), reading Session F's null first: 16.9 gets no mean drift signal to amplify.
+- **Session F — data 0.11 + availability drift 16.7–16.8. ☑ COMPLETE 2026-07-25.** 382 tests (+23), ruff
+  clean; uncommitted for user review. **The availability track returns an honest null too — 16.8's verdict
+  is DOES NOT PREDICT** (headline skill +1.05 % CI[−1.48,+4.96] vs a pre-set 2 % bar; **ablation without
+  the sibling-derived feature: −1.75 %, worse than "everyone drafts at ADP"**).
+  - **0.11 ◐** — **ECR ☑** (`data/sources/ecr.py`; 17,264 rows, 2017–2026 × 3 scorings, 99.2 % gsis, incl.
+    **2025 where FFC has no board**), **Underdog deferred** (no keyless endpoint). **★ The archive is real
+    but kickoff-dated** — every board stamped 9/06–9/11, after 37 of 38 corpus drafts — so BUILD_PLAN's
+    "does true-ECR beat the VBD proxy" is unanswerable; `ecr_asof` returns **empty** for a draft-day as-of.
+    ECR is a live-season/season-outcome input, not a draft-day feature. 2023 PPR flagged `is_preseason=False`
+    (`as_of` 2024-02-12, re-touched post-Super-Bowl).
+  - **16.7 ☑** (`adp/drift_panel.py`) — **34 drafts / 4,495 picks / 436 players / 2017–2024**. Three forced
+    deviations from spec: a **`PRESEASON_WINDOW`** the plan lacked (the corpus runs **Feb–Nov**; biggest
+    filter, 117→42 drafts), **rounds units** so any league size joins the 10/12-team board, and a **flipped
+    sign** (`drift > 0` = drafted EARLIER) plus **`drift_centered`** as the headline target. TE +0.46 rounds
+    (reached), QB −0.20 (slides).
+  - **16.8 ☑** (`adp/drift_model.py`) — **★ the ablation is the finding**: a leave-one-out feature still
+    shares season, room and drafters with its target, so leave-one-out is **not sufficient** — report the
+    fit without it. **Situation flags null on the availability side too**, mirroring 16.1/16.2. What
+    survives, and what 16.9 must shape its shock with (descriptive, not a per-player forecast):
+    **`rookie` +0.73 rounds**, **`adp_stdev` +0.35/SD**, `vbd_gap` +0.18/SD, `pos_WR` +0.47.
+  - **→ Consequence for Session G:** 16.9 gets **no quantitative drift prediction to amplify** — its
+    dispersion (variance) done-bar needs no mean signal, and **16.10's curated hype board is now the
+    primary narrative channel**, its "curated, not backtested" label load-bearing rather than a caveat.
 - **Session G — apply the drift 16.9–16.12 + 16.16.** 16.9 correlated per-draft narrative shock, 16.10 curated
   hype board, 16.11 live 2026 momentum, 16.12 consumption (engine half: opponent flow + opt-in 9.4 advice;
   app readout → Phase 14), 16.16 live run-detection (engine; alert → 14.4). Several light substeps.

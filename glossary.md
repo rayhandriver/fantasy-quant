@@ -974,3 +974,52 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   called plays for the **majority** of the team's games; sub-majority stints (McDaniels LV 2023, Kubiak DEN
   2022, Brady BUF 2023, Schottenheimer JAX 2021) are excluded and documented in an adjacent row's `notes`,
   so 16.4 never fingerprints a scheme on a half-season it did not run.
+
+## Session F — availability drift + ECR (2026-07-25)
+
+- **Draft-slot drift (16.7)** — how far a player was actually drafted from the consensus board, in
+  **rounds**. **`drift > 0` = taken EARLIER than ADP** (a reach; the hype direction), mirroring the
+  existing `reach` in `sleeper.build_tendencies`. This is the *availability* twin of ADP-alpha: alpha asks
+  whether a player **out-earns** his slot, drift asks whether he **goes before** it. NB the sign is the
+  negative of the `actual_slot − ADP` written in BUILD_PLAN §16.7 — flipped on purpose so that "positive =
+  hyped" holds all the way through 16.8–16.12.
+- **`drift_centered`** — drift minus its own draft's mean drift, and the **headline target**. Every room
+  has a level offset that is nothing to do with any player (a 14-round draft against a ~200-deep board;
+  K/DST picks the offense-only panel never sees). Centering isolates the real question: did he go early
+  *relative to how this room drafted overall*. Never model raw `drift`.
+- **Rounds normalization** — `slot_rounds = pick_no / teams`, `adp_rounds = adp / board_teams`. A pick
+  number means different things in an 8- and a 16-team league, and FFC only publishes 10/12-team boards;
+  expressing both sides as "rounds deep" is what lets the whole human corpus join one board.
+- **`PRESEASON_WINDOW` (Aug 1 – Sep 15)** — the filter that makes drift mean anything. The crawled Sleeper
+  corpus contains drafts from **February to November**; an offseason dynasty startup or an in-season draft
+  compared to a September board measures a different market, not narrative drift. It is the single largest
+  cut in the funnel (117 human complete drafts → 42) and was **absent from the original build plan**.
+- **Held-out-draft `source_divergence` (16.8)** — public FFC board minus the sharper Sleeper-room board,
+  where the Sleeper side is recomputed from every draft **except the row's own**. The stored
+  `sleeper_human` ADP is literally the mean pick over the drafts being explained, so the naive feature is
+  the target's own negative and would self-predict spectacularly. **Even held out it did not survive** —
+  see the next entry.
+- **★ The ablation rule (the durable lesson of Session F)** — when a feature is derived from the target's
+  own siblings, computing it leave-one-out is **not sufficient**; report the fit *without it* as well. Here
+  the headline was a weak positive (+1.05 % skill) and the ablation was **negative** (−1.75 %, worse than
+  assuming everyone drafts at ADP), which converted an apparent finding into a null. Generalizes: a
+  leave-one-out feature still shares the season, the room and the drafters with its target. **If a result
+  only survives with the sibling-derived feature, the result is the leak.**
+- **Skill (drift metric)** — fraction of the `drift = 0` baseline MAE removed by the model, where
+  "drift = 0" means "everyone goes at ADP". Deliberately *not* an R² against a fitted intercept, which
+  would flatter the model.
+- **Rank-without-level** — Spearman +0.21 alongside ≈0 MAE skill: the model orders **who** gets reached
+  better than chance while being unable to say **by how much**. Same shape as the Phase-4.4 projection
+  finding (calibrated in rank, optimistic in level). A rank signal is not a usable per-player forecast.
+- **ECR (Expert Consensus Rank, 0.11)** — FantasyPros' consensus **rank** board (`ecr_snapshots`), distinct
+  from the *projection* pages `projections/consensus.py` already scrapes. Carries the experts' spread
+  (`ecr_std`, min/max over 90–243 experts) and tier, which points-only projections cannot express.
+- **★ Kickoff-dated archive (the ECR PIT trap)** — the `?year=` archive is real, but each season's board is
+  a **single end-of-preseason snapshot** stamped 9/06–9/11, *after* the drafts it would explain (**1 of 38**
+  corpus drafts post-dates its own stamp). So ECR cannot be a draft-day feature, and `ecr_asof` enforces
+  that by returning an **empty frame** for an earlier as-of rather than a future-dated board. The general
+  form: *an archive existing is not the same as an archive being point-in-time* — always read the
+  vendor's own timestamp before treating history as backtestable.
+- **`is_preseason` (ECR)** — per-board flag, false when the stamp falls after its own season's kickoff.
+  The live 2023 PPR board carries `as_of = 2024-02-12`, re-touched after the Super Bowl: it has seen the
+  season it is supposed to precede. Flagged rather than dropped, and excluded from any draft-season baseline.

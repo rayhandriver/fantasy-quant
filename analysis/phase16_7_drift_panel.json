@@ -1,0 +1,325 @@
+{
+  "funnel": {
+    "human_complete": 132,
+    "eligible": 42,
+    "with_board": 34,
+    "seasons_without_board": [
+      2025
+    ]
+  },
+  "summary": {
+    "n_rows": 4495,
+    "n_drafts": 34,
+    "n_seasons": 8,
+    "n_players": 436,
+    "mean_drift": -0.24824487525822342,
+    "sd_drift": 1.691000209614526,
+    "p10_drift": -2.216666666666667,
+    "p90_drift": 1.4916666666666671,
+    "mean_days_to_board": 5.2229786679875785
+  },
+  "drift_centered_sd": 1.5375177678103886,
+  "per_season": [
+    {
+      "season": 2017,
+      "drafts": 1,
+      "picks": 139,
+      "sd": 1.1031272406673143
+    },
+    {
+      "season": 2018,
+      "drafts": 4,
+      "picks": 596,
+      "sd": 1.4408500859110103
+    },
+    {
+      "season": 2019,
+      "drafts": 3,
+      "picks": 398,
+      "sd": 1.6991086798392103
+    },
+    {
+      "season": 2020,
+      "drafts": 9,
+      "picks": 1099,
+      "sd": 1.595108416624678
+    },
+    {
+      "season": 2021,
+      "drafts": 3,
+      "picks": 447,
+      "sd": 1.9141533999144607
+    },
+    {
+      "season": 2022,
+      "drafts": 4,
+      "picks": 538,
+      "sd": 1.5249051905116568
+    },
+    {
+      "season": 2023,
+      "drafts": 8,
+      "picks": 988,
+      "sd": 1.368962633443282
+    },
+    {
+      "season": 2024,
+      "drafts": 2,
+      "picks": 290,
+      "sd": 1.380085814521978
+    }
+  ],
+  "pos_bias": {
+    "QB": -0.20201474311376158,
+    "RB": -0.15747895961005093,
+    "WR": 0.07601770197374955,
+    "TE": 0.46012403695216003
+  },
+  "lockbox_rows": 1278,
+  "top_reaches": [
+    {
+      "season": 2022,
+      "name": "Antonio Gibson",
+      "pos": "RB",
+      "n_drafts": 4,
+      "mean_drift_centered": 4.694314870138282,
+      "sd_drift": 1.3908712796900604
+    },
+    {
+      "season": 2022,
+      "name": "T.J. Hockenson",
+      "pos": "TE",
+      "n_drafts": 4,
+      "mean_drift_centered": 4.587023203471615,
+      "sd_drift": 1.4197442520818477
+    },
+    {
+      "season": 2020,
+      "name": "Chris Thompson",
+      "pos": "RB",
+      "n_drafts": 5,
+      "mean_drift_centered": 3.259622061442971,
+      "sd_drift": 1.872721990934265
+    },
+    {
+      "season": 2023,
+      "name": "Dalton Kincaid",
+      "pos": "TE",
+      "n_drafts": 6,
+      "mean_drift_centered": 2.586107656825422,
+      "sd_drift": 0.34208736520383026
+    },
+    {
+      "season": 2022,
+      "name": "Amari Cooper",
+      "pos": "WR",
+      "n_drafts": 4,
+      "mean_drift_centered": 2.3068148701382816,
+      "sd_drift": 0.6633762548927687
+    },
+    {
+      "season": 2023,
+      "name": "Jalin Hyatt",
+      "pos": "WR",
+      "n_drafts": 6,
+      "mean_drift_centered": 2.2511076568254214,
+      "sd_drift": 1.6495062860305567
+    },
+    {
+      "season": 2020,
+      "name": "Austin Hooper",
+      "pos": "TE",
+      "n_drafts": 8,
+      "mean_drift_centered": 2.1184205745981153,
+      "sd_drift": 2.711406958157289
+    },
+    {
+      "season": 2020,
+      "name": "John Brown",
+      "pos": "WR",
+      "n_drafts": 5,
+      "mean_drift_centered": 2.071483025703935,
+      "sd_drift": 0.44648157399647254
+    },
+    {
+      "season": 2023,
+      "name": "Cole Kmet",
+      "pos": "TE",
+      "n_drafts": 5,
+      "mean_drift_centered": 2.0655110063723243,
+      "sd_drift": 1.4341470558411291
+    },
+    {
+      "season": 2018,
+      "name": "Rashaad Penny",
+      "pos": "RB",
+      "n_drafts": 4,
+      "mean_drift_centered": 1.927689657967547,
+      "sd_drift": 0.5610820090087844
+    },
+    {
+      "season": 2020,
+      "name": "Josh Allen",
+      "pos": "QB",
+      "n_drafts": 7,
+      "mean_drift_centered": 1.9083604139918917,
+      "sd_drift": 2.248197533896519
+    },
+    {
+      "season": 2023,
+      "name": "David Njoku",
+      "pos": "TE",
+      "n_drafts": 6,
+      "mean_drift_centered": 1.886940990158755,
+      "sd_drift": 1.1442757764058167
+    },
+    {
+      "season": 2022,
+      "name": "Chase Claypool",
+      "pos": "WR",
+      "n_drafts": 4,
+      "mean_drift_centered": 1.8047315368049475,
+      "sd_drift": 1.8367821254544288
+    },
+    {
+      "season": 2022,
+      "name": "Marquez Valdes-Scantling",
+      "pos": "WR",
+      "n_drafts": 4,
+      "mean_drift_centered": 1.6070232034716154,
+      "sd_drift": 0.796723841872661
+    },
+    {
+      "season": 2023,
+      "name": "Kyle Pitts",
+      "pos": "TE",
+      "n_drafts": 7,
+      "mean_drift_centered": 1.6035803725170277,
+      "sd_drift": 0.977234691219748
+    }
+  ],
+  "top_fallers": [
+    {
+      "season": 2023,
+      "name": "Daniel Jones",
+      "pos": "QB",
+      "n_drafts": 5,
+      "mean_drift_centered": -1.800155660294342,
+      "sd_drift": 0.8664054734617306
+    },
+    {
+      "season": 2023,
+      "name": "Rondale Moore",
+      "pos": "WR",
+      "n_drafts": 4,
+      "mean_drift_centered": -1.8943414007647523,
+      "sd_drift": 1.1676195513379632
+    },
+    {
+      "season": 2022,
+      "name": "Rashaad Penny",
+      "pos": "RB",
+      "n_drafts": 4,
+      "mean_drift_centered": -1.9281851298617187,
+      "sd_drift": 1.8404215247841698
+    },
+    {
+      "season": 2018,
+      "name": "Kirk Cousins",
+      "pos": "QB",
+      "n_drafts": 4,
+      "mean_drift_centered": -1.9698103420324522,
+      "sd_drift": 1.2662051653793447
+    },
+    {
+      "season": 2018,
+      "name": "Bilal Powell",
+      "pos": "RB",
+      "n_drafts": 4,
+      "mean_drift_centered": -2.0506436753657855,
+      "sd_drift": 3.5029726215744255
+    },
+    {
+      "season": 2020,
+      "name": "Devin Singletary",
+      "pos": "RB",
+      "n_drafts": 7,
+      "mean_drift_centered": -2.063220023588546,
+      "sd_drift": 2.814851615172283
+    },
+    {
+      "season": 2022,
+      "name": "Russell Wilson",
+      "pos": "QB",
+      "n_drafts": 4,
+      "mean_drift_centered": -2.065893463195051,
+      "sd_drift": 2.0896453858350386
+    },
+    {
+      "season": 2022,
+      "name": "Damien Harris",
+      "pos": "RB",
+      "n_drafts": 4,
+      "mean_drift_centered": -2.093810129861718,
+      "sd_drift": 1.317900974060857
+    },
+    {
+      "season": 2023,
+      "name": "Nico Collins",
+      "pos": "WR",
+      "n_drafts": 4,
+      "mean_drift_centered": -2.249814107281981,
+      "sd_drift": 1.8295735595275264
+    },
+    {
+      "season": 2020,
+      "name": "Ronald Jones II",
+      "pos": "RB",
+      "n_drafts": 7,
+      "mean_drift_centered": -2.4218594793708594,
+      "sd_drift": 2.4070538203060154
+    },
+    {
+      "season": 2023,
+      "name": "Diontae Johnson",
+      "pos": "WR",
+      "n_drafts": 7,
+      "mean_drift_centered": -2.422848198911543,
+      "sd_drift": 2.92174574286351
+    },
+    {
+      "season": 2018,
+      "name": "Philip Rivers",
+      "pos": "QB",
+      "n_drafts": 4,
+      "mean_drift_centered": -2.669393675365786,
+      "sd_drift": 1.2236196871940597
+    },
+    {
+      "season": 2018,
+      "name": "Ben Roethlisberger",
+      "pos": "QB",
+      "n_drafts": 4,
+      "mean_drift_centered": -3.060227008699119,
+      "sd_drift": 0.8421409554753226
+    },
+    {
+      "season": 2022,
+      "name": "Aaron Rodgers",
+      "pos": "QB",
+      "n_drafts": 4,
+      "mean_drift_centered": -3.282768463195052,
+      "sd_drift": 2.214589683277193
+    },
+    {
+      "season": 2022,
+      "name": "Raheem Mostert",
+      "pos": "RB",
+      "n_drafts": 4,
+      "mean_drift_centered": -4.212143463195051,
+      "sd_drift": 1.5944253334970637
+    }
+  ],
+  "n_player_seasons": 1285,
+  "n_player_seasons_solid": 529
+}

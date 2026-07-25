@@ -2052,3 +2052,102 @@ lineage vs. the outgoing caller) rather than a silent pick.
 lockbox untouched, walled off from the frozen cost report. **The value-side track closes as an honest
 null with one genuinely useful by-product: a measured ranking of which offensive traits a play-caller
 actually carries between jobs.**
+
+---
+
+## Session F — data 0.11 (ECR) + availability drift 16.7–16.8 *(2026-07-25)*
+
+**Headline: the availability side returns an honest null too — but a textured one, and the route to it
+produced two data findings worth more than the model.** 382 tests (+23), ruff clean. DEV + lockbox
+seasons both used (availability track is outside the frozen value stack, user decision 2026-07-25);
+nothing model-side changed.
+
+### 0.11 — the FantasyPros ECR archive exists, and is unusable for the thing it was scoped for
+- **The archive is real.** `?year=YYYY` on the cheatsheet pages genuinely serves that season's board —
+  2020 → McCaffrey/Barkley/Elliott, 2018 → Gurley/Johnson/Brown. Ingested **17,264 rows, 2017–2026 ×
+  {ppr, half-ppr, standard}**, 99.2 % gsis match on the top-150 skill players. It carries what we never
+  stored: consensus **rank**, the experts' **disagreement** (`ecr_std`, min/max over 90–243 experts),
+  tier, and ECR delta. `projections/consensus.py` keeps FantasyPros *points*, not rank.
+- **★ But every archived board is a single END-OF-PRESEASON snapshot**, stamped 9/06–9/11 — i.e. at
+  kickoff, *after* the drafts it would explain. Measured on the 16.7 corpus: **1 of 38** preseason drafts
+  starts on or after its own season's ECR stamp. So BUILD_PLAN §0.11's stated validation ("does true-ECR
+  beat the VBD-proxy on drift MAE?") **cannot be answered**, and 16.8 keeps the VBD-gap proxy. This is a
+  property of the archive's grain, not of the scrape.
+- The guard is **structural, not advisory**: `ecr_asof` refuses a board dated after the caller's as-of, so
+  a draft-day as-of returns an **empty frame** rather than a quietly future-dated board. Asserted for all
+  9 historical seasons in the done-bar.
+- Banked anyway because it is free, vendor-deletable, and genuinely PIT-clean for anything scored on the
+  **season outcome** (a ~Sep-7 board precedes Week 1) — a real expert baseline for the Phase-6/16.1 value
+  work, and the live-2026 input for 16.10/16.11. **It also covers 2025, where FFC has no board at all.**
+- **⚠ One board is not preseason at all: 2023 PPR carries `as_of = 2024-02-12`** — re-touched after the
+  Super Bowl, so it saw the season it is supposed to precede. Flagged per-row as `is_preseason=False`
+  rather than silently mixed in; the step fails only if the archive changes shape systemically (<90 %).
+- **Underdog ADP deferred, not attempted** (user decision): no keyless endpoint — the marketing routes
+  404 and the board is a JS app on an unpublished API. Recorded so the next session does not re-discover it.
+
+### 16.7 — the drift panel, and why it is thin
+- **★ The Sleeper corpus is not a preseason corpus.** Draft start times run from **February to November**.
+  A February dynasty startup or a November in-season draft measured against a September ADP board is not
+  drift, it is a different market. `PRESEASON_WINDOW` (Aug 1 – Sep 15) is the single biggest filter, and
+  BUILD_PLAN did not have it. Funnel: **117 human complete drafts → 42 in-window snake redraft → 34 with
+  an FFC board** = 4,495 boarded picks, 436 players, 8 seasons (2017–2024). The 8 eligible 2025 drafts drop
+  because **FFC publishes no 2025 board** — confirmed against the live API (`"No ADP data found."`).
+- **Units are rounds, not picks** (`pick_no / teams`, `adp / board_teams`), which is what lets 6-, 8-, 14-
+  and 16-team rooms join a 10/12-team board instead of being discarded (+7 drafts, ~20 % more picks).
+- **Sign convention: `drift > 0` = drafted EARLIER than the board** (a reach). This mirrors the existing
+  `sleeper.build_tendencies` `reach`, and is the **negative** of the `actual_slot − ADP` in BUILD_PLAN
+  §16.7 — flipped deliberately so "positive = hyped = goes early" reads the same through 16.8–16.12.
+- **`drift_centered` is the headline target.** Each room carries its own level offset (board depth vs
+  draft depth; K/DST consume slots the offense-only panel never sees), so raw drift hides a draft fixed
+  effect. Centering within the draft asks the real question: did this player go early *relative to how
+  this room drafted overall*. Raw sd 1.69 rounds → centered 1.54.
+- **Face validity is good:** the biggest fallers are **QBs** (Rodgers, Roethlisberger, Rivers — FFC's board
+  overstates QB demand vs real 1-QB rooms), and the biggest reaches are hyped rookie pass-catchers
+  (Kincaid, Hyatt 2023). Positional means: **TE +0.46 rounds (reached), WR +0.08, RB −0.16, QB −0.20**.
+
+### 16.8 — the verdict: drift does NOT predict
+Bar fixed before reading the result: skill > 2 % of baseline MAE with a bootstrap CI clear of zero.
+
+| fit | MAE | baseline | skill | CI | Spearman |
+|---|---|---|---|---|---|
+| headline (all features) | 1.0494 | 1.0605 | **+1.05 %** | [−1.48 %, +4.96 %] | +0.208 |
+| ablation (no `source_divergence`) | 1.0785 | 1.0600 | **−1.75 %** | [−4.10 %, +0.74 %] | +0.084 |
+
+- **★ The ablation is the finding.** Without `source_divergence` the model is *worse than assuming
+  everyone goes at ADP*. All apparent skill traces to the one feature built from the target's own sibling
+  drafts — and it was **already** computed leave-one-draft-out. Even held out, drafts from the same season
+  share rooms, drafters and local ADP quirks, so the honest read is that the headline +1.05 % is residual
+  self-prediction, not signal. Had the ablation not been run (user decision to add it), this would have
+  been written up as a weak positive.
+- **Rank without level.** Spearman +0.21 with skill ≈ 0 means the model orders *who* gets reached better
+  than chance while being unable to reduce absolute error — the same shape as the Phase-4.4 finding
+  (well-calibrated in rank, wrong in level).
+- **The situation flags are null on the availability side too** — `team_changed`, `new_starting_qb` and
+  both competition-change flags are insignificant and sign-unstable, exactly as they were on the value
+  side in 16.1/16.2. **Situation change is a smaller lever than the narrative around it, measured twice
+  now, from two independent directions.**
+- **★ What does survive the ablation** (significant + 100 % sign-stable, so this is what 16.9 should shape
+  its shock with — as descriptive room behaviour, never a per-player forecast):
+  **`rookie` +0.73 rounds** (rooms systematically reach for rookies by three-quarters of a round),
+  **`adp_stdev` +0.35/SD** (the crowd's *own disagreement* is the best available reach predictor —
+  where the market is unsure, someone jumps), `vbd_gap` +0.18/SD, `adp_rounds` −0.19/SD, `pos_WR` +0.47.
+- `days_to_board` is significant in the headline and **not** in the ablation — i.e. the board-vs-draft
+  timing artifact was being absorbed by `source_divergence`, which is a further reason to distrust it.
+
+### Carried forward
+- **16.9 must not be handed a quantitative drift prediction to amplify.** Its done-bar (reproduce realized
+  cross-draft *dispersion*) is a variance match and needs no mean signal — `aggregate_player_season`
+  already emits `sd_drift` for it. Shape the shock with `rookie` / `adp_stdev`, not a fitted per-player drift.
+- **16.10's curated hype board is now the primary narrative channel**, and its "curated, not a backtested
+  claim" label is load-bearing rather than a caveat — the quantitative route was measured and did not clear.
+- The panel is genuinely thin (34 drafts, several seasons 1–3 deep). Growing the Sleeper human corpus via
+  `reference/sleeper_seeds.txt` → `steps/phase0_10b_crawl.py` is the one thing that would let 16.8 be re-asked.
+
+**Incidental find (pre-existing, not from this session): the data-health report is permanently red.**
+`steps/phase0_8_validate.py` ends in `GATES FAILED` on every run — verified it fails identically on a clean
+HEAD checkout. The one failing gate is `adp: unique (gsis, season, source, scoring, teams)`, 1,028 offending
+groups, **all season 2026 and all explained by the Stage-0 weekly snapshot series** (0 groups have more rows
+than distinct `snapshot_date`s, i.e. no genuine duplicates). The gate's key predates Stage 0 and needs
+`snapshot_date` in it. Logged as **TECH-DEBT T12** and deliberately *not* fixed here: it is a frozen-data-layer
+validation rule, not part of the walled-off Phase-16 track, and quietly editing a gate mid-session is the
+behaviour the discipline exists to prevent. Worth fixing soon — an always-red validator cannot warn anyone.

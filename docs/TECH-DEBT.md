@@ -22,6 +22,8 @@ At a glance:
 | **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit ☑**) | 9.5 done / fit done | ◐→☑ |
 | **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☑ |
 | **T10** | ✅ | `validate_archetypes`/`spine_4_validate` sweep S6's `adaptive` archetype → crash (needs `adaptive_parent`) | opportunistic (post-lockbox) | ☑ 2026-07-24 |
+| **T11** | 🟡 | Underdog ADP never ingested (no keyless endpoint); 16.7 drift corpus too thin (34 drafts) to re-ask 16.8 | opportunistic / when the Sleeper corpus grows | ☐ 2026-07-25 |
+| **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☐ 2026-07-25 |
 
 ---
 
@@ -447,6 +449,63 @@ around it at the harness level (`steps/lockbox_eval.py::cost_report_par` passes 
 per parent.
 
 ---
+
+## 🟡 T11 — Underdog ADP never ingested; the drift corpus is too thin to re-ask 16.8
+*(opened 2026-07-25, Session F)*
+
+**Two loose ends left by Session F, both data-side, neither blocking.**
+
+**(a) Underdog ADP — deferred, not attempted** (user decision). It was half of Phase 0.11's scope: the
+sharp best-ball market, the cleanest `source_divergence` input, and the realistic board for 15.2 best-ball.
+**Why it stopped:** no keyless endpoint — `underdogfantasy.com/rankings/nfl` 404s (it redirects to
+`underdogsports.com`), and the plausible API paths return 404. The board is a JS app on an unpublished,
+probably authenticated API. **Fix when wanted:** reverse-engineer the XHR the rankings page issues, or drop
+it permanently and say so. Timebox it — this is exactly the open-ended scrape that eats a session.
+*Note the pattern match with the shelved props layer (T7): both are "the free market data isn't free".*
+
+**(b) The 16.7 drift panel is thin — 34 drafts over 8 seasons**, several seasons only 1–3 drafts deep,
+4,495 boarded picks. That thinness is the main reason 16.8's verdict is a null rather than a measurement:
+the honest read is "not resolvable at this sample size", not "the effect is zero". Two independent
+constraints:
+- **FFC publishes no 2025 board** (verified live: `"No ADP data found."`), which strands the largest
+  single-season human cohort (18 drafts). Nothing to do about it — unrecoverable.
+- The corpus itself is small once the preseason window, snake, redraft-scoring and completeness filters
+  apply (117 human complete drafts → 42 → 34).
+
+**Fix:** grow the human corpus — add league ids / usernames to `reference/sleeper_seeds.txt` and rerun
+`uv run python steps/phase0_10b_crawl.py`, then re-run `steps/phase16_8_drift_model.py` unchanged. The
+crawler reads **historical public leagues**, so this needs no live/in-season drafting. **Only re-ask 16.8
+if the corpus grows materially** — re-running it on the same data after seeing the answer is exactly the
+threshold-moving the phase's discipline forbids.
+
+**Cost of not doing it:** 16.9 shapes its narrative shock from descriptive regularities (`rookie`,
+`adp_stdev`) rather than a fitted per-player drift, and 16.10's curated board carries the narrative
+signal. That is a defensible design, not a broken one — so this is 🟡, not 🟠.
+
+## 🟠 T12 — the data-health report is permanently red (stale ADP uniqueness gate)
+*(found 2026-07-25 while verifying Session F; **pre-existing — HEAD fails it too**, not introduced by 16.7/16.8)*
+
+**Symptom.** `uv run python steps/phase0_8_validate.py` ends in **`GATES FAILED`** on every run. The single
+failing gate is `adp: unique (gsis, season, source, scoring, teams)` with **1,028 offending groups**.
+
+**Diagnosis (measured, benign).** Every offending group is **season 2026**, and **0 groups** contain more
+rows than they have distinct `snapshot_date`s — i.e. there are **no genuine duplicates**. The gate's key
+simply predates Stage 0. It was correct when each season had exactly one FFC board; since 2026-07-09 Stage 0
+deliberately banks a **weekly snapshot series** for 2026, so `(gsis, season, source, scoring, teams)` is
+legitimately non-unique and `snapshot_date` belongs in the key.
+
+**Why this is 🟠 and not 🟡.** The gate is not wrong about data — it is wrong about the schema, and the cost
+is that **the whole health report now reads FAILED by default**. A validator that is always red cannot warn
+anyone: a genuinely broken ingest would produce the identical output. This is the alarm-fatigue failure mode,
+and it silently disarms the T7 scrape-hardening work.
+
+**Fix.** Add `snapshot_date` to that gate's uniqueness key in `data/validate.py` (`_dup_gates`), so it asserts
+"one row per player per board **per snapshot**" — which is the invariant actually intended. Then confirm the
+report returns to green and that a planted true duplicate still trips it.
+
+**Deliberately not fixed in Session F.** Changing a validation rule is not a drive-by edit: it is exactly the
+kind of "move the threshold after seeing the result" the repo's discipline forbids doing unannounced, and it
+touches the frozen data layer rather than the walled-off Phase-16 track. Registered here for a decision.
 
 ## Ordering (see `ROADMAP.md ★ THE PIPELINE` for the full sequence)
 1. ~~**Now:** T1 (commit), T2 (backup).~~ ☑ both done (2026-07-10).

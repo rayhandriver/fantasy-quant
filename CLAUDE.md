@@ -61,11 +61,75 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★ Next-session pointer (2026-07-25, ★ SESSION E COMPLETE — the whole Phase-16 value-side track is
-> done and closed. RESUME AT SESSION F.) READ THIS FIRST — it is written to resume cold.**
+> **★★ Next-session pointer (2026-07-25, ★ SESSION F COMPLETE — data 0.11 + availability drift
+> 16.7–16.8. RESUME AT SESSION G.) READ THIS FIRST — it is written to resume cold.**
 >
-> **State:** **359 tests** (was 344), ruff clean, **Session E committed**. DEV-only, lockbox untouched,
-> walled off from the frozen cost report. Stage-0 FFC chore: done 2026-07-24, **next due after 07-30**.
+> **State:** **382 tests** (was 359), ruff clean, **Session F is UNCOMMITTED — left for your review**
+> (Session E is committed at `d6529d9`). Stage-0 FFC chore: done 2026-07-24, **next due after 07-30**.
+> New files: `data/sources/ecr.py`, `adp/drift_panel.py`, `adp/drift_model.py`, three `steps/`, two
+> `tests/`, `tests/fixtures/ecr/`, three `analysis/*.json`; one edit to `adp/regression.py` (a
+> backward-compatible `target`/`continuous` kwarg — the frozen softness path is untouched and its
+> tests pass).
+>
+> **★ THE VERDICT: the availability side is an honest null too.** 16.8 = **DOES NOT PREDICT** against a
+> bar fixed before the result was read (skill > 2 %, CI clear of 0): headline **+1.05 % CI[−1.48,+4.96]**.
+>
+> **★★ The single most important thing to carry forward — the ablation rule.** The headline's entire
+> apparent skill came from `source_divergence`, a feature derived from the target's own sibling drafts.
+> It was **already** computed leave-one-draft-out; the ablation that drops it scores **−1.75 %**, i.e.
+> *worse than assuming everyone drafts at ADP*. **Leave-one-out is NOT sufficient for a sibling-derived
+> feature** — drafts from the same season still share rooms, drafters and local ADP quirks. Always report
+> the fit without it. Without that ablation (added on your instruction) this would have been written up
+> as a weak positive.
+>
+> **What this means for Session G, concretely:** **16.9 must NOT be handed a quantitative drift
+> prediction to amplify.** Its done-bar is a *dispersion* (variance) match, which needs no mean signal —
+> `drift_panel.aggregate_player_season` already emits `sd_drift` for exactly that. Shape the shared
+> per-draft shock with the things that **did** survive the ablation, as descriptive room behaviour rather
+> than a per-player forecast: **`rookie` +0.73 rounds** (rooms reach for rookies by three-quarters of a
+> round), **`adp_stdev` +0.35/SD** (where the crowd disagrees with itself, someone jumps), `vbd_gap`
+> +0.18/SD, `pos_WR` +0.47. And **16.10's curated hype board is now the primary narrative channel** — its
+> "curated, not a backtested claim" label is load-bearing, not a caveat.
+>
+> **Situation flags are null on the availability side too** (`team_changed`, `new_starting_qb`, both
+> competition flags — insignificant, sign-unstable), exactly as in 16.1/16.2. Measured twice now from two
+> independent directions: **situation change is a smaller lever than the narrative around it.**
+>
+> **★ 16.7's three deviations from BUILD_PLAN, each forced by a measurement — do not "fix" them back:**
+> 1. **`PRESEASON_WINDOW` (Aug 1 – Sep 15)**, which the plan lacked. The Sleeper corpus contains drafts
+>    from **February to November**; an offseason dynasty startup or a November in-season draft measured
+>    against a September board is a different market, not drift. Biggest single filter: 117 → 42 drafts.
+> 2. **Units are rounds** (`pick_no / teams`), so 6/8/14/16-team rooms join the 10/12-team FFC board.
+> 3. **Sign flipped**: `drift > 0` = drafted **EARLIER** (matching `sleeper.build_tendencies`' `reach`),
+>    and **`drift_centered`** — drift minus its own draft's mean — is the headline target, removing each
+>    room's level offset. Never model raw `drift`.
+>
+> Panel: **34 drafts / 4,495 picks / 436 players / 2017–2024**. 2025 drops entirely because **FFC
+> publishes no 2025 board** (confirmed against the live API). It is thin, and the one thing that would let
+> 16.8 be re-asked is a bigger human corpus: add seeds to `reference/sleeper_seeds.txt` → run
+> `steps/phase0_10b_crawl.py`.
+>
+> **★ 0.11 — I was wrong first, then measured it.** The FantasyPros ECR `?year=` archive **is** genuinely
+> historical (2020 → McCaffrey/Barkley/Elliott). An initial check said otherwise because it regex'd a
+> *different* embedded block out of the page — a widget that renders current-season players on every
+> archived page. **Always parse the `ecrData` blob**, never loose `player_name` matches.
+> **But the archive is kickoff-dated**: every board is a single end-of-preseason snapshot stamped
+> 9/06–9/11, *after* the drafts it would explain — **1 of 38** corpus drafts post-dates its own stamp. So
+> BUILD_PLAN's "does true-ECR beat the VBD proxy on drift MAE" is **unanswerable**, 16.8 keeps the proxy,
+> and `ecr_asof` enforces this **structurally** (a draft-day as-of returns an **empty frame**, not a
+> future board). The general lesson: *an archive existing is not the same as an archive being
+> point-in-time — read the vendor's own timestamp before treating history as backtestable.*
+> ECR is banked anyway (17,264 rows, 2017–2026 × 3 scorings, 99.2 % gsis) because it is free, deletable
+> by the vendor, PIT-clean for **season-outcome** work, and **covers 2025 where FFC has nothing**.
+> **⚠ 2023 PPR is flagged `is_preseason=False`** — `as_of = 2024-02-12`, re-touched after the Super Bowl,
+> so it saw the season it should precede. Exclude it from any draft-season expert baseline.
+> **Underdog is deferred, not attempted** (your decision): no keyless endpoint — marketing routes 404,
+> board is a JS app on an unpublished API.
+>
+> **★ NEXT: Session G — apply the drift, 16.9–16.12 + 16.16**, under the constraint above. Then Session H
+> (personalities 16.13–16.15) → I (Phase 17 formats) → K (Phase 14 app, strictly last).
+>
+> _(Prior pointer — history.)_ **★ (2026-07-25, SESSION E COMPLETE — the Phase-16 value-side track.)**
 >
 > **What closed this session:** the **user review gate** — `reference/coaches.csv` is **204 rows, all
 > `confidence=high`**, fact-checked and signed off end to end (the edits were confidence-only, so 16.3b's

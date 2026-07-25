@@ -1073,6 +1073,19 @@ proxy. What is backtestable: the Sleeper human corpus (149 drafts, 2017–2020) 
 - **Done:** the panel builds PIT-clean for 2017–2020; drift distribution reported (mean≈0 by construction,
   fat both tails); documented as thin (the only historical draft-slot ground truth we have).
 - **Reuse:** `adp/panel.py` join machinery, `data/sources/sleeper.py`, `adp_snapshots`.
+- **☑ BUILT 2026-07-25 (`adp/drift_panel.py`, `steps/phase16_7_drift_panel.py`).** Three deviations from
+  the spec above, each forced by a measurement:
+  1. **`PRESEASON_WINDOW` (Aug 1 – Sep 15) added** — the corpus contains drafts from **February to
+     November**; an offseason startup or in-season draft vs a September board is a different market, not
+     drift. Biggest single filter: 117 human complete drafts → 42.
+  2. **Units are rounds, not picks** (`pick_no / teams` vs `adp / board_teams`), so 6/8/14/16-team rooms
+     join the 10/12-team FFC board instead of being discarded (+7 drafts).
+  3. **Sign flipped** vs the `actual_slot − ADP` above: **`drift > 0` = drafted EARLIER** (matches the
+     existing `sleeper.build_tendencies` `reach`), and **`drift_centered`** — drift minus its own draft's
+     mean — is the headline target, removing each room's level offset.
+  Actual span **2017–2024, not 2017–2020** (the corpus is deeper than scoped); **34 drafts / 4,495 boarded
+  picks / 436 players**. 2025 drops entirely: **FFC publishes no 2025 board** (verified live). Positional
+  means: **TE +0.46 rounds, WR +0.08, RB −0.16, QB −0.20**.
 
 ### 16.8 — Drift feature model → `adp/drift_model.py`
 - **Do:** fit `drift ~ features` walk-forward (leave-one-season-out over 2017–2020), season-block bootstrap,
@@ -1084,6 +1097,21 @@ proxy. What is backtestable: the Sleeper human corpus (149 drafts, 2017–2020) 
   with CIs; each feature reports sign-stability. Survive-or-drop, no threshold moved post-hoc.
 - **Reuse:** `valuation/value_board.py` (`overall_rank`), `adp/regression.py` bootstrap harness, 16.1/16.2
   situation features.
+- **☑ BUILT 2026-07-25 (`adp/drift_model.py`, `steps/phase16_8_drift_model.py`) — VERDICT: DOES NOT
+  PREDICT (honest null).** Bar fixed in advance: skill > 2 % of baseline MAE, CI clear of 0.
+  Headline **+1.05 % CI[−1.48, +4.96]**, Spearman +0.208. **Ablation without `source_divergence`:
+  −1.75 %** — *worse than assuming everyone drafts at ADP*.
+  - **★ The ablation is the result.** All apparent skill traces to the one feature derived from the
+    target's own sibling drafts, and it was **already** leave-one-draft-out. Computing a sibling-derived
+    feature leave-one-out is **not sufficient** — report the fit without it too. See glossary,
+    "the ablation rule".
+  - **True ECR was not usable** (0.11 banked the archive and proved it kickoff-dated — 1 of 38 drafts
+    post-dates its own stamp), so the **VBD-gap proxy stands** and the reason is now measured.
+  - **Situation flags null again** — `team_changed`, `new_starting_qb`, both competition flags
+    insignificant and sign-unstable, mirroring the 16.1/16.2 value-side null.
+  - **Survives the ablation** (sig + 100 % sign-stable) → what 16.9 should shape its shock with, as
+    descriptive room behaviour and **not** a per-player forecast: **`rookie` +0.73 rounds**,
+    **`adp_stdev` +0.35/SD**, `vbd_gap` +0.18/SD, `adp_rounds` −0.19/SD, `pos_WR` +0.47.
 
 ### 16.9 — Correlated per-draft narrative shock → `draft/simulator.py`, `draft/opponent_model.py`
 - **Do:** the user's key insight — independent per-opponent sampling washes out clustering, so a hyped player
@@ -1212,6 +1240,19 @@ selector — the whole cluster provably isolated from the frozen value stack.
   `ecr_snapshots`, gsis-matched; freshness/schema gates (T7 pattern).
 - **Done:** ECR + Underdog boards ingest gsis-matched ≥95 %, PIT-clean; 16.8 can consume both. **Validation:**
   in 16.8, does true-ECR beat the VBD-proxy on drift MAE?
+- **◐ PART-BUILT 2026-07-25 (`data/sources/ecr.py`, `steps/phase0_11_ecr.py`) — ECR ☑, Underdog deferred.**
+  **17,264 rows, 2017–2026 × {ppr, half-ppr, standard}**, 99.2 % gsis on top-150 skill; carries rank,
+  **expert disagreement** (`ecr_std`, min/max over 90–243 experts), tier, ECR delta. Also covers **2025,
+  where FFC has no board at all**.
+  - **★ The stated validation question is UNANSWERABLE and that is now measured, not assumed.** The
+    `?year=` archive is genuinely historical, but every board is a single **end-of-preseason snapshot**
+    stamped 9/06–9/11 — after the drafts it would explain (**1 of 38** corpus drafts post-dates its own
+    stamp). `ecr_asof` enforces this structurally: a draft-day as-of returns an **empty frame**. So 16.8
+    keeps the VBD proxy; ECR is a **live-season** input (16.10/16.11) and a season-outcome expert baseline.
+  - **⚠ `is_preseason` flag added:** the 2023 PPR board carries `as_of = 2024-02-12` (re-touched after the
+    Super Bowl) — it saw the season it should precede. Flagged per row, excluded from draft-season baselines.
+  - **Underdog DEFERRED (user decision), not attempted:** no keyless endpoint — marketing routes 404, board
+    is a JS app on an unpublished API. Recorded so it is not re-discovered.
 - **Reuse:** `data/sources/adp.py` (match/snapshot machinery), `projections/consensus.py` (`_pull_fp` pattern),
   `data/validate.py` gates.
 

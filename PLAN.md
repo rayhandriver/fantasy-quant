@@ -1060,3 +1060,48 @@ measuring how far the *incumbent* was from average, not anything about the incom
 was the fix; shipping the total would have been a quietly misleading deliverable.
 
 **Next: Session F** — data 0.11 (ECR + Underdog ADP) + availability drift 16.7–16.8.
+
+---
+
+## 2026-07-25 — Session F: data 0.11 (ECR) + availability drift 16.7–16.8
+
+**Four decisions taken with the user up front**, after a recon pass that changed what was worth building:
+1. **0.11 = ECR only, Underdog dropped** — no keyless Underdog endpoint (marketing routes 404; JS app on
+   an unpublished API). Deferred rather than half-built or allowed to consume the session.
+2. **Include the 2023+2024 lockbox seasons** in the drift panel — the availability track predicts draft
+   *flow*, not player value, and is walk-forward-scored, so it neither spends nor contaminates the frozen
+   value eval (the position the Phase-16 scoping already took). +12 drafts, ~20 % more panel.
+3. **`source_divergence` = held-out-draft split as headline PLUS an ablation without it.** This turned out
+   to be the decision that determined the session's conclusion — see below.
+4. **Leave the work uncommitted** for user review.
+
+The §3.7 sub-step STOP gate was **waived by the user** for this session ("complete it in its entirety"),
+matching the Phase 2–5 precedent.
+
+**Recon that reshaped the plan (all measured, not assumed):**
+- **A correction I made mid-session:** I first reported that FantasyPros has no historical ECR archive.
+  Wrong — `?year=` serves real history. The first check regex'd `player_name` out of the raw HTML and hit
+  a *widget* that renders current-season players on every archived page. Parsing the `ecrData` blob shows
+  2020 → McCaffrey/Barkley/Elliott. **Rule: parse the payload, not the page.**
+- …but the archive is **kickoff-dated** (every board stamped 9/06–9/11), so it post-dates 37 of the 38
+  drafts it would explain. The user's "ECR live-only" call was right for a different reason than I gave.
+- **The Sleeper corpus is not a preseason corpus** — draft times run February→November. This forced a
+  `PRESEASON_WINDOW` the build plan never had, and it is the largest filter in the funnel.
+- **FFC has no 2025 board at all** (live API: `"No ADP data found."`), so the biggest single-season human
+  cohort (18 drafts) cannot be measured against an independent board.
+
+**Outcome: an honest null, and the ablation is why.** Headline skill +1.05 % CI[−1.48,+4.96] against a
+pre-registered 2 % bar; **ablation without `source_divergence` = −1.75 %**, worse than "everyone drafts at
+ADP". The feature was *already* leave-one-draft-out, and it still carried the whole result — same-season
+drafts share rooms, drafters and local ADP quirks. **New durable rule (glossary: "the ablation rule"):
+for a sibling-derived feature, leave-one-out is not sufficient; report the fit without it.**
+
+**Dead ends / things deliberately not done:**
+- No attempt to rescue the null by widening the window to June (it would add ~13 drafts of a genuinely
+  different market) or by relaxing the completeness/snake filters. The bar was set first and left alone.
+- `days_to_board` was kept as a control rather than used to filter, since the board legitimately
+  post-dates most drafts and that gap is a measurement property, not a defect.
+
+**Consequence for Session G:** 16.9 gets no mean drift signal; its dispersion done-bar needs none, and
+`aggregate_player_season.sd_drift` is the target. 16.10's curated hype board becomes the primary narrative
+channel. See `findings.md` §Session F and the CLAUDE.md ★★ pointer.
