@@ -61,13 +61,49 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★ Next-session pointer (2026-07-25, SESSION E — 16.3 + 16.3b DONE; ★ A USER REVIEW GATE IS OPEN and
-> 16.4 is blocked behind it). READ THIS FIRST — it is written to resume cold.**
+> **★★ Next-session pointer (2026-07-25, ★ SESSION E COMPLETE — the whole Phase-16 value-side track is
+> done and closed. RESUME AT SESSION F.) READ THIS FIRST — it is written to resume cold.**
 >
-> **State:** **331 tests** (was 316), ruff clean. **Nothing is committed.** DEV-only, lockbox untouched,
-> walled off from the frozen cost report.
+> **State:** **359 tests** (was 344), ruff clean, **Session E committed**. DEV-only, lockbox untouched,
+> walled off from the frozen cost report. Stage-0 FFC chore: done 2026-07-24, **next due after 07-30**.
 >
-> **★ THE GATE — do this before anything else.** `reference/coaches.csv` is now **204 rows**: the 32
+> **What closed this session:** the **user review gate** — `reference/coaches.csv` is **204 rows, all
+> `confidence=high`**, fact-checked and signed off end to end (the edits were confidence-only, so 16.3b's
+> machine audits stand) — and **16.4**, the last unbuilt substep.
+>
+> **16.4 (`situation/fingerprint.py`, `steps/phase16_4_fingerprint.py`) — descriptive only, as scoped.**
+> 14 metrics per team-season, **z-scored within season** so league drift never reads as personality, pooled
+> per play-caller and **EB-shrunk** by regime length (`k = σ²/τ²`). 41 play-callers / 64 spells / 169
+> regime-seasons; all **17** transport teams resolve (12 own · 5 lineage · 0 silent); BAL/PHI/SEA report
+> **both** priors (mentor lineage vs. outgoing caller). Decisions locked with the user: **no season cap**
+> (2014–2025, lockbox years included, no provenance column — an initial DEV-cap answer was reversed),
+> partial regimes cut to the weeks actually called, metrics extended with HHI/aDOT/pace, output at team and
+> player grain, deltas + implied multiplier and **no points column**.
+>
+> **★ Two results worth carrying into any later phase that touches this:**
+> 1. **The transport effect is small and mostly isn't the coach.** Only **20.9 %** of implied role-share
+>    movement is the incoming play-caller; **79.1 %** is the incumbent slot regressing toward the league
+>    mean, which any hire would produce. Every player row carries `reversion_pp` + `scheme_pp` — **never
+>    surface `delta_pp` alone**, it overstates the phase ~5×.
+> 2. **Trait portability is the real deliverable.** What a coach carries between jobs: `rz_pass_rate`
+>    (k=1.7), `team_adot`/`plays_pg` (1.8), **`carry_hhi` (2.0)**. What he does **not**:
+>    **`wr1_tgt_share` (k=17.9)** — the alpha receiver's target share is a **roster** fact. If a later phase
+>    wants a "this coach will feed X" claim, the concentration and tempo traits support it; WR1 share doesn't.
+>
+> **★ Repo-wide lesson from a real bug here — `LA` vs `LAR`.** `pbp`/`weekly` write the Rams as `LA`,
+> `reference/coaches.csv` as `LAR`, and 16.4's first run **silently deleted Sean McVay's entire nine-season
+> tenure**, reporting it as an ordinary empty result. **A missing entity and a failed join look identical.**
+> Route every cross-source team comparison through `adp.panel._canon_team`, and make "dropped with no stated
+> reason" an assertion (`fingerprint.assert_regime_coverage`), not an empty row.
+>
+> **★ NEXT: Session F — data 0.11 (ECR + Underdog ADP ingest) + availability drift 16.7–16.8**
+> (`adp/drift_panel.py` on the Sleeper human corpus, `adp/drift_model.py` consuming 16.1/16.2 features +
+> the new ECR; walk-forward drift MAE/Spearman). **16.6 Beta Lab tab stays deferred to the Phase-14 app
+> block.** Value-side reads as an honest null → Phase 16's edge is the availability side. Run the Stage-0
+> chore first if the latest 2026 FFC snapshot is >6 days old.
+>
+> _(Prior pointer — history.)_ **★ (2026-07-25, SESSION E mid-flight — the review gate that is now closed.)**
+> `reference/coaches.csv` was **204 rows**: the 32
 > signed-off 2026 rows plus **172 Claude-researched historical rows (2014–2025)**. The historical half has
 > **not** been reviewed, and **16.4 must not consume it until the user signs it off** — the same contract as
 > the 2026 half. **The review surface is deliberately narrow: `offensive_coordinator`, `play_caller` and

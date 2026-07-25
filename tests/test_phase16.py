@@ -16,7 +16,9 @@ import pytest
 
 from fantasy_quant.adp.panel import PHASE16_FEATURES, SITUATION_FEATURES, _canon_team
 from fantasy_quant.adp.scorecard import bias_scorecard
-from fantasy_quant.situation import coaches, events
+from fantasy_quant.data import db
+from fantasy_quant.features import environment
+from fantasy_quant.situation import coaches, events, fingerprint
 
 
 # --------------------------------------------------------------------------------------------
@@ -359,3 +361,252 @@ def test_merge_annotations_leaves_blank_annotation_fields_alone():
     assert out.iloc[0]["mechanism"] == "unknown"   # empty must not erase the derived default
     assert out.iloc[0]["notes"] == ""
     assert out.iloc[0]["confidence"] == "low"
+
+
+# ================================================================================================
+# Phase 16.4 — scheme fingerprints + transport
+# ================================================================================================
+def _tend(rows) -> pd.DataFrame:
+    """Synthetic (team, season, week) tendencies: rows of (season, team, week, pass, rush)."""
+    out = []
+    for season, team, week, ps, rs in rows:
+        out.append({"team": team, "season": season, "week": week,
+                    "pass_plays": ps, "rush_plays": rs,
+                    "ed_pass": ps // 2, "ed_plays": (ps + rs) // 2,
+                    "rz_pass": ps // 5, "rz_rush": rs // 5,
+                    "air_yards": ps * 8.0, "pass_atts": ps})
+    return pd.DataFrame(out)
+
+
+def _usage(rows) -> pd.DataFrame:
+    """Synthetic player-weeks: rows of (season, team, week, gsis, pos, targets, carries)."""
+    return pd.DataFrame([
+        {"gsis_id": g, "player": g, "position": p, "team": t, "season": s, "week": w,
+         "targets": tg, "carries": ca}
+        for s, t, w, g, p, tg, ca in rows])
+
+
+# --- week selection -----------------------------------------------------------------------------
+def test_resolve_weeks_counts_played_weeks_not_calendar_weeks():
+    """A bye must not shift a boundary: 'first 9' means nine games, not 'through week 9'."""
+    played = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12]        # week 8 is the bye
+    assert fingerprint.resolve_weeks(("first", 9), played) == [1, 2, 3, 4, 5, 6, 7, 9, 10]
+    assert fingerprint.resolve_weeks(("last", 3), played) == [10, 11, 12]
+    assert fingerprint.resolve_weeks(("weeks", 9, 12), played) == [9, 10, 11, 12]
+
+
+def test_unresolved_partial_regime_is_dropped_not_guessed():
+    t = _tend([(2021, "CAR", w, 30, 20) for w in range(1, 18)])
+    assert fingerprint.regime_season_weeks(t, 2021, "CAR", "Joe Brady") is None
+    # the same team-season under a different caller is a normal, complete regime
+    assert len(fingerprint.regime_season_weeks(t, 2021, "CAR", "Someone Else")) == 17
+
+
+def test_partial_window_keys_all_exist_in_the_real_coaches_table():
+    """A typo'd key would silently do nothing — the row would be used whole and look fine."""
+    df = coaches.load_coaches()
+    have = {(int(r.season), str(r.team), str(r.play_caller)) for r in df.itertuples()}
+    for key in (*fingerprint.PARTIAL_WEEKS, *fingerprint.UNRESOLVED_PARTIAL):
+        assert key in have, f"{key} is not a row in reference/coaches.csv"
+
+
+def test_coverage_gate_catches_a_silent_join_failure():
+    """The LA/LAR regression guard: a dropped regime with no reason is a join bug, not a coach."""
+    rst = pd.DataFrame([{"play_caller": "X", "team": "LAR", "season": 2018, "weeks": None,
+                         "n_weeks": 0, "partial": False, "dropped": True, "drop_reason": ""}])
+    with pytest.raises(AssertionError, match="did not join"):
+        fingerprint.assert_regime_coverage(rst)
+    rst.loc[0, "drop_reason"] = "stated reason"
+    fingerprint.assert_regime_coverage(rst)          # explained drops are fine
+
+
+# --- the profile --------------------------------------------------------------------------------
+def test_team_season_profile_computes_shares_and_concentration():
+    t = _tend([(2020, "KC", w, 40, 20) for w in (1, 2)])
+    u = _usage([(2020, "KC", w, g, p, tg, ca) for w in (1, 2) for g, p, tg, ca in
+                [("wr1", "WR", 10, 0), ("wr2", "WR", 6, 0), ("wr3", "WR", 4, 0),
+                 ("te1", "TE", 5, 0), ("rb1", "RB", 5, 15), ("rb2", "RB", 0, 5)]])
+    p = fingerprint.team_season_profile(t, u, 2020, "KC")
+    assert p["pass_rate"] == pytest.approx(40 / 60)
+    assert p["plays_pg"] == pytest.approx(60.0)
+    assert p["team_adot"] == pytest.approx(8.0)
+    assert p["wr1_tgt_share"] == pytest.approx(10 / 30)      # 30 team targets per week
+    assert p["wr2_tgt_share"] == pytest.approx(6 / 30)
+    assert p["rb1_carry_share"] == pytest.approx(15 / 20)
+    assert p["rb_tgt_share"] == pytest.approx(5 / 30)
+    # HHI of target shares: (10..6,4,5,5)/30 squared and summed
+    assert p["carry_hhi"] == pytest.approx((15 / 20) ** 2 + (5 / 20) ** 2)
+    assert 0 < p["tgt_hhi"] <= 1
+
+
+def test_profile_restricted_to_a_window_sees_only_those_weeks():
+    """The whole point of PARTIAL_WEEKS: a coach is scored on his own games, not his successor's."""
+    t = _tend([(2020, "CHI", 1, 40, 10), (2020, "CHI", 2, 10, 40)])
+    u = _usage([(2020, "CHI", 1, "wr1", "WR", 10, 0), (2020, "CHI", 2, "wr1", "WR", 1, 0),
+                (2020, "CHI", 1, "rb1", "RB", 0, 10), (2020, "CHI", 2, "rb1", "RB", 0, 40)])
+    whole = fingerprint.team_season_profile(t, u, 2020, "CHI")
+    first = fingerprint.team_season_profile(t, u, 2020, "CHI", weeks=[1])
+    assert first["pass_rate"] == pytest.approx(0.8) and whole["pass_rate"] == pytest.approx(0.5)
+    assert first["weeks"] == 1.0 and whole["weeks"] == 2.0
+
+
+# --- shrinkage ----------------------------------------------------------------------------------
+def _rp(n_by_caller: dict[str, int], value: float = 2.0) -> pd.DataFrame:
+    rows = []
+    for pc, n in n_by_caller.items():
+        for i in range(n):
+            r = {"play_caller": pc, "team": "AAA", "season": 2014 + i,
+                 "partial": False, "n_weeks": 17}
+            for c in fingerprint.METRICS:
+                r[c] = value + (0.1 if i % 2 else -0.1)      # a little within-caller noise
+            rows.append(r)
+    return pd.DataFrame(rows)
+
+
+def test_shrinkage_pulls_toward_the_league_and_never_overshoots():
+    fp = fingerprint.fingerprints(_rp({"Short": 1, "Long": 12}))
+    fingerprint.assert_fingerprints_sane(fp)
+    for c in fingerprint.METRICS:
+        for _, row in fp.iterrows():
+            assert abs(row[c]) <= abs(row[f"{c}_raw"]) + 1e-9
+            assert 0.0 <= row[f"{c}_w"] <= 1.0
+
+
+def test_a_longer_tenure_keeps_more_of_its_own_signal():
+    fp = fingerprint.fingerprints(_rp({"Short": 1, "Long": 12})).set_index("play_caller")
+    for c in fingerprint.METRICS:
+        assert fp.at["Long", f"{c}_w"] > fp.at["Short", f"{c}_w"]
+        assert abs(fp.at["Long", c]) > abs(fp.at["Short", c])
+
+
+def test_fingerprints_can_be_grouped_per_spell_instead_of_per_caller():
+    rp = _rp({"A": 2})
+    rp.loc[1, "team"] = "BBB"
+    assert len(fingerprint.fingerprints(rp)) == 1
+    assert len(fingerprint.fingerprints(rp, by=("play_caller", "team"))) == 2
+
+
+# --- transport ----------------------------------------------------------------------------------
+def _src(rows) -> pd.DataFrame:
+    """rows of (team, play_caller, source, fingerprint_on, same_team, prev_play_caller)."""
+    df = pd.DataFrame([
+        {"team": t, "play_caller": pc, "source": s, "fingerprint_on": on, "prior_seasons": 3,
+         "same_team": st, "prev_play_caller": prev, "is_new_regime": True}
+        for t, pc, s, on, st, prev in rows])
+    df["same_team"] = df["same_team"].astype("boolean")
+    return df
+
+
+def test_transport_reports_both_priors_only_where_they_disagree():
+    fp = fingerprint.fingerprints(_rp({"Mentor": 4, "Outgoing": 4}))
+    zs = pd.DataFrame([{"season": 2025, "team": "BAL", **{c: 0.0 for c in fingerprint.METRICS}},
+                       {"season": 2025, "team": "DEN", **{c: 0.0 for c in fingerprint.METRICS}}])
+    src = _src([("BAL", "Rookie", "lineage", "Mentor", False, "Outgoing"),
+                ("DEN", "Promoted", "lineage", "Mentor", True, "Mentor")])
+    tr = fingerprint.transport(fp, zs, src, 2026).set_index("team")
+    assert tr.at["BAL", "alt_prior_on"] == "Outgoing"     # lineage ≠ continuity → two readings
+    assert pd.isna(tr.at["DEN", "alt_prior_on"])          # same-building promotion → one reading
+
+
+def test_transport_stays_silent_for_a_team_with_no_source():
+    fp = fingerprint.fingerprints(_rp({"Someone": 3}))
+    zs = pd.DataFrame([{"season": 2025, "team": "XXX", **{c: 0.0 for c in fingerprint.METRICS}}])
+    src = _src([("XXX", "Nobody", "none", None, None, "Prev")])
+    tr = fingerprint.transport(fp, zs, src, 2026)
+    assert not tr.iloc[0]["fingerprinted"]
+    assert np.isnan(tr.iloc[0]["pass_rate_in"])
+    fingerprint.assert_transport_honest(tr, src)          # silence is the correct behaviour
+
+
+def test_transport_gate_rejects_a_fingerprint_without_a_source():
+    src = _src([("XXX", "Nobody", "none", None, None, "Prev")])
+    tr = pd.DataFrame([{"team": "XXX", "source": "none", "fingerprinted": True}])
+    with pytest.raises(AssertionError, match="no source"):
+        fingerprint.assert_transport_honest(tr, src)
+
+
+# --- the player board ---------------------------------------------------------------------------
+class _FakeCon:
+    """Stand-in for the DuckDB connection: one canned ADP board."""
+    def __init__(self, board):
+        self._board = board
+
+    def execute(self, sql, params=None):
+        self._df = self._board
+        return self
+
+    def df(self):
+        return self._df
+
+
+def test_player_board_delta_splits_exactly_into_reversion_plus_scheme():
+    """The honesty identity — a reader must be able to see how much of a move is the new coach."""
+    board = pd.DataFrame([{"gsis_id": "g1", "player": "Star WR", "position": "WR",
+                           "team": "BAL", "adp": 12.0}])
+    fp = fingerprint.fingerprints(_rp({"Mentor": 4}))
+    prof = pd.DataFrame([{"season": 2025, "team": "BAL",
+                          **{c: 0.30 for c in fingerprint.METRICS}}])
+    mom = pd.DataFrame([{"season": 2025,
+                         **{f"{c}_mean": 0.22 for c in fingerprint.METRICS},
+                         **{f"{c}_sd": 0.05 for c in fingerprint.METRICS}}])
+    tr = pd.DataFrame([{"team": "BAL", "play_caller": "Rookie", "source": "lineage",
+                        "fingerprint_on": "Mentor", "prior_seasons": 4, "fingerprinted": True,
+                        "alt_prior_on": "Outgoing"}])
+    pb = fingerprint.player_board(_FakeCon(board), tr, fp, prof, mom, 2026)
+    assert len(pb) == 1
+    row = pb.iloc[0]
+    assert row["delta_pp"] == pytest.approx(row["reversion_pp"] + row["scheme_pp"])
+    assert row["share_prev"] == pytest.approx(0.30)       # what the team actually did
+    assert row["share_league"] == pytest.approx(0.22)     # where any hire regresses it
+    assert row["multiplier"] == pytest.approx(row["share_implied"] / row["share_prev"])
+    assert row["slot_metric"] == "wr1_tgt_share"          # ADP rank 1 at WR → the WR1 slot
+
+
+def test_player_board_skips_slots_the_fingerprint_does_not_model():
+    """QBs and a fourth receiver have no slot metric — they must be omitted, not defaulted."""
+    board = pd.DataFrame([{"gsis_id": "q", "player": "QB", "position": "QB",
+                           "team": "BAL", "adp": 30.0}])
+    fp = fingerprint.fingerprints(_rp({"Mentor": 4}))
+    prof = pd.DataFrame([{"season": 2025, "team": "BAL",
+                          **{c: 0.30 for c in fingerprint.METRICS}}])
+    mom = pd.DataFrame([{"season": 2025, **{f"{c}_mean": 0.22 for c in fingerprint.METRICS},
+                         **{f"{c}_sd": 0.05 for c in fingerprint.METRICS}}])
+    tr = pd.DataFrame([{"team": "BAL", "play_caller": "R", "source": "own",
+                        "fingerprint_on": "Mentor", "prior_seasons": 4, "fingerprinted": True,
+                        "alt_prior_on": pd.NA}])
+    assert fingerprint.player_board(_FakeCon(board), tr, fp, prof, mom, 2026).empty
+
+
+def test_profile_reconciles_with_the_phase3_environment_feature():
+    """16.4 re-derives tendencies at week grain so partial regimes can be cut out. The definitions
+    must still be the Phase-3.4 ones — an unrestricted team-season has to agree exactly, or the
+    fingerprints are quietly measuring something else than the rest of the project."""
+    con = db.connect(":memory:")
+    con.execute("CREATE TABLE pbp (season INT, week INT, posteam VARCHAR, season_type VARCHAR, "
+                "pass INT, rush INT, down INT, yardline_100 INT, air_yards DOUBLE, "
+                "pass_attempt INT, qb_epa DOUBLE, epa DOUBLE)")
+    rows = []
+    for wk in range(1, 5):
+        for i in range(30):
+            rows.append((2020, wk, "KC", "REG", 1, 0, 1 + i % 3, 50, 8.0, 1, 0.1, 0.1))
+        for i in range(20):
+            rows.append((2020, wk, "KC", "REG", 0, 1, 1 + i % 3, 50, None, 0, 0.0, 0.05))
+    con.executemany("INSERT INTO pbp VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", rows)
+    con.execute("CREATE TABLE game_lines (season INT, game_type VARCHAR, home_team VARCHAR, "
+                "away_team VARCHAR, home_score INT, away_score INT, "
+                "home_implied_total DOUBLE, away_implied_total DOUBLE)")
+    # environment_features asserts its output is finite, so KC needs a scoring row to exist
+    con.executemany("INSERT INTO game_lines VALUES (?,?,?,?,?,?,?,?)",
+                    [(2020, "REG", "KC", "DEN", 27, 17, 26.5, 20.5)])
+    con.execute("CREATE TABLE weekly (gsis_id VARCHAR, player_display_name VARCHAR, "
+                "position VARCHAR, recent_team VARCHAR, season INT, week INT, "
+                "season_type VARCHAR, targets INT, carries INT)")
+    con.executemany("INSERT INTO weekly VALUES (?,?,?,?,?,?,?,?,?)",
+                    [("w1", "W One", "WR", "KC", 2020, wk, "REG", 6, 0) for wk in range(1, 5)])
+
+    env = environment.environment_features(con).set_index("team")
+    tend, usage = fingerprint.team_week_tendencies(con), fingerprint.player_week_usage(con)
+    prof = fingerprint.team_season_profile(tend, usage, 2020, "KC")
+    for metric in ("pass_rate", "early_down_pass_rate", "plays_pg"):
+        assert prof[metric] == pytest.approx(float(env.at["KC", metric])), metric
+    con.close()

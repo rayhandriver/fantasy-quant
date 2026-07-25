@@ -1990,3 +1990,65 @@ to what no feed carries.
 historical coaching rows and the lineage table are Claude-researched and 16.4 must not consume them until
 the user signs off**, the same contract as the 2026 half. 16.5's derived columns are machine-checked, so
 its review surface is only `mechanism`/`confidence`/`notes`.
+
+### 16.4 — scheme fingerprints + transport — DONE (2026-07-25), **descriptive only**
+
+The review gate closed first: the user fact-checked the historical table and lifted the 26 non-`high`
+rows, so `reference/coaches.csv` is **204 rows, all `confidence=high`** and signed off end to end. The
+edits were confidence-only — no `head_coach`/`offensive_coordinator`/`play_caller`/`hc_calls_plays` value
+moved — so the 16.3b machine audits (pbp head-coach 0 MISMATCH, move-graph 0 HARD) carry over untouched.
+
+**Decisions locked before building** (the user reversed an initial DEV-cap answer, on the record): no
+season cap — fingerprints use **all 2014–2025 seasons on file**, lockbox years included, with **no
+provenance column**; EB shrinkage toward the league-season baseline; partial regimes cut to the weeks
+actually called; the BUILD_PLAN metric set **extended with concentration (HHI), aDOT and pace**; output at
+**both team and player grain**; role-share deltas **plus a unitless implied multiplier**, no points column.
+
+**What it is.** `situation/fingerprint.py` + `steps/phase16_4_fingerprint.py` +
+`analysis/phase16_4_fingerprint.json`. 14 metrics per team-season, **z-scored within season** so that
+league drift in pass rate and pace never reads as a coach's personality, aggregated per play-caller and
+**EB-shrunk** by regime length (`k = σ²/τ²` by method of moments, so the weight is estimated, not chosen).
+**41 play-callers / 64 play-caller×team spells over 169 regime-seasons**; all **17** transport teams
+resolve (12 own · 5 lineage · **0 silent**), and **BAL/PHI/SEA** carry two priors side by side (mentor
+lineage vs. the outgoing caller) rather than a silent pick.
+
+- **★ THE HEADLINE, and it is a deflationary one: only 20.9 % of the implied role-share movement is the
+  incoming coach.** The other **79.1 %** is the incumbent slot regressing toward the league mean — which
+  *any* hire whatsoever would produce. Mean |reversion| **5.77 pp** vs mean |scheme| **1.53 pp**. The
+  player board therefore splits every move into `reversion_pp` and `scheme_pp` and the step prints the
+  ratio; publishing only the total `delta_pp` would have overstated the phase by roughly 5×. This is the
+  same shape of result as the value-side 16.1/16.2 null — situation change is a smaller lever than the
+  narrative around it, and the honest deliverable says so.
+- **★ Trait stability is the actually useful output.** The EB constant *is* the finding — it measures how
+  much of a trait a coach carries between jobs. Most portable: **`rz_pass_rate` (k=1.7)**, `wr2_tgt_share`
+  (1.7), `rb_tgt_share` (1.8), `team_adot` (1.8), `plays_pg` (1.8), **`carry_hhi` (2.0)**. Least portable
+  by a wide margin: **`wr1_tgt_share` (k=17.9, max weight 0.40)** — the alpha receiver's target share is a
+  **roster** fact, not a scheme fact. Adding the concentration measures paid for itself: backfield
+  concentration (bellcow vs committee) is both the most fantasy-relevant thing a play-caller does and one
+  of the most portable, while the headline "target share" everyone quotes is the least.
+- **Partial regimes cut to their own games.** Six seasons carry a pinnable window (`PARTIAL_WEEKS`, e.g.
+  Nagy CHI 2020 = first 9, Reich IND 2022 = first 9, Reich CAR 2023 = weeks 1–6); three are flagged but
+  too vague to pin (`UNRESOLVED_PARTIAL` — Brady CAR 2021's "~13 of 17", Morton DET 2025, Kelly LV 2025)
+  and are **dropped rather than guessed**. Specs resolve against weeks the team *actually played*, so a
+  bye never shifts a boundary. NB the IND window is keyed to **2022** — the note documenting it sits on
+  the 2021 row, which was itself a full season.
+- **★ A silent join failure nearly deleted a coach.** `pbp`/`weekly` write the Rams as `LA`;
+  `reference/coaches.csv` writes `LAR`. The first run dropped **Sean McVay's entire nine-season tenure**
+  and reported it as an ordinary empty result — a missing coach and a failed join look identical. Fixed by
+  reusing `adp.panel._canon_team` (rather than a local map) and locked down by
+  `assert_regime_coverage`, which makes *a drop without a stated reason* an error. Generalizable: any
+  cross-source join in this repo should go through the canonical mapper, and "no rows" must never be an
+  acceptable silent outcome.
+- **Reconciliation, not reinvention.** 16.4 re-derives tendencies at **week** grain (3.4 is season-grain
+  and cannot express a partial regime), so a unit test asserts an unrestricted team-season reproduces
+  `features/environment.py`'s `pass_rate`/`early_down_pass_rate`/`plays_pg` exactly on an in-memory DB.
+- **Labeling.** No FDR gate, no baseline, no edge claim — the clean-transport sample is far too thin, and
+  BUILD_PLAN scopes 16.4 this way deliberately. The done-bar is "computes correctly and is honestly
+  labeled". Walled off: reads `pbp`/`weekly`/`adp_snapshots`, writes nothing, and touches neither
+  `draft/optimizer.py` nor `valuation/value_board.py` nor `valuation/cost_report.py`.
+
+**Status: SESSION E COMPLETE — 16.1 ☑(null) · 16.2 ☑(null) · 16.3 ☑ · 16.3b ☑ · 16.4 ☑(descriptive) ·
+16.5 ☑(derived) · T10 ☑. 16.6 tab deferred to the Phase-14 app block.** 359 tests (+15), ruff clean; DEV-only,
+lockbox untouched, walled off from the frozen cost report. **The value-side track closes as an honest
+null with one genuinely useful by-product: a measured ranking of which offensive traits a play-caller
+actually carries between jobs.**

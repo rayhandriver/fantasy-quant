@@ -1021,3 +1021,42 @@ so a *decisive* result (DEV title Brier was 0.088 ≪ 0.09) is robust and a *mar
   - **★ Open gate:** the 172 historical rows + the 5 lineage rows are Claude-researched. **16.4 does not run
     until the user signs them off** — same contract as the 2026 half. Review surface is deliberately narrow:
     `offensive_coordinator` / `play_caller` / `hc_calls_plays`, since `head_coach` is machine-audited.
+
+## 2026-07-25 (session 2) — SESSION E CLOSED: review gate + Phase 16.4
+
+**Review gate closed.** The user fact-checked `reference/coaches.csv` and lifted the 26 non-`high` rows →
+**204 rows, all `confidence=high`**, signed off end to end. Diff was confidence-only (plus one "- VERIFY"
+note removed): no `head_coach`/`offensive_coordinator`/`play_caller`/`hc_calls_plays` value moved, so
+16.3b's machine audits (pbp head-coach 0 MISMATCH, move-graph 0 HARD) carry over unchanged.
+
+**Process note worth keeping.** The user reported the edits as saved; disk said otherwise (`git diff` empty,
+mtimes unchanged, no edited copy anywhere on the Windows side). This is the **mirror image** of the
+2026-07-24 stale-buffer incident — that time the buffer was stale and disk was right; this time the buffer
+was right and unsaved. **Check disk before building on a "reviewed" file, in both directions.**
+
+**Decisions taken before building 16.4** (asked up front, per the ask-everything-first instruction):
+1. **Season cap — none.** First answered "cap at 2022 (DEV only)", then **reversed**: use all 2014–2025
+   seasons on file, lockbox years included. Also **no provenance column** (the seasons-used tag was
+   declined). Recorded because it is a deliberate, informed acceptance of lockbox-derived content in a
+   descriptive artifact, not an oversight. The DEV cap would have cost CLE/DET/MIA/TB their entire basis
+   (all four debuted as play-callers after 2022) — 13 of 17 transport teams would have survived it.
+2. **EB shrinkage** toward the league-season baseline, weight estimated from the data.
+3. **Partial regimes restricted to the weeks actually called**, transcribed from the rows' own notes;
+   unpinnable ones dropped.
+4. **Metric set extended** beyond BUILD_PLAN with concentration (HHI), aDOT and pace.
+5. **Output at both team and player grain**; role-share deltas **+ implied multiplier**, no points column
+   (a points translation would read as an edit to the frozen projections).
+6. Commit at the end of the session.
+
+**Built:** `situation/fingerprint.py`, `steps/phase16_4_fingerprint.py`,
+`analysis/phase16_4_fingerprint.json`, 15 tests. **359 tests, ruff clean.** Full result in `findings.md`
+§16.4; the two things worth carrying forward are the **20.9 % scheme / 79.1 % reversion** split (publishing
+the total delta alone would have overstated the phase ~5×) and the **trait-portability ranking**, which is
+the one genuinely reusable output of an otherwise-null value-side track.
+
+**Dead end avoided:** the first draft reported `delta_pp` only. Inspecting the numbers showed nearly every
+"implied share" sitting at the league mean — i.e. the shrinkage had done its job and the delta was mostly
+measuring how far the *incumbent* was from average, not anything about the incoming coach. Decomposing it
+was the fix; shipping the total would have been a quietly misleading deliverable.
+
+**Next: Session F** — data 0.11 (ECR + Underdog ADP) + availability drift 16.7–16.8.

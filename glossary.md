@@ -736,13 +736,38 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   *internal promotion* is `in_house=1` yet still a new regime (DEN 2026: Payton hands the offense to Davis
   Webb, already the QB coach; PHI and WAS are the same shape). With `change_from_prev` gone, 16.4 must
   handle those explicitly rather than keying purely on `in_house=0`.
-- **Scheme fingerprint (16.4)** — per-playcaller-regime aggregate role-share stats (WR1/2/3 target share, RB
-  carry share, TE target/route share, team pass rate/PROE, RZ split) computed from Phase-3.1/3.4 features
-  over that regime's historical seasons. The "what this playcaller does to a depth chart" signature.
+- **Scheme fingerprint (16.4, BUILT 2026-07-25)** — a play-caller's 14-metric signature: team tendencies
+  (`pass_rate`, `early_down_pass_rate`, `plays_pg`, `rz_pass_rate`, `team_adot`) plus the role-share split
+  (WR1/2/3 and TE1 target share, RB target share, RB1/RB2 carry share) plus **concentration** (`tgt_hhi`,
+  `carry_hhi`). Every metric is **z-scored within season** before aggregation — league drift in pass rate
+  and pace must never read as a coach's personality — then **EB-shrunk** by regime length. 41 play-callers
+  / 64 spells over 169 regime-seasons.
+- **Trait stability / the EB constant `k` (16.4)** — `k = σ²/τ²` (within-coach season noise ÷ between-coach
+  spread), estimated by method of moments; a regime of `n` seasons keeps weight `n/(n+k)`. **`k` is itself
+  the finding** — it measures how much of a trait a coach *carries between jobs*. Most portable:
+  `rz_pass_rate` (1.7), `team_adot` (1.8), `plays_pg` (1.8), **`carry_hhi` (2.0)**. Least portable:
+  **`wr1_tgt_share` (17.9)** — the alpha receiver's target share is a **roster fact, not a scheme fact**.
 - **Transport (16.4)** — reweighting a new team's *current* personnel by an *incoming* playcaller's
   historical fingerprint. Structurally adjacent to 7.3's rookie transport but a distinct hypothesis:
   scheme-specific, not a blunt team fixed-effect. **Ships descriptive-only, explicitly unvalidated** — no
   FDR gate, no edge claim; the done-bar is "computes correctly and is honestly labeled."
+- **★ Reversion vs. scheme split (16.4)** — the honesty decomposition on every player row:
+  `delta_pp = reversion_pp + scheme_pp`, where `reversion_pp = league_mean − team_prev` (what *any* hire
+  would produce as the incumbent slot regresses) and `scheme_pp = z × sd` (**the only part the fingerprint
+  actually claims**). Measured 2026: scheme is just **20.9 %** of the movement, reversion **79.1 %** (mean
+  |1.53| pp vs |5.77| pp). Reporting the total alone would overstate the phase ~5×. Generalizable pattern:
+  when a "predicted change" is mostly regression to a mean, say which part is which.
+- **Partial-regime window (`PARTIAL_WEEKS` / `UNRESOLVED_PARTIAL`, 16.4)** — six seasons where the listed
+  play-caller only called part of the year are cut to **the weeks he actually called** (specs resolve
+  against weeks the team *played*, so a bye never shifts a boundary); three more are flagged but too vague
+  to pin and are **dropped rather than guessed**. Averaging two coaches' games into one fingerprint is the
+  easiest way to make the module lie.
+- **★ Silent-join failure (the LA/LAR lesson, 2026-07-25)** — `pbp`/`weekly` write the Rams as `LA`,
+  `reference/coaches.csv` as `LAR`, so 16.4's first run **deleted Sean McVay's entire nine-season tenure**
+  and reported it as an ordinary empty result. **A missing coach and a failed join look identical.** Two
+  durable rules: route every cross-source team comparison through `adp.panel._canon_team`, and make
+  "dropped with no stated reason" an **assertion failure** (`fingerprint.assert_regime_coverage`) rather
+  than an empty row.
 - **Move-graph cross-reference** — the review technique that caught every error in the drafted 2026 coaching
   table **without a single external lookup**: each "X departs" claim in one row must be matched by an "X
   arrives" claim in another, and the flags must agree with the prose. Found 4 hard contradictions, 3

@@ -263,11 +263,22 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   research narrowed to `mechanism`/`notes` and merged in. **16.4 still to build. 16.6 tab → deferred to the
   Phase-14 app block.** ruff clean, DEV-only, lockbox untouched, walled off from the frozen cost
   report. **Value-side reads as an honest null → Phase 16's edge is the availability side (16.7–16.12).**
-  326 → 331 → **344 tests**.
-  **★ ← REVIEW GATE, RESUME HERE: (1) user reviews the 172 historical rows of `reference/coaches.csv`
-  (the OC / play_caller / hc_calls_plays columns only — head_coach is machine-audited) plus the 5-row
-  `reference/coach_lineage.csv`, and confirms `reference/situation_events_2026.csv`; (2) build 16.4 on the
-  reviewed table via `coaches.fingerprint_source(df, 2026)`; (3) commit Session E; (4) Session F.**
+  326 → 331 → 344 → **359 tests**.
+  **★ REVIEW GATE CLOSED 2026-07-25** — the user fact-checked the historical rows and lifted all 26
+  non-`high` ones; `reference/coaches.csv` is **204 rows, all `confidence=high`**, signed off end to end.
+  The edits were confidence-only (no `head_coach`/OC/`play_caller`/`hc_calls_plays` value moved), so
+  16.3b's machine audits stand.
+  **16.4 ☑ DONE 2026-07-25 (descriptive only)** — `situation/fingerprint.py` + `steps/phase16_4_fingerprint.py`.
+  14 metrics z-scored within season, EB-shrunk by regime length; **41 play-callers / 64 spells / 169
+  regime-seasons**; all **17** transport teams resolve (12 own · 5 lineage · 0 silent), BAL/PHI/SEA report
+  **both** priors. **★ Headline is deflationary: only 20.9 % of implied role movement is the incoming
+  coach**, 79.1 % is regression to the league mean — so every player row splits into `reversion_pp` +
+  `scheme_pp`. **★ Best by-product: measured trait portability** — `rz_pass_rate`/`team_adot`/`plays_pg`/
+  `carry_hhi` travel with a coach (k≈1.7–2.0); **`wr1_tgt_share` does not (k=17.9)**, i.e. the alpha WR's
+  target share is a roster fact. Guard added (`assert_regime_coverage`) after an `LA`-vs-`LAR` join failure
+  silently deleted Sean McVay's whole Rams tenure on the first run.
+  **★ SESSION E COMPLETE. ← RESUME AT SESSION F** (data 0.11 + drift 16.7–16.8). 16.6 tab stays deferred
+  to the Phase-14 app block.
 - **Session F — data 0.11 + availability drift 16.7–16.8.** 0.11 ECR + Underdog ingest, 16.7 drift panel
   (`actual_slot−ADP` on the Sleeper corpus), 16.8 drift model (VBD-gap + source-divergence + 16.1/16.2 situation
   flags + the new ECR; walk-forward drift MAE/Spearman). **~full-phase (700–1,200L).**

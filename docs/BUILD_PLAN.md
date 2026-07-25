@@ -956,7 +956,33 @@ FULL historical build:***
 - **(c) ★ REVIEW GATE OPEN** — the historical half is Claude-researched. **16.4 must not consume it until the
   user signs off**, the same contract as the 2026 half.
 
-### 16.4 — Scheme fingerprint + transport → `situation/fingerprint.py` ☐ *(gated on the 16.3b USER REVIEW; the `situation/` package now exists)*
+### 16.4 — Scheme fingerprint + transport → `situation/fingerprint.py` — ☑ **DONE 2026-07-25** (descriptive only)
+*Review gate closed first: the user fact-checked the historical rows and lifted all 26 non-`high` ones, so
+`reference/coaches.csv` is 204 rows all at `confidence=high`; the edits were confidence-only, so 16.3b's
+machine audits carry over. Built as `situation/fingerprint.py` + `steps/phase16_4_fingerprint.py` +
+`analysis/phase16_4_fingerprint.json` + 15 tests.*
+- **Decisions locked with the user (2026-07-25):** **no season cap** — fingerprints use all 2014–2025
+  seasons on file, lockbox years included, with **no provenance column** (an initial DEV-cap answer was
+  reversed on the record); **EB shrinkage** toward the league-season baseline; partial regimes cut to the
+  weeks actually called; metric set **extended with concentration (HHI), aDOT and pace**; output at **both**
+  team and player grain; role-share deltas **plus a unitless implied multiplier**, no points column.
+- **Built:** 14 metrics per team-season, z-scored **within season** (league drift ≠ personality), pooled per
+  play-caller and EB-shrunk by regime length (`k = σ²/τ²`, method of moments). **41 play-callers / 64
+  spells / 169 regime-seasons.** All **17** transport teams resolve — 12 own · 5 lineage · **0 silent** —
+  and BAL/PHI/SEA carry **both** priors (mentor lineage vs. outgoing caller), never a silent pick.
+- **★ Headline (deflationary):** only **20.9 %** of implied role-share movement is the incoming coach; the
+  other **79.1 %** is the incumbent slot regressing toward the league mean, which any hire would produce.
+  Every player row therefore splits into `reversion_pp` + `scheme_pp`.
+- **★ Most useful by-product — trait stability.** Portable between jobs: `rz_pass_rate` (k=1.7),
+  `team_adot`/`plays_pg` (1.8), **`carry_hhi` (2.0)**. Not portable: **`wr1_tgt_share` (k=17.9)** — the
+  alpha receiver's target share is a roster fact, not a scheme fact. The added concentration metrics paid
+  for themselves; the headline stat everyone quotes turned out to be the least coach-driven of the 14.
+- **Guard added:** `assert_regime_coverage` makes an unexplained dropped regime an **error** — the first run
+  silently deleted Sean McVay's nine Rams seasons because `pbp` says `LA` and the table says `LAR`. Fixed by
+  reusing `adp.panel._canon_team`; a unit test also reconciles an unrestricted team-season against
+  `features/environment.py` exactly (16.4 needs **week** grain, 3.4 is season grain).
+
+*(original spec, for the record)*
 - **Do:** per-playcaller-regime aggregate role-share stats (WR1/2/3 target share, RB carry share, TE
   target/route share, team pass rate/PROE, RZ usage split) reusing Phase 3.1/3.4 features; a transport
   function reweighting a new team's current personnel by an incoming playcaller's historical fingerprint

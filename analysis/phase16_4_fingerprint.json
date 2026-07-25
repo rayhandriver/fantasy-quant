@@ -1,0 +1,234 @@
+{
+  "target_season": 2026,
+  "metrics": [
+    "pass_rate",
+    "early_down_pass_rate",
+    "plays_pg",
+    "rz_pass_rate",
+    "team_adot",
+    "wr1_tgt_share",
+    "wr2_tgt_share",
+    "wr3_tgt_share",
+    "te1_tgt_share",
+    "rb_tgt_share",
+    "rb1_carry_share",
+    "rb2_carry_share",
+    "tgt_hhi",
+    "carry_hhi"
+  ],
+  "league_baseline_team_seasons": 384,
+  "regime_seasons": {
+    "total": 172,
+    "usable": 169,
+    "partial_windowed": 6,
+    "dropped": {
+      "2021 CAR Joe Brady": "note says '~13 of 17' \u2014 approximate, no pinnable boundary",
+      "2025 DET John Morton": "split season, no game count in the note",
+      "2025 LV Chip Kelly": "split season, no game count in the note"
+    }
+  },
+  "fingerprints": {
+    "play_callers": 41,
+    "spells": 64
+  },
+  "trait_stability": {
+    "rz_pass_rate": {
+      "k": 1.685,
+      "max_weight": 0.877
+    },
+    "wr2_tgt_share": {
+      "k": 1.709,
+      "max_weight": 0.875
+    },
+    "rb_tgt_share": {
+      "k": 1.759,
+      "max_weight": 0.872
+    },
+    "team_adot": {
+      "k": 1.777,
+      "max_weight": 0.871
+    },
+    "plays_pg": {
+      "k": 1.811,
+      "max_weight": 0.869
+    },
+    "carry_hhi": {
+      "k": 2.005,
+      "max_weight": 0.857
+    },
+    "te1_tgt_share": {
+      "k": 2.839,
+      "max_weight": 0.809
+    },
+    "rb1_carry_share": {
+      "k": 2.892,
+      "max_weight": 0.806
+    },
+    "rb2_carry_share": {
+      "k": 3.011,
+      "max_weight": 0.799
+    },
+    "pass_rate": {
+      "k": 3.134,
+      "max_weight": 0.793
+    },
+    "tgt_hhi": {
+      "k": 3.47,
+      "max_weight": 0.776
+    },
+    "early_down_pass_rate": {
+      "k": 3.52,
+      "max_weight": 0.773
+    },
+    "wr3_tgt_share": {
+      "k": 5.434,
+      "max_weight": 0.688
+    },
+    "wr1_tgt_share": {
+      "k": 17.936,
+      "max_weight": 0.401
+    }
+  },
+  "transport": {
+    "teams": 17,
+    "fingerprinted": 17,
+    "by_source": {
+      "own": 12,
+      "lineage": 5
+    },
+    "two_priors": {
+      "BAL": {
+        "lineage": "Ben Johnson",
+        "continuity": "Todd Monken"
+      },
+      "PHI": {
+        "lineage": "Matt LaFleur",
+        "continuity": "Kevin Patullo"
+      },
+      "SEA": {
+        "lineage": "Kyle Shanahan",
+        "continuity": "Klint Kubiak"
+      }
+    }
+  },
+  "player_board": {
+    "rows": 82,
+    "teams": 17,
+    "scheme_share_of_movement": 0.2094,
+    "mean_abs_reversion_pp": 5.766,
+    "mean_abs_scheme_pp": 1.527
+  },
+  "largest_scheme_effects": [
+    {
+      "player": "Tank Bigsby",
+      "team": "PHI",
+      "position": "RB",
+      "adp": 163.2,
+      "fingerprint_on": "Matt LaFleur",
+      "source": "lineage",
+      "scheme_pp": 6.935,
+      "reversion_pp": 9.9,
+      "multiplier": 2.385
+    },
+    {
+      "player": "Cam Skattebo",
+      "team": "NYG",
+      "position": "RB",
+      "adp": 37.7,
+      "fingerprint_on": "Matt Nagy",
+      "source": "own",
+      "scheme_pp": 5.948,
+      "reversion_pp": 14.742,
+      "multiplier": 1.6
+    },
+    {
+      "player": "Rachaad White",
+      "team": "WAS",
+      "position": "RB",
+      "adp": 101.1,
+      "fingerprint_on": "Kliff Kingsbury",
+      "source": "lineage",
+      "scheme_pp": -5.664,
+      "reversion_pp": 13.094,
+      "multiplier": 1.206
+    },
+    {
+      "player": "Jeremiyah Love",
+      "team": "ARI",
+      "position": "RB",
+      "adp": 22.6,
+      "fingerprint_on": "Mike LaFleur",
+      "source": "own",
+      "scheme_pp": -5.404,
+      "reversion_pp": 24.115,
+      "multiplier": 1.744
+    },
+    {
+      "player": "Dylan Sampson",
+      "team": "CLE",
+      "position": "RB",
+      "adp": 160.7,
+      "fingerprint_on": "Todd Monken",
+      "source": "own",
+      "scheme_pp": -5.187,
+      "reversion_pp": 6.62,
+      "multiplier": 1.093
+    },
+    {
+      "player": "Tony Pollard",
+      "team": "TEN",
+      "position": "RB",
+      "adp": 71.2,
+      "fingerprint_on": "Brian Daboll",
+      "source": "own",
+      "scheme_pp": -5.166,
+      "reversion_pp": -14.77,
+      "multiplier": 0.689
+    },
+    {
+      "player": "Sam LaPorta",
+      "team": "DET",
+      "position": "TE",
+      "adp": 72.9,
+      "fingerprint_on": "Drew Petzing",
+      "source": "own",
+      "scheme_pp": 5.164,
+      "reversion_pp": 5.995,
+      "multiplier": 2.253
+    },
+    {
+      "player": "Bucky Irving",
+      "team": "TB",
+      "position": "RB",
+      "adp": 46.6,
+      "fingerprint_on": "Zac Robinson",
+      "source": "own",
+      "scheme_pp": 5.159,
+      "reversion_pp": 12.599,
+      "multiplier": 1.484
+    },
+    {
+      "player": "Jahmyr Gibbs",
+      "team": "DET",
+      "position": "RB",
+      "adp": 1.8,
+      "fingerprint_on": "Drew Petzing",
+      "source": "own",
+      "scheme_pp": -4.763,
+      "reversion_pp": -5.851,
+      "multiplier": 0.807
+    },
+    {
+      "player": "J.K. Dobbins",
+      "team": "DEN",
+      "position": "RB",
+      "adp": 94.4,
+      "fingerprint_on": "Sean Payton",
+      "source": "lineage",
+      "scheme_pp": 3.894,
+      "reversion_pp": -9.958,
+      "multiplier": 0.811
+    }
+  ],
+  "labeling": "DESCRIPTIVE ONLY \u2014 unvalidated hypothesis, no FDR gate, no edge claim."
+}
