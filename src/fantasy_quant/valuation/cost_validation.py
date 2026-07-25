@@ -31,7 +31,7 @@ from scipy.stats import spearmanr
 from fantasy_quant.backtest.significance import BootstrapCI, block_bootstrap_ci
 from fantasy_quant.backtest.walkforward import build_realized, draft_date, roster_season_points
 from fantasy_quant.config import DEV_SEASONS
-from fantasy_quant.draft.config import ARCHETYPES, DraftConfig, LeagueSetup
+from fantasy_quant.draft.config import ADAPTIVE_PARENTS, ARCHETYPES, DraftConfig, LeagueSetup
 from fantasy_quant.draft.optimizer import (
     DEFAULT_NOISE,
     assemble_correlation,
@@ -139,7 +139,7 @@ class RealizedValidation:
 
     def render(self) -> str:
         pct = self.realized_cost / self.bench_points if self.bench_points else 0.0
-        return (f"  {self.subject:9s} projected {self.projected_cost:+6.1f} | "
+        return (f"  {self.subject:18s} projected {self.projected_cost:+6.1f} | "
                 f"realized {self.realized_cost:+6.1f} pts/season ({pct:+.1%}) "
                 f"[95% CI {self.ci.lo:+.1f}, {self.ci.hi:+.1f}]  {self.verdict}")
 
@@ -223,12 +223,23 @@ def validate_archetypes(con, archetypes: Iterable[str] | None = None,
     names = list(archetypes) if archetypes is not None else [a for a in ARCHETYPES if a != "bpa"]
     bench = (DraftConfig(league=league) if risk_lambda is None
              else DraftConfig(league=league, risk_lambda=risk_lambda))
-    subjects = {a: replace(bench, archetype=a) for a in names}
+    # ``adaptive`` (S6) is a wrapper that needs an ``adaptive_parent`` — a bare ``replace(bench,
+    # archetype="adaptive")`` raises. Price it **per parent** (T10, 2026-07-24): expand it into one
+    # distinct subject per static parent (``adaptive(zero_rb)``, …) so the sweep shows each variant
+    # vs its parent, rather than skipping it. Static archetypes map straight through.
+    subjects: dict[str, DraftConfig] = {}
+    for a in names:
+        if a == "adaptive":
+            for parent in ADAPTIVE_PARENTS:
+                subjects[f"adaptive({parent})"] = replace(bench, archetype="adaptive",
+                                                           adaptive_parent=parent)
+        else:
+            subjects[a] = replace(bench, archetype=a)
     seasons = tuple(int(s) for s in seasons)
 
     long = paired_costs(con, subjects, bench, seasons=seasons, k_drafts=k_drafts,
                         noise=noise, seed=seed)
-    per = [summarize(long, a, n_boot=n_boot, seed=seed) for a in names]
+    per = [summarize(long, name, n_boot=n_boot, seed=seed) for name in subjects]
     per.sort(key=lambda v: v.realized_cost, reverse=True)
     return ArchetypeValidation(per_archetype=per, cross=crosscheck(long),
                                seasons=seasons, long=long)

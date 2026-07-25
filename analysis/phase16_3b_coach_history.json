@@ -1,0 +1,634 @@
+{
+  "n_rows": 204,
+  "n_historical": 172,
+  "n_target": 32,
+  "seasons": [
+    2014,
+    2025
+  ],
+  "confidence": {
+    "high": 178,
+    "med": 25,
+    "low": 1
+  },
+  "pbp_scaffold_team_seasons": 384,
+  "pbp_split_seasons_visible": 19,
+  "pbp_game_level_coach_through": 2023,
+  "audit_mismatches": 0,
+  "audit_split_seasons": 1,
+  "move_graph_findings": [
+    "note: 2022 DET: internal promotion \u2014 Ben Johnson was already on staff but Anthony Lynn called plays in 2021",
+    "note: 2022 NO: internal promotion \u2014 Pete Carmichael was already on staff but Sean Payton called plays in 2021",
+    "note: 2023 DAL: internal promotion \u2014 Mike McCarthy was already on staff but Kellen Moore called plays in 2022",
+    "note: 2025 DAL: internal promotion \u2014 Brian Schottenheimer was already on staff but Mike McCarthy called plays in 2024",
+    "note: 2025 NYG: internal promotion \u2014 Mike Kafka was already on staff but Brian Daboll called plays in 2024",
+    "note: 2025 PHI: internal promotion \u2014 Kevin Patullo was already on staff but Kellen Moore called plays in 2024",
+    "note: 2025 TB: internal promotion \u2014 Josh Grizzard was already on staff but Liam Coen called plays in 2024",
+    "note: 2026 DEN: internal promotion \u2014 Davis Webb was already on staff but Sean Payton called plays in 2025",
+    "note: 2026 MIA: internal promotion \u2014 Bobby Slowik was already on staff but Mike McDaniel called plays in 2025",
+    "note: 2026 PHI: internal promotion \u2014 Sean Mannion was already on staff but Kevin Patullo called plays in 2025",
+    "note: 2026 WAS: internal promotion \u2014 David Blough was already on staff but Kliff Kingsbury called plays in 2025",
+    "check: Kevin Stefanski @ CLE: one-season hole at 2024 inside the 2020-2025 spell \u2014 confirm it is a deliberate exclusion, not a missing row",
+    "check: Mike McCarthy @ GB: one-season hole at 2015 inside the 2014-2018 spell \u2014 confirm it is a deliberate exclusion, not a missing row"
+  ],
+  "n_regimes": 70,
+  "n_distinct_playcallers": 43,
+  "transport_set": [
+    "ARI",
+    "ATL",
+    "BAL",
+    "CLE",
+    "DEN",
+    "DET",
+    "LAC",
+    "LV",
+    "MIA",
+    "NYG",
+    "NYJ",
+    "PHI",
+    "PIT",
+    "SEA",
+    "TB",
+    "TEN",
+    "WAS"
+  ],
+  "transport_triggers": {
+    "external": 13,
+    "internal_promotion": 4
+  },
+  "fingerprint_source_counts": {
+    "own": 12,
+    "lineage": 5,
+    "none": 0
+  },
+  "fingerprintable_teams": [
+    "ARI",
+    "ATL",
+    "CLE",
+    "DET",
+    "LAC",
+    "LV",
+    "MIA",
+    "NYG",
+    "NYJ",
+    "PIT",
+    "TB",
+    "TEN"
+  ],
+  "lineage_fallback_teams": [
+    "BAL",
+    "DEN",
+    "PHI",
+    "SEA",
+    "WAS"
+  ],
+  "unfingerprintable_teams": [],
+  "coverage": [
+    {
+      "play_caller": "Mike LaFleur",
+      "team": "ARI",
+      "prior_seasons": 2,
+      "prior_regimes": 1,
+      "prior_detail": "NYJ 2021-2022"
+    },
+    {
+      "play_caller": "Kevin Stefanski",
+      "team": "ATL",
+      "prior_seasons": 6,
+      "prior_regimes": 3,
+      "prior_detail": "MIN 2019; CLE 2020-2023; CLE 2025"
+    },
+    {
+      "play_caller": "Declan Doyle",
+      "team": "BAL",
+      "prior_seasons": 0,
+      "prior_regimes": 0,
+      "prior_detail": ""
+    },
+    {
+      "play_caller": "Joe Brady",
+      "team": "BUF",
+      "prior_seasons": 4,
+      "prior_regimes": 2,
+      "prior_detail": "CAR 2020-2021; BUF 2024-2025"
+    },
+    {
+      "play_caller": "Dave Canales",
+      "team": "CAR",
+      "prior_seasons": 3,
+      "prior_regimes": 2,
+      "prior_detail": "TB 2023; CAR 2024-2025"
+    },
+    {
+      "play_caller": "Ben Johnson",
+      "team": "CHI",
+      "prior_seasons": 4,
+      "prior_regimes": 2,
+      "prior_detail": "DET 2022-2024; CHI 2025"
+    },
+    {
+      "play_caller": "Zac Taylor",
+      "team": "CIN",
+      "prior_seasons": 7,
+      "prior_regimes": 1,
+      "prior_detail": "CIN 2019-2025"
+    },
+    {
+      "play_caller": "Todd Monken",
+      "team": "CLE",
+      "prior_seasons": 3,
+      "prior_regimes": 1,
+      "prior_detail": "BAL 2023-2025"
+    },
+    {
+      "play_caller": "Brian Schottenheimer",
+      "team": "DAL",
+      "prior_seasons": 4,
+      "prior_regimes": 2,
+      "prior_detail": "SEA 2018-2020; DAL 2025"
+    },
+    {
+      "play_caller": "Davis Webb",
+      "team": "DEN",
+      "prior_seasons": 0,
+      "prior_regimes": 0,
+      "prior_detail": ""
+    },
+    {
+      "play_caller": "Drew Petzing",
+      "team": "DET",
+      "prior_seasons": 3,
+      "prior_regimes": 1,
+      "prior_detail": "ARI 2023-2025"
+    },
+    {
+      "play_caller": "Matt LaFleur",
+      "team": "GB",
+      "prior_seasons": 8,
+      "prior_regimes": 2,
+      "prior_detail": "TEN 2018; GB 2019-2025"
+    },
+    {
+      "play_caller": "Nick Caley",
+      "team": "HOU",
+      "prior_seasons": 1,
+      "prior_regimes": 1,
+      "prior_detail": "HOU 2025"
+    },
+    {
+      "play_caller": "Shane Steichen",
+      "team": "IND",
+      "prior_seasons": 7,
+      "prior_regimes": 3,
+      "prior_detail": "LAC 2019-2020; PHI 2021-2022; IND 2023-2025"
+    },
+    {
+      "play_caller": "Liam Coen",
+      "team": "JAX",
+      "prior_seasons": 2,
+      "prior_regimes": 2,
+      "prior_detail": "TB 2024; JAX 2025"
+    },
+    {
+      "play_caller": "Andy Reid",
+      "team": "KC",
+      "prior_seasons": 12,
+      "prior_regimes": 1,
+      "prior_detail": "KC 2014-2025"
+    },
+    {
+      "play_caller": "Mike McDaniel",
+      "team": "LAC",
+      "prior_seasons": 4,
+      "prior_regimes": 1,
+      "prior_detail": "MIA 2022-2025"
+    },
+    {
+      "play_caller": "Sean McVay",
+      "team": "LAR",
+      "prior_seasons": 9,
+      "prior_regimes": 1,
+      "prior_detail": "LAR 2017-2025"
+    },
+    {
+      "play_caller": "Klint Kubiak",
+      "team": "LV",
+      "prior_seasons": 3,
+      "prior_regimes": 3,
+      "prior_detail": "MIN 2021; NO 2024; SEA 2025"
+    },
+    {
+      "play_caller": "Bobby Slowik",
+      "team": "MIA",
+      "prior_seasons": 2,
+      "prior_regimes": 1,
+      "prior_detail": "HOU 2023-2024"
+    },
+    {
+      "play_caller": "Kevin O'Connell",
+      "team": "MIN",
+      "prior_seasons": 4,
+      "prior_regimes": 1,
+      "prior_detail": "MIN 2022-2025"
+    },
+    {
+      "play_caller": "Josh McDaniels",
+      "team": "NE",
+      "prior_seasons": 10,
+      "prior_regimes": 3,
+      "prior_detail": "NE 2014-2021; LV 2022; NE 2025"
+    },
+    {
+      "play_caller": "Kellen Moore",
+      "team": "NO",
+      "prior_seasons": 7,
+      "prior_regimes": 4,
+      "prior_detail": "DAL 2019-2022; LAC 2023; PHI 2024; NO 2025"
+    },
+    {
+      "play_caller": "Matt Nagy",
+      "team": "NYG",
+      "prior_seasons": 3,
+      "prior_regimes": 1,
+      "prior_detail": "CHI 2018-2020"
+    },
+    {
+      "play_caller": "Frank Reich",
+      "team": "NYJ",
+      "prior_seasons": 6,
+      "prior_regimes": 2,
+      "prior_detail": "IND 2018-2022; CAR 2023"
+    },
+    {
+      "play_caller": "Sean Mannion",
+      "team": "PHI",
+      "prior_seasons": 0,
+      "prior_regimes": 0,
+      "prior_detail": ""
+    },
+    {
+      "play_caller": "Mike McCarthy",
+      "team": "PIT",
+      "prior_seasons": 6,
+      "prior_regimes": 3,
+      "prior_detail": "GB 2014; GB 2016-2018; DAL 2023-2024"
+    },
+    {
+      "play_caller": "Brian Fleury",
+      "team": "SEA",
+      "prior_seasons": 0,
+      "prior_regimes": 0,
+      "prior_detail": ""
+    },
+    {
+      "play_caller": "Kyle Shanahan",
+      "team": "SF",
+      "prior_seasons": 12,
+      "prior_regimes": 3,
+      "prior_detail": "CLE 2014; ATL 2015-2016; SF 2017-2025"
+    },
+    {
+      "play_caller": "Zac Robinson",
+      "team": "TB",
+      "prior_seasons": 2,
+      "prior_regimes": 1,
+      "prior_detail": "ATL 2024-2025"
+    },
+    {
+      "play_caller": "Brian Daboll",
+      "team": "TEN",
+      "prior_seasons": 5,
+      "prior_regimes": 2,
+      "prior_detail": "BUF 2018-2021; NYG 2024"
+    },
+    {
+      "play_caller": "David Blough",
+      "team": "WAS",
+      "prior_seasons": 0,
+      "prior_regimes": 0,
+      "prior_detail": ""
+    }
+  ],
+  "fingerprint_source": [
+    {
+      "team": "ARI",
+      "play_caller": "Mike LaFleur",
+      "source": "own",
+      "fingerprint_on": "Mike LaFleur",
+      "prior_seasons": 2,
+      "same_team": null,
+      "prev_play_caller": "Drew Petzing",
+      "is_new_regime": true
+    },
+    {
+      "team": "ATL",
+      "play_caller": "Kevin Stefanski",
+      "source": "own",
+      "fingerprint_on": "Kevin Stefanski",
+      "prior_seasons": 6,
+      "same_team": null,
+      "prev_play_caller": "Zac Robinson",
+      "is_new_regime": true
+    },
+    {
+      "team": "BAL",
+      "play_caller": "Declan Doyle",
+      "source": "lineage",
+      "fingerprint_on": "Ben Johnson",
+      "prior_seasons": 4,
+      "same_team": false,
+      "prev_play_caller": "Todd Monken",
+      "is_new_regime": true
+    },
+    {
+      "team": "BUF",
+      "play_caller": "Joe Brady",
+      "source": "own",
+      "fingerprint_on": "Joe Brady",
+      "prior_seasons": 4,
+      "same_team": null,
+      "prev_play_caller": "Joe Brady",
+      "is_new_regime": false
+    },
+    {
+      "team": "CAR",
+      "play_caller": "Dave Canales",
+      "source": "own",
+      "fingerprint_on": "Dave Canales",
+      "prior_seasons": 3,
+      "same_team": null,
+      "prev_play_caller": "Dave Canales",
+      "is_new_regime": false
+    },
+    {
+      "team": "CHI",
+      "play_caller": "Ben Johnson",
+      "source": "own",
+      "fingerprint_on": "Ben Johnson",
+      "prior_seasons": 4,
+      "same_team": null,
+      "prev_play_caller": "Ben Johnson",
+      "is_new_regime": false
+    },
+    {
+      "team": "CIN",
+      "play_caller": "Zac Taylor",
+      "source": "own",
+      "fingerprint_on": "Zac Taylor",
+      "prior_seasons": 7,
+      "same_team": null,
+      "prev_play_caller": "Zac Taylor",
+      "is_new_regime": false
+    },
+    {
+      "team": "CLE",
+      "play_caller": "Todd Monken",
+      "source": "own",
+      "fingerprint_on": "Todd Monken",
+      "prior_seasons": 3,
+      "same_team": null,
+      "prev_play_caller": "Kevin Stefanski",
+      "is_new_regime": true
+    },
+    {
+      "team": "DAL",
+      "play_caller": "Brian Schottenheimer",
+      "source": "own",
+      "fingerprint_on": "Brian Schottenheimer",
+      "prior_seasons": 4,
+      "same_team": null,
+      "prev_play_caller": "Brian Schottenheimer",
+      "is_new_regime": false
+    },
+    {
+      "team": "DEN",
+      "play_caller": "Davis Webb",
+      "source": "lineage",
+      "fingerprint_on": "Sean Payton",
+      "prior_seasons": 11,
+      "same_team": true,
+      "prev_play_caller": "Sean Payton",
+      "is_new_regime": true
+    },
+    {
+      "team": "DET",
+      "play_caller": "Drew Petzing",
+      "source": "own",
+      "fingerprint_on": "Drew Petzing",
+      "prior_seasons": 3,
+      "same_team": null,
+      "prev_play_caller": "John Morton",
+      "is_new_regime": true
+    },
+    {
+      "team": "GB",
+      "play_caller": "Matt LaFleur",
+      "source": "own",
+      "fingerprint_on": "Matt LaFleur",
+      "prior_seasons": 8,
+      "same_team": null,
+      "prev_play_caller": "Matt LaFleur",
+      "is_new_regime": false
+    },
+    {
+      "team": "HOU",
+      "play_caller": "Nick Caley",
+      "source": "own",
+      "fingerprint_on": "Nick Caley",
+      "prior_seasons": 1,
+      "same_team": null,
+      "prev_play_caller": "Nick Caley",
+      "is_new_regime": false
+    },
+    {
+      "team": "IND",
+      "play_caller": "Shane Steichen",
+      "source": "own",
+      "fingerprint_on": "Shane Steichen",
+      "prior_seasons": 7,
+      "same_team": null,
+      "prev_play_caller": "Shane Steichen",
+      "is_new_regime": false
+    },
+    {
+      "team": "JAX",
+      "play_caller": "Liam Coen",
+      "source": "own",
+      "fingerprint_on": "Liam Coen",
+      "prior_seasons": 2,
+      "same_team": null,
+      "prev_play_caller": "Liam Coen",
+      "is_new_regime": false
+    },
+    {
+      "team": "KC",
+      "play_caller": "Andy Reid",
+      "source": "own",
+      "fingerprint_on": "Andy Reid",
+      "prior_seasons": 12,
+      "same_team": null,
+      "prev_play_caller": "Andy Reid",
+      "is_new_regime": false
+    },
+    {
+      "team": "LAC",
+      "play_caller": "Mike McDaniel",
+      "source": "own",
+      "fingerprint_on": "Mike McDaniel",
+      "prior_seasons": 4,
+      "same_team": null,
+      "prev_play_caller": "Greg Roman",
+      "is_new_regime": true
+    },
+    {
+      "team": "LAR",
+      "play_caller": "Sean McVay",
+      "source": "own",
+      "fingerprint_on": "Sean McVay",
+      "prior_seasons": 9,
+      "same_team": null,
+      "prev_play_caller": "Sean McVay",
+      "is_new_regime": false
+    },
+    {
+      "team": "LV",
+      "play_caller": "Klint Kubiak",
+      "source": "own",
+      "fingerprint_on": "Klint Kubiak",
+      "prior_seasons": 3,
+      "same_team": null,
+      "prev_play_caller": "Chip Kelly",
+      "is_new_regime": true
+    },
+    {
+      "team": "MIA",
+      "play_caller": "Bobby Slowik",
+      "source": "own",
+      "fingerprint_on": "Bobby Slowik",
+      "prior_seasons": 2,
+      "same_team": null,
+      "prev_play_caller": "Mike McDaniel",
+      "is_new_regime": true
+    },
+    {
+      "team": "MIN",
+      "play_caller": "Kevin O'Connell",
+      "source": "own",
+      "fingerprint_on": "Kevin O'Connell",
+      "prior_seasons": 4,
+      "same_team": null,
+      "prev_play_caller": "Kevin O'Connell",
+      "is_new_regime": false
+    },
+    {
+      "team": "NE",
+      "play_caller": "Josh McDaniels",
+      "source": "own",
+      "fingerprint_on": "Josh McDaniels",
+      "prior_seasons": 10,
+      "same_team": null,
+      "prev_play_caller": "Josh McDaniels",
+      "is_new_regime": false
+    },
+    {
+      "team": "NO",
+      "play_caller": "Kellen Moore",
+      "source": "own",
+      "fingerprint_on": "Kellen Moore",
+      "prior_seasons": 7,
+      "same_team": null,
+      "prev_play_caller": "Kellen Moore",
+      "is_new_regime": false
+    },
+    {
+      "team": "NYG",
+      "play_caller": "Matt Nagy",
+      "source": "own",
+      "fingerprint_on": "Matt Nagy",
+      "prior_seasons": 3,
+      "same_team": null,
+      "prev_play_caller": "Mike Kafka",
+      "is_new_regime": true
+    },
+    {
+      "team": "NYJ",
+      "play_caller": "Frank Reich",
+      "source": "own",
+      "fingerprint_on": "Frank Reich",
+      "prior_seasons": 6,
+      "same_team": null,
+      "prev_play_caller": "Tanner Engstrand",
+      "is_new_regime": true
+    },
+    {
+      "team": "PHI",
+      "play_caller": "Sean Mannion",
+      "source": "lineage",
+      "fingerprint_on": "Matt LaFleur",
+      "prior_seasons": 8,
+      "same_team": false,
+      "prev_play_caller": "Kevin Patullo",
+      "is_new_regime": true
+    },
+    {
+      "team": "PIT",
+      "play_caller": "Mike McCarthy",
+      "source": "own",
+      "fingerprint_on": "Mike McCarthy",
+      "prior_seasons": 6,
+      "same_team": null,
+      "prev_play_caller": "Arthur Smith",
+      "is_new_regime": true
+    },
+    {
+      "team": "SEA",
+      "play_caller": "Brian Fleury",
+      "source": "lineage",
+      "fingerprint_on": "Kyle Shanahan",
+      "prior_seasons": 12,
+      "same_team": false,
+      "prev_play_caller": "Klint Kubiak",
+      "is_new_regime": true
+    },
+    {
+      "team": "SF",
+      "play_caller": "Kyle Shanahan",
+      "source": "own",
+      "fingerprint_on": "Kyle Shanahan",
+      "prior_seasons": 12,
+      "same_team": null,
+      "prev_play_caller": "Kyle Shanahan",
+      "is_new_regime": false
+    },
+    {
+      "team": "TB",
+      "play_caller": "Zac Robinson",
+      "source": "own",
+      "fingerprint_on": "Zac Robinson",
+      "prior_seasons": 2,
+      "same_team": null,
+      "prev_play_caller": "Josh Grizzard",
+      "is_new_regime": true
+    },
+    {
+      "team": "TEN",
+      "play_caller": "Brian Daboll",
+      "source": "own",
+      "fingerprint_on": "Brian Daboll",
+      "prior_seasons": 5,
+      "same_team": null,
+      "prev_play_caller": "Brian Callahan",
+      "is_new_regime": true
+    },
+    {
+      "team": "WAS",
+      "play_caller": "David Blough",
+      "source": "lineage",
+      "fingerprint_on": "Kliff Kingsbury",
+      "prior_seasons": 6,
+      "same_team": true,
+      "prev_play_caller": "Kliff Kingsbury",
+      "is_new_regime": true
+    }
+  ]
+}

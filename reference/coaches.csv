@@ -1,0 +1,224 @@
+season,team,head_coach,offensive_coordinator,play_caller,hc_calls_plays,in_house,confidence,notes
+# Phase 16.3 / 16.3b playcaller-regime reference table. THE ONE PIECE WITH NO FREE SOURCE.
+# 2026 rows (32): user-signed-off 2026-07-24 at confidence=high after three correction rounds;
+#   verbatim original preserved at reference/coaches_2026_signed_off_2026-07-24.csv.
+# Historical rows: Claude-researched 2026-07-24/25 (web-verified) - USER REVIEW OWED before 16.4.
+# head_coach on every pre-2026 row is auto-filled from pbp.home_coach/away_coach (exact, PIT) and
+#   is re-audited by steps/phase16_3b_coach_history.py - so review effort belongs on the
+#   offensive_coordinator / play_caller / hc_calls_plays columns.
+# Scope = team-seasons whose PLAY-CALLER we need to fingerprint (prior regimes of the 2026
+#   play-callers + legacy DEV-window rows), NOT a complete staff history of all 32 teams.
+# A season is included only if the named person called plays for the MAJORITY of the team's
+#   games; excluded partial seasons are documented in the notes of an adjacent row.
+# in_house = 'this season's play-caller was already on this team's staff the previous season'.
+#   in_house=0 => a new playcaller regime (a 16.4 transport event). Sufficient, not necessary:
+#   an internal promotion (DEN 2026 - Payton hands the offense to QB coach Davis Webb) is
+#   in_house=1 and still a new regime.
+# offensive_coordinator sentinels: (none) = the team carried no OC title that season;
+#   (unknown) = there was one and it was not verified.
+# confidence: high = web-verified this session and internally consistent; med = believed
+#   correct, not individually verified (or a partial/split season); low = must verify.
+2014,ATL,Mike Smith,Dirk Koetter,Dirk Koetter,0,0,med,Koetter arrives from JAX; Julio/Ryan pass-heavy.
+2014,CLE,Mike Pettine,Kyle Shanahan,Kyle Shanahan,0,0,high,"OC and play-caller under defensive HC Mike Pettine; one season, left for ATL."
+2014,GB,Mike McCarthy,Tom Clements,Mike McCarthy,1,1,high,HC and play-caller. 2015 EXCLUDED: he ceded the calls to Tom Clements and only reclaimed them in Week 14.
+2014,KC,Andy Reid,Doug Pederson,Andy Reid,1,1,high,Reid has called KC's plays every season of his tenure.
+2014,NE,Bill Belichick,Josh McDaniels,Josh McDaniels,0,1,high,OC and play-caller under Bill Belichick; 2014/2016/2018 Super Bowl offenses.
+2014,NO,Sean Payton,Pete Carmichael,Sean Payton,1,1,high,Payton called New Orleans' plays throughout; he stepped away after 2021 and Carmichael kept the calls in 2022. Added 2026-07-25 as a lineage mentor regime.
+2015,ATL,Dan Quinn,Kyle Shanahan,Kyle Shanahan,0,0,high,OC and play-caller under defensive HC Dan Quinn; 2016 offense preceded the SF HC job.
+2015,KC,Andy Reid,Doug Pederson,Andy Reid,1,1,high,
+2015,NE,Bill Belichick,Josh McDaniels,Josh McDaniels,0,1,high,
+2015,NO,Sean Payton,Pete Carmichael,Sean Payton,1,1,high,
+2016,ATL,Dan Quinn,Kyle Shanahan,Kyle Shanahan,0,1,high,
+2016,GB,Mike McCarthy,Edgar Bennett,Mike McCarthy,1,1,high,Reclaimed play-calling in Dec 2015 and kept it.
+2016,KC,Andy Reid,Matt Nagy,Andy Reid,1,1,high,
+2016,NE,Bill Belichick,Josh McDaniels,Josh McDaniels,0,1,high,
+2016,NO,Sean Payton,Pete Carmichael,Sean Payton,1,1,high,
+2017,GB,Mike McCarthy,Edgar Bennett,Mike McCarthy,1,1,high,
+2017,KC,Andy Reid,Matt Nagy,Andy Reid,1,1,high,
+2017,LAR,Sean McVay,Matt LaFleur,Sean McVay,1,0,high,McVay has called the Rams' plays since his 2017 hire; the OC title has often been vacant.
+2017,NE,Bill Belichick,Josh McDaniels,Josh McDaniels,0,1,high,
+2017,NO,Sean Payton,Pete Carmichael,Sean Payton,1,1,high,
+2017,SF,Kyle Shanahan,(none),Kyle Shanahan,1,0,high,Shanahan has called SF's plays since 2017; the OC title was vacant most years.
+2018,BUF,Sean McDermott,Brian Daboll,Brian Daboll,0,0,high,OC/play-caller under defensive HC Sean McDermott; the Josh Allen development years.
+2018,CHI,Matt Nagy,Mark Helfrich,Matt Nagy,1,0,high,HC and play-caller; the 2018 NFC North title offense.
+2018,CLE,Gregg Williams,Freddie Kitchens,Freddie Kitchens,0,0,med,SPLIT SEASON: Todd Haley opened the year as OC/play-caller under Hue Jackson; both were fired after 8 games and Kitchens called plays for Gregg Williams' interim half (hence the head coach here). Baker Mayfield surge.
+2018,GB,Mike McCarthy,Joe Philbin,Mike McCarthy,1,1,med,PARTIAL: fired in early December after 12 of 16 games (Philbin finished as interim HC).
+2018,IND,Frank Reich,Nick Sirianni,Frank Reich,1,0,high,HC and play-caller for all five Indianapolis seasons.
+2018,KC,Andy Reid,Eric Bieniemy,Andy Reid,1,1,high,
+2018,LAR,Sean McVay,(none),Sean McVay,1,1,high,
+2018,NE,Bill Belichick,Josh McDaniels,Josh McDaniels,0,1,high,
+2018,NO,Sean Payton,Pete Carmichael,Sean Payton,1,1,high,
+2018,SEA,Pete Carroll,Brian Schottenheimer,Brian Schottenheimer,0,0,high,OC/play-caller under Pete Carroll; 2018 led the league in rushing.
+2018,SF,Kyle Shanahan,(none),Kyle Shanahan,1,1,high,
+2018,TEN,Mike Vrabel,Matt LaFleur,Matt LaFleur,0,0,high,"OC and play-caller under defensive HC Mike Vrabel; one season, left for the GB HC job."
+2019,ARI,Kliff Kingsbury,(none),Kliff Kingsbury,1,0,med,"Kingsbury called the plays as head coach (high confidence); Arizona carried no OC title under him, which is the med part. Added 2026-07-25 as a lineage mentor regime."
+2019,BAL,John Harbaugh,Greg Roman,Greg Roman,0,1,high,Roman promoted from within - Lamar-centric option/gap run scheme; MVP season.
+2019,BUF,Sean McDermott,Brian Daboll,Brian Daboll,0,1,high,
+2019,CHI,Matt Nagy,Mark Helfrich,Matt Nagy,1,1,high,
+2019,CIN,Zac Taylor,Brian Callahan,Zac Taylor,1,0,high,Taylor has called Cincinnati's plays since 2019.
+2019,DAL,Jason Garrett,Kellen Moore,Kellen Moore,0,1,high,Promoted from QB coach to OC/play-caller under Jason Garrett.
+2019,GB,Matt LaFleur,Nathaniel Hackett,Matt LaFleur,1,0,high,LaFleur has called Green Bay's plays since his 2019 hire.
+2019,IND,Frank Reich,Nick Sirianni,Frank Reich,1,1,high,
+2019,KC,Andy Reid,Eric Bieniemy,Andy Reid,1,1,high,
+2019,LAC,Anthony Lynn,Shane Steichen,Shane Steichen,0,1,med,PARTIAL: promoted from QB coach to interim OC Oct 30 after Ken Whisenhunt's firing; called plays weeks 9-17 (9 of 16 games).
+2019,LAR,Sean McVay,(none),Sean McVay,1,1,high,
+2019,MIN,Mike Zimmer,Kevin Stefanski,Kevin Stefanski,0,1,high,OC/play-caller under Mike Zimmer (interim OC over the last 3 games of 2018 first).
+2019,NE,Bill Belichick,Josh McDaniels,Josh McDaniels,0,1,high,
+2019,NO,Sean Payton,Pete Carmichael,Sean Payton,1,1,high,
+2019,SEA,Pete Carroll,Brian Schottenheimer,Brian Schottenheimer,0,1,high,
+2019,SF,Kyle Shanahan,(none),Kyle Shanahan,1,1,high,
+2020,ARI,Kliff Kingsbury,(none),Kliff Kingsbury,1,1,med,
+2020,BUF,Sean McDermott,Brian Daboll,Brian Daboll,0,1,high,
+2020,CAR,Matt Rhule,Joe Brady,Joe Brady,0,0,high,OC/play-caller under Matt Rhule.
+2020,CHI,Matt Nagy,Bill Lazor,Matt Nagy,1,1,med,"PARTIAL: called plays for the first 9 of 16 games, then ceded to Bill Lazor. 2021 EXCLUDED: he took the calls back to open the year and gave them up again in early October."
+2020,CIN,Zac Taylor,Brian Callahan,Zac Taylor,1,1,high,
+2020,CLE,Kevin Stefanski,Alex Van Pelt,Kevin Stefanski,1,0,high,HC and play-caller. 2024 EXCLUDED: he handed the calls to Ken Dorsey in Week 8 and Dorsey kept them for the rest of the season.
+2020,DAL,Mike McCarthy,Kellen Moore,Kellen Moore,0,1,high,Retained as OC/play-caller when Mike McCarthy arrived; McCarthy took the calls back in 2023.
+2020,GB,Matt LaFleur,Nathaniel Hackett,Matt LaFleur,1,1,high,
+2020,IND,Frank Reich,Nick Sirianni,Frank Reich,1,1,high,
+2020,KC,Andy Reid,Eric Bieniemy,Andy Reid,1,1,high,
+2020,LAC,Anthony Lynn,Shane Steichen,Shane Steichen,0,1,high,Full season as OC/play-caller under Anthony Lynn; Justin Herbert's rookie year.
+2020,LAR,Sean McVay,Kevin O'Connell,Sean McVay,1,1,high,
+2020,NE,Bill Belichick,Josh McDaniels,Josh McDaniels,0,1,high,
+2020,NO,Sean Payton,Pete Carmichael,Sean Payton,1,1,high,
+2020,SEA,Pete Carroll,Brian Schottenheimer,Brian Schottenheimer,0,1,high,
+2020,SF,Kyle Shanahan,(none),Kyle Shanahan,1,1,high,
+2021,ARI,Kliff Kingsbury,(none),Kliff Kingsbury,1,1,med,
+2021,BUF,Sean McDermott,Brian Daboll,Brian Daboll,0,1,high,
+2021,CAR,Matt Rhule,Joe Brady,Joe Brady,0,1,med,PARTIAL: fired in December 2021 after ~13 of 17 games.
+2021,CIN,Zac Taylor,Brian Callahan,Zac Taylor,1,1,high,
+2021,CLE,Kevin Stefanski,Alex Van Pelt,Kevin Stefanski,1,1,high,
+2021,DAL,Mike McCarthy,Kellen Moore,Kellen Moore,0,1,high,
+2021,DET,Dan Campbell,Anthony Lynn,Anthony Lynn,0,0,low,Lynn arrives from LAC; replaced by Ben Johnson in 2022. Play-calling split with Campbell reported at times - VERIFY.
+2021,GB,Matt LaFleur,Nathaniel Hackett,Matt LaFleur,1,1,high,
+2021,IND,Frank Reich,Marcus Brady,Frank Reich,1,1,med,2022 PARTIAL: fired in early November after 9 of 17 games (Jeff Saturday finished).
+2021,KC,Andy Reid,Eric Bieniemy,Andy Reid,1,1,high,
+2021,LAC,Brandon Staley,Joe Lombardi,Joe Lombardi,0,0,med,Lombardi arrives from NO; Herbert's second year.
+2021,LAR,Sean McVay,Kevin O'Connell,Sean McVay,1,1,high,
+2021,MIN,Mike Zimmer,Klint Kubiak,Klint Kubiak,0,1,high,Promoted from QB coach to OC/play-caller under Mike Zimmer. NB DEN 2022 EXCLUDED: he took over play-calling only on Nov 20 (~7 of 17 games); SF 2023 he did not call plays.
+2021,NE,Bill Belichick,Josh McDaniels,Josh McDaniels,0,1,high,
+2021,NO,Sean Payton,Pete Carmichael,Sean Payton,1,1,high,
+2021,NYJ,Robert Saleh,Mike LaFleur,Mike LaFleur,0,0,high,"First-time play-caller as OC under defensive HC Robert Saleh. NB LAR 2023-25 he was OC but McVay called the plays, so those are McVay regimes, not his."
+2021,PHI,Nick Sirianni,Shane Steichen,Shane Steichen,0,0,high,OC/play-caller under Nick Sirianni; the Super Bowl LVII offense.
+2021,SF,Kyle Shanahan,Mike McDaniel,Kyle Shanahan,1,1,high,
+2022,ARI,Kliff Kingsbury,(none),Kliff Kingsbury,1,1,med,
+2022,CIN,Zac Taylor,Brian Callahan,Zac Taylor,1,1,high,
+2022,CLE,Kevin Stefanski,Alex Van Pelt,Kevin Stefanski,1,1,high,
+2022,DAL,Mike McCarthy,Kellen Moore,Kellen Moore,0,1,high,
+2022,DET,Dan Campbell,Ben Johnson,Ben Johnson,0,1,high,Promoted from within to OC/play-caller under Dan Campbell; the Lions offense's peak.
+2022,GB,Matt LaFleur,Adam Stenavich,Matt LaFleur,1,1,high,
+2022,IND,Frank Reich,Marcus Brady,Frank Reich,1,1,med,
+2022,KC,Andy Reid,Eric Bieniemy,Andy Reid,1,1,high,
+2022,LAR,Sean McVay,Liam Coen,Sean McVay,1,1,high,
+2022,LV,Josh McDaniels,Mick Lombardi,Josh McDaniels,1,0,high,"HC and play-caller. 2023 EXCLUDED: fired Oct 31 after 8 of 17 games, so no clean regime."
+2022,MIA,Mike McDaniel,Frank Smith,Mike McDaniel,1,0,high,McDaniel has called Miami's plays since his 2022 hire.
+2022,MIN,Kevin O'Connell,Wes Phillips,Kevin O'Connell,1,0,high,O'Connell has called Minnesota's plays since his 2022 hire.
+2022,NO,Dennis Allen,Pete Carmichael,Pete Carmichael,0,1,med,Carmichael retains play-calling after Sean Payton's departure.
+2022,NYG,Brian Daboll,Mike Kafka,Mike Kafka,0,0,med,Kafka arrives from KC (Reid tree) and calls plays; Barkley workhorse.
+2022,NYJ,Robert Saleh,Mike LaFleur,Mike LaFleur,0,1,high,
+2022,PHI,Nick Sirianni,Shane Steichen,Shane Steichen,0,1,high,
+2022,SF,Kyle Shanahan,(none),Kyle Shanahan,1,1,high,
+2023,ARI,Jonathan Gannon,Drew Petzing,Drew Petzing,0,0,high,OC/play-caller under defensive HC Jonathan Gannon for all three seasons.
+2023,BAL,John Harbaugh,Todd Monken,Todd Monken,0,0,high,OC/play-caller under John Harbaugh; Lamar Jackson's 2023 MVP season. NB his earlier NFL OC stints were NOT play-calling: TB 2016-18 (Koetter called) and CLE 2019 (Kitchens called).
+2023,CAR,Frank Reich,Thomas Brown,Frank Reich,1,0,med,"PARTIAL/SPLIT: called plays weeks 1-6, handed them to Thomas Brown for 3 games, took them back, then was fired after week 12. Majority-season but a contaminated regime."
+2023,CIN,Zac Taylor,Brian Callahan,Zac Taylor,1,1,high,
+2023,CLE,Kevin Stefanski,Alex Van Pelt,Kevin Stefanski,1,1,high,
+2023,DAL,Mike McCarthy,Brian Schottenheimer,Mike McCarthy,1,1,high,Took play-calling himself after Kellen Moore's departure; Schottenheimer held the OC title.
+2023,DEN,Sean Payton,Joe Lombardi,Sean Payton,1,0,high,Payton has called plays in every season of his head-coaching career - which is precisely why handing them to Davis Webb for 2026 is a genuine regime change.
+2023,DET,Dan Campbell,Ben Johnson,Ben Johnson,0,1,high,
+2023,GB,Matt LaFleur,Adam Stenavich,Matt LaFleur,1,1,high,
+2023,HOU,DeMeco Ryans,Bobby Slowik,Bobby Slowik,0,0,high,"OC/play-caller under defensive HC DeMeco Ryans; C.J. Stroud's rookie season, then a regression to 22nd in yards and a January 2025 firing."
+2023,IND,Shane Steichen,Jim Bob Cooter,Shane Steichen,1,0,high,HC and play-caller since his 2023 hire.
+2023,KC,Andy Reid,Matt Nagy,Andy Reid,1,1,high,
+2023,LAC,Brandon Staley,Kellen Moore,Kellen Moore,0,0,high,OC/play-caller under Brandon Staley.
+2023,LAR,Sean McVay,Mike LaFleur,Sean McVay,1,1,high,
+2023,MIA,Mike McDaniel,Frank Smith,Mike McDaniel,1,1,high,
+2023,MIN,Kevin O'Connell,Wes Phillips,Kevin O'Connell,1,1,high,
+2023,SF,Kyle Shanahan,(none),Kyle Shanahan,1,1,high,
+2023,TB,Todd Bowles,Dave Canales,Dave Canales,0,0,high,OC/play-caller under defensive HC Todd Bowles; Baker Mayfield's rebound year.
+2024,ARI,Jonathan Gannon,Drew Petzing,Drew Petzing,0,1,high,
+2024,ATL,Raheem Morris,Zac Robinson,Zac Robinson,0,0,high,OC/play-caller under defensive HC Raheem Morris.
+2024,BAL,John Harbaugh,Todd Monken,Todd Monken,0,1,high,
+2024,BUF,Sean McDermott,Joe Brady,Joe Brady,0,1,high,Full OC/play-caller under Sean McDermott. 2023 EXCLUDED: took over as interim OC in mid-November (~7 of 17 games) after Ken Dorsey was fired.
+2024,CAR,Dave Canales,Brad Idzik,Dave Canales,1,0,med,HC and play-caller since his 2024 hire; OC name not individually verified.
+2024,CIN,Zac Taylor,Dan Pitcher,Zac Taylor,1,1,high,
+2024,DAL,Mike McCarthy,Brian Schottenheimer,Mike McCarthy,1,1,high,
+2024,DEN,Sean Payton,Joe Lombardi,Sean Payton,1,1,high,
+2024,DET,Dan Campbell,Ben Johnson,Ben Johnson,0,1,high,
+2024,GB,Matt LaFleur,Adam Stenavich,Matt LaFleur,1,1,high,
+2024,HOU,DeMeco Ryans,Bobby Slowik,Bobby Slowik,0,1,high,
+2024,IND,Shane Steichen,Jim Bob Cooter,Shane Steichen,1,1,high,
+2024,KC,Andy Reid,Matt Nagy,Andy Reid,1,1,high,
+2024,LAR,Sean McVay,Mike LaFleur,Sean McVay,1,1,high,
+2024,MIA,Mike McDaniel,Frank Smith,Mike McDaniel,1,1,high,
+2024,MIN,Kevin O'Connell,Wes Phillips,Kevin O'Connell,1,1,high,
+2024,NO,Dennis Allen,Klint Kubiak,Klint Kubiak,0,0,high,OC/play-caller under Dennis Allen.
+2024,NYG,Brian Daboll,Mike Kafka,Brian Daboll,1,1,high,"The one season Daboll took play-calling from Kafka; Kafka called 2022, 2023 and 2025."
+2024,PHI,Nick Sirianni,Kellen Moore,Kellen Moore,0,0,high,OC/play-caller for the Super Bowl LIX offense.
+2024,SF,Kyle Shanahan,(none),Kyle Shanahan,1,1,high,
+2024,TB,Todd Bowles,Liam Coen,Liam Coen,0,0,high,OC/play-caller under defensive HC Todd Bowles. NB LAR 2022 he held the OC title but McVay called the plays.
+2024,WAS,Dan Quinn,Kliff Kingsbury,Kliff Kingsbury,0,0,high,OC/play-caller under Dan Quinn; Jayden Daniels' OROY season and a run to the NFC title game.
+2025,ARI,Jonathan Gannon,Drew Petzing,Drew Petzing,0,1,high,
+2025,ATL,Raheem Morris,Zac Robinson,Zac Robinson,0,1,high,
+2025,BAL,John Harbaugh,Todd Monken,Todd Monken,0,1,high,
+2025,BUF,Sean McDermott,Joe Brady,Joe Brady,0,1,high,
+2025,CAR,Dave Canales,Brad Idzik,Dave Canales,1,1,med,
+2025,CHI,Ben Johnson,Declan Doyle,Ben Johnson,1,0,high,HC and play-caller; Chicago went from the league's worst offense in 2024 to 6th.
+2025,CIN,Zac Taylor,Dan Pitcher,Zac Taylor,1,1,high,
+2025,CLE,Kevin Stefanski,Tommy Rees,Kevin Stefanski,1,1,med,"Resumed play-calling for 2025 (the 2024 gap is real, not a missing row). OC name unverified."
+2025,DAL,Brian Schottenheimer,Klayton Adams,Brian Schottenheimer,1,1,med,First season as HC and play-caller. NB his DAL OC years 2023-24 were NOT play-calling (McCarthy called); 2014 STL and 2021 JAX likewise are not clean regimes. OC name unverified.
+2025,DEN,Sean Payton,Joe Lombardi,Sean Payton,1,1,high,Payton called the plays himself; Lombardi was fired after the season and Payton handed the calls to QB coach Davis Webb for 2026 - the internal-promotion transport case.
+2025,DET,Dan Campbell,John Morton,John Morton,0,0,med,SPLIT SEASON: Morton opened as play-caller after Ben Johnson left for CHI; Dan Campbell took the calls over during the season. Listed at the season-opening play-caller.
+2025,GB,Matt LaFleur,Adam Stenavich,Matt LaFleur,1,1,high,
+2025,HOU,DeMeco Ryans,Nick Caley,Nick Caley,0,0,high,First-time play-caller as OC under DeMeco Ryans; the offense scored the 2nd-most points in franchise history.
+2025,IND,Shane Steichen,Jim Bob Cooter,Shane Steichen,1,1,high,
+2025,JAX,Liam Coen,Grant Udinski,Liam Coen,1,0,med,First season as HC and play-caller; OC name not individually verified.
+2025,KC,Andy Reid,Matt Nagy,Andy Reid,1,1,high,
+2025,LAC,Jim Harbaugh,Greg Roman,Greg Roman,0,1,high,OC/play-caller under Jim Harbaugh.
+2025,LAR,Sean McVay,Mike LaFleur,Sean McVay,1,1,high,
+2025,LV,Pete Carroll,Chip Kelly,Chip Kelly,0,0,med,SPLIT SEASON: Kelly was fired in-season and Greg Olson finished as interim OC. Listed at the season-opening play-caller.
+2025,MIA,Mike McDaniel,Frank Smith,Mike McDaniel,1,1,high,
+2025,MIN,Kevin O'Connell,Wes Phillips,Kevin O'Connell,1,1,high,
+2025,NE,Mike Vrabel,Josh McDaniels,Josh McDaniels,0,0,high,Returned as OC/play-caller under Mike Vrabel; 2025 AP Assistant Coach of the Year.
+2025,NO,Kellen Moore,Doug Nussmeier,Kellen Moore,1,0,med,First season as HC and play-caller; OC name not individually verified.
+2025,NYG,Brian Daboll,Mike Kafka,Mike Kafka,0,1,high,Daboll handed play-calling back to Kafka for 2025 (Daboll called 2024); Daboll was fired after 10 games and Kafka finished as interim HC while keeping the calls.
+2025,NYJ,Aaron Glenn,Tanner Engstrand,Tanner Engstrand,0,0,high,OC/play-caller under first-year HC Aaron Glenn; the two parted ways after one season.
+2025,PHI,Nick Sirianni,Kevin Patullo,Kevin Patullo,0,1,high,Promoted from pass-game coordinator when Kellen Moore left for the NO head job.
+2025,PIT,Mike Tomlin,Arthur Smith,Arthur Smith,0,1,high,OC/play-caller under Mike Tomlin.
+2025,SEA,Mike Macdonald,Klint Kubiak,Klint Kubiak,0,0,high,OC/play-caller under Mike Macdonald for the Super Bowl LX season.
+2025,SF,Kyle Shanahan,(none),Kyle Shanahan,1,1,high,
+2025,TB,Todd Bowles,Josh Grizzard,Josh Grizzard,0,1,high,Promoted from pass-game coordinator when Liam Coen left for the JAX head job.
+2025,TEN,Brian Callahan,Nick Holz,Brian Callahan,1,1,med,Callahan called the plays himself; OC name not individually verified.
+2025,WAS,Dan Quinn,Kliff Kingsbury,Kliff Kingsbury,0,1,high,OC/play-caller under Dan Quinn; Washington promoted asst QB coach David Blough over him for 2026 - the internal-promotion transport case.
+2026,ARI,Mike LaFleur,Nathaniel Hackett,Mike LaFleur,1,0,high,"Mike LaFleur replaces Jonathan Gannon as head coach, bringing Shanahan-tree principles. Nathaniel Hackett arrives as OC, but LaFleur retains play-calling."
+2026,ATL,Kevin Stefanski,Tommy Rees,Kevin Stefanski,1,0,high,"Kevin Stefanski replaces Raheem Morris, importing his wide zone/play-action offense. Tommy Rees coordinates while Stefanski resumes primary play-calling."
+2026,BAL,Jesse Minter,Declan Doyle,Declan Doyle,0,0,high,Jesse Minter succeeds John Harbaugh as head coach. Declan Doyle arrives as OC and becomes Baltimore's new offensive play-caller.
+2026,BUF,Joe Brady,Pete Carmichael Jr.,Joe Brady,1,1,high,"Joe Brady shifts from offensive coordinator to head coach. Pete Carmichael Jr. joins as OC, but Brady maintains offensive play-calling continuity."
+2026,CAR,Dave Canales,Brad Idzik,Dave Canales,1,1,high,No philosophical changes. Dave Canales keeps head coaching and play-calling duties while Brad Idzik remains a complementary offensive coordinator.
+2026,CHI,Ben Johnson,Press Taylor,Ben Johnson,1,1,high,"Ben Johnson enters Year 2 as head coach. Press Taylor replaces Declan Doyle as OC, but Johnson continues calling Detroit-style offense."
+2026,CIN,Zac Taylor,Dan Pitcher,Zac Taylor,1,1,high,Complete continuity. Zac Taylor remains head coach and play-caller with Dan Pitcher returning as offensive coordinator for another season.
+2026,CLE,Todd Monken,Travis Switzer,Todd Monken,1,0,high,"Todd Monken replaces Kevin Stefanski as head coach, bringing a more vertical passing philosophy. Travis Switzer joins as first-time NFL offensive coordinator."
+2026,DAL,Brian Schottenheimer,Klayton Adams,Brian Schottenheimer,1,1,high,"Brian Schottenheimer returns for Year 2, keeping play-calling duties. Klayton Adams maintains OC job under Brian."
+2026,DEN,Sean Payton,Davis Webb,Davis Webb,0,1,high,"Sean Payton relinquishes play-calling for the first time in Denver, handing offensive control to first-year coordinator Davis Webb."
+2026,DET,Dan Campbell,Drew Petzing,Drew Petzing,0,0,high,"John Morton was fired mid-season and Dan Campbell assumed playcalling duties temporarily. Drew Petzing arrives from Arizona, installing his own scheme and assuming Detroit's offensive play-calling duties."
+2026,GB,Matt LaFleur,Adam Stenavich,Matt LaFleur,1,1,high,"Matt LaFleur retains complete offensive control. Adam Stenavich remains offensive coordinator, preserving Green Bay's long-running offensive structure."
+2026,HOU,DeMeco Ryans,Nick Caley,Nick Caley,0,1,high,Nick Caley enters year 2 as offensive coordinator and has play-calling responsibilities under DeMeco Ryans.
+2026,IND,Shane Steichen,Jim Cooter,Shane Steichen,1,1,high,"Shane Steichen continues calling plays with Jim Cooter as offensive coordinator, maintaining offensive continuity."
+2026,JAX,Liam Coen,Grant Udinski,Liam Coen,1,1,high,Liam Coen enters year 2 with Grant Udinski also entering year 2 as OC. Coen continues calling his McVay-influenced offensive system.
+2026,KC,Andy Reid,Eric Bieniemy,Andy Reid,1,1,high,"Eric Bieniemy returns as offensive coordinator after Matt Nagy's departure, reuniting with Andy Reid, who continues calling the offense."
+2026,LAC,Jim Harbaugh,Mike McDaniel,Mike McDaniel,0,0,high,"Greg Roman departs. Mike McDaniel becomes offensive coordinator and play-caller, replacing power-run concepts with Shanahan-style motion and outside-zone principles."
+2026,LAR,Sean McVay,Nathan Scheelhaase,Sean McVay,1,1,high,Nathan Scheelhaase replaces Mike LaFleur as offensive coordinator. Sean McVay continues play-calling with minimal expected schematic changes.
+2026,LV,Klint Kubiak,Andrew Janocko,Klint Kubiak,1,0,high,"Klint Kubiak replaces Pete Carroll as head coach, installing his wide-zone offense. Andrew Janocko joins from Minnesota as offensive coordinator."
+2026,MIA,Jeff Hafley,Bobby Slowik,Bobby Slowik,0,1,high,Mike McDaniel leaves for Los Angeles. Jeff Hafley becomes head coach while Bobby Slowik gets promoted to OC and installs a Texans-style offense and calls plays.
+2026,MIN,Kevin O'Connell,Wes Phillips,Kevin O'Connell,1,1,high,Full continuity. Kevin O'Connell remains head coach and play-caller with Wes Phillips returning as offensive coordinator.
+2026,NE,Mike Vrabel,Josh McDaniels,Josh McDaniels,0,1,high,"Mike Vrabel returns as head coach for year 2. Josh McDaniels returns as offensive coordinator and play-caller, restoring New England's longtime offensive architecture."
+2026,NO,Kellen Moore,Doug Nussmeier,Kellen Moore,1,1,high,"Kellen Moore replaced Dennis Allen last year, bringing his Eagles-influenced offense. Doug Nussmeier enters year 2 as coordinator while Moore retains play-calling."
+2026,NYG,John Harbaugh,Matt Nagy,Matt Nagy,0,0,high,"John Harbaugh replaces Brian Daboll. Matt Nagy becomes offensive coordinator and play-caller, introducing a substantially different offensive approach."
+2026,NYJ,Aaron Glenn,Frank Reich,Frank Reich,0,0,high,Aaron Glenn returns for year 2. Veteran Frank Reich assumes offensive coordinator and play-calling duties to stabilize New York's offense.
+2026,PHI,Nick Sirianni,Sean Mannion,Sean Mannion,0,1,high,Kevin Patullo departs. Sean Mannion becomes offensive coordinator through internal promotion and first-time NFL play-caller while Nick Sirianni remains hands-off offensively.
+2026,PIT,Mike McCarthy,Brian Angelichio,Mike McCarthy,1,0,high,"Mike McCarthy replaces Mike Tomlin as head coach, bringing his West Coast roots and reclaiming offensive play-calling responsibilities."
+2026,SEA,Mike Macdonald,Brian Fleury,Brian Fleury,0,0,high,Klint Kubiak departs. Brian Fleury becomes offensive coordinator and play-caller while Mike Macdonald preserves overall organizational continuity.
+2026,SF,Kyle Shanahan,Klay Kubiak,Kyle Shanahan,1,1,high,"Kyle Shanahan continues calling plays. Klay Kubiak remains offensive coordinator, preserving one of the league's most stable offensive infrastructures."
+2026,TB,Todd Bowles,Zac Robinson,Zac Robinson,0,0,high,"Zac Robinson arrives from Atlanta as offensive coordinator with play-calling duties, creating a new Tampa Bay offensive identity and reuniting with Baker Mayfield."
+2026,TEN,Robert Saleh,Brian Daboll,Brian Daboll,0,0,high,"Robert Saleh replaces Brian Callahan as head coach. Brian Daboll arrives as offensive coordinator and play-caller, completely overhauling Tennessee's offense."
+2026,WAS,Dan Quinn,David Blough,David Blough,0,1,high,Kliff Kingsbury departs. David Blough becomes offensive coordinator through internal promotion and first-time NFL play-caller while Dan Quinn maintains overall program continuity.

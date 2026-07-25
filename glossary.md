@@ -4,7 +4,13 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-23 — **Phase-17 / 0.11 / Phase-14-surfacing terms** (bottom section, planned):
+> **Last updated:** 2026-07-25 — **16.3b playcaller-regime terms** (play-caller vs HC vs OC · playcaller
+> regime · head-coach scaffold + its 2024 limitation · `in_house` · move-graph cross-reference ·
+> first-time play-caller · majority-season inclusion rule · **lineage fallback / mentor regime** ·
+> `same_team` · fingerprint source) **+ 16.5 derived-event-board terms** (**derived-vs-curated**, the
+> method split between the two reference tables · event type · room churn · `(unsettled)` quarterback),
+> folded into the Phase-16 section.
+> *(Prior: 2026-07-23 — **Phase-17 / 0.11 / Phase-14-surfacing terms** (bottom section, planned):
 > League-Format Fidelity, superflex/OP, multi-flex, `LeagueSettings` contract, keeper effective-ADP inflation,
 > ECR, Underdog ADP, run detection, decision-support surfacing (tier-cliff / roster-risk / uncertainty /
 > playoff-SOS / draft-grade). *(Earlier same day: **Phase-16 opponent personalities** (planned 16.13–16.15):
@@ -37,7 +43,7 @@ section, not just appended.
 > risk-adjusted value-over-replacement, reach budget / secured fraction, leave-one-out attribution).
 > *(Prior: 2026-07-05 Phase-4 value terms — consensus two-track, VBD value board contract, draft-time
 > replacement, rookie model, bias ratio / correction / survivorship haircut; 2026-07-05 Phase-3 feature
-> terms — exposure matrix, TD-regression, winsor-z.)*
+> terms — exposure matrix, TD-regression, winsor-z.)**
 
 ## Direct-indexing / personalization terms (reframe 2026-07-04)
 - **Direct indexing (for fantasy)** — don't try to *beat* the benchmark (the optimal team); **track** it
@@ -717,6 +723,35 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   whose estimates are genuinely softer ("thin data — read the bars as wide"), so a shaky estimate is never
   shown with false crispness. The UI analog of the engine's calibration discipline.
 
+## Phase 16 value-side — the coaching/scheme table (2026-07-24, 16.3/16.3b/16.4)
+- **Playcaller regime** — a `(team, season, play_caller)` tuple: *who actually called the offensive plays*
+  for that team that year. The atomic unit of `reference/coaches.csv` and the thing 16.4 fingerprints. Not
+  the same as head coach — **`pbp.home_coach`/`away_coach` gives head coach only**, which is why this table
+  has to be curated by hand (though pbp is a valid free **scaffold** for the `head_coach` column across all
+  352 team-seasons 2014–2025).
+- **`in_house` (the frozen flag, semantics verified 32/32 on 2026-07-24)** — *"the season's play-caller was
+  already on this team's staff the previous season."* Replaced the earlier `change_from_prev` (user decision
+  2026-07-24, which **dropped** that column). **`in_house=0` ⇒ a new playcaller regime ⇒ a 16.4 transport
+  event** (13 of 32 teams in 2026). **Caveat that matters:** it is **sufficient but not necessary** — an
+  *internal promotion* is `in_house=1` yet still a new regime (DEN 2026: Payton hands the offense to Davis
+  Webb, already the QB coach; PHI and WAS are the same shape). With `change_from_prev` gone, 16.4 must
+  handle those explicitly rather than keying purely on `in_house=0`.
+- **Scheme fingerprint (16.4)** — per-playcaller-regime aggregate role-share stats (WR1/2/3 target share, RB
+  carry share, TE target/route share, team pass rate/PROE, RZ split) computed from Phase-3.1/3.4 features
+  over that regime's historical seasons. The "what this playcaller does to a depth chart" signature.
+- **Transport (16.4)** — reweighting a new team's *current* personnel by an *incoming* playcaller's
+  historical fingerprint. Structurally adjacent to 7.3's rookie transport but a distinct hypothesis:
+  scheme-specific, not a blunt team fixed-effect. **Ships descriptive-only, explicitly unvalidated** — no
+  FDR gate, no edge claim; the done-bar is "computes correctly and is honestly labeled."
+- **Move-graph cross-reference** — the review technique that caught every error in the drafted 2026 coaching
+  table **without a single external lookup**: each "X departs" claim in one row must be matched by an "X
+  arrives" claim in another, and the flags must agree with the prose. Found 4 hard contradictions, 3
+  incoherent notes and 2 cycle-stale rows. **Reuse for 16.3b and any future curated reference table.**
+- **Signed-off-with-flags** — the honest sign-off pattern used for 16.3: the table is accepted at
+  `confidence=high` *and* the specific claims that were **never externally verified** are recorded alongside
+  it (for 2026: the 10-new-HC count, McDaniel MIA-HC→LAC-OC, the 56 % HC-playcaller rate). Internal
+  consistency ≠ factual accuracy; writing down the boundary of what was checked is part of the artifact.
+
 ## Phase 16 availability-drift terms (2026-07-23, planned 16.7–16.12, spec `PROJECT.md` §5)
 - **Availability drift (draft-slot drift)** — how much *earlier or later* a player is actually **drafted**
   than his consensus ADP, `drift = actual_draft_slot − preseason_ADP` (negative = drafted earlier / reached
@@ -821,3 +856,96 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   from Phase-5), **playoff-week SOS lens** (weeks-15–17 matchup difficulty, keyed to `LeagueFormat`), **draft
   grade / team report** (post-mock grade vs the room, from the Phase-10 sim + cost report). All land in the
   Phase-14 app (app strictly last).
+
+- **Situation-change features (Phase 16.1–16.2, value side, 2026-07-24)** — four PIT 0/1 flags added to
+  the ADP-alpha panel to test whether the crowd misprices a *changed situation*. `team_changed` (on a
+  different franchise than last year), `new_starting_qb` (team enters the season with a different Week-1
+  starter than last year's attempts leader), `competition_change_roster` and `competition_change_depth` (a
+  startable-caliber same-position teammate arrived/left — dual-sourced from weekly usage+`draft_picks` vs
+  the `depth_charts` starting-depth). **All mined honestly; all washed out** (team/QB null; the two
+  competition sources flip sign and fail FDR — echoing Phase 12.3). Live in `SITUATION_FEATURES` /
+  `PHASE16_FEATURES`, **walled off** from the pinned frozen `FEATURES` (the cost-report DURABILITY model).
+- **Board-team leak (2026-07-24)** — the `adp_snapshots.team` column is an end-of-season crosswalk, NOT a
+  draft-day roster: historical boards list a player's *eventual* team (mid-season trades included). Never
+  use it for a PIT feature; derive team-of-record from `weekly` (Week-1 team). Discovered building 16.1.
+- **`SITUATION_FEATURES` / `PHASE16_FEATURES`** — the Phase-16 value-side feature sets. `FEATURES` (the
+  frozen 5-trait softness model) is **pinned** so adding situation features never perturbs the cost-report
+  DURABILITY credit; `PHASE16_FEATURES = FEATURES + SITUATION_FEATURES` is what the walled-off Phase-16
+  steps mine. Reminder: enlarging the default `FEATURES` would also break `test_adp_bias` and the drift check.
+- **`MATERIAL_RANK` / `DEPTH_TOP` (16.2 knobs)** — "material competitor" = a prior-season leaguewide finish
+  inside a per-position rank (QB18/RB30/WR36/TE15); `DEPTH_TOP=2` = the starter-level depth slots. A looser
+  bar floods the competition-change features to ~90 % (deep-bench churn hits every room yearly).
+- **`reference/coaches.csv` (16.3)** — a Claude-drafted, **user-reviewed** table of playcaller/coaching
+  history, feeding the 16.4 scheme fingerprint. Carries a `confidence` column; 16.4 must not consume it
+  until the user signs off. As of 2026-07-25 it is **204 rows** on the frozen schema — 172 historical
+  (2014–2025, Claude-researched + web-verified, review owed) + the 32 signed-off 2026 rows. This is the
+  project's one genuinely un-derivable input, which is *why* it is hand-curated — contrast
+  `situation_events_2026.csv` below.
+- **`reference/situation_events_2026.csv` (16.5)** — the current-season situation-change event board
+  feeding the 16.6 Beta Lab tab: **one row per affected draftable player**, **generated** by
+  `situation/events.py` (never hand-edited). 138 events over 30 teams as of 2026-07-25. It was originally
+  hand-researched at 9 rows and **missed 16 of the 23 team changes among draftable players**, which is the
+  case for deriving anything that *can* be derived: the 2026 ADP board, the 2026 consensus projections and
+  2025 `weekly` pin down who plays where, so research narrows to the `mechanism` column (trade vs free
+  agency vs draft) that no feed carries.
+- **Derived-vs-curated (the 16.3/16.5 split)** — the two reference tables look alike and are built by
+  opposite methods on purpose. Hand-curate only what has **no free source** (who calls plays); derive
+  everything a feed can already answer, and spend the human budget on the residue. The test is not "is this
+  hard to look up" but "does any table we already ingest contain it".
+- **Event type (16.5)** — which kind of situation change a player is on the board for, strongest first:
+  `team_change` (on a new team) · `new_to_league` (no prior-season snaps — rookie or missed year) ·
+  `room_change` (stayed put, but a same-position draftable player arrived or left) · `context_only` (only
+  the play-caller and/or the quarterback changed around him).
+- **Room churn (16.5)** — the arrivals into and departures from a player's `(team, position)` room among
+  draftable players. Departures include prior-season producers (≥100 carries+targets+attempts) who left the
+  draftable pool entirely: a retirement or an unsigned veteran vacates opportunity exactly like a trade
+  does, and the incumbent who inherits it is the actual fantasy event.
+- **`(unsettled)` quarterback (16.5)** — a team with **no** QB anywhere on the season's ADP board. Counted
+  as a QB change rather than skipped, because an undraftable quarterback room is the *least* settled kind,
+  not missing data (2026: ARI, ATL, CLE, NYJ, PIT).
+- **Play-caller (vs head coach vs offensive coordinator)** — the person who actually calls the offensive
+  plays. It is the unit Phase 16.4 fingerprints, and it is **neither** of the two title columns reliably: a
+  head coach calls plays only about half the time, and an OC can hold the title for years without ever
+  calling a play (Todd Monken at TB 2016–18 and CLE 2019; Brian Schottenheimer at DAL 2023–24). This is why
+  the table has no free source.
+- **Playcaller regime** — a contiguous `(play_caller, team)` spell, the grain 16.4 fingerprints a scheme on.
+  Computed by `situation/coaches.py::playcaller_regimes`, which splits a return to a former team into two
+  spells (Josh McDaniels at NE 2014–21 and again 2025) rather than one impossible block.
+- **Head-coach scaffold (16.3b)** — an exact head coach per team-season for all **384** team-seasons
+  2014–2025, derived free and PIT from `pbp.home_coach`/`away_coach`. Two uses: it removes the head-coach
+  column from the research burden, and — the bigger one — it **audits** every researched row, since a wrong
+  head coach almost always means the row is about the wrong regime. **Limitation:** the field is game-level
+  only through **2023**; from 2024 it is a season-level *coach of record* (Daboll shows for all 17 of NYG
+  2025 despite an in-season firing), so its `interim` column is a lower bound on mid-season changes.
+- **`in_house` (16.3 frozen flag)** — "this season's play-caller was already on this team's staff the
+  previous season." `in_house=0` ⇒ a new playcaller regime ⇒ a **16.4 transport event** — but **sufficient,
+  not necessary**: an *internal promotion* (DEN 2026, Payton handing the offense to QB coach Davis Webb) is
+  `in_house=1` and still a new regime. Hence `new_regimes()` pairs the flag with a **structural** check
+  against the table's own previous-season row, which is what lifted the 2026 transport set from 13 to **17**.
+- **Move-graph cross-reference** — the internal-consistency method for a curated table, run with **zero
+  external lookups**: every "X departs" must match an "X arrives"; nobody holds two jobs in one season; a
+  continuity flag must agree with the table's own history; a spell must have no one-season holes. Findings
+  are graded `HARD:` (a self-contradiction — fix it), `check:` (must be explained in `notes`) or `note:`
+  (expected, e.g. an internal promotion). It found every error in the 2026 draft table and, on the merged
+  table, produced 12 findings with 0 HARD.
+- **First-time play-caller** — a 2026 play-caller with **no prior play-calling regime anywhere** (2026: Declan
+  Doyle/BAL, Davis Webb/DEN, Sean Mannion/PHI, Brian Fleury/SEA, David Blough/WAS). Not a research gap —
+  research cannot manufacture a past — so they are handled by the **lineage fallback** below.
+- **Lineage fallback / mentor regime (16.3b, user direction 2026-07-25)** — a first-time play-caller is not a
+  blank. They came up inside somebody's system, so the honest prior is broad continuity with **that mentor's**
+  regime, tagged as weaker evidence: Declan Doyle held the OC title in Chicago while Ben Johnson called the
+  plays, so the 2026 Ravens should resemble the 2025 Bears more than they resemble nothing. Lives in
+  `reference/coach_lineage.csv`, which names a *person*, not a scheme — 16.4 looks the mentor up in
+  `coaches.csv` and fingerprints their regimes, and a gate asserts every mentor is itself a play-caller there.
+- **`same_team` (lineage strength)** — whether the mentor's regime is on the team the mentee is now taking
+  over. `True` (DEN 2026 Payton→Webb, WAS 2026 Kingsbury→Blough) means lineage and **team continuity** agree —
+  the strongest form of the fallback. `False` (BAL, PHI, SEA 2026) means they point at different schemes, and
+  16.4 owes the user **both** readings rather than picking silently; `prev_play_caller` carries the continuity
+  side.
+- **Fingerprint source (`coaches.fingerprint_source`)** — the resolved answer to "what does 16.4 fingerprint
+  this team on?": `own` (the play-caller's own prior regimes) → `lineage` (their mentor's) → `none` (stay
+  silent). For 2026: **12 own · 5 lineage · 0 none** across the 17 transport teams.
+- **Majority-season inclusion rule (16.3b)** — a team-season enters `coaches.csv` only if the named person
+  called plays for the **majority** of the team's games; sub-majority stints (McDaniels LV 2023, Kubiak DEN
+  2022, Brady BUF 2023, Schottenheimer JAX 2021) are excluded and documented in an adjacent row's `notes`,
+  so 16.4 never fingerprints a scheme on a half-season it did not run.

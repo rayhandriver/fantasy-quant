@@ -61,7 +61,105 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★ Next-session pointer (2026-07-19, SESSION D COMPLETE — the engine is FINAL and the lockbox is spent).**
+> **★★ Next-session pointer (2026-07-25, SESSION E — 16.3 + 16.3b DONE; ★ A USER REVIEW GATE IS OPEN and
+> 16.4 is blocked behind it). READ THIS FIRST — it is written to resume cold.**
+>
+> **State:** **331 tests** (was 316), ruff clean. **Nothing is committed.** DEV-only, lockbox untouched,
+> walled off from the frozen cost report.
+>
+> **★ THE GATE — do this before anything else.** `reference/coaches.csv` is now **204 rows**: the 32
+> signed-off 2026 rows plus **172 Claude-researched historical rows (2014–2025)**. The historical half has
+> **not** been reviewed, and **16.4 must not consume it until the user signs it off** — the same contract as
+> the 2026 half. **The review surface is deliberately narrow: `offensive_coordinator`, `play_caller` and
+> `hc_calls_plays` only.** `head_coach` is machine-audited against `pbp` (172 rows, **0 MISMATCH**) so it does
+> not need human eyes. Sort by `confidence` — **25 `med` + 1 `low`** rows are where the doubt is concentrated;
+> the 178 `high` rows were web-verified this session. Also awaiting review: **`reference/coach_lineage.csv`**
+> (5 rows, new — see below).
+>
+> **★ 16.5 is now DERIVED, not researched (2026-07-25) — `reference/situation_events_2026.csv` is a
+> GENERATED file: do not hand-edit rows.** Re-run `uv run python steps/phase16_5_situation_events.py
+> --write`; research goes in that step's `ANNOTATIONS` block and is merged onto the derived rows. The
+> hand-built 9-row version **missed 16 of the 23 team changes among draftable players** (incl. A.J. Brown
+> PHI→NE at ADP 13.6) and had no row for the two highest-ADP players in the league. It is now **138 events
+> over 30 teams**, dual-sourced (2026 `adp_snapshots` × `consensus_projections`, 0 disagreements) against
+> 2025 `weekly`. **Its review surface is only `mechanism`/`confidence`/`notes` — 111 rows are still
+> `mechanism=unknown`** (i.e. trade-vs-FA unresearched); every other column is machine-checked.
+>
+> **★ THEN, IN ORDER:** (1) build **16.4** on the reviewed table — scheme fingerprint + transport,
+> `situation/fingerprint.py`, **descriptive-only, no FDR gate**; (2) **commit Session E**; (3) **Session F**
+> (data 0.11 + drift 16.7–16.8). **16.6 tab stays deferred to the Phase-14 app block.**
+>
+> **★ What 16.4 is entitled to assume (consume via the API, do not re-derive):**
+> - **The transport set is 17 teams, not the 13 the old pointer said** — `situation.coaches.new_regimes(df,
+>   2026)` returns 13 `external` + **4 `internal_promotion`** (DEN, MIA, PHI, WAS). Deriving it from
+>   `in_house==0` alone silently drops the promotions.
+> - **★ Ask `coaches.fingerprint_source(df, 2026)` what to fingerprint each team on — do not work this out
+>   from `coverage()` alone.** It returns `own` / `lineage` / `none` per team. Currently **12 own · 5 lineage
+>   · 0 none**, i.e. **all 17 transport teams are covered**.
+> - **The lineage fallback (user direction, 2026-07-25) replaced the earlier "say nothing" plan.** BAL, DEN,
+>   PHI, SEA and WAS have genuinely FIRST-TIME play-callers (Doyle, Webb, Mannion, Fleury, Blough), but a
+>   first-timer is not a blank — they came up inside somebody's system, so fall back to **that mentor's**
+>   regimes and tag the evidence as weaker. `reference/coach_lineage.csv` names the mentor; every mentor is
+>   itself a play-caller in `coaches.csv` (a gate asserts it), so the fallback always lands on a real
+>   fingerprint. Doyle→Ben Johnson (CHI 2025), Webb→Sean Payton, Mannion→Matt LaFleur (GB), Fleury→Kyle
+>   Shanahan (SF), Blough→Kliff Kingsbury. **Sean Payton (NO 2014–21, DEN 2023–25) and Kliff Kingsbury (ARI
+>   2019–22, WAS 2024–25) were added to `coaches.csv` purely to make their mentees fingerprint-able.**
+> - **Where lineage and team continuity disagree, 16.4 owes BOTH readings** — `same_team` marks the cases
+>   where they coincide (DEN, WAS: same-team promotions, the strongest form). They **disagree at BAL**
+>   (lineage Ben Johnson vs 2025 Monken), **PHI** (Matt LaFleur vs Patullo) and **SEA** (Shanahan vs Kubiak);
+>   `prev_play_caller` carries the continuity side. Report both, do not pick silently.
+> - **Regime grain:** `coaches.playcaller_regimes()` — a contiguous `(play_caller, team)` spell, with returns
+>   split into separate spells. 70 regimes / 43 play-callers / 172 team-seasons; median 4 prior seasons for a
+>   2026 play-caller (was ~1).
+> - **Most prior regimes sit in 2023–2025** (Petzing/ARI, Monken/BAL, Slowik/HOU, Caley/HOU, Kubiak/SEA …),
+>   i.e. **lockbox + calibration seasons**. The *names* are not outcome data, but 16.4's fingerprints are
+>   built from realized role-shares — **decide explicitly how to treat 2023–24 before computing them**, and
+>   note that the lockbox was already spent once in Session D and the value stack is frozen.
+>
+> **★ Decisions locked (do not re-litigate):** 16.3 signs off at **`confidence=high`** (2026-07-24) · 16.4
+> gets the **full historical build** · schema **drops `change_from_prev`, keeps `in_house`** · research scope
+> = **targeted** (the 23 uncovered play-callers' prior regimes, not a full staff history) · verification =
+> **web-verify + move-graph** (2026-07-25).
+>
+> **★ Carry-forward caveats:**
+> - **Three aggregates in the 2026 table were never externally verified** and the user signed off knowing it:
+>   **10 new head coaches**, **McDaniel leaving the MIA HC job to be LAC's OC**, **56 % of HCs calling plays**
+>   (18/32). Internal consistency ≠ factual accuracy — label 16.4 output accordingly.
+> - **`pbp`'s coach field is game-level only through 2023.** From **2024** it is a season-level *coach of
+>   record* (Dennis Allen shows for all 17 of NO 2024, Daboll for all 17 of NYG 2025, both fired in-season),
+>   so `head_coach_scaffold()`'s `interim` column is a **lower bound** on mid-season changes. Fine for the
+>   audit; not a source for "who was fired when" in 2024–25.
+>
+> **Useful method (reused, worked twice):** the **move-graph cross-reference** — each "X departs" must match
+> an "X arrives", nobody holds two jobs in a season, a continuity flag must agree with the table's own
+> history, and a spell must have no one-season holes. Zero external lookups. `coaches.move_graph_check()`
+> grades findings `HARD:` / `check:` / `note:`; the merged table returns **12 findings, 0 HARD**.
+>
+> **Stage-0 chore: DONE 2026-07-24** (FFC 2026 snapshot banked, 6 configs, 1,202 rows, gsis 99.3 %, PASS;
+> `backup_db.py` verified). Next due after **2026-07-30**.
+>
+> _(Prior pointer — history.)_ **★ Next-session pointer (2026-07-24, SESSION E IN PROGRESS — value-side situation track is an honest
+> NULL; at the 16.3 review gate).** Completed T10 + Phase-16 value-side 16.1–16.2; drafted the 16.3/16.5
+> CSVs; **16.4 is gated on the user reviewing `reference/coaches.csv`.** **NOT committed — left for user.**
+> 316 tests (was 311), ruff clean; DEV-only, lockbox untouched, walled off from the frozen cost report.
+> - **T10 ☑** — `validate_archetypes` prices the S6 `adaptive` archetype **per parent** (`adaptive(zero_rb)`
+>   …); `steps/spine_4_validate.py` green.
+> - **16.1 ☑ (NULL)** — `team_changed` (−2.5 VOR/SD, p_fdr 0.82) + `new_starting_qb` (−0.1, p_fdr 0.98) both
+>   ruled out. **PIT catch:** the `adp_snapshots.team` column leaks an end-of-season crosswalk (Sep-1 2022
+>   board lists mid-season trades McCaffrey→SF etc.) → team-of-record derived from `weekly` Week-1 instead.
+> - **16.2 ☑ (BOTH WASH OUT)** — `competition_change_roster` (−9.9) and `competition_change_depth` (+9.8)
+>   flip sign, neither survives FDR (p_fdr 0.087) → echoes Phase 12.3. Depth uses `depth_charts` (2014–24),
+>   not `depth_charts_ts` (2025-only).
+> - **Wall-off:** `FEATURES` pinned (5-trait softness model); situation flags in `SITUATION_FEATURES` /
+>   `PHASE16_FEATURES`, mined only by `steps/phase16_1_*` / `phase16_2_*`. Phase-6 drift check reproduces
+>   frozen `DURABILITY` +14.6 — cost report untouched.
+> - **16.3/16.5 DRAFTED, awaiting review:** `reference/coaches.csv` + `reference/situation_events_2026.csv`,
+>   both with a `confidence` column. **2026 web data was contradictory (esp. head coaches) — those rows are
+>   flagged low/VERIFY.** **★ RESUME: user reviews/corrects `reference/coaches.csv` → then build 16.4 (scheme
+>   fingerprint, `situation/fingerprint.py`, descriptive-only) → 16.6 tab defers to Phase 14.** Then Session F
+>   (data 0.11 + drift 16.7–16.8). Value-side null means Phase 16's edge is the availability side.
+>
+> _(Prior pointer — history.)_ **★ Next-session pointer (2026-07-19, SESSION D COMPLETE — the engine is FINAL and the lockbox is spent).**
 > Session D closed the pre-app pipeline: **(1) the optional MCTS research gate — BUILT & DROPPED** (user chose
 > to build the benchmark; a determinized-UCT beats the greedy in-objective Δ CE +77 but not on realized OOS
 > points Δ +32 CI∋0 at 8.5 s/pick → greedy stays the policy; CFR/self-play-RL stay out; `draft/mcts.py`,

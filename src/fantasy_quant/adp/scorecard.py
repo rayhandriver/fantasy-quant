@@ -42,6 +42,10 @@ _LABELS: dict[str, str] = {
     "z_adp_stdev": "ADP disagreement (stdev)",
     "z_prior_games": "prior-season games (durability)",
     "z_prior_ppg": "prior-season pts/game (efficiency)",
+    "team_changed": "changed team (offseason)",
+    "new_starting_qb": "new starting QB",
+    "competition_change_roster": "competition change (roster)",
+    "competition_change_depth": "competition change (depth)",
 }
 
 

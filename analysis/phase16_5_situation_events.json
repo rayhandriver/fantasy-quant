@@ -1,0 +1,193 @@
+{
+  "n_events": 138,
+  "n_teams": 30,
+  "max_adp": 200.0,
+  "by_event_type": {
+    "room_change": 60,
+    "context_only": 36,
+    "team_change": 23,
+    "new_to_league": 19
+  },
+  "n_annotated": 8,
+  "n_mechanism_unknown": 111,
+  "n_below_high_confidence": 1,
+  "n_new_play_caller": 95,
+  "n_new_qb": 49,
+  "qb_changes": {
+    "ARI": "(unsettled)",
+    "ATL": "(unsettled)",
+    "CLE": "(unsettled)",
+    "LV": "Fernando Mendoza",
+    "MIA": "Malik Willis",
+    "MIN": "Kyler Murray",
+    "NYJ": "(unsettled)",
+    "PIT": "(unsettled)",
+    "WAS": "Jayden Daniels"
+  },
+  "team_changes": [
+    {
+      "player": "A.J. Brown",
+      "position": "WR",
+      "prev_team": "PHI",
+      "team": "NE",
+      "adp": 13.6
+    },
+    {
+      "player": "Kenneth Walker III",
+      "position": "RB",
+      "prev_team": "SEA",
+      "team": "KC",
+      "adp": 22.5
+    },
+    {
+      "player": "Travis Etienne Jr.",
+      "position": "RB",
+      "prev_team": "JAX",
+      "team": "NO",
+      "adp": 39.9
+    },
+    {
+      "player": "Jaylen Waddle",
+      "position": "WR",
+      "prev_team": "MIA",
+      "team": "DEN",
+      "adp": 40.8
+    },
+    {
+      "player": "Mike Evans",
+      "position": "WR",
+      "prev_team": "TB",
+      "team": "SF",
+      "adp": 49.6
+    },
+    {
+      "player": "David Montgomery",
+      "position": "RB",
+      "prev_team": "DET",
+      "team": "HOU",
+      "adp": 56.2
+    },
+    {
+      "player": "DJ Moore",
+      "position": "WR",
+      "prev_team": "CHI",
+      "team": "BUF",
+      "adp": 64.9
+    },
+    {
+      "player": "Michael Pittman Jr.",
+      "position": "WR",
+      "prev_team": "IND",
+      "team": "PIT",
+      "adp": 70.9
+    },
+    {
+      "player": "Rico Dowdle",
+      "position": "RB",
+      "prev_team": "CAR",
+      "team": "PIT",
+      "adp": 78.8
+    },
+    {
+      "player": "Wan'Dale Robinson",
+      "position": "WR",
+      "prev_team": "NYG",
+      "team": "TEN",
+      "adp": 89.0
+    },
+    {
+      "player": "Rachaad White",
+      "position": "RB",
+      "prev_team": "TB",
+      "team": "WAS",
+      "adp": 101.1
+    },
+    {
+      "player": "Romeo Doubs",
+      "position": "WR",
+      "prev_team": "GB",
+      "team": "NE",
+      "adp": 103.8
+    },
+    {
+      "player": "Jauan Jennings",
+      "position": "WR",
+      "prev_team": "SF",
+      "team": "MIN",
+      "adp": 130.5
+    },
+    {
+      "player": "Jalen Nailor",
+      "position": "WR",
+      "prev_team": "MIN",
+      "team": "LV",
+      "adp": 135.8
+    },
+    {
+      "player": "Isaiah Likely",
+      "position": "TE",
+      "prev_team": "BAL",
+      "team": "NYG",
+      "adp": 136.9
+    },
+    {
+      "player": "Kyler Murray",
+      "position": "QB",
+      "prev_team": "ARI",
+      "team": "MIN",
+      "adp": 149.0
+    },
+    {
+      "player": "Chris Rodriguez Jr.",
+      "position": "RB",
+      "prev_team": "WAS",
+      "team": "JAX",
+      "adp": 154.4
+    },
+    {
+      "player": "Isiah Pacheco",
+      "position": "RB",
+      "prev_team": "KC",
+      "team": "DET",
+      "adp": 156.6
+    },
+    {
+      "player": "Brian Robinson Jr.",
+      "position": "RB",
+      "prev_team": "SF",
+      "team": "ATL",
+      "adp": 163.9
+    },
+    {
+      "player": "Malik Willis",
+      "position": "QB",
+      "prev_team": "GB",
+      "team": "MIA",
+      "adp": 164.4
+    },
+    {
+      "player": "Tyler Allgeier",
+      "position": "RB",
+      "prev_team": "ATL",
+      "team": "ARI",
+      "adp": 167.0
+    },
+    {
+      "player": "Chig Okonkwo",
+      "position": "TE",
+      "prev_team": "TEN",
+      "team": "WAS",
+      "adp": 169.4
+    },
+    {
+      "player": "Keaton Mitchell",
+      "position": "RB",
+      "prev_team": "BAL",
+      "team": "LAC",
+      "adp": 170.1
+    }
+  ],
+  "withdrawn": {
+    "Aaron Jones Sr.": "re-signed with MIN; no team change, no MIN RB-room churn. The original premise was a timeshare with Jordan Mason, but that trade closed 16 Mar 2025 \u2014 the derivation independently reaches the same 'not a 2026 event' conclusion the manual re-verification did."
+  }
+}

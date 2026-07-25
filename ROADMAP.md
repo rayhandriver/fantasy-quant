@@ -79,9 +79,12 @@ availability-side 16.7–16.12, added 2026-07-23.**)*
 **Value-side (does situation change make a player out-*earn* ADP?):** ☐ **16.1** team-change +
 new-starting-QB ADP-alpha extension (Phase 6.1/6.2 panel+regression) · ☐ **16.2** competition-change signal,
 **dual-sourced** (roster-turnover-derived vs depth-chart-derived, compared — the latter mirrors Phase
-12.3's already-null signal) · ☐ **16.3** playcaller/coaching history table (Claude-drafted via web
-research, user-reviewed before use) · ☐ **16.4** scheme fingerprint + transport (descriptive-only, no
-statistical gate — thin sample) · ☐ **16.5** 2026 live situation-change event board · ☐ **16.6** Beta Lab
+12.3's already-null signal) · ☑ **16.3** playcaller/coaching history table (2026 half signed off, merged
+onto the frozen schema) · ☑ **16.3b** historical playcaller regimes (204-row table + a 5-row lineage
+fallback, pbp head-coach audit, **★ user review gate open**) · ☐ **16.4** scheme fingerprint + transport (descriptive-only, no
+statistical gate — thin sample; **17-team transport set, all 17 covered: 12 own + 5 lineage**) · ☑ **16.5** 2026 live
+situation-change event board (**rebuilt as DERIVED 2026-07-25 — 138 events over 30 teams**, dual-sourced;
+the hand-built 9-row version missed 16 of 23 team changes; `mechanism` unresearched on 111) · ☐ **16.6** Beta Lab
 Streamlit tab (`app/streamlit_app.py`, read-only, no optimizer/VBD/cost-report coupling).
 **Availability-side (does narrative/situation make a player *drafted earlier* than ADP? — folds in the
 "McConkey falls in mocks then gets sniped" fix; extends the opponent/availability model, which is already
@@ -240,11 +243,31 @@ same ~1.5–2.2k-line one-concept discipline).** Covers everything not done: Pha
 Phase 17, Phase 14, T10, and the deferred 15.1 dynasty. The lead is pinned by real dependencies
 (16.1/16.2 features → 16.8; 0.11 → 16.8; 16.13 → 16.14; availability → 16.16). Each session: STOP-gates between
 substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report + questions.
-- **Session E — Phase 16 value-side (16.1–16.5) + T10 warm-up.** Situation-change ADP-alpha mining (16.1
-  team/QB, 16.2 competition dual-sourced), 16.3 coaching table (user-reviewed), 16.4 scheme fingerprint, 16.5
-  2026 event board. **16.6 tab → deferred to the Phase-14 app block** (app strictly last). T10 (adaptive-
-  archetype validate crash) as a quick warm-up. **First** because it builds the situation features 16.8 reuses.
-  **~full-phase (700–1,400L).**
+- **Session E — Phase 16 value-side (16.1–16.5) + T10 warm-up.** ◐ **IN PROGRESS (docs current as of
+  2026-07-25, session 3):** **T10 ☑** (adaptive priced per-parent, `spine_4_validate` green), **16.1 ☑**
+  (team/QB change — honest NULL; PIT team-of-record from `weekly`, the ADP-board `team` col leaks),
+  **16.2 ☑** (competition dual-sourced — both sources wash out, opposite signs, echoes Phase 12.3),
+  **16.3 ☑ DONE** (2026 half signed off at `confidence=high` after 3 user correction rounds; **merged onto
+  the frozen schema 2026-07-25**, `in_house` backfilled, stale 2026 rows replaced; signed-off original
+  retained verbatim), **16.3b ☑ BUILT** (`situation/coaches.py` + `steps/phase16_3b_coach_history.py`;
+  **204 rows** = 172 historical 2014–2025 + 32 for 2026; head-coach column auto-audited against `pbp` —
+  **0 MISMATCH of 172**; move-graph 13 findings / **0 HARD**; coverage **9/32 → 27/32** play-callers with a
+  median 4 prior seasons; **transport set corrected 13 → 17** = 13 external + 4 internal promotions
+  (DEN/MIA/PHI/WAS)) **+ the LINEAGE FALLBACK** (user direction 2026-07-25 — a first-time play-caller falls
+  back to the regime they came up under, `reference/coach_lineage.csv`; Payton + Kingsbury added as mentor
+  regimes) → **all 17 transport teams covered: 12 own · 5 lineage · 0 none**. **16.5 ☑ REBUILT AS DERIVED
+  2026-07-25** — the user asked why the board had only 9 rows and was right: hand-research had missed 16 of
+  the 23 team changes among draftable players (incl. A.J. Brown PHI→NE at ADP 13.6) and had no row for the
+  two highest-ADP players in the league. New `situation/events.py` generates it from 2026 `adp_snapshots` ×
+  `consensus_projections` (0 team disagreements) against 2025 `weekly` → **138 events over 30 teams**;
+  research narrowed to `mechanism`/`notes` and merged in. **16.4 still to build. 16.6 tab → deferred to the
+  Phase-14 app block.** ruff clean, DEV-only, lockbox untouched, walled off from the frozen cost
+  report. **Value-side reads as an honest null → Phase 16's edge is the availability side (16.7–16.12).**
+  326 → 331 → **344 tests**.
+  **★ ← REVIEW GATE, RESUME HERE: (1) user reviews the 172 historical rows of `reference/coaches.csv`
+  (the OC / play_caller / hc_calls_plays columns only — head_coach is machine-audited) plus the 5-row
+  `reference/coach_lineage.csv`, and confirms `reference/situation_events_2026.csv`; (2) build 16.4 on the
+  reviewed table via `coaches.fingerprint_source(df, 2026)`; (3) commit Session E; (4) Session F.**
 - **Session F — data 0.11 + availability drift 16.7–16.8.** 0.11 ECR + Underdog ingest, 16.7 drift panel
   (`actual_slot−ADP` on the Sleeper corpus), 16.8 drift model (VBD-gap + source-divergence + 16.1/16.2 situation
   flags + the new ECR; walk-forward drift MAE/Spearman). **~full-phase (700–1,200L).**

@@ -21,7 +21,7 @@ At a glance:
 | **T7** | 🟡 | External scrapes (FantasyPros/FFC) fail silently; props layer a no-op | opportunistic | ☑ |
 | **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit ☑**) | 9.5 done / fit done | ◐→☑ |
 | **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☑ |
-| **T10** | 🟡 | `validate_archetypes`/`spine_4_validate` sweep S6's `adaptive` archetype → crash (needs `adaptive_parent`) | opportunistic (post-lockbox) | ☐ |
+| **T10** | ✅ | `validate_archetypes`/`spine_4_validate` sweep S6's `adaptive` archetype → crash (needs `adaptive_parent`) | opportunistic (post-lockbox) | ☑ 2026-07-24 |
 
 ---
 
@@ -420,7 +420,14 @@ value; the FAAB sim still passes its done-bar under the upgraded machinery.
 
 ---
 
-## 🟡 T10 — the archetype sweep crashes on S6's `adaptive`
+## ✅ T10 — the archetype sweep crashes on S6's `adaptive` — **DONE 2026-07-24 (Session E)**
+**Status ☑ · fixed per parent.** `validate_archetypes` now expands `adaptive` into one distinct subject
+per static parent — `adaptive(zero_rb)`, `adaptive(late_qb)`, `adaptive(elite_te)`, `adaptive(hero_rb)` —
+so the sweep prices each variant against its parent (the more-informative option) instead of skipping it.
+`steps/spine_4_validate.py` runs green; the frozen stack is untouched (harness/utility fix only). On an
+ADP board adaptive reproduces its parent (as S6 predicted); the 2 REAL-GAIN reads (elite_te) are unchanged.
+_Original diagnosis below (kept for the record)._
+
 **Status ☐ · opportunistic (found during the lockbox eval; worked around there).**
 
 **Symptom.** `valuation/cost_validation.validate_archetypes` defaults its sweep to `[a for a in ARCHETYPES

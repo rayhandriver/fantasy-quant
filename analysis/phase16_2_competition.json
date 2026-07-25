@@ -1,0 +1,132 @@
+{
+  "seasons": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "n_players": 1504,
+  "competition_features": [
+    "competition_change_roster",
+    "competition_change_depth"
+  ],
+  "rates": {
+    "competition_change_roster": 0.25132978723404253,
+    "competition_change_depth": 0.7154255319148937
+  },
+  "scorecard": [
+    {
+      "term": "z_prior_games",
+      "label": "prior-season games (durability)",
+      "coef": 15.739299824730649,
+      "ci_lo": 12.52724233961414,
+      "ci_hi": 21.015602159485187,
+      "p_raw": 0.0002,
+      "p_fdr": 0.0018000000000000002,
+      "n_seasons": 8,
+      "stability": 1.0,
+      "significant": true
+    },
+    {
+      "term": "z_prior_ppg",
+      "label": "prior-season pts/game (efficiency)",
+      "coef": -11.88181656891049,
+      "ci_lo": -16.352542061911173,
+      "ci_hi": -2.0634397637252433,
+      "p_raw": 0.0128,
+      "p_fdr": 0.057600000000000005,
+      "n_seasons": 8,
+      "stability": 0.75,
+      "significant": false
+    },
+    {
+      "term": "competition_change_roster",
+      "label": "competition change (roster)",
+      "coef": -9.900889421159283,
+      "ci_lo": -17.834395735045195,
+      "ci_hi": -0.7175625280018988,
+      "p_raw": 0.0388,
+      "p_fdr": 0.0873,
+      "n_seasons": 9,
+      "stability": 0.6666666666666666,
+      "significant": false
+    },
+    {
+      "term": "competition_change_depth",
+      "label": "competition change (depth)",
+      "coef": 9.790332150416269,
+      "ci_lo": 0.8481993822280578,
+      "ci_hi": 18.326550455820176,
+      "p_raw": 0.0328,
+      "p_fdr": 0.0873,
+      "n_seasons": 9,
+      "stability": 0.6666666666666666,
+      "significant": false
+    },
+    {
+      "term": "rookie",
+      "label": "rookie",
+      "coef": 10.110129513746658,
+      "ci_lo": -1.9121317484872922,
+      "ci_hi": 37.00669793174809,
+      "p_raw": 0.0912,
+      "p_fdr": 0.1368,
+      "n_seasons": 9,
+      "stability": 0.6666666666666666,
+      "significant": false
+    },
+    {
+      "term": "z_experience",
+      "label": "experience (years)",
+      "coef": -3.9945119037982977,
+      "ci_lo": -9.525983584831263,
+      "ci_hi": 0.42467166086947317,
+      "p_raw": 0.0788,
+      "p_fdr": 0.1368,
+      "n_seasons": 9,
+      "stability": 0.6666666666666666,
+      "significant": false
+    },
+    {
+      "term": "z_adp_stdev",
+      "label": "ADP disagreement (stdev)",
+      "coef": -3.3648187270059724,
+      "ci_lo": -7.93372999899624,
+      "ci_hi": 3.3528816725346005,
+      "p_raw": 0.3304,
+      "p_fdr": 0.4248,
+      "n_seasons": 9,
+      "stability": 0.4444444444444444,
+      "significant": false
+    },
+    {
+      "term": "team_changed",
+      "label": "changed team (offseason)",
+      "coef": -2.2875447825773603,
+      "ci_lo": -13.387436460530605,
+      "ci_hi": 10.41182606853005,
+      "p_raw": 0.7516,
+      "p_fdr": 0.8455500000000001,
+      "n_seasons": 8,
+      "stability": 0.5,
+      "significant": false
+    },
+    {
+      "term": "new_starting_qb",
+      "label": "new starting QB",
+      "coef": -0.1410930546089796,
+      "ci_lo": -11.386465691842853,
+      "ci_hi": 12.941976637490836,
+      "p_raw": 0.9848,
+      "p_fdr": 0.9848,
+      "n_seasons": 8,
+      "stability": 0.5,
+      "significant": false
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+play_caller,season,team,mentor,learned_at,learned_seasons,role,confidence,notes
+# Phase 16.3b lineage table — the fallback prior for a FIRST-TIME play-caller.
+# User direction (2026-07-25): a play-caller with no regime of their own is not a blank. Fall back to
+#   the regime they came up under and assume broad continuity of system, flagged as weaker evidence.
+# 16.4 resolves: own regimes (coaches.csv) -> else this mentor's regimes -> else nothing.
+# Every mentor here IS a play-caller in coaches.csv, so the fallback lands on a real fingerprint.
+# 'learned_at' + 'learned_seasons' describe where the apprenticeship happened; the fingerprint comes
+#   from the MENTOR's regimes, which may extend beyond those seasons (e.g. Shanahan SF 2017-2025).
+# Where the new play-caller stays on the SAME team, lineage and team continuity coincide - the
+#   strongest case. Where they differ (PHI 2026), 16.4 should say so rather than pick silently.
+# Claude-researched + web-verified 2026-07-25. USER REVIEW OWED, same contract as coaches.csv.
+Declan Doyle,2026,BAL,Ben Johnson,CHI,2025,offensive coordinator (Johnson called the plays),high,"Doyle ran Chicago's offense on paper in 2025 while Ben Johnson called it - the Bears went from the league's worst offense to 6th. Secondary lineage: Sean Payton (DEN TE coach 2023-24, NO offensive assistant 2019-22), so a Payton flavour is a defensible alternative prior."
+Davis Webb,2026,DEN,Sean Payton,DEN,2023-2025,"QB coach 2023-24, pass-game coordinator 2025",high,"SAME TEAM - lineage and team continuity coincide, so this is the strongest of the five: Denver's 2026 offense inherits Payton's system with Payton still the head coach."
+Sean Mannion,2026,PHI,Matt LaFleur,GB,2024-2025,"offensive assistant 2024, QB coach 2025",high,"Shanahan-tree wide zone by way of Green Bay. Note Philadelphia's 2025 play-caller was Kevin Patullo, so lineage and team continuity point in DIFFERENT directions here."
+Brian Fleury,2026,SEA,Kyle Shanahan,SF,2019-2025,"defensive QC 2019, offensive QC 2020-21, TE coach 2022-24, + run-game coordinator 2025",high,Seven years inside the San Francisco system. Team continuity agrees: Seattle's 2025 play-caller Klint Kubiak is from the same wide-zone (Kubiak/Shanahan) family.
+David Blough,2026,WAS,Kliff Kingsbury,WAS,2024-2025,assistant QB coach 2024-25 (interim QB coach for the last 4 games of 2025),high,"SAME TEAM - lineage and team continuity coincide. Promoted over Kingsbury after only two years coaching, so the prior is the system he was taught in, not a track record of his own."
