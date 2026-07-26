@@ -4,10 +4,29 @@
     2025
   ],
   "board_source": "sleeper_human",
-  "leagues": 2,
-  "sims": 50,
+  "leagues": 30,
+  "sims": 500,
   "season_sim": {
-    "n": 0
+    "n_team_seasons": 300,
+    "seasons": [
+      2025
+    ],
+    "playoff_brier": {
+      "brier": 0.23236472000000002,
+      "baseline": 0.24,
+      "beats": true
+    },
+    "title_brier": {
+      "brier": 0.09052389333333333,
+      "baseline": 0.09000000000000001,
+      "beats": false
+    },
+    "points_coverage": 0.88,
+    "spread_ratio": 1.1585775613333356,
+    "level_bias": 31.49776076437687,
+    "stability_playoff": 0.9636363636363635,
+    "leverage_dog_playoff": -0.013999999999999997,
+    "leverage_fav_playoff": -0.014000000000000012
   },
   "projection_calibration": {
     "n": 448,
@@ -27,5 +46,7 @@
     "n": 673,
     "n_played": 551
   },
-  "cost_report": null
+  "cost_report": {
+    "skipped": "no FFC board for [2025] \u2014 the archetype sweep prices against the FFC consensus only, so there is nothing to price for these seasons"
+  }
 }

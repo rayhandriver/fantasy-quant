@@ -1147,3 +1147,25 @@ would have silently poisoned every F.6 conclusion.
 because a 3-manager smoke test caught that discovery was running at 26 s/manager (a ~4-hour projection)
 and prompted the league-cache fix that took it to 4.8 s/manager. The estimate was right by correction, not
 by foresight; smoke-test before launching a long unattended run.
+
+## 2026-07-26 — Session F.6: the re-derivation sweep (11.1 · 11.2 · 16.8 · S6 · dress)
+
+Ran everything F.5 deliberately deferred. 411 tests (was 395), ruff clean, gates PASS, committed on
+`main` (not pushed). **The sweep's real deliverable was not the refreshed numbers but the discovery
+that the behavioral path carried F.5's format-contamination bug**: 11.x read all 7,699 human drafts
+against one hardcoded 10-team PPR board; only 1,426 are eligible redraft rooms. The clean re-fit
+deleted `rookie` (+0.45→+0.11, dynasty leakage) and `is_QB` (+0.17→−0.03, 2QB leakage) and doubled
+`adp_s`. Eligibility + board resolution now live in one shared module (`adp/boards.py`).
+
+Decisions: ECR adopted as the 2025 board fallback **calibrated** (isotonic rank→ADP, depth
+truncation); 16.8's pre-registered headline stays FFC-only with ECR as a labelled sensitivity; no
+per-manager random effects (mgr_lean ablation = 16 % of gain; only 111 eligible managers with ≥10
+drafts); 11.1 fits a sampled 60 drafts/season for memory.
+
+Results: 11.1 +0.1738 log-loss gain (was +0.1126); 11.2 +0.0864 CI[+0.0769,+0.0980] on 36,972
+windows (was +0.1587 on 1,501 — the thin result was ~2× optimistic); 16.8 headline +9.25 % with a
+**+0.01 %** ablation → the null holds and the leak got *stronger* with scale; S6 adaptive stronger
+(+19.4 hero_rb). 2025 dress rehearsal ran its season sim for the first time. New tech debt T13
+(distribution not reproducible across processes) and T14 (11.2 bootstrap O(n²)); T11(b) closed.
+
+**Next: Session G — 16.9–16.12 + 16.16 under the null's constraint.**

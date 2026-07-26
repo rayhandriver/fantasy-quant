@@ -91,7 +91,9 @@ def main() -> None:
     con = db.connect(read_only=True)
 
     print("Fitting the Phase-11 behavioral opponent model (human corpus) ...")
-    frame, _ = build_choice_frame(con, board_source="ffc", top_k=40)
+    # Same sampling budget and seed as steps/phase11_opponent_model.py, so the room S6 is validated
+    # against is the room 11.1 reported — and so the frame fits in memory on the F.5 corpus.
+    frame, _ = build_choice_frame(con, top_k=40, max_drafts_per_season=60, seed=11)
     model = OpponentModel(list(ALL_FEATURES), l2=1.0).fit(frame)
 
     lg = LeagueSetup(n_teams=10, draft_slot=5)          # a mid seat: slides have room to develop

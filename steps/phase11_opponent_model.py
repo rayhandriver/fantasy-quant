@@ -22,6 +22,7 @@ from fantasy_quant.draft.opponent_model import (
     ALL_FEATURES,
     OpponentModel,
     build_choice_frame,
+    corpus_funnel,
     walk_forward,
 )
 from fantasy_quant.draft.personalities import make_opponent_pick_fn, personalities
@@ -29,11 +30,29 @@ from fantasy_quant.draft.simulator import simulate_draft
 
 OUT = Path("analysis/phase11_opponent_model.json")
 
+#: Choice-frame sampling budget. The eligible pool is ~1,420 drafts; the full frame would be ~8M
+#: candidate rows, which does not fit in this box's memory. 60/season is ~9x the pre-F.6 corpus and
+#: leaves the walk-forward comfortably inside RAM. Sampling is per season so no held-out season is
+#: lost, and the seed makes the draw reproducible.
+DRAFTS_PER_SEASON = 60
+
+#: 11.2 sampling budget. The n_drafts=21 that stood through Session F.5 was THIS number (3), not
+#: the size of the corpus — the thinnest result in the repo was a default argument.
+BRIER_DRAFTS_PER_SEASON = 28
+
 
 def main() -> None:
     con = connect(read_only=True)
-    print("Building choice frame from the human draft corpus ...")
-    frame, feats = build_choice_frame(con, board_source="ffc", top_k=40)
+    print("=== corpus funnel (Session F.6: eligibility is enforced here now) ===")
+    funnel = corpus_funnel(con)
+    print(f"  human drafts held                      : {funnel['human_drafts']:,}")
+    print(f"  ... eligible (complete/snake/redraft/window): {funnel['eligible']:,}")
+    print(f"  ... with a consensus board             : {funnel['with_board']:,}  "
+          f"{funnel['by_board_source']}")
+    print(f"\nBuilding choice frame (sampling {DRAFTS_PER_SEASON}/season — an explicit budget, "
+          f"the eligible pool is larger) ...")
+    frame, feats = build_choice_frame(con, top_k=40,
+                                      max_drafts_per_season=DRAFTS_PER_SEASON, seed=11)
 
     n_groups = frame["group"].nunique()
     n_seasons = frame["season"].nunique()
@@ -74,7 +93,7 @@ def main() -> None:
     print("\n[11.2] Availability Brier — behavioral flow vs best-tuned ADP+noise "
           "(MC over real windows; ~3-4 min) ...")
     ab = availability_brier(con, full, n_sims=40, contested_k=30,
-                            max_drafts_per_season=3, n_boot=400, seed=1)
+                            max_drafts_per_season=BRIER_DRAFTS_PER_SEASON, n_boot=400, seed=1)
     print(f"  windows={ab['n_windows']:,} over {ab['n_drafts']} drafts")
     print(f"  behavioral Brier {ab['beh_brier']:.4f}  |  ADP+noise best-tuned "
           f"{ab['base_brier_best_tuned']:.4f} (noise={ab['best_noise']:.0f}; "
@@ -86,9 +105,11 @@ def main() -> None:
 
     # ===== 11.3 — realistic mock: personality-tilted opponents ================================
     print("\n[11.3] Configurable mock opponents (early-round positional mix on a real board) ...")
+    # `scoring` is not optional: without it this unions the ppr / half-ppr / standard boards and
+    # the demo drafts from a board with every player on it three times (the F.5 lesson, again).
     board = con.execute(
         "SELECT name, position, team, adp, pos_rank FROM adp_snapshots "
-        "WHERE source='ffc' AND season=2022 AND teams=10 "
+        "WHERE source='ffc' AND season=2022 AND teams=10 AND scoring='ppr' "
         "QUALIFY snapshot_date=MAX(snapshot_date) OVER () ORDER BY adp"
     ).df()
     demo = {}
@@ -108,6 +129,12 @@ def main() -> None:
 
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps({
+        "corpus_funnel": funnel,
+        "sampling": {"drafts_per_season": DRAFTS_PER_SEASON,
+                     "brier_drafts_per_season": BRIER_DRAFTS_PER_SEASON, "seed": 11},
+        "board_source_split": {str(k): int(v) for k, v in
+                               frame.groupby("board_source", observed=True)["draft_id"]
+                               .nunique().items()},
         "n_groups": int(n_groups), "n_seasons": int(n_seasons),
         "chosen_in_candidate_set": float(chosen_in_set),
         "coefficients": {k: float(v) for k, v in coefs.items()},

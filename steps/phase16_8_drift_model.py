@@ -36,11 +36,19 @@ SKILL_BAR = 0.02
 def main() -> None:
     con = db.connect(read_only=True)
 
-    panel = dp.build_drift_panel(con)
+    # ★ The pre-registered headline is defined on FFC-boarded rows — the yardstick 16.8 was
+    # registered against in Session F. Session F.6 added an ECR fallback board that recovers 2025
+    # (which FFC never published); ECR is a calibrated *proxy* for ADP, not ADP, so it is reported
+    # as a clearly separate sensitivity below and never folded into the headline. Re-asking a
+    # pre-registered test on a widened definition of the data would be threshold-moving.
+    full_panel = dp.build_drift_panel(con, allow_ecr=True)
+    panel = full_panel[full_panel["board_source"] == "ffc"].reset_index(drop=True)
     feats = dm.build_features(con, panel,
                               lambda c, s: value_board(c, s, rookie_fn=rookie_projection))
-    print(f"panel: {len(feats):,} picks · {feats['draft_id'].nunique()} drafts · "
-          f"{feats['season'].nunique()} seasons\n")
+    print(f"panel (FFC-boarded, the pre-registered population): {len(feats):,} picks · "
+          f"{feats['draft_id'].nunique()} drafts · {feats['season'].nunique()} seasons")
+    n_ecr = int((full_panel["board_source"] == "ecr").sum())
+    print(f"  (+{n_ecr:,} ECR-boarded rows held out of the headline, reported separately)\n")
 
     # ---- 1/2. walk-forward verdicts -------------------------------------------------------------
     head = dm.walk_forward_drift(feats, dm.DRIFT_FEATURES)
@@ -98,6 +106,23 @@ def main() -> None:
                   f"    with, as descriptive room behaviour rather than a per-player forecast:\n"
                   f"    {', '.join(survivors)}")
 
+    # ---- 5. sensitivity: the same fit with the ECR-boarded season admitted ----------------------
+    # Reported AFTER the verdict and never mixed into it. If the two disagree, the disagreement is
+    # about the proxy board, not about drift.
+    sens = None
+    if n_ecr:
+        feats_all = dm.build_features(
+            con, full_panel, lambda c, s: value_board(c, s, rookie_fn=rookie_projection))
+        h_all = dm.walk_forward_drift(feats_all, dm.DRIFT_FEATURES)
+        a_all = dm.walk_forward_drift(feats_all, dm.ABLATION_FEATURES)
+        sens = {"headline_skill": h_all.skill, "headline_ci": list(h_all.skill_ci),
+                "ablation_skill": a_all.skill, "ablation_ci": list(a_all.skill_ci),
+                "n": h_all.n, "n_seasons": h_all.n_seasons}
+        print("\n=== SENSITIVITY — ECR-boarded 2025 admitted (NOT the pre-registered headline) ===")
+        print(f"  headline {h_all.skill:+.2%} CI[{h_all.skill_ci[0]:+.2%},{h_all.skill_ci[1]:+.2%}]"
+              f"  ·  ablation {a_all.skill:+.2%} "
+              f"CI[{a_all.skill_ci[0]:+.2%},{a_all.skill_ci[1]:+.2%}]  (n={h_all.n:,})")
+
     # structural gates — the harness is sound even when the answer is 'no'.
     assert head.n > 0 and abl.n > 0, "walk-forward produced no held-out rows"
     assert head.mae_baseline > 0, "degenerate baseline"
@@ -120,6 +145,7 @@ def main() -> None:
         "survivors_without_leak_prone_feature": survivors,
         "r2": reg.r2,
         "r2_ablation": reg_a.r2,
+        "sensitivity_with_ecr_board": sens,
     }, indent=2, default=float))
     print(f"\n  wrote {OUT.relative_to(OUT.parents[1])}")
     print("\nPhase 16.8 (drift model) — all checks PASS.")

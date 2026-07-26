@@ -38,16 +38,17 @@ def main() -> None:
     dp.assert_drift_panel_pit(panel, drafts)
     s = dp.summarize(panel)
 
-    print("=== corpus funnel (why the panel is thin) ===")
+    print("=== corpus funnel ===")
     total = con.execute("SELECT COUNT(*) FROM sleeper_drafts WHERE is_human "
                         "AND status = 'complete'").fetchone()[0]
     print(f"  human complete drafts in the corpus : {total}")
     print(f"  ... snake + redraft scoring + preseason window : {len(drafts)}")
-    print(f"  ... with an FFC board for that season          : {s['n_drafts']}")
+    print(f"  ... with a consensus board for that season     : {s['n_drafts']}")
+    by_src = panel.groupby("board_source")["draft_id"].nunique().to_dict()
+    print(f"  ... by board source                            : {by_src}")
     lost = sorted(set(drafts["season"]) - set(panel["season"]))
     if lost:
-        print(f"  seasons dropped for want of a board            : {lost}  "
-              f"(FFC publishes no 2025 board — verified against the live API)")
+        print(f"  seasons dropped for want of a board            : {lost}")
 
     print("\n=== panel ===")
     for k, v in s.items():
@@ -87,9 +88,13 @@ def main() -> None:
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(json.dumps({
         "funnel": {"human_complete": int(total), "eligible": int(len(drafts)),
-                   "with_board": int(s["n_drafts"]), "seasons_without_board": lost},
+                   "with_board": int(s["n_drafts"]), "seasons_without_board": lost,
+                   "by_board_source": {k: int(v) for k, v in by_src.items()}},
         "summary": s,
         "drift_centered_sd": float(panel["drift_centered"].std(ddof=0)),
+        "drift_centered_sd_by_source": {
+            str(k): float(v) for k, v in
+            panel.groupby("board_source")["drift_centered"].std(ddof=0).items()},
         "per_season": by.reset_index().to_dict(orient="records"),
         "pos_bias": pos_bias.to_dict(),
         "lockbox_rows": n_lock,

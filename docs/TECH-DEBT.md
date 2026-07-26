@@ -22,7 +22,9 @@ At a glance:
 | **T8** | 🟡 | `objective` a dead label (**8a ☑**); opponent model still ADP+noise (**8b: ingest+crawler+real corpus ☑, fit ☑**) | 9.5 done / fit done | ◐→☑ |
 | **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☑ |
 | **T10** | ✅ | `validate_archetypes`/`spine_4_validate` sweep S6's `adaptive` archetype → crash (needs `adaptive_parent`) | opportunistic (post-lockbox) | ☑ 2026-07-24 |
-| **T11** | 🟡 | Underdog ADP never ingested (no keyless endpoint); 16.7 drift corpus too thin (34 drafts) to re-ask 16.8 | opportunistic / when the Sleeper corpus grows | ☐ 2026-07-25 |
+| **T11** | 🟡 | (a) Underdog ADP never ingested (no keyless endpoint). **(b) drift corpus thinness — CLOSED 2026-07-26**: re-asked 16.8 on 1,144 drafts, verdict held | (a) opportunistic; (b) done | ◐ 2026-07-26 |
+| **T13** | 🟠 | Phase-5 distribution cloud is **not reproducible across processes** — per-player q10/q90 vary run to run; dress coverage wobbles 75.5↔76.5 % | before any per-player distribution number is published in the app | ☐ 2026-07-26 |
+| **T14** | 🟡 | 11.2's availability bootstrap is O(n_boot × n_drafts × n_windows) — ~45 min at 252 drafts | when 11.2 is next re-run at scale | ☐ 2026-07-26 |
 | **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☑ 2026-07-25 |
 
 ---
@@ -531,3 +533,40 @@ you show it still catches the thing it was built to catch.
    built; `faab_bid` consumes `endgame_cap`; auction done-bar 6/6 DEV.
 10. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params) — **the only
     open pre-lockbox tech-debt item.** (Optional MCTS/RL research gate sits just before it.)
+
+
+## 🟠 T13 — the Phase-5 distribution cloud is not reproducible across processes
+*(found 2026-07-26, Session F.6, while reconciling two dress-rehearsal runs)*
+
+**Symptom.** Identical inputs, fresh process, same seed: `cached_distribution(con, 2025, None)`
+returns per-player `q10`/`q90` that differ every run. Downstream, the dress rehearsal's 80 %-interval
+coverage alternates between **75.48 %** and **76.52 %** (508 vs 515 of 673 players inside). Observed
+3:1 across five runs.
+
+**What it is NOT** (both tested, both ruled out): the global NumPy RNG (perturbing it changes
+nothing), and DuckDB row ordering (the first player keys are stable across processes). Determinism
+holds *within* a process. Marginal sums are near-invariant while the per-player assignment moves,
+which is the fingerprint of a coupling/permutation step rather than a marginal draw — the
+Iman–Conover permutation in the Phase-8 correlation coupling is the prime suspect.
+
+**Why it matters.** Any *per-player* distribution number — a player's q10/q90 in the app, a coverage
+figure, a boom/bust probability — is only reproducible within one process. Aggregate and marginal
+statistics are fine. Concretely: **Session D's 75.5 % and Session F.6's 76.5 % are the same result**,
+and reading the difference as a T3 improvement would be wrong.
+
+**Why it is not fixed here.** It lives in the **frozen** risk layer that the spent lockbox ran on.
+Changing the sampler now would break comparability with the lockbox result for a defect that moves a
+reported number by ~1pp. **Fix when the app is built** (Phase 14), by threading an explicit seed
+through the coupling step and asserting cross-process reproducibility in a test.
+
+## 🟡 T14 — 11.2's availability bootstrap does not scale
+*(found 2026-07-26, Session F.6)*
+
+`availability_brier` bootstraps by rebuilding a boolean mask per draft per replicate
+(`np.flatnonzero(draft_of_win == u)` inside a 400-iteration loop): O(n_boot × n_drafts ×
+n_windows). At 21 drafts / 1,501 windows it was invisible; at 252 drafts / 36,972 windows it is
+tens of minutes, and it dominated a ~100-minute step run.
+
+**Fix:** precompute `np.argsort(draft_of_win)` once into per-draft index blocks and index into
+them, instead of scanning the full window array per draft per replicate. Pure refactor — the
+statistic is unchanged. Do it before the next scaled 11.2 run.

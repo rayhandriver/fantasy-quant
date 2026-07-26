@@ -73,11 +73,28 @@ def _board_ffc(con, season):
 
 
 def _board_source(con, season, source):
-    """PIT board off a non-FFC ADP source (e.g. the crawled ``sleeper_human`` 2025 board)."""
-    as_of = draft_date(con, season, source=source)
+    """PIT board off a non-FFC ADP source (e.g. the crawled ``sleeper_human`` 2025 board).
+
+    **The team-size label has to be looked up, not assumed.** ``draft_date``/``adp_asof`` default
+    to ``teams=10``, but a crawled board is labelled with the *modal* league size of the drafts
+    that built it — 10 in 2017, 12 from 2019 on, 32 for one thin 2022 cohort. Pinning 10 therefore
+    made the 2025 board invisible and the dress rehearsal skipped its season sim with "no ADP
+    board" while a perfectly good 727-player board sat in the table. Harness-level fix only: the
+    frozen ``walkforward`` readers are untouched.
+    """
+    row = con.execute(
+        """SELECT teams, COUNT(*) n FROM adp_snapshots
+           WHERE season = ? AND source = ? AND scoring = 'ppr'
+           GROUP BY teams ORDER BY n DESC LIMIT 1""",
+        [int(season), source],
+    ).fetchone()
+    if row is None:
+        return None, None
+    teams = int(row[0])
+    as_of = draft_date(con, season, source=source, teams=teams)
     if as_of is None:
         return None, None
-    return adp_asof(con, season, as_of, source=source), as_of
+    return adp_asof(con, season, as_of, source=source, teams=teams), as_of
 
 
 # ------------------------------------------------------------------------------------------------
@@ -216,6 +233,18 @@ def cost_report_par(con, seasons, k_drafts: int = 10) -> dict:
     # `adaptive` (S6) is a meta-wrapper needing an `adaptive_parent` — neither a standalone
     # preference to price (a harness scoping choice; the frozen stack is untouched).
     from fantasy_quant.draft.config import ADAPTIVE_PARENTS
+
+    # `paired_costs` reads the **FFC** board (`draft_date(con, season)` with source='ffc') and
+    # skips any season without one. 2025 has no FFC board at all, so the sweep is structurally
+    # impossible there — report the skip like the season sim does rather than raising. Threading a
+    # board source through `paired_costs` would mean editing the frozen cost-validation path that
+    # the spent lockbox ran on, which is not worth it for a rehearsal.
+    priced = [int(s) for s in seasons if draft_date(con, int(s)) is not None]
+    if not priced:
+        reason = (f"no FFC board for {list(seasons)} — the archetype sweep prices against the FFC "
+                  f"consensus only, so there is nothing to price for these seasons")
+        print(f"    skipped: {reason}")
+        return {"skipped": reason}
     res = validate_archetypes(con, archetypes=list(ADAPTIVE_PARENTS), seasons=tuple(seasons),
                               k_drafts=k_drafts, n_boot=10000)
     per = [{"archetype": v.subject, "realized_cost": float(v.realized_cost),
@@ -276,6 +305,7 @@ def main() -> None:
     if not args.skip_cost:
         print("\n--- (3) cost-of-personalization (realized-PAR archetype sweep) ---")
         cost_metrics = cost_report_par(con, seasons, k_drafts=args.cost_drafts)
+    if cost_metrics and "skipped" not in cost_metrics:
         for p in cost_metrics["per_archetype"]:
             print(f"    {p['archetype']:14s} realized cost {p['realized_cost']:+7.1f} "
                   f"CI[{p['ci'][0]:+.0f},{p['ci'][1]:+.0f}]")

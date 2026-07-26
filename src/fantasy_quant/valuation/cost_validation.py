@@ -239,6 +239,13 @@ def validate_archetypes(con, archetypes: Iterable[str] | None = None,
 
     long = paired_costs(con, subjects, bench, seasons=seasons, k_drafts=k_drafts,
                         noise=noise, seed=seed)
+    # An empty sweep means no season produced a draftable board — say so. Left unguarded this
+    # surfaced as `KeyError: 'subject'` from inside pandas, which reads like a schema bug and sent
+    # the 2025 dress rehearsal looking in the wrong place entirely.
+    if long.empty:
+        raise ValueError(
+            f"archetype sweep produced no drafts for seasons {seasons} — every season lacked a "
+            f"usable ADP board, so there is nothing to price (check the board source/teams label)")
     per = [summarize(long, name, n_boot=n_boot, seed=seed) for name in subjects]
     per.sort(key=lambda v: v.realized_cost, reverse=True)
     return ArchetypeValidation(per_archetype=per, cross=crosscheck(long),

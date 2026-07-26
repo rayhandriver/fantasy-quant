@@ -2265,3 +2265,131 @@ would otherwise have paid these 70 minutes again.
   `--which lockbox` to `source="ffc"`/`_board_ffc`, its seats use `_noisy_adp_pick` (ADP+noise, not the
   behavioral model), and `cost_validation.py` likewise. Only `--which dress` (2025) reads `sleeper_human`.
   Growing the corpus **cannot** contaminate the spent lockbox or the frozen value stack.
+
+## Session F.6 — the re-derivation sweep (2026-07-26): a contaminated corpus invents effects
+
+Session F.5 grew the Sleeper corpus 52× and deliberately re-derived nothing. This session ran the
+sweep. **411 tests** (was 395), ruff clean, all data-health gates PASS. DEV-only; the spent
+2023+2024 lockbox is untouched.
+
+### ★★ The finding: the behavioral path had the F.5 contamination bug too — and it was worse there
+
+F.5 fixed format contamination on the **ADP board** path (`REDRAFT_SCORING`, snake, complete). The
+**behavioral** path never got the same treatment: `build_choice_frame` and `availability_brier`
+selected on `is_human AND picked_by IS NOT NULL` and scored every draft against a single hardcoded
+10-team PPR board. Of 7,699 human drafts, **1,426 are eligible** (complete · snake · redraft
+scoring · preseason window); the other 74 % are dynasty, 2QB, IDP, auction or abandoned rooms.
+
+Re-fitting 11.1 on the eligible corpus did not merely sharpen the estimate — **it deleted two
+"behavioral findings" that were pure format leakage**:
+
+| coefficient | contaminated | redraft-only | what it really was |
+|---|---|---|---|
+| `adp_s` | −0.848 | **−1.683** | ADP discipline, halved by rooms that ignore redraft ADP |
+| `rookie` | +0.446 | **+0.111** | **dynasty** rooms, where rookie picks are the currency |
+| `is_QB` | +0.169 | **−0.028** | **2QB/superflex** rooms, where QBs go early by rule |
+| `need` | +0.335 | +0.474 | real, and was being diluted |
+
+The old fit told a story — *managers reach for rookies and quarterbacks* — that was entirely an
+artifact of which leagues were in the pool. **A contaminated corpus does not just add noise; it
+manufactures plausible, publishable effects.** Noise you can see in a CI. This you cannot.
+
+The walk-forward *improved* on the smaller, cleaner corpus: pooled held-out log-loss gain
+**+0.1738** CI[+0.1693,+0.1781] (was +0.1126), Brier gain +0.0177. 70,614 choice groups (was
+7,900), 9 seasons including 2025.
+
+### ★ 16.8 re-asked: more data made the LEAK stronger, not the signal
+
+Same pre-registered bar (skill > 2 %, CI clear of 0), same mandatory `source_divergence` ablation,
+34× the panel (1,144 FFC-boarded drafts, 157,349 picks):
+
+| | Session F (34 drafts) | Session F.6 (1,144 drafts) |
+|---|---|---|
+| headline skill | +1.05 % CI[−1.48,+4.96] | **+9.25 % CI[+3.29,+13.91]** |
+| ablation (no `source_divergence`) | −1.75 % | **+0.01 % CI[−1.98,+1.84]** |
+
+The headline now clears the bar four times over — **and the ablation is exactly zero.** With
+thousands of sibling drafts per season the leave-one-draft-out board estimates each room's own
+consensus *better*, so the contaminated feature predicts *better*. F.5 expected the extra data to
+dilute the leak; it concentrated it.
+
+**The durable lesson (glossary: "the ablation rule", now with teeth): scale does not launder a
+leak — it strengthens it.** A leak-prone feature converges on the target as n grows, so a rising
+headline is exactly what a leak looks like from the outside. Only the ablation separates them.
+
+Verdict unchanged in substance: **DOES NOT PREDICT** without the leak-prone feature. 16.9 still
+shapes its shock from descriptive room behaviour — the ablation survivors are `rookie` (+0.94
+rounds), `adp_stdev` (+0.27/SD), `vbd_gap` (+0.26/SD), `pos_WR`, `pos_TE`.
+
+### ★ 11.2 availability Brier: the thin result was ~2× optimistic
+
+`n_drafts: 21` was **a default argument** (`max_drafts_per_season=3`), not a corpus limit — the
+thinnest number in the repo was a parameter nobody re-read. At 28/season:
+
+| | before | after |
+|---|---|---|
+| windows / drafts | 1,501 / 21 | **36,972 / 252** |
+| behavioral Brier | 0.1576 | 0.1978 |
+| gain vs best-tuned ADP+noise | +0.1587 | **+0.0864** CI[+0.0769,+0.0980] |
+
+Still beats the best-tuned baseline decisively, but the effect is **half** what 21 drafts implied.
+*When a headline rests on a sample size you did not choose deliberately, treat it as an upper
+bound.*
+
+### ★ The ECR fallback has to be calibrated, and the first version was not
+
+Adopting ECR as the 2025 board (FFC publishes none) recovers 278 eligible drafts. Used **raw**, it
+is not unit-safe: ECR ranks 544–724 players where FFC boards ~200 and compresses ADP (2024 PPR:
+ECR rank 396 ↔ FFC ADP 193.5). The first panel run duly reported **Efton Chism at +17.5 rounds**,
+every top-10 reach a 2025 fringe name, and a 2025 drift sd of **2.67** against ~1.75 elsewhere.
+
+Fix: isotonic rank→ADP calibration fitted on the overlapping seasons plus truncation at FFC's
+median board depth (182). 2025 sd → **1.82**, in line with its siblings, and the reach list becomes
+recognisable football (Judkins, Mixon, Robinson). **A fallback source is not a drop-in until its
+units are shown to match** — and the tell was distributional, not an error.
+
+The pre-registered 16.8 headline stays FFC-only regardless; ECR is reported as a labelled
+sensitivity (+6.06 % headline / −1.15 % ablation — same conclusion).
+
+### ★ Third instance of the hardcoded-label family: board `teams`
+
+`sleeper_human` boards are labelled with the **modal league size** of the drafts that built them —
+10 in 2017, 12 from 2019 on, 32 for one thin 2022 cohort. Every consumer asks for `teams=10`
+(`draft_date`/`adp_asof` default). So the 2025 dress rehearsal reported *"no ADP board — skipping
+season sim"* while a perfectly good 727-player board sat in the table, and the archetype sweep then
+died with `KeyError: 'subject'` on an empty frame.
+
+Fixed at harness level (the frozen `walkforward` readers are untouched): look the label up instead
+of assuming it. **The 2025 season sim has now run for the first time** — 300 team-seasons, playoff
+Brier 0.2325 < 0.240, title Brier 0.0905 vs 0.090 (a marginal miss), points coverage 0.88, level
+bias +31.5. The cost sweep is structurally impossible on 2025 (it prices against FFC only) and now
+says so instead of crashing.
+
+### Corrections to the F.5 plan's premises
+
+- **Repeat-manager depth was counted on the wrong population.** "12,578 managers with ≥2 drafts,
+  1,330 with 10+" counts *all* formats. Within the eligible redraft corpus it is **2,589 with ≥2
+  and 111 with ≥10**.
+- **Per-manager random effects: not built** (the pre-authorised rule was "extend only if the pooled
+  fit leaves signal on the table"). Ablating `mgr_lean` costs +0.0276 log-loss of a +0.1738 total —
+  the per-manager channel is ~16 % of the edge and is already carried by a pooled, shrunk feature.
+  On 111 deep managers, random effects would be mostly prior.
+- **11.1 is fitted on a sampled 60 drafts/season** (~70.6k groups), an explicit budget: the full
+  eligible corpus builds an ~8M-row choice frame that does not fit in this box's ~3 GB. The knob is
+  reported in `analysis/phase11_opponent_model.json`, not silent.
+
+### S6 adaptive, re-validated on the new β
+
+Both done-bars still PASS and got stronger: adaptive(zero_rb) **+6.6** team-value in the behavioral
+room (was +2.0), adaptive(hero_rb) **+19.4 CI[+4.5,+32.9]** (was +15.6, now clear of zero).
+
+### Two new defects found while verifying, both logged not fixed
+
+- **T13 — the Phase-5 distribution cloud is not reproducible across processes.** Same inputs, fresh
+  process: per-player `q10`/`q90` differ every run and dress-rehearsal coverage wobbles **75.5 %
+  ↔ 76.5 %**. Determinism holds *within* a process and against the global RNG (both tested), so the
+  nondeterminism is inside the assembly. **Today's 76.5 % is not an improvement on Session D's
+  75.5 % — it is the same number twice.** In the frozen risk layer, so it is documented, not
+  patched.
+- **T14 — 11.2's bootstrap is O(n_boot × n_drafts × n_windows)** (a linear scan per draft per
+  replicate). Cheap at 21 drafts, ~45 min at 252; it dominated a 100-minute step run.

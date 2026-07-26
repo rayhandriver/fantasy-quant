@@ -42,6 +42,7 @@ from collections.abc import Iterable
 import numpy as np
 import pandas as pd
 
+from fantasy_quant.adp import boards
 from fantasy_quant.adp.panel import OFFENSE, _canon_pos
 
 #: Drafts outside this (month, day) window of their own season are excluded — see fact (1) above.
@@ -50,15 +51,19 @@ PRESEASON_WINDOW: tuple[tuple[int, int], tuple[int, int]] = ((8, 1), (9, 15))
 
 #: Sleeper ``scoring`` values that are genuinely redraft formats with an FFC board analog.
 #: ``dynasty_*``/``idp`` are a different market (rookie picks, defensive players) and are excluded.
-SCORING_MAP: dict[str, str] = {"ppr": "ppr", "half_ppr": "half-ppr", "std": "standard"}
+#: Single source of truth is :mod:`fantasy_quant.adp.boards` — every corpus consumer shares it.
+SCORING_MAP: dict[str, str] = boards.SCORING_MAP
 
 #: FFC publishes 10- and 12-team boards only; a draft is compared to whichever is closer in size.
-FFC_TEAM_SIZES: tuple[int, ...] = (10, 12)
+FFC_TEAM_SIZES: tuple[int, ...] = boards.FFC_TEAM_SIZES
 
 PANEL_COLS = [
     "season", "draft_id", "teams", "scoring", "start_ts", "days_to_board",
     "pick_no", "round", "draft_slot", "gsis_id", "name", "pos",
     "slot_rounds", "adp", "board_teams", "adp_rounds", "adp_stdev", "drift", "drift_centered",
+    # which consensus source answered for this row: 'ffc', or 'ecr' where FFC published nothing
+    # (2025). Never pool the two into a pre-registered headline — see :mod:`adp.boards`.
+    "board_source",
 ]
 
 
@@ -121,17 +126,12 @@ def season_board(con, season: int, scoring: str, teams: int) -> pd.DataFrame:
     board may have moved between a draft and its stamp, so every panel row carries
     ``days_to_board`` and Phase 16.8 controls on it. Board-derived *features* inherit the same
     caveat; features taken from ``weekly``/``draft_picks`` do not.
+
+    FFC only, by design: this is the yardstick the pre-registered 16.8 headline is defined against.
+    :func:`build_drift_panel` reaches the ECR fallback through :func:`fantasy_quant.adp.boards.
+    resolve_board` and labels those rows, so a fallback board can never enter silently here.
     """
-    return con.execute(
-        """
-        SELECT gsis_id, name, position, adp, stdev, pos_rank, snapshot_date
-        FROM adp_snapshots
-        WHERE season = ? AND source = 'ffc' AND scoring = ? AND teams = ?
-          AND gsis_id IS NOT NULL
-        QUALIFY snapshot_date = MAX(snapshot_date) OVER ()
-        """,
-        [int(season), scoring, int(teams)],
-    ).df()
+    return boards.resolve_board(con, season, scoring, teams, allow_ecr=False)[0]
 
 
 def _picks(con, draft_ids: list[str]) -> pd.DataFrame:
@@ -151,7 +151,8 @@ def _picks(con, draft_ids: list[str]) -> pd.DataFrame:
 # ------------------------------------------------------------------------------------------------
 # the panel
 # ------------------------------------------------------------------------------------------------
-def build_drift_panel(con, seasons: Iterable[int] | None = None) -> pd.DataFrame:
+def build_drift_panel(con, seasons: Iterable[int] | None = None,
+                      *, allow_ecr: bool = True) -> pd.DataFrame:
     """One row per (draft, boarded pick): where the player actually went vs the consensus board.
 
     Returns :data:`PANEL_COLS` at **pick grain** — deliberately not pre-aggregated to player-season.
@@ -159,6 +160,10 @@ def build_drift_panel(con, seasons: Iterable[int] | None = None) -> pd.DataFrame
     observations; keeping every pick lets 16.8 fit on ~5k rows and cluster the uncertainty by
     season/draft instead of throwing the within-season spread away. :func:`aggregate_player_season`
     provides the aggregate view for reporting and for 16.9's dispersion match.
+
+    ``allow_ecr`` admits ECR-boarded seasons (2025, which FFC never published) — every such row is
+    tagged ``board_source='ecr'`` so a caller can segment or drop them. The pre-registered 16.8
+    headline filters to ``board_source == 'ffc'``; ECR seasons are a labelled sensitivity.
     """
     drafts = eligible_drafts(con, seasons)
     if drafts.empty:
@@ -174,7 +179,8 @@ def build_drift_panel(con, seasons: Iterable[int] | None = None) -> pd.DataFrame
 
     frames = []
     for (season, scoring, bteams), g in df.groupby(["season", "ffc_scoring", "board_teams"]):
-        board = season_board(con, int(season), str(scoring), int(bteams))
+        board, src = boards.resolve_board(con, int(season), str(scoring), int(bteams),
+                                          allow_ecr=allow_ecr)
         if board.empty:
             continue
         board = board.rename(columns={"name": "board_name"})
@@ -184,6 +190,7 @@ def build_drift_panel(con, seasons: Iterable[int] | None = None) -> pd.DataFrame
         if m.empty:
             continue
         m["board_teams"] = int(bteams)
+        m["board_source"] = src
         m["days_to_board"] = (pd.to_datetime(m["snapshot_date"], utc=True)
                               - pd.to_datetime(m["start_ts"], utc=True)).dt.total_seconds() / 86400
         frames.append(m)

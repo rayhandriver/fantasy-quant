@@ -134,22 +134,26 @@ def build_features(con, panel: pd.DataFrame, value_board_fn,
     out["source_divergence"] = out["adp_rounds"] - heldout
 
     # --- per-season joins -----------------------------------------------------------------------
+    # `vbd_rounds` is a rank divided by a league size, so it is keyed by (season, board_teams) —
+    # NOT by season alone. That distinction was invisible while each season's handful of drafts
+    # happened to share one board size; on the Session-F.5 corpus a single season carries both
+    # 10- and 12-team rooms, and joining on season alone would price roughly half the rows against
+    # the wrong board. Grouping on both is a correctness fix, not a tuning choice.
     gaps, flags = [], []
-    for season, g in out.groupby("season"):
-        bteams = int(g["board_teams"].iloc[0])
-        vb = _vbd_gap(con, int(season), bteams, value_board_fn)
+    for (season, bteams), _g in out.groupby(["season", "board_teams"]):
+        vb = _vbd_gap(con, int(season), int(bteams), value_board_fn)
         if not vb.empty:
-            vb = vb.assign(season=int(season))
-            gaps.append(vb)
+            gaps.append(vb.assign(season=int(season), board_teams=int(bteams)))
+    for season, _g in out.groupby("season"):
         sf = _situation_flags(con, int(season))
         if not sf.empty:
             flags.append(sf.assign(season=int(season)))
     vbd = pd.concat(gaps, ignore_index=True) if gaps else pd.DataFrame(
-        columns=["gsis_id", "vbd_rounds", "season"])
+        columns=["gsis_id", "vbd_rounds", "season", "board_teams"])
     sit = pd.concat(flags, ignore_index=True) if flags else pd.DataFrame(
         columns=["gsis_id", "season", *DRIFT_FEATURES[2:6]])
 
-    out = out.merge(vbd, on=["gsis_id", "season"], how="left")
+    out = out.merge(vbd, on=["gsis_id", "season", "board_teams"], how="left")
     out["vbd_gap"] = out["adp_rounds"] - out["vbd_rounds"]
     out = out.merge(sit, on=["gsis_id", "season"], how="left")
     for f in ("team_changed", "new_starting_qb", "competition_change_roster",

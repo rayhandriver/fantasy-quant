@@ -1057,3 +1057,38 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
   that is supposed to be offensive redraft. Removing the contamination took it to **0.61 %**. A join-rate
   gate on a *derived* artifact is a cheap detector for "the wrong rows are in here" — the crosswalk was
   never broken, the population was.
+
+
+## Session F.6 terms (2026-07-26)
+
+**eligible draft** — the corpus filter every Sleeper consumer must apply before learning anything
+about redraft behaviour: `is_human` · `status='complete'` · `draft_type='snake'` · a redraft
+`scoring` with a board analog · inside the Aug 1–Sep 15 preseason window. 1,426 of 7,699 human
+drafts qualify. Implemented once in `adp/drift_panel.eligible_drafts`; consumed by 16.7, 11.1 and
+11.2. Anything outside it is a *different market*, not noisy redraft.
+
+**board key** — a consensus board is identified by **(season, scoring, teams)**, never by season
+alone. Asking for a board without all three is the single most repeated bug in this repo: F.5
+(hardcoded `scoring="ppr"`), F.6 (hardcoded 10-team PPR board in the behavioral path), and F.6
+again (`teams=10` against `sleeper_human` boards labelled with the *modal* league size). See
+`adp/boards.py`.
+
+**calibrated fallback** — a substitute data source is not a drop-in until its units are shown to
+match the original. ECR ranks 544+ players where FFC boards ~200 and compresses ADP ~2×; used raw
+it manufactured +17.5-round "reaches". The fallback maps rank→ADP isotonically on overlapping
+seasons and truncates at the original's depth. *Check the distribution of the substitute against
+the thing it substitutes for, before trusting a single row.*
+
+**scale does not launder a leak** — the sharpened form of the ablation rule. A leak-prone feature
+derived from the target's siblings gets *better* as the corpus grows, so a rising headline is
+exactly what a leak looks like from the outside. 16.8's headline went +1.05 % → +9.25 % while its
+ablation went −1.75 % → +0.01 %. Only the ablation distinguishes the two.
+
+**contamination invents effects** — the F.6 headline lesson. A wrong-population corpus does not
+merely widen confidence intervals; it produces coefficients that tell a coherent, plausible story
+(*"managers reach for rookies and QBs"*) which is really a description of which leagues leaked in.
+Noise is visible in a CI; contamination is not.
+
+**the sample you did not choose** — `n_drafts: 21`, the thinnest number in the repo and cited for
+two sessions as a corpus limit, was the default argument `max_drafts_per_season=3`. When a headline
+rests on a sample size nobody deliberately picked, treat it as an upper bound on the effect.

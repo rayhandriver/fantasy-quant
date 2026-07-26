@@ -61,8 +61,60 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★ Next-session pointer (2026-07-25, ★ SESSION F.5 COMPLETE — corpus expansion. RESUME AT
-> SESSION F.6, *then* G.) READ THIS FIRST — it is written to resume cold.**
+> **★★ Next-session pointer (2026-07-26, ★ SESSION F.6 COMPLETE — the re-derivation sweep.
+> RESUME AT SESSION G.) READ THIS FIRST — it is written to resume cold.**
+>
+> **State:** **411 tests** (was 395), ruff clean, all data-health gates PASS. Committed on `main`,
+> **not pushed**. Stage-0 FFC chore: next due after 07-30. DEV-only; the spent lockbox is untouched.
+>
+> **★★ THE FINDING TO CARRY FORWARD — a contaminated corpus invents effects.** F.5 fixed format
+> contamination on the ADP board path but the **behavioral** path had the identical bug:
+> `build_choice_frame`/`availability_brier` read all 7,699 human drafts (74 % dynasty/2QB/IDP/
+> auction/abandoned) against one hardcoded 10-team PPR board. Of those, **1,426 are eligible**.
+> Re-fitting on the clean corpus deleted two "behavioral findings": `rookie` +0.45→**+0.11** (that
+> was dynasty rooms) and `is_QB` +0.17→**−0.03** (2QB rooms), while `adp_s` doubled
+> −0.85→**−1.68**. *Noise shows up in a CI; contamination shows up as a plausible result.*
+> Eligibility now lives in one place — `adp/boards.py` + `drift_panel.eligible_drafts` — and
+> `tests/test_boards.py` fails on the old rule (verified by reverting, not by inspection).
+>
+> **★ Results after the sweep.** 11.1: **+0.1738** log-loss gain CI[+0.1693,+0.1781] on 70,614
+> groups (was +0.1126 / 7,900) — beats ADP. 11.2: gain **+0.0864** CI[+0.0769,+0.0980] on 36,972
+> windows over 252 drafts — still beats best-tuned ADP+noise, but **half** the +0.1587 that 21
+> drafts implied (`n_drafts: 21` was a *default argument*, not a corpus limit). S6 adaptive
+> re-validated and stronger: adaptive(hero_rb) **+19.4 CI[+4.5,+32.9]**.
+>
+> **★ 16.8: the leak got stronger with more data.** Headline **+9.25 %** CI[+3.29,+13.91] (bar is
+> 2 %) — and the mandatory ablation without `source_divergence` is **+0.01 %** CI[−1.98,+1.84].
+> With more sibling drafts the leave-one-draft-out board estimates each room's own consensus
+> better, so the leak-prone feature predicts better. **Scale does not launder a leak — a rising
+> headline is what a leak looks like from outside.** Verdict stands: no per-player drift forecast
+> for 16.9; it shapes its shock from the ablation survivors (`rookie`, `adp_stdev`, `vbd_gap`,
+> `pos_WR`, `pos_TE`).
+>
+> **★ Decisions taken this session (do not re-litigate):** ECR adopted as the 2025 board fallback
+> but **calibrated** (isotonic rank→ADP + truncation at FFC's median depth 182 — raw rank produced
+> +17.5-round fake reaches and a 2025 sd of 2.67 vs 1.82 after); the pre-registered 16.8 headline
+> stays **FFC-only** with ECR as a labelled sensitivity; **no per-manager random effects**
+> (ablating `mgr_lean` costs 16 % of the gain, and the eligible corpus has only 111 managers with
+> ≥10 drafts — the "1,330 with 10+" figure counted all formats); 11.1 fits a **sampled 60
+> drafts/season** because the full frame is ~8M rows and this box has ~3 GB.
+>
+> **★ New tech debt: T13** (🟠 the Phase-5 cloud is **not reproducible across processes** — dress
+> coverage wobbles 75.5↔76.5 %, so Session D's 75.5 % and today's 76.5 % are *the same number*;
+> frozen layer, fix at Phase 14) and **T14** (🟡 11.2's bootstrap is O(n_boot × n_drafts ×
+> n_windows), ~45 min at 252 drafts). **T11(b) closed.**
+>
+> **★ The 2025 dress rehearsal ran its season sim for the first time** (Session D could not): 300
+> team-seasons, playoff Brier 0.2325 < 0.240, title Brier 0.0905 vs 0.090 (marginal miss), points
+> coverage 0.88. Cause of the old skip: `sleeper_human` boards are labelled with the **modal**
+> league size (12 from 2019 on) while every consumer asks for `teams=10` — the hardcoded-label
+> family, third instance. Fixed at harness level; frozen readers untouched.
+>
+> **★ NEXT: Session G** — apply the drift, 16.9–16.12 + 16.16, under the null's constraint
+> (dispersion match, no mean signal). Then H (personalities) → I (Phase 17 formats) → K (Phase 14
+> app, last). Re-running 11.2 at scale first? Fix T14 or it costs ~45 min of bootstrap.
+>
+> _(Prior pointer — history.)_ **★★ (2026-07-25, ★ SESSION F.5 COMPLETE — corpus expansion.)**
 >
 > **State:** **395 tests** (was 382), ruff clean, **all data-health gates PASS for the first time**
 > (T12 closed). DB backed up 2026-07-25 (357 MB, checksums verified). Stage-0 FFC chore: current,

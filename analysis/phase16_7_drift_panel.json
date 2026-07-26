@@ -2,23 +2,29 @@
   "funnel": {
     "human_complete": 7619,
     "eligible": 1426,
-    "with_board": 1144,
-    "seasons_without_board": [
-      2025
-    ]
+    "with_board": 1420,
+    "seasons_without_board": [],
+    "by_board_source": {
+      "ecr": 276,
+      "ffc": 1144
+    }
   },
   "summary": {
-    "n_rows": 157349,
-    "n_drafts": 1144,
-    "n_seasons": 8,
-    "n_players": 490,
-    "mean_drift": -0.316714174466742,
-    "sd_drift": 2.085677787636572,
-    "p10_drift": -2.4700000000000006,
-    "p90_drift": 1.6833333333333336,
-    "mean_days_to_board": 4.2315681096482
+    "n_rows": 197227,
+    "n_drafts": 1420,
+    "n_seasons": 9,
+    "n_players": 529,
+    "mean_drift": -0.1997780308705468,
+    "sd_drift": 2.109671916533393,
+    "p10_drift": -2.3899999999999997,
+    "p90_drift": 1.9303174603174593,
+    "mean_days_to_board": 4.930235053018962
   },
-  "drift_centered_sd": 1.8160516109904137,
+  "drift_centered_sd": 1.8163502274723218,
+  "drift_centered_sd_by_source": {
+    "ecr": 1.8175280175943127,
+    "ffc": 1.816051610990407
+  },
   "per_season": [
     {
       "season": 2017,
@@ -67,13 +73,19 @@
       "drafts": 176,
       "picks": 26017,
       "sd": 1.7500752964529003
+    },
+    {
+      "season": 2025,
+      "drafts": 276,
+      "picks": 39878,
+      "sd": 1.8175508066283819
     }
   ],
   "pos_bias": {
-    "QB": -0.2673440860581315,
-    "RB": -0.21375171349804192,
-    "WR": 0.1506741228978978,
-    "TE": 0.44663592589624324
+    "QB": -0.38323582957831,
+    "RB": -0.07720382520473859,
+    "WR": 0.06785488245044871,
+    "TE": 0.43355885565933644
   },
   "lockbox_rows": 56293,
   "top_reaches": [
@@ -94,6 +106,22 @@
       "sd_drift": 1.8390327895957068
     },
     {
+      "season": 2025,
+      "name": "Quinshon Judkins",
+      "pos": "RB",
+      "n_drafts": 258,
+      "mean_drift_centered": 4.337567446494876,
+      "sd_drift": 1.9010821595822427
+    },
+    {
+      "season": 2025,
+      "name": "Joe Mixon",
+      "pos": "RB",
+      "n_drafts": 239,
+      "mean_drift_centered": 4.128880924337404,
+      "sd_drift": 2.771726017407258
+    },
+    {
       "season": 2018,
       "name": "Nyheim Hines",
       "pos": "RB",
@@ -108,6 +136,22 @@
       "n_drafts": 171,
       "mean_drift_centered": 3.602800447101139,
       "sd_drift": 1.5774337990727525
+    },
+    {
+      "season": 2025,
+      "name": "Brian Robinson",
+      "pos": "RB",
+      "n_drafts": 256,
+      "mean_drift_centered": 3.5334769623844964,
+      "sd_drift": 1.7858851621292264
+    },
+    {
+      "season": 2025,
+      "name": "Jacory Croskey-Merritt",
+      "pos": "RB",
+      "n_drafts": 233,
+      "mean_drift_centered": 3.467187271382388,
+      "sd_drift": 2.2592693566674877
     },
     {
       "season": 2022,
@@ -164,65 +208,9 @@
       "n_drafts": 62,
       "mean_drift_centered": 2.895123891595321,
       "sd_drift": 5.360362799237951
-    },
-    {
-      "season": 2024,
-      "name": "Brock Bowers",
-      "pos": "TE",
-      "n_drafts": 171,
-      "mean_drift_centered": 2.880170481854852,
-      "sd_drift": 1.8997760636556273
-    },
-    {
-      "season": 2018,
-      "name": "Mitch Trubisky",
-      "pos": "QB",
-      "n_drafts": 5,
-      "mean_drift_centered": 2.7910148347364516,
-      "sd_drift": 3.1564803564037596
-    },
-    {
-      "season": 2022,
-      "name": "T.J. Hockenson",
-      "pos": "TE",
-      "n_drafts": 167,
-      "mean_drift_centered": 2.789486912850627,
-      "sd_drift": 2.884969047292228
-    },
-    {
-      "season": 2018,
-      "name": "James Conner",
-      "pos": "RB",
-      "n_drafts": 30,
-      "mean_drift_centered": 2.747060745396874,
-      "sd_drift": 3.4860968724831407
     }
   ],
   "top_fallers": [
-    {
-      "season": 2019,
-      "name": "Ben Roethlisberger",
-      "pos": "QB",
-      "n_drafts": 67,
-      "mean_drift_centered": -2.301318958999338,
-      "sd_drift": 2.595533124847045
-    },
-    {
-      "season": 2021,
-      "name": "Giovani Bernard",
-      "pos": "RB",
-      "n_drafts": 81,
-      "mean_drift_centered": -2.316917946569797,
-      "sd_drift": 2.1651882603239487
-    },
-    {
-      "season": 2024,
-      "name": "Nick Chubb",
-      "pos": "RB",
-      "n_drafts": 171,
-      "mean_drift_centered": -2.372086622562085,
-      "sd_drift": 1.8091389090181813
-    },
     {
       "season": 2017,
       "name": "Chris Hogan",
@@ -264,6 +252,14 @@
       "sd_drift": 3.359736558389016
     },
     {
+      "season": 2025,
+      "name": "Caleb Williams",
+      "pos": "QB",
+      "n_drafts": 194,
+      "mean_drift_centered": -2.6385570726526466,
+      "sd_drift": 2.4772706114990855
+    },
+    {
       "season": 2022,
       "name": "J.D. McKissic",
       "pos": "RB",
@@ -286,6 +282,14 @@
       "n_drafts": 15,
       "mean_drift_centered": -2.830324061560671,
       "sd_drift": 4.177814716148759
+    },
+    {
+      "season": 2025,
+      "name": "Trevor Lawrence",
+      "pos": "QB",
+      "n_drafts": 134,
+      "mean_drift_centered": -3.103435196896299,
+      "sd_drift": 2.825400652316685
     },
     {
       "season": 2017,
@@ -312,6 +316,14 @@
       "sd_drift": 3.9079383335176434
     },
     {
+      "season": 2025,
+      "name": "Justin Fields",
+      "pos": "QB",
+      "n_drafts": 174,
+      "mean_drift_centered": -3.479248111265105,
+      "sd_drift": 2.492910534878697
+    },
+    {
       "season": 2023,
       "name": "Cordarrelle Patterson",
       "pos": "RB",
@@ -320,6 +332,6 @@
       "sd_drift": 2.3000808780466078
     }
   ],
-  "n_player_seasons": 1455,
-  "n_player_seasons_solid": 1401
+  "n_player_seasons": 1638,
+  "n_player_seasons_solid": 1584
 }

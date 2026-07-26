@@ -3,7 +3,8 @@
 The reframe (2026-07-04) promotes the opponent model from "unverifiable frontier flex" to
 **core, verifiable infrastructure**: its job — *who does each manager pick, given who's on the
 board* — has hard ground truth (the observed pick), so it is Brier/log-loss-scorable over the
-real Sleeper corpus (149 human drafts, 289 managers, ~11.6k identity-carrying skill picks).
+real Sleeper corpus (7,699 human drafts after the Session-F.5 expansion, 24,696 managers; the
+**eligible redraft** subset the model actually fits on is reported by :func:`corpus_funnel`).
 
 The model is a **conditional (McFadden) logit**: at a pick, the manager chooses one player from
 the set still on the board; the utility of each candidate is a linear function of behavioral
@@ -34,11 +35,14 @@ scored on a held-out season), so no metric is in-sample.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
 
+from fantasy_quant.adp.boards import resolve_boards
+from fantasy_quant.adp.drift_panel import eligible_drafts
 from fantasy_quant.draft.simulator import canon_pos
 
 # Feature layout -------------------------------------------------------------------------------
@@ -87,20 +91,55 @@ def _load_profiles(con) -> pd.DataFrame:
     return prof
 
 
-def build_choice_frame(con, *, board_source: str = "ffc", scoring: str = "ppr",
-                       teams: int = 10, top_k: int = 40,
-                       skill_only: bool = True) -> tuple[pd.DataFrame, list[str]]:
+def build_choice_frame(con, *, top_k: int = 40, skill_only: bool = True,
+                       seasons: Iterable[int] | None = None, allow_ecr: bool = True,
+                       max_drafts_per_season: int | None = None,
+                       seed: int = 0) -> tuple[pd.DataFrame, list[str]]:
     """Turn the human-draft corpus into conditional-logit **choice rows**.
 
     One row per *(pick, candidate)*: for every real human pick we form the candidate set = the
     ``top_k`` still-available players by consensus ADP, mark the realized pick ``chosen=1``, and
     attach the behavioral features. Returns ``(frame, feature_cols)`` where ``frame`` has a
-    ``group`` id (one draft-pick), ``season``, ``chosen`` and the feature columns.
+    ``group`` id (one draft-pick), ``season``, ``draft_id``, ``board_source``, ``chosen`` and the
+    feature columns.
+
+    **The corpus is** :func:`~fantasy_quant.adp.drift_panel.eligible_drafts` **, and each draft is
+    scored against its own board.** Until Session F.6 this function read *every* human draft —
+    dynasty, 2QB, IDP, auction, abandoned — against one hardcoded 10-team PPR board. At the 149-
+    draft corpus that was ~26 % contamination and survivable; after the F.5 expansion it is 74 %,
+    and a 2QB room's pick order is not evidence about redraft PPR behaviour. This is the same
+    format-contamination bug F.5 fixed on the ADP board path, in its second home; see
+    :mod:`fantasy_quant.adp.boards` for why a board key is (season, scoring, teams).
     """
-    board = _load_board(con, board_source, scoring, teams)
-    if skill_only:      # candidates are skill players only (K/DST availability is trivially late)
-        board = board[board["pos"].isin(("QB", "RB", "WR", "TE"))]
-    board_by_season = {s: g.reset_index(drop=True) for s, g in board.groupby("season")}
+    drafts = eligible_drafts(con, seasons)
+    if drafts.empty:
+        return pd.DataFrame(columns=["group", "season", "draft_id", "board_source", "chosen",
+                                     *ALL_FEATURES]), list(ALL_FEATURES)
+    if max_drafts_per_season is not None:
+        # An explicit, reported sampling budget — not a silent cap. Sampling is per season so the
+        # walk-forward keeps every held-out season; `seed` makes the draw reproducible.
+        keep = [g.sample(min(len(g), max_drafts_per_season), random_state=seed)
+                for _s, g in drafts.groupby("season", sort=True)]
+        drafts = pd.concat(keep, ignore_index=True)
+    keys = list(zip(drafts["season"], drafts["ffc_scoring"], drafts["board_teams"], strict=False))
+    resolved = resolve_boards(con, keys, allow_ecr=allow_ecr)
+
+    board_cache: dict[tuple, tuple[pd.DataFrame, str]] = {}
+    for key, (bd, src) in resolved.items():
+        if bd.empty:
+            continue
+        bd = bd.copy()
+        bd["pos"] = bd["position"].map(canon_pos)
+        bd["adp"] = pd.to_numeric(bd["adp"], errors="coerce")
+        bd = bd.dropna(subset=["pos", "adp"])
+        if skill_only:  # candidates are skill players only (K/DST availability is trivially late)
+            bd = bd[bd["pos"].isin(("QB", "RB", "WR", "TE"))]
+        board_cache[key] = (bd.sort_values("adp").reset_index(drop=True), src)
+    board_key_of = {
+        str(d): (int(s), str(sc), int(t))
+        for d, s, sc, t in zip(drafts["draft_id"], drafts["season"], drafts["ffc_scoring"],
+                               drafts["board_teams"], strict=False)
+    }
 
     # per-season rookie map (years_exp == 0 anywhere in the corpus that season)
     exp = con.execute(
@@ -127,25 +166,42 @@ def build_choice_frame(con, *, board_source: str = "ffc", scoring: str = "ppr",
                 for p in ("QB", "RB", "WR", "TE")
             }
 
+    ids = drafts["draft_id"].astype(str).tolist()
+    ph = ",".join("?" * len(ids))
     picks = con.execute(
-        """
+        f"""
         SELECT p.draft_id, p.season, p.pick_no, p.picked_by, p.gsis_id, p.position, p.nfl_team
-        FROM sleeper_draft_picks p JOIN sleeper_drafts d USING(draft_id)
-        WHERE d.is_human = TRUE AND p.picked_by IS NOT NULL AND p.gsis_id IS NOT NULL
+        FROM sleeper_draft_picks p
+        WHERE p.draft_id IN ({ph}) AND p.picked_by IS NOT NULL AND p.gsis_id IS NOT NULL
         ORDER BY p.draft_id, p.pick_no
-        """
+        """,
+        ids,
     ).df()
     picks["pos"] = picks["position"].map(canon_pos)
     if skill_only:
         picks = picks[picks["pos"].isin(("QB", "RB", "WR", "TE"))]
 
-    rows = []
+    # One draft contributes ~140 boarded picks x `top_k` candidates, so the full eligible corpus
+    # is ~8M rows. Accumulated as Python tuples that does not fit in memory; rows are therefore
+    # built as one typed block per draft and concatenated once, with draft_id / board_source held
+    # as integer codes and rehydrated as categoricals at the end.
+    blocks: list[np.ndarray] = []
+    draft_codes: list[np.ndarray] = []
+    src_codes: list[np.ndarray] = []
+    draft_levels: list[str] = []
+    src_levels: list[str] = []
+    src_index: dict[str, int] = {}
     gid = 0
-    for _draft_id, dpicks in picks.groupby("draft_id", sort=False):
+    for draft_id, dpicks in picks.groupby("draft_id", sort=False):
         season = int(dpicks["season"].iloc[0])
-        bd = board_by_season.get(season)
-        if bd is None or bd.empty:
-            continue
+        cached = board_cache.get(board_key_of.get(str(draft_id), ()))
+        if cached is None:
+            continue                      # no consensus board published for this draft's cell
+        bd, board_src = cached
+        rows: list[tuple] = []
+        if board_src not in src_index:
+            src_index[board_src] = len(src_levels)
+            src_levels.append(board_src)
         adp_map = dict(zip(bd["gsis_id"], bd["adp"], strict=False))
         pos_map = dict(zip(bd["gsis_id"], bd["pos"], strict=False))
         team_map = dict(zip(bd["gsis_id"], bd["team"], strict=False))
@@ -204,9 +260,52 @@ def build_choice_frame(con, *, board_source: str = "ffc", scoring: str = "ppr",
             mgr_counts.setdefault(mgr, {})
             mgr_counts[mgr][pk["pos"]] = mgr_counts[mgr].get(pk["pos"], 0) + 1
 
-    cols = ["group", "season", "chosen", *ALL_FEATURES]
-    frame = pd.DataFrame(rows, columns=cols)
-    return frame, list(ALL_FEATURES)
+        if rows:
+            blk = np.asarray(rows, dtype=np.float32)
+            blocks.append(blk)
+            draft_codes.append(np.full(len(blk), len(draft_levels), dtype=np.int32))
+            src_codes.append(np.full(len(blk), src_index[board_src], dtype=np.int8))
+            draft_levels.append(str(draft_id))
+
+    num_cols = ["group", "season", "chosen", *ALL_FEATURES]
+    if not blocks:
+        return (pd.DataFrame(columns=["group", "season", "draft_id", "board_source", "chosen",
+                                      *ALL_FEATURES]), list(ALL_FEATURES))
+    arr = np.concatenate(blocks)
+    del blocks
+    frame = pd.DataFrame(arr, columns=num_cols)
+    frame["group"] = frame["group"].astype(np.int32)
+    frame["season"] = frame["season"].astype(np.int16)
+    frame["chosen"] = frame["chosen"].astype(np.int8)
+    frame["draft_id"] = pd.Categorical.from_codes(np.concatenate(draft_codes), draft_levels)
+    frame["board_source"] = pd.Categorical.from_codes(np.concatenate(src_codes), src_levels)
+    cols = ["group", "season", "draft_id", "board_source", "chosen", *ALL_FEATURES]
+    return frame[cols], list(ALL_FEATURES)
+
+
+def corpus_funnel(con, seasons: Iterable[int] | None = None,
+                  *, allow_ecr: bool = True) -> dict:
+    """How the raw human corpus narrows to the drafts the behavioral model may learn from.
+
+    Reported rather than assumed: the gap between "human drafts we hold" and "human *redraft*
+    drafts with a board" is the whole substance of the F.5/F.6 contamination lesson.
+    """
+    raw = int(con.execute("SELECT count(*) FROM sleeper_drafts WHERE is_human").fetchone()[0])
+    drafts = eligible_drafts(con, seasons)
+    if drafts.empty:
+        return {"human_drafts": raw, "eligible": 0, "with_board": 0, "by_board_source": {}}
+    keys = list(zip(drafts["season"], drafts["ffc_scoring"], drafts["board_teams"], strict=False))
+    resolved = resolve_boards(con, keys, allow_ecr=allow_ecr)
+    src_of = {k: s for k, (b, s) in resolved.items() if not b.empty}
+    got = [src_of.get((int(s), str(sc), int(t)), "")
+           for s, sc, t in zip(drafts["season"], drafts["ffc_scoring"], drafts["board_teams"],
+                               strict=False)]
+    by_src: dict[str, int] = {}
+    for s in got:
+        if s:
+            by_src[s] = by_src.get(s, 0) + 1
+    return {"human_drafts": raw, "eligible": int(len(drafts)),
+            "with_board": int(sum(1 for s in got if s)), "by_board_source": by_src}
 
 
 # =============================================================================================

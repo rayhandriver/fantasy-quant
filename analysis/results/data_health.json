@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-26T00:47:50.858659+00:00",
+  "generated_at": "2026-07-26T06:01:31.476005+00:00",
   "tables": {
     "adp_snapshots": 34469,
     "combine": 4080,
@@ -101,7 +101,7 @@
       "passed": true,
       "live_season": 2026,
       "latest": "2026-07-24",
-      "age_days": 1,
+      "age_days": 2,
       "max_age_days": 6
     },
     {

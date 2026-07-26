@@ -238,6 +238,10 @@ how 11+7 combined a spine-completion phase with a 4-substep exploratory phase:
 - **Sessions A–D ☑ DONE** (S6+13.1–13.2 · 13.3–13.5 · Phase 12+15 · MCTS gate+T5+LOCKBOX). *(kept for the
   record; sizing held.)*
 
+**(2026-07-26: Session F.6 ☑ — the re-derivation sweep. 11.1/11.2/S6 re-fit on the *eligible*
+redraft corpus after the behavioral path was found to carry F.5's contamination bug; 16.8 re-asked
+and the null HELD (headline +9.25 %, ablation +0.01 %). ← NOW: Session G.)**
+
 **★ SESSION PLAN (re-ordered 2026-07-23 — the full remaining backlog, dependency-optimal, app strictly last,
 same ~1.5–2.2k-line one-concept discipline).** Covers everything not done: Phase 16 (3 tracks) + 0.11 + 16.16,
 Phase 17, Phase 14, T10, and the deferred 15.1 dynasty. The lead is pinned by real dependencies

@@ -200,3 +200,29 @@ The plumbing is built and verified; the ingest is corpus-ready. To make the deri
 Pulling a league surfaces the *other* managers' public Sleeper handles and picks. That's already public via
 the API, but it is other people's league data entering our store — worth a heads-up before ingesting a
 shared league.
+
+## The eligibility contract (Session F.6, 2026-07-26)
+
+**Holding a draft is not the same as being able to learn from it.** The crawler filters nothing at
+ingest (deliberately — Phase 17 wants the dynasty/2QB/IDP rooms), so every *consumer* must apply
+the eligibility filter itself:
+
+    is_human · status='complete' · draft_type='snake' · scoring ∈ {ppr, half_ppr, std} · Aug1–Sep15
+
+**1,426 of 7,699** human drafts qualify. One implementation, `adp.drift_panel.eligible_drafts`,
+consumed by 16.7, 11.1 and 11.2; board resolution is `adp.boards.resolve_board`, keyed on
+**(season, scoring, teams)**.
+
+Two traps this closes, both of which had silently shipped:
+
+1. **The behavioral path never had the filter.** `build_choice_frame`/`availability_brier` selected
+   on `is_human` alone and scored everything against one 10-team PPR board. 74 % of the corpus is a
+   different market, and the resulting fit reported a rookie premium (dynasty rooms) and a QB
+   appetite (2QB rooms) as if they were redraft behaviour.
+2. **`sleeper_human` board `teams` is the MODAL league size** of the drafts that built it (10 in
+   2017, 12 from 2019, 32 for one thin 2022 cohort) — so a consumer pinning `teams=10` gets an
+   empty board for most seasons. Look the label up; never assume it.
+
+**2025 has no FFC board**; the calibrated ECR fallback (`adp.boards`) covers it. ECR is a *proxy* —
+rank mapped isotonically onto the ADP scale and truncated to FFC's depth — so ECR-boarded rows are
+tagged `board_source='ecr'` and stay out of any pre-registered headline.

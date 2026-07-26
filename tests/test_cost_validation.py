@@ -90,3 +90,20 @@ def test_crosscheck_no_relationship_low_agreement():
     long = _long([10, -10, 10, -10, 10, -10], [5, 5, 5, 5, 5, 5])
     cc = crosscheck(long)
     assert cc.sign_agreement <= 0.6
+
+
+def test_empty_sweep_raises_a_diagnostic_error_not_a_keyerror(monkeypatch):
+    """A season with no draftable board must say so, not die inside pandas.
+
+    Regression for the 2025 dress rehearsal: `validate_archetypes` returned an empty frame and
+    surfaced `KeyError: 'subject'`, which reads like a schema bug and hides the real cause (the
+    board's `teams` label did not match what the harness asked for).
+    """
+    import pytest
+
+    from fantasy_quant.valuation import cost_validation as cv
+
+    monkeypatch.setattr(cv, "paired_costs",
+                        lambda *a, **k: pd.DataFrame())
+    with pytest.raises(ValueError, match="no drafts"):
+        cv.validate_archetypes(None, archetypes=["zero_rb"], seasons=(2025,))

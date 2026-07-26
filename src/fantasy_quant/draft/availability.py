@@ -18,7 +18,9 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from fantasy_quant.draft.opponent_model import _load_board, _load_profiles
+from fantasy_quant.adp.boards import resolve_boards
+from fantasy_quant.adp.drift_panel import eligible_drafts
+from fantasy_quant.draft.opponent_model import _load_profiles
 from fantasy_quant.draft.optimizer import DEFAULT_NOISE, survival_prob
 from fantasy_quant.draft.simulator import canon_pos
 
@@ -69,8 +71,8 @@ _NEED_TARGET = {"QB": 1, "RB": 4, "WR": 4, "TE": 1}
 _NOISE_GRID = (3.0, 5.0, 8.0, 12.0, 18.0, 26.0, 36.0)   # ADP+noise baseline tuned over this grid
 
 
-def availability_brier(con, model, *, board_source: str = "ffc", scoring: str = "ppr",
-                       teams: int = 10, n_sims: int = 60, contested_k: int = 30,
+def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
+                       n_sims: int = 60, contested_k: int = 30,
                        max_drafts_per_season: int = 8, noise: float = DEFAULT_NOISE,
                        n_boot: int = 400, seed: int = 0) -> dict:
     """Score availability forecasts on real draft windows. For every seat's consecutive pick pair
@@ -78,11 +80,35 @@ def availability_brier(con, model, *, board_source: str = "ffc", scoring: str = 
     band (the ``contested_k`` lowest-ADP available players) under (a) the behavioral flow and
     (b) ``survival_prob`` (ADP+noise), and Brier-score both against realized availability.
     Bootstraps the per-window Brier difference for a CI.
+
+    Draws from the same eligible-redraft corpus as
+    :func:`~fantasy_quant.draft.opponent_model.build_choice_frame`, each draft against its own
+    (season, scoring, teams) board — see :mod:`fantasy_quant.adp.boards`. ``max_drafts_per_season``
+    is the sampling budget, and it, not the corpus, is what held the reported ``n_drafts`` to 21
+    through Session F.5.
     """
     rng = np.random.default_rng(seed)
-    board = _load_board(con, board_source, scoring, teams)
-    board = board[board["pos"].isin(("QB", "RB", "WR", "TE"))]
-    board_by_season = {s: g.reset_index(drop=True) for s, g in board.groupby("season")}
+    drafts = eligible_drafts(con, seasons)
+    if drafts.empty:
+        raise ValueError("no eligible redraft drafts in the corpus")
+    keys = list(zip(drafts["season"], drafts["ffc_scoring"], drafts["board_teams"], strict=False))
+    resolved = resolve_boards(con, keys, allow_ecr=allow_ecr)
+    board_cache: dict[tuple, pd.DataFrame] = {}
+    for key, (bd, _src) in resolved.items():
+        if bd.empty:
+            continue
+        bd = bd.copy()
+        bd["pos"] = bd["position"].map(canon_pos)
+        bd["adp"] = pd.to_numeric(bd["adp"], errors="coerce")
+        bd = bd.dropna(subset=["pos", "adp"])
+        bd = bd[bd["pos"].isin(("QB", "RB", "WR", "TE"))]
+        board_cache[key] = bd.sort_values("adp").reset_index(drop=True)
+    board_key_of = {
+        str(d): (int(s), str(sc), int(t))
+        for d, s, sc, t in zip(drafts["draft_id"], drafts["season"], drafts["ffc_scoring"],
+                               drafts["board_teams"], strict=False)
+    }
+    eligible_ids = [d for d in board_key_of if board_key_of[d] in board_cache]
 
     prof = _load_profiles(con)
     lean_by_mgr: dict = {}
@@ -101,19 +127,19 @@ def availability_brier(con, model, *, board_source: str = "ffc", scoring: str = 
     rookie_set = set(zip(exp.loc[exp["ye"] == 0, "season"],
                          exp.loc[exp["ye"] == 0, "gsis_id"], strict=False))
 
+    ph = ",".join("?" * len(eligible_ids))
     picks = con.execute(
-        """SELECT p.draft_id, p.season, p.pick_no, p.picked_by, p.gsis_id, p.position
-           FROM sleeper_draft_picks p JOIN sleeper_drafts d USING(draft_id)
-           WHERE d.is_human = TRUE AND p.picked_by IS NOT NULL AND p.gsis_id IS NOT NULL
-           ORDER BY p.draft_id, p.pick_no"""
+        f"""SELECT p.draft_id, p.season, p.pick_no, p.picked_by, p.gsis_id, p.position
+            FROM sleeper_draft_picks p
+            WHERE p.draft_id IN ({ph}) AND p.picked_by IS NOT NULL AND p.gsis_id IS NOT NULL
+            ORDER BY p.draft_id, p.pick_no""",
+        eligible_ids,
     ).df()
     picks["pos"] = picks["position"].map(canon_pos)
 
     # sample drafts evenly across seasons
     chosen_drafts = []
-    for s, g in picks.groupby("season"):
-        if s not in board_by_season:
-            continue
+    for _s, g in picks.groupby("season"):
         dids = [str(x) for x in g["draft_id"].unique()]
         rng.shuffle(dids)
         chosen_drafts.extend(dids[:max_drafts_per_season])
@@ -122,7 +148,7 @@ def availability_brier(con, model, *, board_source: str = "ffc", scoring: str = 
     for di, draft_id in enumerate(chosen_drafts):
         dpicks = picks[picks["draft_id"] == draft_id].sort_values("pick_no")
         season = int(dpicks["season"].iloc[0])
-        bd = board_by_season[season].copy()
+        bd = board_cache[board_key_of[str(draft_id)]].copy()
         bd["rookie"] = [1.0 if (season, g) in rookie_set else 0.0 for g in bd["gsis_id"]]
         gsis_to_row = {g: i for i, g in enumerate(bd["gsis_id"])}
         pick_rows = dpicks[["pick_no", "picked_by", "gsis_id", "pos"]].to_records(index=False)
