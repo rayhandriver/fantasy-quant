@@ -55,23 +55,69 @@ HUMAN_SOURCE = "sleeper_human"    # real multi-manager drafts (the ADP the oppon
 # derived artifacts (ADP boards, manager profiles) use only finished pick-order drafts — abandoned
 # drafts (a common crawl artifact: people quit mid-draft) and auctions would pollute ADP/reach.
 _QUALITY_FILTER = "d.status = 'complete' AND d.draft_type IN ('snake', 'linear')"
+# ★ ADP boards are REDRAFT-only, and carry the board's true scoring label (FFC's vocabulary, so
+# `adp_asof` reads Sleeper and FFC boards interchangeably). The crawled corpus is mostly NOT
+# redraft — measured 2026-07-25: of 7,399 complete human snake/linear drafts only 1,312 are PPR
+# redraft, against 2,547 dynasty_2qb, 952 2qb, 861 dynasty and 610 IDP. Pooling those onto one
+# board labelled 'ppr' (which is what a hardcoded `scoring="ppr"` did) prices a startup dynasty
+# room and a 2QB room as if they were redraft PPR. The non-redraft drafts stay in the raw tables
+# for Phase 17; they are simply not *redraft ADP*.
+REDRAFT_SCORING = {"ppr": "ppr", "half_ppr": "half-ppr", "std": "standard"}
 SEEDS_FILE = PROJECT_ROOT / "reference" / "sleeper_seeds.txt"
-# how many past seasons a user-history crawl walks back over (Sleeper redraft history).
-CRAWL_SEASONS = tuple(str(y) for y in range(2018, 2027))
-_CRAWL_SLEEP = 0.05               # politeness between calls (Sleeper allows ~1000/min)
+# how many past seasons a user-history crawl walks back over. 2017 is Sleeper's first NFL season,
+# so this is the full reachable history — nothing is gained by starting later.
+CRAWL_SEASONS = tuple(str(y) for y in range(2017, 2027))
+_CRAWL_SLEEP = 0.05               # legacy per-call nap; superseded by the shared rate limiter
+CRAWL_RATE = 10.0                 # calls/sec ceiling — see _RateLimiter
+ARCHIVE_PAYLOADS = True           # T7 raw-payload archive; off for bulk crawls (see crawl_frontier)
+
+
+class _RateLimiter:
+    """Token-bucket pacing shared by every Sleeper call.
+
+    Sleeper documents ~1000 calls/min (16.7/s) and we sit deliberately under it. A bucket rather
+    than a flat ``sleep`` per call because a flat nap *adds* to response latency instead of
+    absorbing it: the old fixed 0.05 s nap measured **29 calls/s** in practice, i.e. above the
+    documented ceiling. Here a slow response pays for its own latency and the ceiling is real.
+    Set ``rate <= 0`` to disable (tests).
+    """
+
+    def __init__(self, rate: float):
+        self.rate = rate
+        self._next = 0.0
+
+    def wait(self) -> None:
+        if self.rate <= 0:
+            return
+        now = time.monotonic()
+        if now < self._next:
+            time.sleep(self._next - now)
+        self._next = max(now, self._next) + 1.0 / self.rate
+
+
+_RATE = _RateLimiter(CRAWL_RATE)
 
 
 # --------------------------------------------------------------------------------------------
-# network (keyless, read-only, 404-tolerant, retry-guarded)
+# network (keyless, read-only, 404-tolerant, retry-guarded, rate-limited)
 # --------------------------------------------------------------------------------------------
 def _get(client: httpx.Client, path: str, *, retries: int = 3):
-    """GET ``BASE+path``; return parsed JSON, ``None`` on 404, retrying transient errors."""
+    """GET ``BASE+path``; return parsed JSON, ``None`` on 404, retrying transient errors.
+
+    A **429 backs off hard** (5 s × attempt) rather than hammering: on a multi-hour crawl the
+    polite thing and the effective thing coincide — the server stops answering either way."""
     last: Exception | None = None
     for attempt in range(retries):
+        _RATE.wait()
         try:
             r = client.get(f"{BASE}{path}")
             if r.status_code == 404:
                 return None
+            if r.status_code == 429:
+                log.warning("Sleeper 429 on %s — backing off", path)
+                last = RuntimeError(f"rate limited: {path}")
+                time.sleep(5.0 * (attempt + 1))
+                continue
             r.raise_for_status()
             return r.json()
         except (httpx.HTTPError, ValueError) as e:  # network hiccup / truncated JSON
@@ -83,7 +129,7 @@ def _get(client: httpx.Client, path: str, *, retries: int = 3):
 def fetch_draft(client: httpx.Client, draft_id: str) -> dict | None:
     """Draft metadata (type/status/settings/draft_order). Archives the raw JSON (T7)."""
     d = _get(client, f"/draft/{draft_id}")
-    if d is not None:
+    if d is not None and ARCHIVE_PAYLOADS:
         cache.archive_text(SLEEPER_RAW / "payloads", f"draft_{draft_id}",
                            _dumps(d), "json")
     return d
@@ -92,15 +138,22 @@ def fetch_draft(client: httpx.Client, draft_id: str) -> dict | None:
 def fetch_picks(client: httpx.Client, draft_id: str) -> list[dict]:
     """The pick-by-pick list for a draft. Archives the raw JSON (T7)."""
     p = _get(client, f"/draft/{draft_id}/picks") or []
-    if p:
+    if p and ARCHIVE_PAYLOADS:
         cache.archive_text(SLEEPER_RAW / "payloads", f"picks_{draft_id}", _dumps(p), "json")
     return p
 
 
 def discover_draft_ids(client: httpx.Client, *, username: str | None = None,
-                       user_id: str | None = None, seasons=None, sport: str = "nfl") -> list[str]:
+                       user_id: str | None = None, seasons=None, sport: str = "nfl",
+                       seen_leagues: set[str] | None = None) -> list[str]:
     """All draft_ids reachable from a ``username``/``user_id`` across ``seasons`` (user -> leagues
-    -> drafts). Mocks won't appear here (they're not attached to the user); real leagues do."""
+    -> drafts). Mocks won't appear here (they're not attached to the user); real leagues do.
+
+    ``seen_leagues`` is a caller-owned set of league_ids already expanded this run. A crawl over a
+    manager frontier revisits the *same* leagues constantly — the managers were discovered from
+    each other's leagues in the first place — so without this the ``/league/<id>/drafts`` call is
+    re-spent once per co-manager. Passing the set in (rather than caching internally) keeps the
+    function's cost visible to its caller and leaves it stateless between runs."""
     if user_id is None:
         if username is None:
             return []
@@ -114,7 +167,12 @@ def discover_draft_ids(client: httpx.Client, *, username: str | None = None,
     for season in seasons:
         leagues = _get(client, f"/user/{user_id}/leagues/{sport}/{season}") or []
         for lg in leagues:
-            drafts = _get(client, f"/league/{lg['league_id']}/drafts") or []
+            lid = str(lg.get("league_id") or "")
+            if not lid or (seen_leagues is not None and lid in seen_leagues):
+                continue
+            if seen_leagues is not None:
+                seen_leagues.add(lid)
+            drafts = _get(client, f"/league/{lid}/drafts") or []
             ids.extend(str(d["draft_id"]) for d in drafts if d.get("draft_id"))
         # a user can also own drafts directly (some are exposed on this endpoint)
         udrafts = _get(client, f"/user/{user_id}/drafts/{sport}/{season}") or []
@@ -241,9 +299,15 @@ def build_mock_adp(picks: pd.DataFrame, *, snapshot_date, season: int | None = N
     if df.empty:
         return pd.DataFrame()
     n_drafts = df["draft_id"].nunique()
-    df["_pkey"] = df["gsis_id"].where(
-        df["gsis_id"].notna(),
-        df["dst_team"].where(df["dst_team"].notna(), "SLPR:" + df["sleeper_player_id"].astype(str)),
+    # `.astype(object)` first: a corpus slice with no DST at all round-trips `dst_team` out of
+    # DuckDB as an all-NULL *numeric* column, and writing the string fallback into it raises. The
+    # key is a string by construction, so make the columns hold strings before choosing between
+    # them (the same all-NULL column-type drift `_upsert` reconciles on the write side).
+    _gsis = df["gsis_id"].astype(object)
+    _dst = df["dst_team"].astype(object)
+    df["_pkey"] = _gsis.where(
+        _gsis.notna(),
+        _dst.where(_dst.notna(), "SLPR:" + df["sleeper_player_id"].astype(str)),
     )
     g = df.groupby("_pkey")
     board = pd.DataFrame({
@@ -392,31 +456,40 @@ def log_unmatched_skill(picks: pd.DataFrame) -> pd.DataFrame:
 
 
 def _refresh_board(con, *, is_human: bool, source: str, season: int | None,
-                   scoring: str = "ppr", min_drafts: int = 1) -> pd.DataFrame:
+                   min_drafts: int = 1) -> pd.DataFrame:
     """Build ADP board(s) from the drafts matching ``is_human`` and (re)write them into
     ``adp_snapshots`` under ``source``, so ``adp_asof``/the sim use them. ADP is season-specific, so
-    a **separate board per season** is built (the crawled corpus spans years), each tagged with that
-    season's modal team-count. Only **complete** snake/linear drafts feed the board (abandoned
-    drafts and auctions are excluded — they'd pollute ADP). *(Simplification: within a season,
+    a **separate board per (season, scoring)** is built (the crawled corpus spans years and
+    formats), each tagged with that group's modal team-count. Only **complete** snake/linear
+    **redraft** drafts feed the board — abandoned drafts and auctions would pollute ADP, and
+    dynasty/2QB/IDP rooms are a different market rather than noisy redraft (see
+    :data:`REDRAFT_SCORING`). *(Simplification: within a season,
     drafts of different team-counts pool onto the modal-teams board; per-format split later.)*"""
+    fmts = ", ".join(f"'{k}'" for k in REDRAFT_SCORING)
     picks = con.execute(
-        "SELECT p.*, d.is_human, d.start_time_ms, d.teams AS draft_teams "
+        "SELECT p.*, d.is_human, d.start_time_ms, d.teams AS draft_teams, d.scoring "
         "FROM sleeper_draft_picks p JOIN sleeper_drafts d USING (draft_id) "
-        f"WHERE d.is_human = ? AND {_QUALITY_FILTER}", [is_human]
+        f"WHERE d.is_human = ? AND {_QUALITY_FILTER} AND d.scoring IN ({fmts})", [is_human]
     ).df()
     if season is not None:
         picks = picks[picks["season"] == season]
     picks = picks[picks["season"].notna()]
     if picks.empty:
         return pd.DataFrame()
+    # one board per (season, scoring): ADP is season-specific, and half-PPR/standard rooms draft
+    # pass-catchers differently enough that pooling them would blur the very thing ADP measures.
     boards = []
     for s in sorted(picks["season"].unique()):
-        sp = picks[picks["season"] == s]
-        teams = int(sp["draft_teams"].mode().iloc[0]) if sp["draft_teams"].notna().any() else 10
-        b = build_mock_adp(sp, snapshot_date=_latest_date(sp["start_time_ms"]), season=int(s),
-                           scoring=scoring, teams=teams, source=source, min_drafts=min_drafts)
-        if not b.empty:
-            boards.append(b)
+        for sleeper_fmt, board_fmt in REDRAFT_SCORING.items():
+            sp = picks[(picks["season"] == s) & (picks["scoring"] == sleeper_fmt)]
+            if sp.empty:
+                continue
+            teams = int(sp["draft_teams"].mode().iloc[0]) if sp["draft_teams"].notna().any() else 10
+            b = build_mock_adp(sp, snapshot_date=_latest_date(sp["start_time_ms"]), season=int(s),
+                               scoring=board_fmt, teams=teams, source=source,
+                               min_drafts=min_drafts)
+            if not b.empty:
+                boards.append(b)
     if not boards:
         return pd.DataFrame()
     board = pd.concat(boards, ignore_index=True)
@@ -430,19 +503,17 @@ def _refresh_board(con, *, is_human: bool, source: str, season: int | None,
     return board
 
 
-def refresh_mock_adp(con, *, season: int | None = None, scoring: str = "ppr",
-                     min_drafts: int = 1) -> pd.DataFrame:
+def refresh_mock_adp(con, *, season: int | None = None, min_drafts: int = 1) -> pd.DataFrame:
     """The ``sleeper_mock`` board — bot-only mock drafts (Sleeper's algorithmic ADP)."""
     return _refresh_board(con, is_human=False, source=MOCK_SOURCE, season=season,
-                          scoring=scoring, min_drafts=min_drafts)
+                          min_drafts=min_drafts)
 
 
-def refresh_human_adp(con, *, season: int | None = None, scoring: str = "ppr",
-                      min_drafts: int = 1) -> pd.DataFrame:
-    """The ``sleeper_human`` board — real multi-manager drafts (the ADP the opponent model wants,
-    kept separate so bot ADP never dilutes it)."""
+def refresh_human_adp(con, *, season: int | None = None, min_drafts: int = 1) -> pd.DataFrame:
+    """The ``sleeper_human`` board — real multi-manager redraft drafts (the ADP the opponent model
+    wants, kept separate so bot ADP never dilutes it)."""
     return _refresh_board(con, is_human=True, source=HUMAN_SOURCE, season=season,
-                          scoring=scoring, min_drafts=min_drafts)
+                          min_drafts=min_drafts)
 
 
 def refresh_adp_boards(con, *, season: int | None = None, min_drafts: int = 1) -> dict:
@@ -492,37 +563,47 @@ def participants_from_draft(draft: dict) -> set[str]:
 
 
 def crawl_user_history(client, *, username: str | None = None, user_id: str | None = None,
-                       seasons=None, sport: str = "nfl") -> list[str]:
+                       seasons=None, sport: str = "nfl", seen_leagues=None) -> list[str]:
     """All draft_ids a user is reachable from across ``seasons`` (defaults to the redraft-history
     window). Thin wrapper over :func:`discover_draft_ids` with the multi-season default."""
     return discover_draft_ids(client, username=username, user_id=user_id,
-                              seasons=seasons or CRAWL_SEASONS, sport=sport)
+                              seasons=seasons or CRAWL_SEASONS, sport=sport,
+                              seen_leagues=seen_leagues)
 
 
 def _league_members(client, league_id: str) -> tuple[list[str], list[str]]:
     """A league's draft_ids + member user_ids — the seed a public league URL gives (its
     ``league_id`` is in the URL). ``/league/<id>/drafts`` + ``/league/<id>/users`` are keyless."""
     drafts = _get(client, f"/league/{league_id}/drafts") or []
-    time.sleep(_CRAWL_SLEEP)
     users = _get(client, f"/league/{league_id}/users") or []
-    time.sleep(_CRAWL_SLEEP)
     return ([str(d["draft_id"]) for d in drafts if d.get("draft_id")],
             [str(u["user_id"]) for u in users if u.get("user_id")])
 
 
 def crawl_expand(client, *, seed_usernames=None, seed_draft_ids=None, seed_league_ids=None,
                  seasons=None, max_drafts: int = 500, expand_participants: bool = True,
-                 existing_ids=None) -> list[str]:
+                 existing_ids=None, users_done=None, on_user_done=None) -> list[str]:
     """Discover a corpus of draft_ids by **iterative BFS snowball**. Seed from usernames (crawl each
     user's full league/draft history), league_ids (→ their drafts + members), and draft_ids. If
     ``expand_participants``, every *human* (multi-manager) draft found queues its seated managers,
     whose histories are crawled in turn — so one league/lobby fans out through co-managers until no
     new users remain or ``max_drafts`` is hit. Skips ``existing_ids``, rate-limited. Returns the new
-    draft_ids to ingest."""
+    draft_ids to ingest.
+
+    ``users_done`` pre-seeds the visited set (resume a interrupted crawl); ``on_user_done`` is
+    called with each user_id as its history is finished, so the caller can persist that progress.
+
+    **Expansion is keyed on "have we expanded this draft", not "is this draft new".** The obvious
+    version — expand only when ``_add_draft`` reports a new id — silently kills the crawl on every
+    re-run: the caller seeds ``existing_ids`` with the whole store, so each already-ingested draft
+    reports "not new" and its participants are never queued. The frontier then collapses to
+    whatever the seed file happens to hold.
+    """
     seen: set[str] = {str(x) for x in (existing_ids or [])}
     found: list[str] = []
     users_todo: list[str] = []
-    users_done: set[str] = set()
+    users_done = {str(u) for u in (users_done or ())}
+    expanded: set[str] = set()
 
     def _add_draft(did) -> bool:
         did = str(did)
@@ -548,26 +629,26 @@ def crawl_expand(client, *, seed_usernames=None, seed_draft_ids=None, seed_leagu
             _queue_user(u)
     for uname in (seed_usernames or []):
         u = _get(client, f"/user/{uname}")
-        time.sleep(_CRAWL_SLEEP)
         if u and u.get("user_id"):
             _queue_user(u["user_id"])
 
-    # ---- BFS snowball: crawl a user's history, queue the participants of each new human draft ----
+    # ---- BFS snowball: crawl a user's history, queue the participants of each human draft ----
     while users_todo and len(found) < max_drafts:
         uid = users_todo.pop(0)
         if uid in users_done:
             continue
         users_done.add(uid)
         for did in crawl_user_history(client, user_id=uid, seasons=seasons):
-            is_new = _add_draft(did)
-            time.sleep(_CRAWL_SLEEP)
-            if not (expand_participants and is_new) or len(found) >= max_drafts:
+            _add_draft(did)
+            if not expand_participants or did in expanded or len(found) >= max_drafts:
                 continue
+            expanded.add(did)
             draft = fetch_draft(client, did)
-            time.sleep(_CRAWL_SLEEP)
             if draft and len(participants_from_draft(draft)) >= 2:  # a real multi-manager draft
                 for pid in participants_from_draft(draft):
                     _queue_user(pid)
+        if on_user_done is not None:
+            on_user_done(uid)
 
     return found[:max_drafts]
 
@@ -593,6 +674,200 @@ def load_seeds() -> dict:
         else:
             out["usernames"].append(tok)
     return out
+
+
+# --------------------------------------------------------------------------------------------
+# resumable crawl state — a bulk crawl is a long network walk that WILL be interrupted
+# --------------------------------------------------------------------------------------------
+USERS_TABLE = "sleeper_crawl_users"      # user_ids whose league/draft history has been walked
+QUEUE_TABLE = "sleeper_crawl_queue"      # discovered draft_ids awaiting (or past) ingest
+LEAGUES_TABLE = "sleeper_crawl_leagues"  # league_ids already expanded to their drafts
+
+
+def ensure_crawl_state(con) -> None:
+    """Create the three resume tables if absent.
+
+    Without them an interrupted crawl restarts from zero and re-spends the whole call budget on
+    work already done — the practical reason the previous run could never be extended."""
+    con.execute(f"CREATE TABLE IF NOT EXISTS {USERS_TABLE} "
+                "(user_id VARCHAR PRIMARY KEY, done_at TIMESTAMP)")
+    con.execute(f"CREATE TABLE IF NOT EXISTS {QUEUE_TABLE} "
+                "(draft_id VARCHAR PRIMARY KEY, status VARCHAR, seen_at TIMESTAMP)")
+    con.execute(f"CREATE TABLE IF NOT EXISTS {LEAGUES_TABLE} "
+                "(league_id VARCHAR PRIMARY KEY, done_at TIMESTAMP)")
+
+
+def crawled_leagues(con) -> set[str]:
+    """league_ids already expanded to their drafts (skip re-fetching them on resume)."""
+    ensure_crawl_state(con)
+    return {r[0] for r in con.execute(f"SELECT league_id FROM {LEAGUES_TABLE}").fetchall()}
+
+
+def mark_leagues_crawled(con, league_ids) -> None:
+    ids = [str(x) for x in league_ids if x]
+    if ids:
+        con.executemany(f"INSERT OR REPLACE INTO {LEAGUES_TABLE} VALUES (?, ?)",
+                        [(x, db.utc_now()) for x in ids])
+
+
+def crawled_users(con) -> set[str]:
+    """user_ids whose history has already been walked (skip them on resume)."""
+    ensure_crawl_state(con)
+    return {r[0] for r in con.execute(f"SELECT user_id FROM {USERS_TABLE}").fetchall()}
+
+
+def mark_user_crawled(con, user_id: str) -> None:
+    con.execute(f"INSERT OR REPLACE INTO {USERS_TABLE} VALUES (?, ?)",
+                [str(user_id), db.utc_now()])
+
+
+def enqueue_drafts(con, draft_ids) -> int:
+    """Add newly discovered draft_ids to the ingest queue as ``todo`` (idempotent)."""
+    ids = [str(d) for d in draft_ids if d]
+    if not ids:
+        return 0
+    ensure_crawl_state(con)
+    con.executemany(f"INSERT OR IGNORE INTO {QUEUE_TABLE} VALUES (?, 'todo', ?)",
+                    [(d, db.utc_now()) for d in ids])
+    return len(ids)
+
+
+def queue_todo(con, limit: int | None = None) -> list[str]:
+    """draft_ids still awaiting ingest."""
+    ensure_crawl_state(con)
+    sql = f"SELECT draft_id FROM {QUEUE_TABLE} WHERE status = 'todo'"
+    if limit:
+        sql += f" LIMIT {int(limit)}"
+    return [r[0] for r in con.execute(sql).fetchall()]
+
+
+def mark_queue(con, draft_ids, status: str) -> None:
+    """Retire queue rows as ``done`` (ingested) or ``dead`` (404/empty — never retry these).
+
+    Tracking dead ids is not bookkeeping pedantry: the previous 500-draft run spent **263 of its
+    500** on ids that never resolved, so more than half the budget bought nothing and every re-run
+    would have spent it again."""
+    ids = [str(d) for d in draft_ids if d]
+    if not ids:
+        return
+    con.executemany(f"UPDATE {QUEUE_TABLE} SET status = ? WHERE draft_id = ?",
+                    [(status, d) for d in ids])
+
+
+def seed_users_from_profiles(con) -> list[str]:
+    """Every manager already observed in the corpus — **the real crawl frontier**.
+
+    :func:`load_seeds` reads only the hand-maintained seed file (a handful of ids). The managers
+    discovered by past crawls live in ``sleeper_manager_profiles`` and were never fed back in as
+    seeds, so each run re-walked the same tiny neighbourhood. Ordered by picks observed, so the
+    most-connected managers are walked first and an interrupted run still gets the best of it."""
+    if not db.table_exists(con, "sleeper_manager_profiles"):
+        return []
+    return [str(r[0]) for r in con.execute(
+        "SELECT manager FROM sleeper_manager_profiles ORDER BY n_picks DESC").fetchall()]
+
+
+def crawl_frontier(con, *, user_ids=None, seasons=None, client: httpx.Client | None = None,
+                   expand_participants: bool = False, max_users: int | None = None,
+                   max_seconds: float | None = None, batch: int = 400,
+                   archive_payloads: bool = False, progress_every: int = 25) -> dict:
+    """Walk every frontier user's history, queueing what's new, then drain the queue in batches.
+
+    Two persisted phases so either can be interrupted and resumed:
+      1. **discover** — for each user not in ``USERS_TABLE``, list their league/draft history and
+         enqueue any draft_id not already in ``sleeper_drafts``; mark the user done.
+      2. **drain** — pull ``todo`` ids in ``batch``-sized chunks, ingest, retire them ``done`` or
+         ``dead``. Committing per batch is what makes a 45-minute run survivable.
+
+    ``expand_participants=False`` is the *frontier-only* crawl: walk the managers we already know
+    and stop, rather than snowballing into their co-managers. ``archive_payloads`` defaults off —
+    at this scale the T7 archive would be ~20k files, which is not an audit trail anyone can use.
+    """
+    global ARCHIVE_PAYLOADS
+    ensure_crawl_state(con)
+    t0 = time.monotonic()
+    owns = client is None
+    client = client or httpx.Client(timeout=60, headers=HEADERS)
+    prev_archive, ARCHIVE_PAYLOADS = ARCHIVE_PAYLOADS, archive_payloads
+
+    users = [str(u) for u in (user_ids if user_ids is not None else seed_users_from_profiles(con))]
+    done = crawled_users(con)
+    todo_users = [u for u in dict.fromkeys(users) if u not in done]
+    if max_users:
+        todo_users = todo_users[:max_users]
+
+    existing = set()
+    if db.table_exists(con, "sleeper_drafts"):
+        existing = {r[0] for r in con.execute("SELECT draft_id FROM sleeper_drafts").fetchall()}
+    known = existing | {r[0] for r in con.execute(f"SELECT draft_id FROM {QUEUE_TABLE}").fetchall()}
+
+    seen_leagues = crawled_leagues(con)
+    stats = {"users_walked": 0, "users_skipped": len(users) - len(todo_users),
+             "discovered": 0, "ingested": 0, "dead": 0, "leagues_seen": len(seen_leagues),
+             "stopped_early": False}
+    try:
+        # ---- phase 1: discovery ----
+        for i, uid in enumerate(todo_users, 1):
+            if max_seconds and time.monotonic() - t0 > max_seconds:
+                stats["stopped_early"] = True
+                log.warning("crawl_frontier: time budget hit during discovery (%d/%d users)",
+                            i - 1, len(todo_users))
+                break
+            before_leagues = set(seen_leagues)
+            found = crawl_user_history(client, user_id=uid, seasons=seasons or CRAWL_SEASONS,
+                                       seen_leagues=seen_leagues)
+            fresh = [d for d in found if d not in known]
+            known.update(fresh)
+            enqueue_drafts(con, fresh)
+            mark_leagues_crawled(con, seen_leagues - before_leagues)
+            if expand_participants:
+                # snowball: each human draft's co-managers join the frontier for a later pass
+                for did in fresh:
+                    draft = fetch_draft(client, did)
+                    if draft and len(participants_from_draft(draft)) >= 2:
+                        for pid in participants_from_draft(draft):
+                            if pid not in done and pid not in todo_users:
+                                todo_users.append(pid)
+            mark_user_crawled(con, uid)
+            done.add(uid)
+            stats["users_walked"] += 1
+            stats["discovered"] += len(fresh)
+            if progress_every and i % progress_every == 0:
+                log.info("crawl_frontier discovery %d/%d users — %d new drafts queued",
+                         i, len(todo_users), stats["discovered"])
+                print(f"  discovery {i}/{len(todo_users)} users — "
+                      f"{stats['discovered']} new drafts queued "
+                      f"({time.monotonic() - t0:.0f}s)", flush=True)
+
+        # ---- phase 2: drain the ingest queue in committed batches ----
+        while True:
+            if max_seconds and time.monotonic() - t0 > max_seconds:
+                stats["stopped_early"] = True
+                log.warning("crawl_frontier: time budget hit during ingest")
+                break
+            chunk = queue_todo(con, limit=batch)
+            if not chunk:
+                break
+            summary = ingest_drafts(con, chunk, client=client)
+            got = set(summary.get("draft_ids") or [])
+            # retire the WHOLE chunk first, then promote what actually landed. Marking only the
+            # ids we recognise would requeue anything unrecognised forever — an infinite loop in
+            # an unattended multi-hour run, which is the one failure mode worth designing out.
+            mark_queue(con, chunk, "dead")
+            mark_queue(con, sorted(got), "done")
+            stats["ingested"] += len(got)
+            stats["dead"] += len(chunk) - len(got)
+            print(f"  ingest +{len(got)} (dead {len(chunk) - len(got)}) — "
+                  f"{stats['ingested']} total ({time.monotonic() - t0:.0f}s)", flush=True)
+    finally:
+        ARCHIVE_PAYLOADS = prev_archive
+        if owns:
+            client.close()
+
+    stats["elapsed_s"] = round(time.monotonic() - t0, 1)
+    stats["queue_remaining"] = len(queue_todo(con))
+    stats["leagues_seen"] = len(seen_leagues)
+    return stats
 
 
 def crawl_and_ingest(con, *, seed_usernames=None, seed_draft_ids=None, seed_league_ids=None,

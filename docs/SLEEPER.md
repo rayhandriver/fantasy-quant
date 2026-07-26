@@ -100,6 +100,43 @@ Built on top of 0.10 so the corpus scales without hand-collecting ids (`steps/ph
 - **Behavioral seed:** `sleeper_manager_profiles` — per real manager (across all their drafts): draft count,
   per-position pick share, mean reach-vs-ADP, top NFL teams (crude fandom). The Phase-11 opponent-model input.
 
+### ★ Frontier mode + resumability (Session F.5, 2026-07-25)
+The 2026-07-11 crawl stalled at 266 drafts for reasons that were **mechanical, not methodological** — three
+defects, each of which made the crawl look exhausted when it was not:
+
+1. **The frontier was never fed back in.** `load_seeds()` reads only `reference/sleeper_seeds.txt` (a
+   handful of ids), while the managers the crawl *discovered* live in `sleeper_manager_profiles` and were
+   never used as seeds. Every re-run re-walked the same tiny neighbourhood.
+   → `seed_users_from_profiles(con)`, and `--mode frontier` (now the default) walks exactly that set.
+2. **Participant expansion dead-ended on re-runs.** `crawl_expand` queued a draft's co-managers only when
+   the draft id was *new*; but the caller seeds `existing_ids` with the entire store, so every
+   already-ingested draft reported "not new" and its participants were never queued. Expansion is now keyed
+   on *"have we expanded this draft"*, not *"is this draft new"* — pinned by a regression test.
+3. **The budget was spent on ids that never resolved.** `MAX_DRAFTS=500` counted *discovered* ids; **263 of
+   that 500** were 404/empty, so more than half the budget bought nothing and a re-run would spend it again.
+   Dead ids are now retired in `sleeper_crawl_queue` and never retried.
+
+**Resumable by construction.** `sleeper_crawl_users` (histories walked), `sleeper_crawl_leagues` (leagues
+expanded) and `sleeper_crawl_queue` (`todo`/`done`/`dead`) persist progress, and ingest commits per batch.
+A multi-hour crawl will be interrupted; without this it restarts from zero.
+
+**★ The league cache is the whole performance story.** `discover_draft_ids` calls `/league/<id>/drafts` per
+league per user — but a manager frontier is *built out of shared leagues*, so co-managers re-request the same
+league constantly. Passing a run-scoped `seen_leagues` set took discovery from **26 s/manager to 4.8 s/manager
+(5.4×)**. Measured, not estimated: the first pass without it projected ~4 hours, the cached pass ~30 min.
+
+**Pacing.** A `_RateLimiter` token bucket (`CRAWL_RATE`, 10 calls/s) replaces the old flat `time.sleep(0.05)`,
+which measured **29 calls/s** in practice — *above* Sleeper's documented ~1000/min — because a fixed nap adds
+to response latency instead of absorbing it. 429s back off 5 s × attempt.
+
+**Archiving.** `ARCHIVE_PAYLOADS` (off for bulk crawls, `--archive-payloads` to force on): at frontier scale
+the T7 raw archive would be ~20k files, which is not an audit trail anyone can use.
+
+**Formats are banked, not filtered.** Nothing is dropped at ingest — dynasty / 2QB / superflex / IDP drafts
+land alongside redraft. Downstream consumers filter for themselves (the 16.7 drift panel keeps redraft only);
+**Phase 17 (league-format fidelity) is the consumer that will want the rest**, and re-crawling for it later
+would cost the same hours again.
+
 ### Live corpus (2026-07-11) — seeded from the Sleeper docs' public example leagues
 Web-searched + validated two **public** real human leagues (the official API docs' examples, `picked_by`
 fully populated — this also **confirmed real-league drafts carry full opponent identity**, unlike mocks):
@@ -109,6 +146,29 @@ exhausting: **149 human + 117 bot drafts**, seasons 2017–2020, **289 manager p
 board ≈2,580 rows (per season), skill gsis-match **99.8 %**. All gates PASS. **This clears the Phase-11
 *data* blocker** — a first opponent-model fit + availability Brier can now run on real human picks (older
 seasons w/ realized outcomes). More/newer seeds broaden it; the fit itself is the next modeling step.
+
+### Live corpus (2026-07-25, after the F.5 frontier crawl) — the data blocker is gone
+367 managers walked, 8,207 leagues expanded, 10,700 drafts discovered → **8,148 ingested / 2,552 dead**,
+**70 minutes** wall clock, queue fully drained.
+
+| | 2026-07-11 | 2026-07-25 | × |
+|---|---|---|---|
+| Human drafts | 149 | **7,699** | 51.7× |
+| Bot drafts | 117 | 822 | 7.0× |
+| Picks | 17,082 | **1,207,687** | 70.7× |
+| Manager profiles | 289 | **24,696** | 85× |
+| Seasons | 2017–2020 | **2017–2026** | — |
+| 16.7 drift panel | 34 drafts | **1,144 drafts** | 33.6× |
+
+**Repeated managers — the constraint that gated Phase 11 — is comfortably cleared:** 8,511 managers seen
+in 2–4 drafts, 2,737 in 5–9, **1,330 in 10+**. (Phase 11.2's availability Brier was computed on **21**
+drafts.)
+
+**Redraft ADP boards** (`sleeper_human`): 7,129 ppr · 3,197 half-ppr · 2,247 standard, 2017–2026.
+**Banked for Phase 17** (not on any board): dynasty_2qb 2,607 · 2qb 1,021 · dynasty 861 · idp 610 ·
+dynasty_ppr 396 · dynasty_half_ppr 160 · dynasty_std 20 · idp_1qb 18 = **5,693** complete human drafts.
+
+All data-health gates PASS (the report had been permanently red on T12; also green now).
 
 ## How much data (what each source buys)
 | Source | Behavioral signal? | Good | Ideal | Powers |

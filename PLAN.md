@@ -1105,3 +1105,45 @@ for a sibling-derived feature, leave-one-out is not sufficient; report the fit w
 **Consequence for Session G:** 16.9 gets no mean drift signal; its dispersion done-bar needs none, and
 `aggregate_player_season.sd_drift` is the target. 16.10's curated hype board becomes the primary narrative
 channel. See `findings.md` §Session F and the CLAUDE.md ★★ pointer.
+
+## 2026-07-25 (session 4) — Session F.5: corpus expansion
+
+**Why this session existed at all.** The Session F pointer said 16.8 could only be re-asked with a bigger
+human corpus. Investigating that turned up the real cause of the small corpus: `analysis/results/sleeper_crawl.json`
+recorded `crawled_new: 500` — **exactly `MAX_DRAFTS`**. The crawl had hit its cap, not exhausted the graph.
+
+**Sequencing decision: F.5 before G, not after.** Session G's 16.9 done-bar is a *dispersion* (variance)
+match, which needs **sample, not signal**. Fitting it on 34 drafts and then re-fitting after a crawl is
+doing the session twice, so the crawl goes first.
+
+**Decisions taken by the user before building (2026-07-25):**
+1. **Frontier-only crawl** — walk the managers already in `sleeper_manager_profiles` and stop; no
+   second-order snowball into their co-managers. (Snowball is implemented and tested behind `--expand`.)
+2. **Ingest and bank non-redraft formats** — dynasty/2QB/superflex/IDP stored, not filtered at ingest, so
+   Phase 17 does not have to re-pay the crawl. Downstream consumers filter for themselves.
+3. **Archiver off for bulk crawls** — the T7 raw-payload archive would have been ~20k files, which is not
+   an audit trail anyone can use. Still on for incremental runs (`--archive-payloads` forces it).
+4. **Stop after the 16.7 funnel check** — no re-derivation this session, so every downstream decision is
+   made against a *measured* corpus size rather than a projected one.
+
+**Decisions deliberately NOT taken (carried to F.6):** re-asking 16.8 against the pre-registered >2 % bar;
+re-fit vs extend for Phase 11.1; re-running the 2025 dress rehearsal (a further read of the calibration
+holdout); adopting ECR as the board fallback for 2025.
+
+**T12 closed here, with the decision made explicitly rather than as a drive-by.** The ADP uniqueness gate's
+key gains `snapshot_date`. Folded into this session because it multiplies `sleeper_human` rows and would
+have made the permanently-red gate redder. Two tests pin **both** directions — a deliberate weekly snapshot
+series passes, two rows on the *same* snapshot still fail. Widening a uniqueness key is only safe if you
+show it still catches what it was built to catch.
+
+**One unplanned fix, taken because leaving it would have corrupted F.6.** The crawl turned a *passing* gate
+red (`ADP top-150 gsis match`, 3.5 % unmatched). Root cause was not the crosswalk but the population:
+`_refresh_board` hardcoded `scoring="ppr"`, pooling dynasty/2QB/IDP drafts onto a board labelled PPR
+redraft — 82 % contamination at frontier scale. Boards are now redraft-only and split per (season,
+scoring). This was in scope as "rebuild the derived artifacts", and shipping a knowingly-wrong ADP board
+would have silently poisoned every F.6 conclusion.
+
+**Estimate honesty.** The pre-session estimate was "~1 hr, ~25×". Actual: **70 min, 51.7×** — but only
+because a 3-manager smoke test caught that discovery was running at 26 s/manager (a ~4-hour projection)
+and prompted the league-cache fix that took it to 4.8 s/manager. The estimate was right by correction, not
+by foresight; smoke-test before launching a long unattended run.

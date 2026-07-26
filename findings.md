@@ -2151,3 +2151,117 @@ than distinct `snapshot_date`s, i.e. no genuine duplicates). The gate's key pred
 `snapshot_date` in it. Logged as **TECH-DEBT T12** and deliberately *not* fixed here: it is a frozen-data-layer
 validation rule, not part of the walled-off Phase-16 track, and quietly editing a gate mid-session is the
 behaviour the discipline exists to prevent. Worth fixing soon — an always-red validator cannot warn anyone.
+
+---
+
+## Session F.5 — corpus expansion (2026-07-25): the crawl was un-reseeded, not exhausted
+
+**Scope, agreed up front:** grow the Sleeper corpus and verify what it bought. Deliberately **not** in
+scope: re-asking 16.8, re-fitting Phase 11, personalities, S6 adaptive, the 2025 dress rehearsal. Those
+depend on knowing what the crawl produced, which is what this session measures. **395 tests** (was 382),
+ruff clean, all data-health gates **PASS**.
+
+### What the corpus did
+
+| | Before | After | × |
+|---|---|---|---|
+| Human drafts | 149 | **7,699** | 51.7× |
+| Bot drafts | 117 | 822 | 7.0× |
+| Picks | 17,082 | **1,207,687** | 70.7× |
+| Manager profiles | 289 | **24,696** | 85× |
+| Seasons | 2017–2020 | 2017–2026 | — |
+
+367 managers walked, 8,207 leagues expanded, 10,700 drafts discovered → 8,148 ingested / 2,552 dead,
+**70 minutes** wall clock, queue fully drained, no early stop.
+
+### ★ The 16.7 funnel — the actual deliverable
+
+| Stage | Before | After | × |
+|---|---|---|---|
+| Human complete | 132 | 7,619 | 57.7× |
+| Eligible (redraft · snake · preseason window) | 42 | 1,426 | 34× |
+| **With board → the panel** | **34** | **1,144** | **33.6×** |
+| Panel rows (picks) | 4,495 | 157,349 | 35× |
+| Distinct players | 436 | 490 | 1.1× |
+| `sd_drift` | 1.691 | 2.086 | — |
+| **`drift_centered_sd`** (16.9's target) | 1.5375 | **1.8161** | — |
+
+All 16.7 checks PASS. **2025 still drops entirely** — 278 eligible drafts with no FFC board. ECR covers
+every season 2017–2026 and remains the candidate fallback (an F.6 decision, not taken here).
+
+Note `n_players` barely moved (436 → 490) while drafts grew 34×: the panel is bounded by the *board*, not
+the corpus. What grew is **observations per player**, which is exactly what a dispersion target needs.
+
+### ★ Why the old crawl stalled at 266 drafts — three mechanical defects, none methodological
+
+1. **The frontier was never fed back in.** `load_seeds()` reads only `reference/sleeper_seeds.txt` (3
+   draft ids, 2 league ids). The 289 managers the crawl *discovered* live in `sleeper_manager_profiles`
+   and were never used as seeds, so every re-run re-walked the same tiny neighbourhood.
+2. **Participant expansion dead-ended on re-runs.** `crawl_expand` queued a draft's co-managers only when
+   the id was *new* — but `crawl_and_ingest` pre-seeds `existing_ids` with the entire store, so every
+   already-ingested draft reported "not new" and its participants were never queued. Expansion is now
+   keyed on *"have we expanded this draft"*. A regression test fails on the old condition and passes on
+   the new one (verified by temporarily reverting the fix, not by inspection).
+3. **The budget was denominated in attempts, not successes.** `MAX_DRAFTS=500` counted *discovered* ids;
+   **263 of that 500** never resolved, so over half the budget bought nothing and every re-run re-bought
+   the same nothing. Dead ids are now retired in `sleeper_crawl_queue`.
+
+**The general lesson:** all three failure modes look identical from outside — *the crawl returns nothing
+new, so the graph must be exhausted*. It wasn't. Before concluding a data source is tapped out, check
+that the crawler can still reach past what it has already stored.
+
+### ★ The league cache — a 5.4× speedup, and why the smoke test earned its keep
+
+A 3-manager smoke test measured **26 s/manager**, which projected to ~4 hours against my ~1 hr estimate.
+The cause: `discover_draft_ids` calls `/league/<id>/drafts` per league per user, but a manager frontier is
+*built out of shared leagues* — co-managers re-request the same league once each. A run-scoped
+`seen_leagues` set (persisted to `sleeper_crawl_leagues`) took discovery to **4.8 s/manager**.
+
+*When a graph is crawled from its nodes but its cost lives on its edges, dedupe the edges* — and the more
+connected the corpus, the bigger the win, which is the same property that makes the corpus worth having.
+
+**Pacing:** the old flat `time.sleep(0.05)` measured **29 calls/s** — *above* Sleeper's documented
+~1000/min — because a fixed nap adds to response latency rather than absorbing it. Replaced with a
+token-bucket limiter at a deliberate 10/s, plus hard 429 backoff.
+
+### ★★ Format contamination — a hardcoded label that became a bug at scale
+
+The crawl turned a passing gate red: `ADP top-150 gsis match` failed at **3.5 %** unmatched. The
+crosswalk was fine; the **population** was wrong. `_refresh_board` hardcoded `scoring="ppr"`, so every
+complete human snake draft landed on a single board labelled PPR redraft — and at frontier scale only
+**1,312 of 7,399** such drafts actually are PPR redraft, against 2,547 dynasty_2qb, 952 2qb, 861 dynasty
+and 610 IDP. The board was **82 % contaminated**, and the IDP rooms were pushing DB/DL/LB players onto a
+board that is supposed to be offensive redraft.
+
+Boards are now **redraft-only and split per (season, scoring)**, labelled in FFC's vocabulary so
+`adp_asof` reads both sources interchangeably: `sleeper_human` = 7,129 ppr · 3,197 half-ppr · 2,247
+standard. Unmatched rate fell **3.52 % → 0.61 %** and the data-health report is **green for the first
+time** (T12 also closed this session).
+
+**This is the finding to carry forward.** The same code was harmless at 149 drafts and seriously wrong at
+7,699 — nothing changed but the input distribution. *A hardcoded label is a bug that scales with your
+corpus.* Re-audit derived artifacts after any step change in input volume, not only after code changes.
+And note the detector: a join-rate gate on a derived artifact is a cheap canary for "the wrong rows are
+in here."
+
+### Banked for Phase 17 (per the ingest-and-bank decision)
+
+Nothing is filtered at ingest, so the non-redraft corpus is now real data rather than a future crawl:
+**dynasty_2qb 2,607 · 2qb 1,021 · dynasty 861 · idp 610 · dynasty_ppr 396 · dynasty_half_ppr 160 ·
+dynasty_std 20 · idp_1qb 18 = 5,693 complete human drafts.** Phase 17 (superflex/keeper/custom scoring)
+would otherwise have paid these 70 minutes again.
+
+### What this unblocks (for F.6 — measured, not yet acted on)
+
+- **Phase 11.2 availability Brier (T8b)** was the thinnest result in the repo — `n_drafts: 21`. The
+  binding constraint was repeated managers; there are now **12,578 managers with ≥2 drafts and 1,330 with
+  10+**. This is the largest proportional firming available.
+- **Phase 11.1** goes from 7,900 choice groups toward ~200k, which is the regime where per-manager random
+  effects become viable — a modelling decision, not a re-run.
+- **16.8** can be re-asked against a ~5.8× tighter CI (√(1144/34)). The pre-registered **>2 % skill bar
+  stands unmoved** and the `source_divergence` ablation remains mandatory; with thousands of independent
+  leagues the shared-room contamination that ablation exposed is genuinely diluted for the first time.
+- **The frozen 2023+2024 lockbox is untouched** — verified three ways: `lockbox_eval.py` routes
+  `--which lockbox` to `source="ffc"`/`_board_ffc`, its seats use `_noisy_adp_pick` (ADP+noise, not the
+  behavioral model), and `cost_validation.py` likewise. Only `--which dress` (2025) reads `sleeper_human`.
+  Growing the corpus **cannot** contaminate the spent lockbox or the frozen value stack.

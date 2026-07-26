@@ -303,6 +303,29 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   - **→ Consequence for Session G:** 16.9 gets **no quantitative drift prediction to amplify** — its
     dispersion (variance) done-bar needs no mean signal, and **16.10's curated hype board is now the
     primary narrative channel**, its "curated, not backtested" label load-bearing rather than a caveat.
+- **Session F.5 — corpus expansion. ☑ COMPLETE 2026-07-25.** 395 tests (+13), ruff clean, **all data-health
+  gates PASS for the first time** (T12 closed). Inserted ahead of G because G's 16.9 done-bar is a
+  *dispersion* target, which needs **sample, not signal** — fitting it on 34 drafts and re-fitting after a
+  crawl would be doing the session twice. Fixed three mechanical crawler defects (frontier never reseeded
+  from `sleeper_manager_profiles`; participant expansion dead-ended on re-runs; budget counted *discovered*
+  not *ingested* ids), added resumable crawl state + a run-scoped league cache (**5.4× discovery speedup**)
+  + token-bucket pacing. Corpus **149 → 7,699 human drafts / 17k → 1.21M picks / 289 → 24,696 managers** in
+  70 min; **16.7 panel 34 → 1,144 drafts** (33.6×), `drift_centered_sd` 1.5375 → **1.8161**.
+  - **★★ Format contamination found and fixed:** `_refresh_board` hardcoded `scoring="ppr"`, making the
+    `sleeper_human` board **82 % non-redraft** at scale (2,547 dynasty_2qb / 952 2qb / 861 dynasty / 610 IDP
+    vs 1,312 actual PPR redraft). Now redraft-only, split per (season, scoring). Surfaced as an
+    unrelated-looking join-rate gate failure (3.52 % → 0.61 % unmatched). *A hardcoded label is a bug that
+    scales with your corpus.*
+  - **Banked for Phase 17:** 5,693 complete human non-redraft drafts already in the store.
+  - **Deliberately took no modelling decisions** — 16.8, Phase 11, personalities, S6, the dress rehearsal
+    and the ECR fallback all deferred to F.6 so they could be judged against measured corpus size.
+- **Session F.6 — the re-derivation sweep.** In dependency order: **11.2 availability Brier (T8b)** first
+  (thinnest result in the repo at `n_drafts: 21`; now 12,578 managers with ≥2 drafts, 1,330 with 10+) →
+  **11.1 opponent model** (7,900 → ~200k choice groups; *decide explicitly* re-fit vs extend with
+  per-manager random effects) → **16.8** against a ~5.8× tighter CI with the **>2 % bar unmoved and the
+  `source_divergence` ablation mandatory** → **11.3 personalities** + **S6 adaptive** (both ride the fitted
+  β). Open decisions: ECR board fallback (recovers 2025's 278 eligible drafts), and whether to re-run the
+  2025 dress rehearsal (a further read of the calibration holdout).
 - **Session G — apply the drift 16.9–16.12 + 16.16.** 16.9 correlated per-draft narrative shock, 16.10 curated
   hype board, 16.11 live 2026 momentum, 16.12 consumption (engine half: opponent flow + opt-in 9.4 advice;
   app readout → Phase 14), 16.16 live run-detection (engine; alert → 14.4). Several light substeps.

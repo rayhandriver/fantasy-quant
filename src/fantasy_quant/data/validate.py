@@ -202,12 +202,18 @@ def _dup_gates(con) -> list[dict]:
     )
     gates.append(_gate("game_lines: unique game_id", gl == 0, offending_groups=gl))
 
+    # T12: `snapshot_date` belongs in this key. The gate predates Stage 0, when each season had
+    # exactly one FFC board; since 2026-07-09 we deliberately bank a weekly 2026 snapshot *series*,
+    # so one row per player per board per season is no longer the invariant — one row per player
+    # per board per **snapshot** is. Without the date the report was red on every run (1,028 benign
+    # 2026 groups, 0 genuine dups), and a validator that is always red cannot warn anyone.
     adp = _count(
         con,
-        "SELECT COUNT(*) FROM (SELECT gsis_id, season, source, scoring, teams, COUNT(*) c "
-        "FROM adp_snapshots WHERE gsis_id IS NOT NULL GROUP BY 1,2,3,4,5 HAVING c > 1)",
+        "SELECT COUNT(*) FROM (SELECT gsis_id, season, source, scoring, teams, snapshot_date, "
+        "COUNT(*) c FROM adp_snapshots WHERE gsis_id IS NOT NULL "
+        "GROUP BY 1,2,3,4,5,6 HAVING c > 1)",
     )
-    gates.append(_gate("adp: unique (gsis,season,source,scoring,teams)", adp == 0,
+    gates.append(_gate("adp: unique (gsis,season,source,scoring,teams,snapshot_date)", adp == 0,
                        offending_groups=adp))
     return gates
 

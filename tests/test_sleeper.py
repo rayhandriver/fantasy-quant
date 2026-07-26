@@ -271,3 +271,162 @@ def test_crawl_expand_skips_existing_ids(monkeypatch, tmp_path):
     found = sleeper.crawl_expand(client, seed_draft_ids=["D1"], seasons=["2024"],
                                  existing_ids={"D1"})
     assert found == []                          # already in the store -> not re-crawled
+
+
+# --- crawl resumability (Session F.5) ---------------------------------------------------------
+def _mem_con():
+    """An in-memory DuckDB — the crawl-state helpers are the one part that needs a real store."""
+    import duckdb
+    return duckdb.connect()
+
+
+def test_crawl_state_enqueue_is_idempotent_and_retires():
+    con = _mem_con()
+    sleeper.ensure_crawl_state(con)
+    sleeper.enqueue_drafts(con, ["D1", "D2", "D1"])       # dup within the call
+    sleeper.enqueue_drafts(con, ["D2", "D3"])             # dup across calls
+    assert sorted(sleeper.queue_todo(con)) == ["D1", "D2", "D3"]
+    sleeper.mark_queue(con, ["D1"], "done")
+    sleeper.mark_queue(con, ["D2"], "dead")
+    assert sleeper.queue_todo(con) == ["D3"]              # neither done nor dead comes back
+
+
+def test_crawled_users_round_trips_for_resume():
+    con = _mem_con()
+    assert sleeper.crawled_users(con) == set()
+    sleeper.mark_user_crawled(con, "U1")
+    sleeper.mark_user_crawled(con, "U1")                  # idempotent
+    sleeper.mark_user_crawled(con, "U2")
+    assert sleeper.crawled_users(con) == {"U1", "U2"}
+
+
+def test_seed_users_from_profiles_orders_by_picks():
+    con = _mem_con()
+    assert sleeper.seed_users_from_profiles(con) == []    # no table yet -> no seeds
+    con.execute("CREATE TABLE sleeper_manager_profiles (manager VARCHAR, n_picks INTEGER)")
+    con.execute("INSERT INTO sleeper_manager_profiles VALUES ('quiet', 15), ('busy', 300)")
+    assert sleeper.seed_users_from_profiles(con) == ["busy", "quiet"]
+
+
+def test_crawl_expand_still_expands_through_an_already_ingested_draft(monkeypatch, tmp_path):
+    """The dead-end regression: D1 is already in the store, so it is *not* a new find — but its
+    participants must still be queued, or a re-run's frontier collapses to nothing."""
+    monkeypatch.setattr(sleeper, "SLEEPER_RAW", tmp_path)
+    routes = {
+        "/user/U1/leagues/nfl/2024": [{"league_id": "L1"}],
+        "/league/L1/drafts": [{"draft_id": "D1"}],
+        "/user/U1/drafts/nfl/2024": [],
+        "/draft/D1": {"draft_id": "D1", "draft_order": {"U1": 1, "U2": 2}},
+        "/user/U2/leagues/nfl/2024": [{"league_id": "L2"}],
+        "/league/L2/drafts": [{"draft_id": "D2"}],
+        "/user/U2/drafts/nfl/2024": [],
+        "/draft/D2": {"draft_id": "D2", "draft_order": {"U2": 1}},
+    }
+    routes["/user/alice"] = {"user_id": "U1"}
+    found = sleeper.crawl_expand(_FakeClient(routes), seed_usernames=["alice"], seasons=["2024"],
+                                 max_drafts=50, existing_ids={"D1"})
+    assert "D2" in found          # reached only by expanding through the pre-existing D1
+    assert "D1" not in found      # ...without re-ingesting it
+
+
+def test_crawl_expand_reports_finished_users(monkeypatch, tmp_path):
+    monkeypatch.setattr(sleeper, "SLEEPER_RAW", tmp_path)
+    routes = {"/user/alice": {"user_id": "U1"},
+              "/user/U1/leagues/nfl/2024": [], "/user/U1/drafts/nfl/2024": []}
+    seen: list[str] = []
+    sleeper.crawl_expand(_FakeClient(routes), seed_usernames=["alice"], seasons=["2024"],
+                         on_user_done=seen.append)
+    assert seen == ["U1"]
+
+
+def test_archive_payloads_flag_suppresses_raw_writes(monkeypatch, tmp_path):
+    """Bulk crawls turn the T7 archive off — ~20k files is not an audit trail anyone can use."""
+    monkeypatch.setattr(sleeper, "SLEEPER_RAW", tmp_path)
+    client = _FakeClient({"/draft/D1": {"draft_id": "D1", "draft_order": {"U1": 1}}})
+    monkeypatch.setattr(sleeper, "ARCHIVE_PAYLOADS", False)
+    sleeper.fetch_draft(client, "D1")
+    assert not list(tmp_path.rglob("*.json"))
+    monkeypatch.setattr(sleeper, "ARCHIVE_PAYLOADS", True)
+    sleeper.fetch_draft(client, "D1")
+    assert len(list(tmp_path.rglob("*.json"))) == 1
+
+
+def test_rate_limiter_paces_calls():
+    import time as _t
+    lim = sleeper._RateLimiter(50.0)          # 20 ms apart
+    t0 = _t.monotonic()
+    for _ in range(5):
+        lim.wait()
+    assert _t.monotonic() - t0 >= 0.06        # 4 enforced gaps, first call is free
+    assert sleeper._RateLimiter(0).wait() is None   # disabled -> no sleep
+
+
+def test_discover_draft_ids_skips_already_expanded_leagues():
+    """League expansion is the dominant discovery cost and co-managers share leagues, so the
+    /league/<id>/drafts call must be spent once per league per run, not once per member."""
+    routes = {
+        "/user/U1/leagues/nfl/2024": [{"league_id": "L1"}],
+        "/user/U2/leagues/nfl/2024": [{"league_id": "L1"}],   # same league, different member
+        "/league/L1/drafts": [{"draft_id": "D1"}],
+        "/user/U1/drafts/nfl/2024": [], "/user/U2/drafts/nfl/2024": [],
+    }
+    client = _FakeClient(routes)
+    seen: set[str] = set()
+    a = sleeper.discover_draft_ids(client, user_id="U1", seasons=["2024"], seen_leagues=seen)
+    b = sleeper.discover_draft_ids(client, user_id="U2", seasons=["2024"], seen_leagues=seen)
+    assert a == ["D1"] and b == []                       # U2 adds nothing new
+    assert client.calls.count("/league/L1/drafts") == 1   # ...and costs no second league call
+    assert seen == {"L1"}
+
+
+def test_crawled_leagues_round_trips():
+    con = _mem_con()
+    assert sleeper.crawled_leagues(con) == set()
+    sleeper.mark_leagues_crawled(con, ["L1", "L2", "L1"])
+    assert sleeper.crawled_leagues(con) == {"L1", "L2"}
+
+
+def _board_con(drafts, picks):
+    con = _mem_con()
+    con.register("_d", pd.DataFrame(drafts))
+    con.register("_p", pd.DataFrame(picks))
+    con.execute("CREATE TABLE sleeper_drafts AS SELECT * FROM _d")
+    con.execute("CREATE TABLE sleeper_draft_picks AS SELECT * FROM _p")
+    return con
+
+
+def _pick(did, n, gsis):
+    return {"draft_id": did, "season": 2024, "pick_no": n, "round": 1, "draft_slot": n,
+            "picked_by": f"m{n}", "sleeper_player_id": str(1000 + n), "position": "RB",
+            "player_name": f"P{n}", "nfl_team": "KC", "gsis_id": gsis, "dst_team": None}
+
+
+def test_adp_board_is_redraft_only_and_labels_true_scoring():
+    """The crawled corpus is mostly dynasty/2QB/IDP. Pooling those onto a board labelled 'ppr'
+    prices a startup dynasty room as redraft PPR — measured 82% contamination at frontier scale."""
+    drafts = [
+        {"draft_id": "A", "season": 2024, "teams": 10, "scoring": "ppr", "is_human": True,
+         "status": "complete", "draft_type": "snake", "start_time_ms": 1_724_000_000_000},
+        {"draft_id": "B", "season": 2024, "teams": 10, "scoring": "half_ppr", "is_human": True,
+         "status": "complete", "draft_type": "snake", "start_time_ms": 1_724_000_000_000},
+        {"draft_id": "C", "season": 2024, "teams": 10, "scoring": "dynasty_2qb", "is_human": True,
+         "status": "complete", "draft_type": "snake", "start_time_ms": 1_724_000_000_000},
+        {"draft_id": "D", "season": 2024, "teams": 10, "scoring": "idp", "is_human": True,
+         "status": "complete", "draft_type": "snake", "start_time_ms": 1_724_000_000_000},
+    ]
+    picks = [_pick(d, i + 1, f"00-000{i}") for d in "ABCD" for i in range(3)]
+    con = _board_con(drafts, picks)
+    board = sleeper.refresh_human_adp(con)
+    assert set(board["scoring"]) == {"ppr", "half-ppr"}       # FFC vocabulary, both formats kept
+    assert board["source"].eq("sleeper_human").all()
+    # each redraft board is built from its own draft alone, never pooled across formats
+    assert set(board["total_drafts"]) == {1}
+    # dynasty/IDP contributed nothing
+    assert len(board) == 6
+
+
+def test_adp_board_empty_when_corpus_has_no_redraft():
+    drafts = [{"draft_id": "C", "season": 2024, "teams": 10, "scoring": "dynasty", "is_human": True,
+               "status": "complete", "draft_type": "snake", "start_time_ms": 1_724_000_000_000}]
+    con = _board_con(drafts, [_pick("C", 1, "00-0001")])
+    assert sleeper.refresh_human_adp(con).empty

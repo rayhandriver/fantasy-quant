@@ -1023,3 +1023,37 @@ The draft is ~1 of 17+ decisions; the in-season engine re-estimates the same thr
 - **`is_preseason` (ECR)** — per-board flag, false when the stamp falls after its own season's kickoff.
   The live 2023 PPR board carries `as_of = 2024-02-12`, re-touched after the Super Bowl: it has seen the
   season it is supposed to precede. Flagged rather than dropped, and excluded from any draft-season baseline.
+- **Frontier crawl (0.10b, `--mode frontier`)** — walk the histories of the managers *already observed in
+  the corpus* (`sleeper_manager_profiles`) and stop, as opposed to the BFS **snowball** that also expands
+  into each newly-found co-manager. The frontier is the set the previous crawl discovered but never fed
+  back in as seeds — which is why a crawl that looked exhausted at 266 drafts was merely un-reseeded.
+- **★ Discovered ≠ ingested (the dead-id lesson)** — a crawl budget must be spent in the unit you actually
+  want. `MAX_DRAFTS=500` counted *discovered* ids; **263 of them were 404/empty**, so over half the budget
+  bought nothing and every re-run would re-buy the same nothing. Count ingests, and **persist the dead ids**
+  so failure is remembered. The general form: *if a budget is denominated in attempts rather than successes,
+  the failure rate silently becomes the budget.*
+- **★ Shared-league fan-in (the crawl's dominant cost)** — a manager frontier is *built out of shared
+  leagues*, so expanding `league → drafts` once per member re-requests the same league once per co-manager.
+  A run-scoped `seen_leagues` cache took discovery from **26 s → 4.8 s per manager (5.4×)**. The general
+  form: *when a graph is crawled from its nodes but its cost lives on its edges, dedupe the edges* — the
+  more connected the corpus, the bigger the win, and connectivity is exactly what makes the corpus useful.
+- **Resumable crawl state** — `sleeper_crawl_users` / `sleeper_crawl_leagues` / `sleeper_crawl_queue`
+  (`todo`/`done`/`dead`), plus per-batch ingest commits. A multi-hour network walk *will* be interrupted;
+  without persisted progress it restarts from zero, which is the practical reason a crawl never gets extended.
+- **Token-bucket pacing vs a flat nap** — a fixed `sleep(0.05)` between calls does **not** cap throughput at
+  20/s: it *adds* to response latency, and measured **29 calls/s**, above Sleeper's documented ~1000/min. A
+  bucket makes a slow response pay for its own latency, so the stated ceiling is the real one.
+- **★ Format contamination (the ADP board defect the crawl exposed)** — `_refresh_board` hardcoded
+  `scoring="ppr"`, so every complete human snake draft landed on one board labelled PPR redraft. At 149
+  drafts that was near-harmless; at frontier scale it was **82 % wrong** — of 7,399 complete human
+  drafts only 1,312 are PPR redraft, against 2,547 dynasty_2qb, 952 2qb, 861 dynasty and 610 IDP. The
+  board is now **redraft-only, split per (season, scoring)**, labelled in FFC's vocabulary so
+  `adp_asof` reads both interchangeably. **The general form: a hardcoded label is a bug that scales with
+  your corpus.** It was invisible while the sample was small and homogeneous, and the *same* code became
+  a serious defect the moment the sample got big and mixed — so re-audit derived artifacts after any
+  step change in input volume, not just after code changes.
+- **The unmatched-rate canary** — the defect surfaced as an unrelated-looking gate failure: `ADP top-150
+  gsis match` went red at **3.5 %** unmatched, because IDP rooms had pushed DB/DL/LB rows onto a board
+  that is supposed to be offensive redraft. Removing the contamination took it to **0.61 %**. A join-rate
+  gate on a *derived* artifact is a cheap detector for "the wrong rows are in here" — the crosswalk was
+  never broken, the population was.

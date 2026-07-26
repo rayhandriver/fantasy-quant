@@ -102,3 +102,42 @@ def test_match_rate_gate_floor():
     assert match_rate_gate("m", 0.99)["passed"]
     assert not match_rate_gate("m", 0.80)["passed"]
     assert not match_rate_gate("m", None)["passed"]   # no rows -> loud fail, not vacuous pass
+
+
+# --- T12: the ADP uniqueness gate keys on the snapshot, not just the season ------------------
+def _adp_con(rows):
+    import duckdb
+    import pandas as pd
+
+    from fantasy_quant.data import validate as V
+    con = duckdb.connect()
+    con.register("_r", pd.DataFrame(rows))
+    con.execute("CREATE TABLE adp_snapshots AS SELECT * FROM _r")
+    # _dup_gates checks all three tables; the siblings just need to exist and be clean
+    con.execute("CREATE TABLE weekly (gsis_id VARCHAR, season INT, week INT, season_type VARCHAR)")
+    con.execute("CREATE TABLE game_lines (game_id VARCHAR)")
+    return con, V
+
+
+def _adp_row(**kw):
+    base = {"gsis_id": "00-0000001", "season": 2026, "source": "ffc", "scoring": "ppr",
+            "teams": 12, "snapshot_date": "2026-07-18"}
+    base.update(kw)
+    return base
+
+
+def test_adp_dup_gate_allows_a_weekly_snapshot_series():
+    """Stage 0 banks a weekly 2026 series on purpose: same player, same board, different dates."""
+    con, V = _adp_con([_adp_row(snapshot_date="2026-07-18"),
+                       _adp_row(snapshot_date="2026-07-24"),
+                       _adp_row(snapshot_date="2026-07-31")])
+    gate = next(g for g in V._dup_gates(con) if g["gate"].startswith("adp: unique"))
+    assert gate["passed"] and gate["offending_groups"] == 0
+
+
+def test_adp_dup_gate_still_catches_a_true_duplicate():
+    """...but two rows for the same player on the SAME snapshot is still a real dup."""
+    con, V = _adp_con([_adp_row(snapshot_date="2026-07-18"),
+                       _adp_row(snapshot_date="2026-07-18")])
+    gate = next(g for g in V._dup_gates(con) if g["gate"].startswith("adp: unique"))
+    assert not gate["passed"] and gate["offending_groups"] == 1

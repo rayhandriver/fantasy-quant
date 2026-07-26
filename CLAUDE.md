@@ -61,11 +61,73 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★ Next-session pointer (2026-07-25, ★ SESSION F COMPLETE — data 0.11 + availability drift
-> 16.7–16.8. RESUME AT SESSION G.) READ THIS FIRST — it is written to resume cold.**
+> **★★ Next-session pointer (2026-07-25, ★ SESSION F.5 COMPLETE — corpus expansion. RESUME AT
+> SESSION F.6, *then* G.) READ THIS FIRST — it is written to resume cold.**
 >
-> **State:** **382 tests** (was 359), ruff clean, **Session F is UNCOMMITTED — left for your review**
-> (Session E is committed at `d6529d9`). Stage-0 FFC chore: done 2026-07-24, **next due after 07-30**.
+> **State:** **395 tests** (was 382), ruff clean, **all data-health gates PASS for the first time**
+> (T12 closed). DB backed up 2026-07-25 (357 MB, checksums verified). Stage-0 FFC chore: current,
+> next due after 07-30. Session F.5 is **left uncommitted for your review**, same as prior sessions.
+>
+> **★ What happened: the Sleeper corpus grew ~52× and the 16.7 drift panel grew 33.6×.**
+>
+> | | Before | After |
+> |---|---|---|
+> | Human drafts | 149 | **7,699** |
+> | Picks | 17,082 | **1,207,687** |
+> | Manager profiles | 289 | **24,696** |
+> | **16.7 panel drafts** | **34** | **1,144** |
+> | `drift_centered_sd` (16.9's target) | 1.5375 | **1.8161** |
+>
+> The old crawl was **un-reseeded, not exhausted** — three mechanical defects (frontier never fed back
+> in from `sleeper_manager_profiles`; participant expansion dead-ended because it keyed on "is this
+> draft new" while the caller pre-seeds the whole store; budget counted *discovered* not *ingested* ids,
+> burning 263/500 on dead ids). All fixed, all regression-tested. `steps/phase0_10b_crawl.py --mode
+> frontier` is resumable via `sleeper_crawl_users`/`_leagues`/`_queue`. Full detail: `findings.md`
+> §"Session F.5", `docs/SLEEPER.md`.
+>
+> **★★ THE FINDING TO CARRY FORWARD — format contamination.** `_refresh_board` hardcoded
+> `scoring="ppr"`, so every complete human snake draft landed on one board labelled PPR redraft. At 149
+> drafts that was harmless; at 7,399 it was **82 % wrong** (only 1,312 are PPR redraft; 2,547 are
+> dynasty_2qb, 952 2qb, 861 dynasty, 610 IDP). It surfaced as an *unrelated-looking* gate failure — `ADP
+> top-150 gsis match` red at 3.5 % unmatched, because IDP rooms pushed DB/DL/LB onto an offensive-redraft
+> board. Boards are now **redraft-only, split per (season, scoring)**, in FFC's vocabulary; unmatched
+> fell to 0.61 %. **A hardcoded label is a bug that scales with your corpus — re-audit derived artifacts
+> after any step change in input volume, not just after code changes.**
+>
+> **★ NEXT: Session F.6 — the re-derivation sweep**, in this order, and note each item's *decision*
+> status because F.5 deliberately took none of them:
+> 1. **Phase 11.2 availability Brier (T8b)** — the thinnest result in the repo (`n_drafts: 21`). The
+>    binding constraint was repeated managers; there are now **12,578 with ≥2 drafts, 1,330 with 10+**.
+>    Largest proportional firming available; do this first.
+> 2. **Phase 11.1 opponent model** — 7,900 choice groups → ~200k. **Decide explicitly: re-fit, or
+>    *extend*** (per-manager random effects are only now viable). A re-fit is mechanical; an extension is
+>    a modelling session. Recommendation was: re-fit first, look, then decide.
+> 3. **16.8 drift model** — CI shrinks ~5.8× (√(1144/34)). **The pre-registered >2 % skill bar stands
+>    unmoved** and the `source_divergence` **ablation remains mandatory** (see the Session F ablation
+>    rule below — it is the single most important carry-forward in this file). Honest expectation: the CI
+>    clears zero, the point estimate stays under 2 %, i.e. real but too small to use.
+> 4. **Phase 11.3 personalities** + **S6 adaptive** (`spine_5_adaptive.py`) — both ride the fitted β and
+>    the behavioural room, so both move once (1)–(2) land.
+> 5. **Open decisions not taken in F.5:** (a) adopt **ECR as the board fallback** to recover 2025 (278
+>    eligible drafts, no FFC board; ECR covers 2017–2026 — mind the 2023 PPR `is_preseason=False` trap);
+>    (b) whether to **re-run the 2025 dress rehearsal**, which is a further read of the 2025 calibration
+>    holdout.
+>
+> **★ Banked for Phase 17 (Session I):** ingest filters nothing, so **5,693 complete human non-redraft
+> drafts** (dynasty_2qb 2,607 · 2qb 1,021 · dynasty 861 · idp 610 · …) are already in the store. Phase 17
+> would otherwise have re-paid the 70-minute crawl.
+>
+> **★ The lockbox is safe — verified three ways, do not re-litigate.** `lockbox_eval.py --which lockbox`
+> routes to `source="ffc"`/`_board_ffc`; its seats use `_noisy_adp_pick` (ADP+noise, not the behavioural
+> model); `cost_validation.py` likewise. Only `--which dress` (2025) reads `sleeper_human`. Growing the
+> corpus **cannot** contaminate the spent 2023+2024 lockbox or the frozen value stack. Phase 9.1's
+> scarcity is also Sleeper-independent (`survival_prob` lives in `draft/optimizer.py`).
+>
+> _(Prior pointer — history, and still the authority on the ablation rule.)_ **★★ (2026-07-25, ★ SESSION F
+> COMPLETE — data 0.11 + availability drift 16.7–16.8.)**
+>
+> **State (as of Session F, superseded above):** 382 tests, ruff clean. Session F was committed at
+> `6a047a7`. Stage-0 FFC chore: done 2026-07-24, **next due after 07-30**.
 > New files: `data/sources/ecr.py`, `adp/drift_panel.py`, `adp/drift_model.py`, three `steps/`, two
 > `tests/`, `tests/fixtures/ecr/`, three `analysis/*.json`; one edit to `adp/regression.py` (a
 > backward-compatible `target`/`continuous` kwarg — the frozen softness path is untouched and its

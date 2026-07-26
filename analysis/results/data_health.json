@@ -1,11 +1,13 @@
 {
-  "generated_at": "2026-07-05T17:37:09.762180+00:00",
+  "generated_at": "2026-07-26T00:47:50.858659+00:00",
   "tables": {
-    "adp_snapshots": 14144,
+    "adp_snapshots": 34469,
     "combine": 4080,
+    "consensus_projections": 529,
     "depth_charts": 955989,
     "depth_charts_ts": 554215,
     "draft_picks": 3077,
+    "ecr_snapshots": 17264,
     "game_lines": 3295,
     "injuries": 65866,
     "news_raw": 109,
@@ -14,8 +16,16 @@
     "pfr_pass": 848,
     "pfr_rec": 4130,
     "pfr_rush": 2820,
+    "player_distributions": 673,
     "player_ids": 12465,
     "seasonal": 8702,
+    "sleeper_crawl_leagues": 8207,
+    "sleeper_crawl_queue": 11149,
+    "sleeper_crawl_users": 370,
+    "sleeper_draft_picks": 1207687,
+    "sleeper_drafts": 8521,
+    "sleeper_manager_profiles": 24696,
+    "sleeper_tendencies": 122162,
     "snaps": 300812,
     "weekly": 79250
   },
@@ -37,7 +47,7 @@
       "date_modified": 0.9079
     },
     "adp_snapshots": {
-      "gsis_id": 0.9296
+      "gsis_id": 0.9092
     }
   },
   "gates": [
@@ -72,7 +82,7 @@
       "offending_groups": 0
     },
     {
-      "gate": "adp: unique (gsis,season,source,scoring,teams)",
+      "gate": "adp: unique (gsis,season,source,scoring,teams,snapshot_date)",
       "passed": true,
       "offending_groups": 0
     },
@@ -84,14 +94,61 @@
     {
       "gate": "ADP top-150 gsis match <1%",
       "passed": true,
-      "unmatched_rate": 0.00075
+      "unmatched_rate": 0.00607
+    },
+    {
+      "gate": "adp: live-season snapshot fresh",
+      "passed": true,
+      "live_season": 2026,
+      "latest": "2026-07-24",
+      "age_days": 1,
+      "max_age_days": 6
+    },
+    {
+      "gate": "consensus: FantasyPros board size sane",
+      "passed": true,
+      "n_rows": 529,
+      "band": [
+        400,
+        700
+      ]
+    },
+    {
+      "gate": "consensus: gsis-match rate",
+      "passed": true,
+      "match_rate": 0.9943,
+      "floor": 0.95
+    },
+    {
+      "gate": "sleeper: no draft repeats a pick_no",
+      "passed": true,
+      "drafts_with_dup": 0,
+      "incomplete_drafts": 785,
+      "total_drafts": 8521
+    },
+    {
+      "gate": "sleeper: skill (QB/RB/WR/TE) gsis-match rate",
+      "passed": true,
+      "match_rate": 0.995,
+      "floor": 0.95
+    },
+    {
+      "gate": "sleeper: human slot resolved per mock",
+      "passed": true,
+      "n_mocks": 3,
+      "with_human_slot": 3
     }
   ],
   "all_gates_passed": true,
   "survivorship": {
     "season_examined": 2022,
-    "drafted_top150_no_weekly_appearance": 0,
-    "examples": [],
+    "drafted_top150_no_weekly_appearance": 1,
+    "examples": [
+      {
+        "name": "Rob Gronkowski",
+        "adp": 129.0
+      }
+    ],
     "weekly_gsis_not_in_player_ids": 341,
     "note": "Weekly panels contain only players who recorded stats; drafted-but-DNP players must be pulled from ADP to avoid survivorship-flattered backtests."
   }

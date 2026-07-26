@@ -23,7 +23,7 @@ At a glance:
 | **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☑ |
 | **T10** | ✅ | `validate_archetypes`/`spine_4_validate` sweep S6's `adaptive` archetype → crash (needs `adaptive_parent`) | opportunistic (post-lockbox) | ☑ 2026-07-24 |
 | **T11** | 🟡 | Underdog ADP never ingested (no keyless endpoint); 16.7 drift corpus too thin (34 drafts) to re-ask 16.8 | opportunistic / when the Sleeper corpus grows | ☐ 2026-07-25 |
-| **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☐ 2026-07-25 |
+| **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☑ 2026-07-25 |
 
 ---
 
@@ -506,6 +506,13 @@ report returns to green and that a planted true duplicate still trips it.
 **Deliberately not fixed in Session F.** Changing a validation rule is not a drive-by edit: it is exactly the
 kind of "move the threshold after seeing the result" the repo's discipline forbids doing unannounced, and it
 touches the frozen data layer rather than the walled-off Phase-16 track. Registered here for a decision.
+
+**☑ Done 2026-07-25 (Session F.5), with the decision taken explicitly.** Folded into the corpus-expansion
+session because that session multiplies `sleeper_human` ADP rows and would have made the red gate redder.
+The key is now `(gsis, season, source, scoring, teams, snapshot_date)`. Two tests in `tests/test_validate.py`
+pin **both** directions, which is the part that matters: a deliberate weekly snapshot **series** passes, and
+two rows for the same player on the **same** snapshot still fail. Widening a uniqueness key is only safe if
+you show it still catches the thing it was built to catch.
 
 ## Ordering (see `ROADMAP.md ★ THE PIPELINE` for the full sequence)
 1. ~~**Now:** T1 (commit), T2 (backup).~~ ☑ both done (2026-07-10).
