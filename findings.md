@@ -2393,3 +2393,124 @@ room (was +2.0), adaptive(hero_rb) **+19.4 CI[+4.5,+32.9]** (was +15.6, now clea
   patched.
 - **T14 — 11.2's bootstrap is O(n_boot × n_drafts × n_windows)** (a linear scan per draft per
   replicate). Cheap at 21 drafts, ~45 min at 252; it dominated a 100-minute step run.
+
+---
+
+## Session G (2026-07-26) — applying the availability drift
+
+### T14, fixed — and the diagnosis it arrived with was wrong
+
+`availability_brier` at an identical call went **396.4 s → 12.7 s (31×)**; at full committed scale
+(36,972 windows) **~163 min → ~5.2 min**. Outputs are **bit-identical**, verified against the
+pre-fix implementation retained as a test oracle (`_simulate_survival_reference`).
+
+**★ THE DURABLE LESSON — a complexity class is not a profile.** F.6 opened T14 from *reading* the
+code: it spotted `np.flatnonzero(draft_of_win == u)` inside a 400-replicate loop, correctly derived
+O(n_boot × n_drafts × n_windows), and concluded it "dominated a ~100-minute step run." Measured at
+exactly that scale, **the bootstrap runs in 0.79 s — 0.008 % of the run.** The asymptotic reasoning
+was sound and the conclusion was still off by four orders of magnitude, because the constant factor
+lived somewhere else entirely: `cProfile` put **99.3 % of the time in `simulate_survival`**, and
+within it not in arithmetic but in **pandas** — `cand.iloc[ai]` (195 s) and rebuilding the feature
+matrix column-by-column in `candidate_utility` (169 s), over ~648 k calls in a *9-draft* sample
+(~13 M at full scale). The slow thing was an O(1)-per-pick operation called 13 million times; the
+thing that looked slow was an O(n³) scan over arrays small enough not to matter.
+
+*Generalization: when a hot path mixes numpy with pandas row-slicing, the pandas call is the
+default suspect regardless of what the loop structure suggests. Profile before opening a
+performance ticket — and treat a ticket written without a profile as a hypothesis, not a finding.*
+
+### What was fixed
+
+1. **The real one.** `OpponentModel.candidate_matrix` is split out of `candidate_utility`;
+   `simulate_survival` builds **one design matrix per seat context** and indexes rows rather than
+   re-deriving every column from pandas at each simulated pick. `pos_run3` — the only column that
+   moves within a draw — is overwritten in place. This rests on a **row-wise-columns invariant**
+   (`candidate_matrix(board)[rows] == candidate_matrix(board.iloc[rows])`), now asserted by its own
+   test so a future cross-row feature (a rank, a share, a within-board z-score) breaks the test
+   instead of silently corrupting the hoist.
+2. **The prescribed one.** `_draft_blocks` precomputes per-draft index blocks in one stable argsort.
+   Kept despite being ~0.008 % of runtime: it removes a real hazard as the corpus grows, and costs
+   five lines.
+
+**Bit-identity was a design constraint, not a bonus.** 11.2's committed `brier_gain_vs_best =
++0.0864` is a *reported result*; a refactor that moved probabilities in the last bits would
+invalidate it silently. So both changes preserve **RNG call order and summation order** — the same
+`X[ai] @ beta` over the same rows, not an algebraically-equal rearrangement. A 460× algebraic
+bootstrap (per-draft sums/counts) was measured and **rejected** on exactly this ground: exact in
+exact arithmetic, but it consumes the RNG differently, so replicate draws would not match. Trading
+comparability of a published number for speed on a 0.79 s component is a bad trade.
+
+**Knock-on:** the 16.9 availability-Brier non-regression gate can now run at full committed scale in
+~5 min, so the reduced-sample compromise it was scoped under is only needed during iteration.
+
+### 16.9 — the narrative shock is a NULL; the defect underneath it was a choice-set contract violation
+
+**Verdict: the correlated per-draft shock does not earn its keep** (Phase 16's third consecutive
+null, after the 16.1/16.2 value side and 16.8's availability side). What the session actually
+found is a real bug in how the fitted opponent model was being *used*, and fixing that met the
+level done-bar on its own. `analysis/phase16_9_narrative.json`, 240 simulated drafts matched
+one-for-one against realized eligible drafts, 7,792 Brier windows.
+
+**★ The defect: a conditional logit applied outside its choice set.** 11.1 is fit by
+`build_choice_frame(top_k=40)` — at each real pick the candidate set is the **top 40 still-available
+players by ADP**. Both consumers of that β were simulating against the **entire** board:
+`personalities.make_opponent_pick_fn` used the whole cap-respecting pool, and
+`availability.simulate_survival` the whole board. A conditional logit's coefficients are only
+interpretable *relative to the candidate set they were estimated on*, so this spread pick
+probability over players 100+ slots away. Both now read one constant,
+`opponent_model.CHOICE_TOP_K`, and a test asserts fit and simulation still agree on it.
+
+| | pooled `drift_centered_sd` | vs realized 1.816 | availability Brier gain |
+|---|---|---|---|
+| band OFF (pre-Session-G) | 2.897 | **+59.5 %** | +0.0644 CI[+0.0539,+0.0765] |
+| band ON (`top_k=40`) | 1.976 | **+8.8 %** | **+0.0708** CI[+0.0609,+0.0823] |
+
+Two independent metrics improve, so this is not a tuning choice. A band sweep is monotone
+(k=20→1.33, 30→1.67, 40→1.94, 60→2.33, 120→2.81, ∞→2.89), which is itself the tell: simulated
+dispersion was being set almost entirely by an unexamined implementation detail rather than by
+anything behavioural.
+
+**★ The premise inverted under measurement.** The phase was opened on the intuition that
+independent per-seat sampling washes out clustering, so the simulator must **under**-disperse. It
+**over**-dispersed, by 59 %. The mechanism (one shared draw per draft) was right; the deficit it was
+built to repair was not there. *Measure the gap before building the thing that closes it* — three
+phases in a row now, the intuition named a real phenomenon and the measurement rejected the
+direction.
+
+**★ What is genuinely still wrong — the shape, not the level.** Realized cross-draft dispersion
+climbs steeply with board depth (Spearman(sd_drift, ADP rounds) = **+0.679**): the consensus top of
+the board goes at the same slot in every room while a round-12 flier swings wildly. Simulated, over
+the same 1,346 matched player-seasons:
+
+    realized +0.679 | band OFF +0.480 | band ON +0.077 | band ON + shock +0.057
+
+So the band **fixes the level and costs the shape** — and band-OFF looked shape-right for the wrong
+reason (an unbounded candidate set lets deep players go anywhere, mimicking depth-dependent
+dispersion while inflating total variance by 59 %). Right-shaped and wrong-sized versus right-sized
+and wrong-shaped. The band is still correct because it is the *contract*, not because it wins on
+this metric.
+
+**★ Why the shock cannot close it, and how we know it is not a tuning failure.** Across a **50×
+range of shock sizes** (intercept −5.0 → −1.0) the matched depth slope never moves: +0.246, +0.242,
++0.245, +0.235, +0.249, +0.222, +0.180. Two runs at the *same* intercept on different draft samples
+gave +0.249 and +0.057 — **the metric's own sampling noise exceeds the entire effect of the
+parameter**, so the calibration is unidentified and its "best intercept = −2.0" is a draw from
+noise, not an optimum. Reported as such rather than as a fitted value.
+
+The reason is structural: `top_k` is a **hard rank filter applied before utility**, so no shock of
+any size can pull a player into the candidate set. A player at ADP rank 100 simply cannot be taken
+until ~60 ahead of him are gone — his slot variance is capped by the band, not by his utility. An
+additive utility shock only reshuffles *within* the band.
+
+**★ Where the remaining miss actually lives (→ T15).** Utility is linear in raw ADP
+(`adp_s = adp/50`), which makes dispersion roughly uniform *in rank* — exactly the flat profile
+observed. Real drafting is sharp at the top (everyone agrees on the top 5) and diffuse at depth.
+Closing this needs the *candidate set or the utility curvature* to vary with depth — a soft/widening
+band, or log-ADP / rank-based utility — which is an **11.1 respecification**, not a 16.9 knob.
+Logged as **T15** rather than attempted here, because it means refitting a validated component.
+
+**Shipping decision:** band **ON by default** (it is the contract, and it improves the two metrics
+that matter). Shock **built, wired, tested, default OFF** — the repo's established "kept, not
+default" pattern (Phase 7, props, the 13.2 win-tilt, MCTS). It is available for 16.10/16.15, which
+need a *channel* to express a curated narrative through, and that channel is now correct even
+though the quantitative shock has no measured skill.

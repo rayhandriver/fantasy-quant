@@ -1,0 +1,183 @@
+{
+  "config": {
+    "drafts_per_season": 30,
+    "choice_top_k": 40
+  },
+  "realized": {
+    "pooled_sd": 1.8160516109904137,
+    "mean_player_sd": 1.8300697498912255,
+    "depth_spearman": 0.6756322221238233,
+    "depth_spearman_p": 6.1575138212622e-183,
+    "n_player_seasons": 1367
+  },
+  "band_off": {
+    "pooled_sd": 2.8973704161470715,
+    "mean_player_sd": 2.7144097026968894,
+    "depth_spearman": 0.47669174889328425,
+    "depth_spearman_p": 5.656784494567549e-78,
+    "n_player_seasons": 1358,
+    "matched": {
+      "n_matched": 1349,
+      "depth_slope_real": 0.6786752981840233,
+      "depth_slope_sim": 0.4795641421018171,
+      "depth_slope_sim_p": 1.6356384527754581e-78,
+      "sd_agreement": 0.40390550497529404,
+      "sd_agreement_p": 4.325609451676085e-54,
+      "mean_sd_real": 1.825717907118498,
+      "mean_sd_sim": 2.7118907949403033
+    }
+  },
+  "band_on": {
+    "pooled_sd": 1.9759437949993377,
+    "mean_player_sd": 1.968739905275866,
+    "depth_spearman": 0.07476845813116482,
+    "depth_spearman_p": 0.005876684057643489,
+    "n_player_seasons": 1356,
+    "matched": {
+      "n_matched": 1346,
+      "depth_slope_real": 0.6787535083237916,
+      "depth_slope_sim": 0.07729132829446705,
+      "depth_slope_sim_p": 0.004550183384423947,
+      "sd_agreement": 0.21821193622541785,
+      "sd_agreement_p": 5.677255316069947e-16,
+      "mean_sd_real": 1.8228586594158835,
+      "mean_sd_sim": 1.969632746491693
+    }
+  },
+  "shape_coefficients": {
+    "log_depth": 0.36228543038969246,
+    "adp_stdev_z": 2.7755575615628914e-17,
+    "vbd_gap_z": 0.0,
+    "rookie": 0.0,
+    "is_WR": -0.08029197798422896,
+    "is_TE": -0.028523681565925836
+  },
+  "calibration": {
+    "grid": [
+      {
+        "pooled_sd": 1.9356244732288814,
+        "mean_player_sd": 1.8435585568810002,
+        "depth_spearman": 0.2458121336632594,
+        "depth_spearman_p": 1.8273600822666403e-17,
+        "n_player_seasons": 1204,
+        "sd_agreement": 0.23399050575904098,
+        "intercept": -5.0
+      },
+      {
+        "pooled_sd": 1.9386426060839914,
+        "mean_player_sd": 1.8505598784359354,
+        "depth_spearman": 0.24232079585597585,
+        "depth_spearman_p": 4.7218961421650125e-18,
+        "n_player_seasons": 1211,
+        "sd_agreement": 0.24765574873133026,
+        "intercept": -4.0
+      },
+      {
+        "pooled_sd": 1.945339073556009,
+        "mean_player_sd": 1.859553392883746,
+        "depth_spearman": 0.2444993741600244,
+        "depth_spearman_p": 6.4300239647628355e-18,
+        "n_player_seasons": 1205,
+        "sd_agreement": 0.25153966749997175,
+        "intercept": -3.0
+      },
+      {
+        "pooled_sd": 1.9465893776750438,
+        "mean_player_sd": 1.854646058723067,
+        "depth_spearman": 0.23512167686925417,
+        "depth_spearman_p": 1.815360624046719e-16,
+        "n_player_seasons": 1196,
+        "sd_agreement": 0.2398608750220365,
+        "intercept": -2.5
+      },
+      {
+        "pooled_sd": 1.970621582174215,
+        "mean_player_sd": 1.8804244660181868,
+        "depth_spearman": 0.24870438640701184,
+        "depth_spearman_p": 3.05013103425599e-18,
+        "n_player_seasons": 1205,
+        "sd_agreement": 0.2501349241743777,
+        "intercept": -2.0
+      },
+      {
+        "pooled_sd": 2.028029562576824,
+        "mean_player_sd": 1.9221414737490516,
+        "depth_spearman": 0.2215670619507083,
+        "depth_spearman_p": 5.485642435843792e-15,
+        "n_player_seasons": 1209,
+        "sd_agreement": 0.23079546085175168,
+        "intercept": -1.5
+      },
+      {
+        "pooled_sd": 2.1465818090480204,
+        "mean_player_sd": 2.018103905925701,
+        "depth_spearman": 0.17994748260718402,
+        "depth_spearman_p": 3.3700884483465723e-10,
+        "n_player_seasons": 1205,
+        "sd_agreement": 0.1958717903336198,
+        "intercept": -1.0
+      }
+    ],
+    "best_intercept": -2.0
+  },
+  "band_on_shock": {
+    "pooled_sd": 2.001110020980801,
+    "mean_player_sd": 1.9823489938114702,
+    "depth_spearman": 0.05018570313892265,
+    "depth_spearman_p": 0.0643799038215497,
+    "n_player_seasons": 1359,
+    "matched": {
+      "n_matched": 1349,
+      "depth_slope_real": 0.6775909717593744,
+      "depth_slope_sim": 0.05739059620184885,
+      "depth_slope_sim_p": 0.03505978048306231,
+      "sd_agreement": 0.20373634522354425,
+      "sd_agreement_p": 4.175075648857496e-14,
+      "mean_sd_real": 1.8246728441678384,
+      "mean_sd_sim": 1.984564726497192
+    }
+  },
+  "availability_brier": {
+    "band_off": {
+      "n_windows": 7792,
+      "n_drafts": 54,
+      "beh_brier": 0.1946858487511111,
+      "base_brier_default_noise5": 0.3239626431182165,
+      "base_brier_best_tuned": 0.2590444993107971,
+      "best_noise": 36.0,
+      "brier_gain_vs_best": 0.06435865055968598,
+      "brier_gain_ci": [
+        0.053911182756567304,
+        0.0764515406179798
+      ],
+      "beats_best_adp_noise": true
+    },
+    "band_on": {
+      "n_windows": 7792,
+      "n_drafts": 54,
+      "beh_brier": 0.18822770524922885,
+      "base_brier_default_noise5": 0.3239626431182165,
+      "base_brier_best_tuned": 0.2590444993107971,
+      "best_noise": 36.0,
+      "brier_gain_vs_best": 0.07081679406156825,
+      "brier_gain_ci": [
+        0.06092976971907036,
+        0.08231981947527135
+      ],
+      "beats_best_adp_noise": true
+    }
+  },
+  "verdict": {
+    "level_error_band_off": 0.5954229486721155,
+    "level_error_band_on": 0.08804385461364954,
+    "level_gate_pass": true,
+    "depth_slope_realized": 0.6787535083237916,
+    "depth_slope_band_off": 0.4795641421018171,
+    "depth_slope_band_on": 0.07729132829446705,
+    "depth_slope_band_on_shock": 0.05739059620184885,
+    "sd_agreement_band_on": 0.21821193622541785,
+    "sd_agreement_band_on_shock": 0.20373634522354425,
+    "shock_helps_slope": false,
+    "brier_no_regression": true
+  }
+}

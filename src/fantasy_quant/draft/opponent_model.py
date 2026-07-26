@@ -57,6 +57,13 @@ _NEED_TARGET = {"QB": 1, "RB": 4, "WR": 4, "TE": 1, "K": 1, "DST": 1}
 _RUN_WINDOW = 3          # picks looked back for a "positional run"
 _ADP_SCALE = 50.0        # adp is divided by this so β is O(1)
 
+#: **The choice-set contract.** A conditional logit estimates β *relative to the candidate set it
+#: sees*, so every consumer that simulates picks from this β must offer the same set: the top-K
+#: still-available players by consensus ADP. Session G found the simulator (11.3) and the
+#: availability sim (11.2) both drawing from the *whole* board instead, which inflated simulated
+#: draft-slot dispersion by ~59 %. Fit and simulation now read this one constant.
+CHOICE_TOP_K = 40
+
 
 # =============================================================================================
 # feature construction
@@ -91,7 +98,7 @@ def _load_profiles(con) -> pd.DataFrame:
     return prof
 
 
-def build_choice_frame(con, *, top_k: int = 40, skill_only: bool = True,
+def build_choice_frame(con, *, top_k: int = CHOICE_TOP_K, skill_only: bool = True,
                        seasons: Iterable[int] | None = None, allow_ecr: bool = True,
                        max_drafts_per_season: int | None = None,
                        seed: int = 0) -> tuple[pd.DataFrame, list[str]]:
@@ -375,14 +382,16 @@ class OpponentModel:
         soft_series = pd.Series(soft, index=f.index)
         return soft_series.reindex(range(len(frame))).to_numpy()
 
-    def candidate_utility(self, cand: pd.DataFrame, *, recent_pos=None, lean=None,
-                          fav=None, need=None) -> np.ndarray:
-        """Utility (Xβ) for a set of live candidates — the portable path used by availability
-        simulation (11.2) and mock opponents (11.3). ``cand`` needs ``adp``, ``pos`` and
-        optionally ``team``/``rookie``; the Tier-B context (``recent_pos`` positional-run counts,
-        manager ``lean``/``fav``/``need``) defaults to neutral (0) when unknown, which is the exact
-        "no information on this term" marginalization. Only ``feature_cols`` are used, so an
-        ADP-only model ignores everything but ``adp``."""
+    def candidate_matrix(self, cand: pd.DataFrame, *, recent_pos=None, lean=None,
+                         fav=None, need=None) -> np.ndarray:
+        """The design matrix behind :meth:`candidate_utility`, columns in ``feature_cols`` order.
+
+        Split out so hot loops can build it **once per context for a whole board** and then index
+        rows, rather than re-deriving it from pandas at every simulated pick — every column here is
+        row-wise, so ``candidate_matrix(board)[rows]`` equals
+        ``candidate_matrix(board.iloc[rows])``. See
+        :func:`~fantasy_quant.draft.availability.simulate_survival`, which relies on that identity.
+        """
         recent_pos = recent_pos or {}
         pos = cand["pos"].to_numpy()
         team = cand["team"].to_numpy() if "team" in cand.columns else np.array([None] * len(cand))
@@ -397,8 +406,18 @@ class OpponentModel:
             "fandom": np.array([1.0 if (fav and t in fav) else 0.0 for t in team], float),
             "need": np.array([(need or {}).get(p, 0.0) for p in pos], float),
         }
-        X = np.column_stack([cols[c] for c in self.feature_cols])
-        return X @ self.beta
+        return np.column_stack([cols[c] for c in self.feature_cols])
+
+    def candidate_utility(self, cand: pd.DataFrame, *, recent_pos=None, lean=None,
+                          fav=None, need=None) -> np.ndarray:
+        """Utility (Xβ) for a set of live candidates — the portable path used by availability
+        simulation (11.2) and mock opponents (11.3). ``cand`` needs ``adp``, ``pos`` and
+        optionally ``team``/``rookie``; the Tier-B context (``recent_pos`` positional-run counts,
+        manager ``lean``/``fav``/``need``) defaults to neutral (0) when unknown, which is the exact
+        "no information on this term" marginalization. Only ``feature_cols`` are used, so an
+        ADP-only model ignores everything but ``adp``."""
+        return self.candidate_matrix(cand, recent_pos=recent_pos, lean=lean, fav=fav,
+                                     need=need) @ self.beta
 
     def score(self, frame: pd.DataFrame) -> dict:
         """Held-out fit quality: log-loss, multiclass Brier, top-1 accuracy, mean realized rank."""

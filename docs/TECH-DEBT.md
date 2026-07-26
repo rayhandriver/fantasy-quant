@@ -24,8 +24,9 @@ At a glance:
 | **T10** | ✅ | `validate_archetypes`/`spine_4_validate` sweep S6's `adaptive` archetype → crash (needs `adaptive_parent`) | opportunistic (post-lockbox) | ☑ 2026-07-24 |
 | **T11** | 🟡 | (a) Underdog ADP never ingested (no keyless endpoint). **(b) drift corpus thinness — CLOSED 2026-07-26**: re-asked 16.8 on 1,144 drafts, verdict held | (a) opportunistic; (b) done | ◐ 2026-07-26 |
 | **T13** | 🟠 | Phase-5 distribution cloud is **not reproducible across processes** — per-player q10/q90 vary run to run; dress coverage wobbles 75.5↔76.5 % | before any per-player distribution number is published in the app | ☐ 2026-07-26 |
-| **T14** | 🟡 | 11.2's availability bootstrap is O(n_boot × n_drafts × n_windows) — ~45 min at 252 drafts | when 11.2 is next re-run at scale | ☐ 2026-07-26 |
+| **T14** | ✅ | 11.2 does not scale. **Diagnosis corrected 2026-07-26**: the bootstrap was 0.79 s (0.008 %); the cost was pandas in `simulate_survival` (99.3 %). Fixed both → **396 s → 12.7 s, bit-identical** | when 11.2 is next re-run at scale | ☑ 2026-07-26 |
 | **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☑ 2026-07-25 |
+| **T15** | 🟡 | simulated draft-slot dispersion is **flat in board depth** (+0.08 vs realized +0.68) — `adp_s` is linear in raw ADP + a hard rank band, so deep sleepers look more reliably gettable than they are | before Phase 14 surfaces availability to a user; an 11.1 respecification | ☐ 2026-07-26 |
 
 ---
 
@@ -559,14 +560,74 @@ Changing the sampler now would break comparability with the lockbox result for a
 reported number by ~1pp. **Fix when the app is built** (Phase 14), by threading an explicit seed
 through the coupling step and asserting cross-process reproducibility in a test.
 
-## 🟡 T14 — 11.2's availability bootstrap does not scale
-*(found 2026-07-26, Session F.6)*
+## ✅ T14 — 11.2 does not scale — **DONE 2026-07-26 (Session G), with the diagnosis corrected**
+*(found 2026-07-26, Session F.6; fixed 2026-07-26, Session G)*
 
-`availability_brier` bootstraps by rebuilding a boolean mask per draft per replicate
-(`np.flatnonzero(draft_of_win == u)` inside a 400-iteration loop): O(n_boot × n_drafts ×
-n_windows). At 21 drafts / 1,501 windows it was invisible; at 252 drafts / 36,972 windows it is
-tens of minutes, and it dominated a ~100-minute step run.
+**Status ☑ done.** `availability_brier` at the committed budget went **396.4 s → 12.7 s (31×)** on
+an identical call; projected at full committed scale (36,972 windows) **~163 min → ~5.2 min**.
+Outputs are **bit-identical**, verified against the pre-fix implementation kept as a test oracle.
 
-**Fix:** precompute `np.argsort(draft_of_win)` once into per-draft index blocks and index into
-them, instead of scanning the full window array per draft per replicate. Pure refactor — the
-statistic is unchanged. Do it before the next scaled 11.2 run.
+**★ The original diagnosis was wrong, and the way it was wrong is the lesson.** F.6 opened T14 by
+*reading* the code, spotting an O(n_boot × n_drafts × n_windows) scan, and asserting it "dominated
+a ~100-minute step run." Measured at exactly that scale, **the bootstrap takes 0.79 s** — about
+**0.008 %** of the run. A `cProfile` of the real path put **99.3 % of the time in
+`simulate_survival`**, and inside it not in the arithmetic but in **pandas**: `cand.iloc[ai]`
+(195 s) and rebuilding the feature matrix column-by-column in `candidate_utility` (169 s), across
+~648 k calls in a 9-draft sample — ~13 M at full scale. *A complexity class is not a profile.* The
+scan was genuinely O(n³)-ish and genuinely irrelevant; the real cost was constant-factor pandas
+overhead in a loop, which no amount of reading Big-O off the page surfaces.
+
+**What was actually fixed (both, since the prescribed fix was cheap and correct on its own terms):**
+1. **The real one — hoist invariant work out of the MC loop.** `OpponentModel.candidate_matrix` is
+   split out of `candidate_utility`, and `simulate_survival` now builds **one design matrix per seat
+   context** and indexes rows, instead of re-deriving every column from pandas at each simulated
+   pick. `pos_run3` is the only column that moves within a draw, so it alone is overwritten in
+   place. Rests on a **row-wise-columns invariant** (`candidate_matrix(board)[rows] ==
+   candidate_matrix(board.iloc[rows])`) that is now asserted by its own test — if a future feature
+   reads across rows (a rank, a share, a within-board z-score), that test fails rather than the
+   hoist silently going wrong.
+2. **The prescribed one** — `_draft_blocks` precomputes per-draft index blocks via one stable
+   argsort. Kept because it removes a real scaling hazard as the corpus grows, and it is exactly
+   bit-identical (proven by construction and by test).
+
+**Why bit-identity mattered enough to design for.** 11.2's committed `brier_gain_vs_best = +0.0864`
+is a reported result. A "pure refactor" that moved probabilities in the last bits would silently
+invalidate it, so both changes preserve the **RNG call order and the summation order** — the
+optimization computes the same `X[ai] @ beta` on the same rows, not an algebraically-equal
+rearrangement. (A faster algebraic bootstrap — per-draft sums/counts, 460× — was measured and
+**rejected**: exact in exact arithmetic, but it consumes the RNG differently, so the replicate draws
+would not match. Speed on a 0.79 s component was not worth breaking comparability.)
+
+**Consequence for Session G:** the 16.9 availability-Brier non-regression gate can be run at full
+committed scale for ~5 min, so the "reduced sample" compromise it was scoped under is no longer
+needed for the confirmation run.
+
+## 🟡 T15 — simulated draft-slot dispersion is flat in board depth
+*(opened 2026-07-26, Session G, by the 16.9 done-bar)*
+
+**Symptom.** Realized cross-draft dispersion rises steeply with board depth — Spearman(`sd_drift`,
+ADP rounds) = **+0.679** over 1,346 matched player-seasons. The simulator, with the choice-set band
+correctly applied, is **+0.077**: essentially flat. The pooled *level* is right (1.976 vs realized
+1.816, 8.8 %); the *shape* is not. Consensus top-of-board players are simulated as far more
+volatile than they are, and deep fliers as far less.
+
+**Why the 16.9 shock does not fix it** (measured, not assumed). `top_k` is a **hard rank filter
+applied before utility**, so an additive utility shock cannot pull a player into the candidate set —
+it only reshuffles within it. A player at ADP rank 100 cannot be taken until ~60 ahead of him are
+gone, whatever his shock. Sweeping the shock over a 50× range moved the slope by less than its own
+between-sample noise.
+
+**Where it actually lives.** `adp_s = adp / 50` makes utility **linear in raw ADP**, which produces
+dispersion that is roughly uniform *in rank* — exactly the flat profile measured. Real drafting is
+sharp at the top and diffuse at depth.
+
+**Fix (an 11.1 respecification, hence not done here):** either a **depth-varying candidate set**
+(soft or widening band instead of a hard top-40) or **curvature in the ADP term** (log-ADP or
+rank-based `adp_s`), then refit and re-verify against 11.1's log-loss gain (+0.1738), 11.2's
+availability Brier (+0.0708 banded) **and** the 16.9 dispersion profile together — a change that
+improves one of those and quietly degrades another is the failure mode to guard against.
+
+**Who is affected.** Mock-draft realism and the honest `P(available at your pick)` readout
+(16.12) — deep sleepers currently look more reliably gettable than they are. **Not** the frozen
+value stack, which is untouched by all of this. Worth doing before Phase 14 surfaces availability
+numbers to a user; not worth blocking Session H on.

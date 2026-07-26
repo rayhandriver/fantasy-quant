@@ -1092,3 +1092,33 @@ Noise is visible in a CI; contamination is not.
 **the sample you did not choose** — `n_drafts: 21`, the thinnest number in the repo and cited for
 two sessions as a corpus limit, was the default argument `max_drafts_per_season=3`. When a headline
 rests on a sample size nobody deliberately picked, treat it as an upper bound on the effect.
+
+**a complexity class is not a profile** — T14 was opened by *reading* code: a `flatnonzero` scan
+inside a 400-replicate loop, correctly derived as O(n_boot × n_drafts × n_windows), asserted to
+dominate a 100-minute run. Measured, it took **0.79 s — 0.008 %**; 99.3 % was pandas row-slicing in
+`simulate_survival`, an O(1)-per-call operation made 13 M times. Sound asymptotics, wrong by four
+orders of magnitude, because the constant factor lived elsewhere. *A performance ticket written
+without a profile is a hypothesis. Profile first; suspect pandas in any loop that mixes it with
+numpy.*
+
+**the choice-set contract** — a conditional logit's β means nothing except *relative to the
+candidate set it was estimated on*. 11.1 is fit on the top-40 available by ADP; both the mock
+simulator and the availability sim were applying that β to the whole board, inflating simulated
+draft-slot dispersion by 59 %. Fit and simulation now share one constant (`CHOICE_TOP_K`) with a
+test that fails if they drift apart. *Whenever a fitted model is used somewhere new, the first
+question is whether the new caller reproduces the estimation-time conditions — not whether the
+output looks reasonable.* Fourth member of the F.5/F.6 family (hardcoded label, contaminated
+corpus, modal-size board, and now candidate set): **every one was a fit/use mismatch that looked
+like a modelling result.**
+
+**right-shaped vs right-sized** — the pre-fix simulator reproduced the realized *shape* of
+dispersion-by-depth (+0.48 vs +0.68) far better than the fixed one (+0.08), while being 59 % too
+dispersed overall. It got the shape by accident, from an unbounded candidate set letting deep
+players go anywhere. *When a defective version scores better on one axis, check whether it is right
+for a reason or right by coincidence before treating the fix as a regression.*
+
+**an unidentified calibration** — 16.9's shock size was swept over a 50× range and the target
+metric never moved beyond its own between-sample noise (two runs at the same setting: +0.249 and
++0.057). The grid still has an argmin, and reporting it as "the calibrated value" would have
+dressed a noise draw as a fitted parameter. *Before quoting an optimum, check that the objective
+varies more across the parameter than it does across reruns at a fixed parameter.*

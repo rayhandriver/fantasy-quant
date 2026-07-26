@@ -20,7 +20,7 @@ import pandas as pd
 
 from fantasy_quant.adp.boards import resolve_boards
 from fantasy_quant.adp.drift_panel import eligible_drafts
-from fantasy_quant.draft.opponent_model import _load_profiles
+from fantasy_quant.draft.opponent_model import CHOICE_TOP_K, _load_profiles
 from fantasy_quant.draft.optimizer import DEFAULT_NOISE, survival_prob
 from fantasy_quant.draft.simulator import canon_pos
 
@@ -31,32 +31,81 @@ def _softmax(u: np.ndarray) -> np.ndarray:
     return e / e.sum()
 
 
+def _draft_blocks(draft_of_win: np.ndarray) -> dict[int, np.ndarray]:
+    """Row indices of ``draft_of_win`` grouped by draft, for the cluster bootstrap (T14).
+
+    Equivalent to ``{u: np.flatnonzero(draft_of_win == u)}`` but computed in one sort rather than
+    one full-array scan per draft per bootstrap replicate.
+    """
+    order = np.argsort(draft_of_win, kind="stable")
+    sorted_dow = draft_of_win[order]
+    uniq = np.unique(draft_of_win)
+    lo = np.searchsorted(sorted_dow, uniq, side="left")
+    hi = np.searchsorted(sorted_dow, uniq, side="right")
+    return {int(u): order[a:b] for u, a, b in zip(uniq, lo, hi, strict=False)}
+
+
 def simulate_survival(cand: pd.DataFrame, avail0: np.ndarray, seat_plan: list[dict],
                       model, *, n_sims: int, rng: np.random.Generator,
-                      recent0: list | None = None) -> np.ndarray:
+                      recent0: list | None = None,
+                      top_k: int | None = CHOICE_TOP_K) -> np.ndarray:
     """MC survival of each ``cand`` row over a window of opponent picks.
 
     ``cand`` is a positional-index board (``adp``, ``pos``, optional ``team``/``rookie``);
     ``avail0`` marks who is available at the window start; ``seat_plan`` has one context dict per
     intervening opponent pick (``lean``/``fav``/``need`` for the manager on the clock, any of which
     may be absent → neutral). Returns P(available at window end) per row.
+
+    ``top_k`` restricts each simulated pick to the top-``k`` **still-available players by ADP** —
+    the candidate set the conditional logit was actually estimated on
+    (:func:`~fantasy_quant.draft.opponent_model.build_choice_frame`, ``top_k=40``). A conditional
+    logit's β is only interpretable relative to its choice set, so simulating over the whole board
+    is applying the model outside its contract; ``top_k=None`` restores that (pre-Session-G)
+    behaviour and is kept only for the comparison that measured the difference.
     """
     m = len(cand)
     idx_all = np.arange(m)
     surv = np.zeros(m)
     pos_arr = cand["pos"].to_numpy()
+    beta = model.beta
+    # rank by ADP so "top_k available" is well-defined even if `cand` arrives unsorted
+    adp_order = np.argsort(cand["adp"].to_numpy(float), kind="stable")
+    adp_rank = np.empty(m, int)
+    adp_rank[adp_order] = np.arange(m)
+
+    # --- hoisted design matrices (T14) --------------------------------------------------------
+    # The per-pick cost used to be `model.candidate_utility(cand.iloc[ai], ...)`, which re-sliced a
+    # DataFrame and rebuilt every feature column from pandas at each of the ~13M simulated picks a
+    # scaled 11.2 run makes. All of that is invariant across draws, so build **one design matrix per
+    # seat context** up front and index rows instead. `pos_run3` is the only column that moves
+    # within a draw (it counts the last <=3 picks), so it alone is overwritten in place.
+    # Row-wise columns ⇒ X[ai] is exactly the matrix the old path built on `cand.iloc[ai]`, so the
+    # utilities, the softmax, the RNG stream and hence the returned probabilities are unchanged.
+    mats = [model.candidate_matrix(cand, lean=c.get("lean"), fav=c.get("fav"), need=c.get("need"))
+            for c in seat_plan]
+    run_col = model.feature_cols.index("pos_run3") if "pos_run3" in model.feature_cols else None
+    pos_codes, pos_levels = pd.factorize(pos_arr)
+    lvl_of = {p: i for i, p in enumerate(pos_levels)}
+    # trailing slot stays 0 so an unfactorized position (code -1) contributes no run count
+    counts = np.zeros(len(pos_levels) + 1)
+
     for _ in range(n_sims):
         avail = avail0.copy()
         recent = list(recent0 or [])
-        for ctx in seat_plan:
+        for X in mats:
             ai = idx_all[avail]
             if ai.size == 0:
                 break
-            rp: dict[str, int] = {}
-            for p in recent[-3:]:
-                rp[p] = rp.get(p, 0) + 1
-            u = model.candidate_utility(cand.iloc[ai], recent_pos=rp, lean=ctx.get("lean"),
-                                        fav=ctx.get("fav"), need=ctx.get("need"))
+            if top_k is not None and ai.size > top_k:
+                ai = ai[np.argsort(adp_rank[ai], kind="stable")[:top_k]]
+            if run_col is not None:
+                counts[:] = 0.0
+                for p in recent[-3:]:
+                    j = lvl_of.get(p)
+                    if j is not None:
+                        counts[j] += 1.0
+                X[:, run_col] = counts[pos_codes]
+            u = X[ai] @ beta
             choice = int(rng.choice(ai, p=_softmax(u)))
             avail[choice] = False
             recent.append(pos_arr[choice])
@@ -74,7 +123,8 @@ _NOISE_GRID = (3.0, 5.0, 8.0, 12.0, 18.0, 26.0, 36.0)   # ADP+noise baseline tun
 def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
                        n_sims: int = 60, contested_k: int = 30,
                        max_drafts_per_season: int = 8, noise: float = DEFAULT_NOISE,
-                       n_boot: int = 400, seed: int = 0) -> dict:
+                       n_boot: int = 400, seed: int = 0,
+                       top_k: int | None = CHOICE_TOP_K) -> dict:
     """Score availability forecasts on real draft windows. For every seat's consecutive pick pair
     in a sample of human drafts, predict P(available at the seat's next pick) for the contested
     band (the ``contested_k`` lowest-ADP available players) under (a) the behavioral flow and
@@ -199,7 +249,8 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
 
                 # behavioral survival (only need it for the contested rows)
                 surv_full = simulate_survival(
-                    bd, avail0, seat_plan, model, n_sims=n_sims, rng=rng, recent0=recent0)
+                    bd, avail0, seat_plan, model, n_sims=n_sims, rng=rng, recent0=recent0,
+                    top_k=top_k)
                 p_beh = surv_full[contested]
                 cadp = bd["adp"].to_numpy()[contested]
                 beh_br.append(float(np.mean((p_beh - realized) ** 2)))
@@ -218,10 +269,13 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
     base_default = base_grid[noise] if noise in base_grid else base_grid[best_nz]
     d = base_best - beh_br            # >0 ⇒ behavioral beats the BEST-tuned ADP+noise
     uniq = np.unique(draft_of_win)
+    # T14: index each draft's windows once, instead of rescanning the full window array per draft
+    # per replicate (the old O(n_boot x n_drafts x n_windows) scan). Same draws, same statistic.
+    blocks = _draft_blocks(draft_of_win)
     boots = []
     for _ in range(n_boot):
         pick = rng.choice(uniq, uniq.size, replace=True)
-        mask = np.concatenate([np.flatnonzero(draft_of_win == u) for u in pick])
+        mask = np.concatenate([blocks[int(u)] for u in pick])
         boots.append(d[mask].mean())
     boots = np.array(boots)
     return {

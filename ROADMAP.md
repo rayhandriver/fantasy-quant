@@ -330,9 +330,18 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   `source_divergence` ablation mandatory** → **11.3 personalities** + **S6 adaptive** (both ride the fitted
   β). Open decisions: ECR board fallback (recovers 2025's 278 eligible drafts), and whether to re-run the
   2025 dress rehearsal (a further read of the calibration holdout).
-- **Session G — apply the drift 16.9–16.12 + 16.16.** 16.9 correlated per-draft narrative shock, 16.10 curated
-  hype board, 16.11 live 2026 momentum, 16.12 consumption (engine half: opponent flow + opt-in 9.4 advice;
-  app readout → Phase 14), 16.16 live run-detection (engine; alert → 14.4). Several light substeps.
+- **Session G — apply the drift 16.9–16.12 + 16.16.** ◐ **IN PROGRESS (2026-07-26).** **T14 ☑** (the
+  warm-up: 11.2 396 s → 12.7 s, bit-identical — and its **diagnosis was wrong**, the bootstrap was 0.79 s
+  while 99.3 % sat in pandas inside `simulate_survival`). **16.9 ☑ BUILT — an honest NULL, and the third
+  in Phase 16.** The premise inverted under measurement: the simulator **over**-dispersed draft slots by
+  59 %, because 11.1's top-40-fit β was being applied to the whole board in both `make_opponent_pick_fn`
+  and `simulate_survival` — a **choice-set contract violation**, now fixed and shared via `CHOICE_TOP_K`.
+  That fix alone met the level done-bar (**59.5 % → 8.8 %** error) and *improved* the availability Brier
+  (**+0.0644 → +0.0708**). The shock itself moves nothing: realized depth slope +0.679, banded +0.077,
+  +shock +0.057, and a 50× size sweep stays inside the metric's own noise → **default OFF, kept as the
+  expression channel for 16.10/16.15**. Residual shape miss → **T15**. **425 tests, ruff clean.**
+  **← RESUME AT 16.10** (curated hype board — mechanism + `reviewed=false` board, user review after),
+  then 16.11 momentum → 16.12 consumption → 16.16 run detection.
   **~full-phase (800–1,400L); may split if 16.9/16.16 run heavy.**
 - **Session H — opponent personalities 16.13–16.15.** 16.13 board enrichment (frozen dist/value fields), 16.14
   the 5 personalities (`signal_weights`), 16.15 mock-room composition + hype coupling (engine; selector → 14).

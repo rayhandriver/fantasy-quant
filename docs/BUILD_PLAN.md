@@ -1124,6 +1124,21 @@ proxy. What is backtestable: the Sleeper human corpus (149 drafts, 2017–2020) 
   11.2 default. Validated on the human corpus, walk-forward.
 - **Reuse:** `draft/opponent_model.py` (conditional-logit utility), `draft/availability.py` (`simulate_survival`),
   `draft/simulator.py` opponent loop.
+- **☑ BUILT 2026-07-26 (Session G) — the shock is an honest NULL; the level done-bar was met by a bug fix.**
+  `adp/narrative.py` + `steps/phase16_9_narrative.py` + `analysis/phase16_9_narrative.json` + 9 tests.
+  - **The premise inverted:** the simulator did not under-disperse, it **over**-dispersed by 59 %. Cause was
+    a **choice-set contract violation** — 11.1 is fit on `build_choice_frame(top_k=40)` but both
+    `make_opponent_pick_fn` and `simulate_survival` drew from the **whole board**. Now share
+    `opponent_model.CHOICE_TOP_K`, asserted by test. Level error **59.5 % → 8.8 %**; availability Brier
+    **+0.0644 → +0.0708** (improves — no regression, on 7,792 windows).
+  - **The shock does not earn its keep.** Realized depth slope +0.679; band ON +0.077; +shock **+0.057**.
+    Swept over a **50× size range** the slope never moved beyond its own between-sample noise (two runs at
+    one setting: +0.249 / +0.057) → the calibration is **unidentified**, reported as such.
+  - **Why it structurally cannot:** `top_k` is a hard rank filter applied **before** utility, so no additive
+    shock pulls a player into the candidate set — it only reshuffles within it. Residual shape miss traced to
+    `adp_s` being linear in raw ADP → **T15** (an 11.1 respecification, deliberately not attempted here).
+  - **Shipped:** band **ON by default**; shock **built/wired/tested, default OFF** ("kept, not default", as
+    Phase 7 / props / the 13.2 win-tilt). 16.10 and 16.15 still get their expression channel, now a correct one.
 
 ### 16.10 — Curated hype-board override → `adp/hype_board.py` + `reference/hype_board.csv`
 - **Do:** a small editable table (`player_key · pick_delta · note · source`), Claude-drafted via web research

@@ -1169,3 +1169,33 @@ windows (was +0.1587 on 1,501 — the thin result was ~2× optimistic); 16.8 hea
 (distribution not reproducible across processes) and T14 (11.2 bootstrap O(n²)); T11(b) closed.
 
 **Next: Session G — 16.9–16.12 + 16.16 under the null's constraint.**
+
+## 2026-07-26 — Session G (in progress): T14 warm-up + Phase 16.9
+
+**T14 ☑** — `availability_brier` 396.4 s → 12.7 s (31×) on an identical call; ~163 min → ~5.2 min at
+full committed scale. **Bit-identical**, verified against the pre-fix implementation kept as a test
+oracle. The register's diagnosis was wrong: the bootstrap it blamed runs in **0.79 s (0.008 %)**;
+`cProfile` put **99.3 %** in `simulate_survival`, specifically pandas (`cand.iloc[ai]`, per-pick
+feature rebuild) over ~13 M calls at scale. Fixed by hoisting one design matrix per seat context
+(`OpponentModel.candidate_matrix`, resting on a row-wise-columns invariant that now has its own
+test) plus the prescribed `_draft_blocks`. Bit-identity was a **design constraint** — 11.2's
+committed `+0.0864` is a reported number — so a 460× algebraic bootstrap was measured and rejected
+for consuming the RNG differently.
+
+**16.9 ☑ — the shock is an honest NULL; the real find was a choice-set contract violation.**
+New `adp/narrative.py`, `steps/phase16_9_narrative.py`, `analysis/phase16_9_narrative.json`,
+`tests/test_narrative.py` (9), band tests in `test_opponent_model.py`. **425 tests, ruff clean.**
+- **Premise inverted:** the phase assumed under-dispersion; measured, the simulator **over**-dispersed
+  draft slots by **59 %**. 11.1 is fit on the top-40 available by ADP; `make_opponent_pick_fn` and
+  `simulate_survival` were both drawing from the whole board. Now share `CHOICE_TOP_K`.
+- **The fix alone meets the level done-bar** — pooled `drift_centered_sd` 2.897 → **1.976** vs
+  realized 1.816 (**59.5 % → 8.8 %** error) — **and improves the availability Brier**, +0.0644 →
+  **+0.0708** on 7,792 windows. Two independent metrics, so not a tuning choice.
+- **The shock earns nothing.** Realized depth slope +0.679 · banded +0.077 · +shock +0.057. A **50×**
+  sweep of shock size leaves the slope inside its own between-sample noise (+0.249 vs +0.057 at one
+  setting) → **unidentified calibration**, reported as a noise draw not a fitted parameter.
+  Structural cause: `top_k` is a hard rank filter applied *before* utility.
+- **Decisions:** band **ON by default** (it is the contract); shock **default OFF**, kept as the
+  expression channel 16.10/16.15 need. Residual shape miss logged as **T15** (an 11.1
+  respecification — soft/widening band or log-ADP utility — not attempted inside 16.9).
+- **Next: 16.10** (mechanism now, user reviews the board after), then 16.11 → 16.12 → 16.16.

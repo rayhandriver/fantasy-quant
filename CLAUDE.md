@@ -61,8 +61,51 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★ Next-session pointer (2026-07-26, ★ SESSION F.6 COMPLETE — the re-derivation sweep.
-> RESUME AT SESSION G.) READ THIS FIRST — it is written to resume cold.**
+> **★★ Next-session pointer (2026-07-26, ★ SESSION G IN PROGRESS — T14 ☑ + 16.9 ☑.
+> RESUME AT 16.10.) READ THIS FIRST — it is written to resume cold.**
+>
+> **State:** **425 tests** (was 411), ruff clean. Committed on `main`. DEV-only; the spent lockbox is
+> untouched; the frozen value/distribution/optimizer/VBD/cost-report stack is not touched by any of
+> this. Stage-0 FFC chore: last pull 2026-07-24, **next due after 07-30**.
+>
+> **★★ THE FINDING TO CARRY FORWARD — the choice-set contract.** 11.1 is a conditional logit fit on
+> `build_choice_frame(top_k=40)` = the top-40 available by ADP. **Both** consumers of that fitted β
+> were simulating against the *whole board*: `personalities.make_opponent_pick_fn` and
+> `availability.simulate_survival`. A conditional logit's coefficients only mean anything relative to
+> the candidate set they were estimated on. This inflated simulated draft-slot dispersion **59 %**.
+> Both now read `opponent_model.CHOICE_TOP_K` and a test fails if fit and simulation drift apart.
+> **This is the fourth member of the F.5/F.6 family** (hardcoded `scoring="ppr"` → contaminated
+> behavioural corpus → modal board size → candidate set): *every one was a fit/use mismatch that
+> presented as a modelling result.* When a fitted model gets a new caller, check the caller
+> reproduces estimation-time conditions before trusting the output.
+>
+> **★ 16.9 = an honest NULL (Phase 16's third).** The premise inverted: the phase assumed
+> independent per-seat sampling **under**-disperses; measured, the simulator **over**-dispersed.
+> After the contract fix — level error **59.5 % → 8.8 %** (pooled sd 2.897 → 1.976 vs realized
+> 1.816) and availability Brier **+0.0644 → +0.0708** on 7,792 windows, so *two independent metrics
+> improved and it is not a tuning choice*. The shock itself does nothing: realized depth slope
+> **+0.679**, banded **+0.077**, +shock **+0.057**; swept over a **50× size range** the slope stays
+> inside its own between-sample noise (two runs at one setting: +0.249 / +0.057) → the calibration is
+> **unidentified**, and its "best intercept" is a noise draw, reported as such rather than as a fit.
+> **Structural reason it cannot work:** `top_k` is a hard rank filter applied *before* utility, so no
+> additive shock pulls a player into the candidate set. **Shipped: band ON by default; shock built,
+> wired, tested, default OFF** — kept because 16.10/16.15 need an expression channel for a curated
+> narrative, and that channel is now correct.
+>
+> **★ New tech debt: T15** (🟡 simulated dispersion is flat in board depth — `adp_s` is linear in raw
+> ADP, so dispersion is uniform *in rank*; real drafting is sharp at the top and diffuse at depth.
+> Fix is an **11.1 respecification** — soft/widening band or log-ADP/rank utility — and must be
+> re-verified against 11.1 log-loss, 11.2 Brier **and** the 16.9 profile *together*. Do it before
+> Phase 14 surfaces `P(available)` to a user; do not block Session H on it.) **T14 ☑** — see its
+> register entry for the "a complexity class is not a profile" lesson.
+>
+> **★ NEXT: 16.10** — the curated hype board. User decision already taken: **build the mechanism now
+> (loader + schema + tests + a Claude-drafted 2026 board stamped `reviewed=false`, apply path refuses
+> unreviewed rows), user reviews the CSV afterwards** — do NOT stall the session on review. Then
+> 16.11 momentum (live-2026-only, forward-only label) → 16.12 consumption → 16.16 run detection.
+> Then Session H (personalities 16.13–16.15) → I (Phase 17 formats) → K (Phase 14 app, last).
+>
+> _(Prior pointer — history.)_ **★★ (2026-07-26, ★ SESSION F.6 COMPLETE — the re-derivation sweep.)**
 >
 > **State:** **411 tests** (was 395), ruff clean, all data-health gates PASS. Committed on `main`,
 > **not pushed**. Stage-0 FFC chore: next due after 07-30. DEV-only; the spent lockbox is untouched.
