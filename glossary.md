@@ -1224,3 +1224,46 @@ the candidate set, discrimination is monotone in the threshold, reaching **+0.10
 is how a detector gets tuned until it looks like it works. 16.16 reports the whole
 threshold/fire-rate/discrimination curve and selects an operating point from it, so a reader can
 see that discrimination rises monotonically rather than at one chosen point.
+
+**opponent personality vs archetype** (16.13–16.15) — two different things that both describe "a
+way of drafting". A **personality** is an *opponent*: a tilt on the fitted 11.1 β that makes one of
+the nine other seats behave like a recognizable manager. An **archetype** (`draft/config.py`) is
+*your own* strategy, a constraint set the optimizer drafts under. They never mix — one is realism,
+the other is personalization.
+
+**signal weights** (16.14) — a personality's linear bonus on the enriched board columns, in units
+of **utility per within-position standard deviation of the live candidate pool**. Standardizing
+first is what makes `+0.45` mean the same thing for `boom_prob` ∈ [0,1] and `q90` ∈ [100, 300], and
+standardizing *within position* is what stops a risk tilt from silently becoming a positional lean
+(QBs carry the fattest raw `q90`; that is the scoring system, not an opinion about ceiling).
+
+**reach ceiling** (`max_reach_picks`, 16.14) — a cap on how far a personality may reach for a
+player it likes, stated **in ADP picks** and converted to utility through the model's own `β_adp_s`
+(the same conversion `apply_hype` uses). It bounds only the *discretionary, player-specific* tilt —
+hype, signal weights, a homer's fandom excess — and deliberately not β reshaping or
+`early_pos_penalty`, because "I never take RBs early" is a **strategy**, not a reach for a name.
+Two properties fall out for free: nothing on the board that fits a personality's taste ⇒ the bonus
+is ≈0 and it quietly takes best value; and a curated claim can never drag a player further than a
+human would have claimed.
+
+**level vs shape** (16.13, `enrichment.residual_shape`) — the distinction that decides whether a
+risk signal means anything. Within position, `q90` is **~0.98 collinear with the projected mean**
+in every season checked (2022, 2025, 2026) and `corr(q90, q10) = +0.62…+0.74`: the quantiles are
+mostly *level*, i.e. "is this player good". So an "upside chaser" weighting `q90` and a "safe"
+drafter weighting `q10` both just draft good players and **agree**. Regressing the level out inside
+each position leaves the **shape** — `upside` / `floor`, "more ceiling (floor) than a player
+projected this high usually carries" — which are orthogonal to level by construction and correlate
+**−0.86** with each other. *Same family as the 16.10 lesson: a signal is not a shape signal without
+its control, and it fails by looking plausible.*
+
+**change of situation** (`cos`, 16.13) — a coarse [0,1] score over 16.5's derived event board
+(`team_change` 1.0 · `new_to_league` 0.9 · `room_change` 0.6 · `context_only` 0.4). Strictly a
+**behavioral** prior — what a draft room *talks about* — never a value claim: 16.1 and 16.2 both
+found situation change does not predict outperformance. It exists so a narrative-chasing opponent
+has something to chase, and it must not leak into the value stack.
+
+**inert personality** — the failure mode a personality set fails by. `homer` shipped in Phase 11.3
+scaling a `fandom` coefficient whose feature was **identically zero** (nothing in the mock path
+ever passed `fav`), and `rookie_hawk` scaled a `rookie` column `_prepare_board` dropped. Both were
+literal no-ops for a whole phase and no test noticed, because a personality that does nothing still
+completes a legal draft. The lesson: assert a tilt **moves** something, not merely that it runs.

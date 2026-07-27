@@ -61,8 +61,56 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★ Next-session pointer (2026-07-26, ★ SESSION G COMPLETE — T14 ☑ · 16.9 ☑ · 16.11 ☑ · 16.10 ☑
-> · 16.12 ☑ · 16.16 ☑. NEXT = SESSION H.) READ THIS FIRST — it is written to resume cold.**
+> **★★ Next-session pointer (2026-07-26, ◐ SESSION H PART 1/2 — 16.13 ☑ · 16.14 ☑. NEXT = 16.15,
+> then Session I.) READ THIS FIRST — it is written to resume cold.**
+>
+> **State:** **496 tests** (was 466), ruff clean, every done-bar gate PASS.
+> `steps/phase16_13_personalities.py` → `analysis/phase16_13_personalities.json`. **UNCOMMITTED**
+> (13 files), your choice — Session G is fully committed through `5f6383b`, so the working tree holds
+> Session H alone. DEV-only; the frozen value/distribution/optimizer/VBD/cost-report stack is untouched
+> (16.13 only *reads* it). Stage-0 FFC chore: last pull 2026-07-24, **next due after 07-30**.
+>
+> **★★ THE FINDING TO CARRY FORWARD — a signal is not a *shape* signal without its level control.**
+> 16.14's spec says the upside chaser weights `q90` and the safe drafter weights `q10`. Built exactly
+> that way, **they agree with each other**: on the real board `safe_floor` drafted a *higher* mean
+> `q90` than `upside_chaser`. Measured within position, `corr(q90, mean)` = **+0.984 / +0.985 /
+> +0.999** (2022 / 2025 / 2026) and `corr(q90, q10)` = +0.62…+0.74. The quantiles are almost entirely
+> **level** — "is this player good" — so both weights are quality tilts wearing risk-tilt clothes.
+> The fix is `enrichment.residual_shape`: regress the level out inside each position, giving
+> `upside`/`floor`, orthogonal to level by construction and `corr = −0.86` with each other.
+> **This is the 16.10 finding again** (*a coefficient is not transportable without its controls*) —
+> same failure mode, one level down, on a **signal** instead of a coefficient, and it presented the
+> same way: as a plausible modelling result rather than as an error. It was caught only because the
+> face-validity bar was stated as *the two must disagree with each other* rather than *each must
+> differ from balanced*; the weaker bar passes the broken build. **State your bars as oppositions.**
+>
+> **★ The other lesson: an inert thing still passes.** `homer` had been scaling a `fandom`
+> coefficient whose feature was identically 0 (nothing in the mock path ever passed `fav`) and
+> `rookie_hawk` scaled a column `_prepare_board` discarded. Both were **literal no-ops from Phase
+> 11.3 through a full phase and a green suite**, because a personality that does nothing still
+> completes a legal draft. Assert that a tilt *moves* something, not merely that it runs.
+>
+> **★ Effect sizes here are small and that is honest.** ±0.05 z on a pooled drafted pool; a manager
+> who reaches 1–2 rounds cannot move 90 picks much. One seeded draft cannot even resolve the *sign* —
+> every face-validity number pools 8–12 drafts. The reach ceilings (18 / 15 / 24 picks) were
+> **measured**: at 10 the personalities sit inside `balanced`'s own noise.
+>
+> **★ New tech debt: T17 (🟠) — the live season has no per-player availability.**
+> `availability_projection(con, 2026)` returns **0 rows** (a future season has no played weeks to
+> predict on), so every player falls to the T3-A cohort prior: **4 distinct `games_played_mean`
+> values across 480 players** and the Phase-5 `mean` collapses to **37 % of the consensus projection
+> it is built from** (2025: 75 %). Session H is insulated because every signal is standardized
+> *within position*, so a uniform multiplier cancels — but this **blocks Phase 14** showing a user
+> any distribution number for the season they are drafting. Fix + guard in `docs/TECH-DEBT.md`.
+>
+> **★ NEXT: 16.15** — mock-room seat composition (a default realistic mix over the 9 opponents,
+> user-overridable), routing the 16.9 narrative shock through the seats that would chase it, and the
+> app selector spec. The plumbing is already in: `Personality.hype_gain` is the per-seat multiplier
+> on the shared shock and `fav_teams` makes a homer's team configurable. Then Session I (Phase 17
+> formats) → K (Phase 14 app, last).
+>
+> _(Prior pointer — history.)_ **★★ (2026-07-26, ★ SESSION G COMPLETE — T14 ☑ · 16.9 ☑ · 16.11 ☑
+> · 16.10 ☑ · 16.12 ☑ · 16.16 ☑.)**
 >
 > **State:** **466 tests** (was 425), ruff clean, every done-bar gate PASS. **UNCOMMITTED** — left on
 > a clean-diff basis for your review (your choice this session). DEV-only; the spent lockbox is

@@ -27,6 +27,7 @@ At a glance:
 | **T14** | ✅ | 11.2 does not scale. **Diagnosis corrected 2026-07-26**: the bootstrap was 0.79 s (0.008 %); the cost was pandas in `simulate_survival` (99.3 %). Fixed both → **396 s → 12.7 s, bit-identical** | when 11.2 is next re-run at scale | ☑ 2026-07-26 |
 | **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☑ 2026-07-25 |
 | **T15** | 🟡 | simulated draft-slot dispersion is **flat in board depth** (+0.08 vs realized +0.68) — `adp_s` is linear in raw ADP + a hard rank band, so deep sleepers look more reliably gettable than they are | before Phase 14 surfaces availability to a user; an 11.1 respecification | ☐ 2026-07-26 |
+| **T17** | 🟠 | **the live season has no per-player availability at all** — `availability_projection(con, 2026)` returns **0 rows** (a future season has no played weeks to predict on), so every player falls to the T3-A cohort prior: **4 distinct `games_played_mean` values across 480 players**, ~6.6 vs 12.9 games, and the Phase-5 `mean` collapses to **37 % of the consensus projection** (2025: 75 %) | before Phase 14 shows a user any distribution number for the season they are drafting | ☐ 2026-07-26 |
 
 ---
 
@@ -671,3 +672,61 @@ for a cosmetic effect.
 
 **Who is affected.** Mock-draft realism and the 16.12 readout for deep players only. **Not** the
 frozen value stack. Not a blocker for Session H.
+
+---
+
+## 🟠 T17 — the live season has no per-player availability; the Phase-5 cloud halves
+*(opened 2026-07-26, Session H, found by 16.13's enrichment coverage report)*
+
+**Symptom.** On the 2026 board the frozen distribution is roughly **half** the consensus projection
+it is built from. Top-60 `mean / proj_points`: **0.37 in 2026 vs 0.75 in 2025**. The ratio tracks
+`games_played_mean` exactly — 6.60 vs 12.85 — so the level loss is entirely the availability
+multiplier, not the projection.
+
+**Root cause, verified.** `injury.availability_projection(con, season)` predicts each player's
+hazard at *his own covariates for the target season*, read from `availability_frame(con, [season])`
+— which is built from `weekly`. A season that has not been played has no weekly rows, so:
+
+```
+availability_projection(con, 2025) -> 299 rows
+availability_projection(con, 2026) ->   0 rows      # <- every player, no exceptions
+```
+
+Everyone therefore routes to the T3-A rookie/backup cohort prior, which is a per-(pos × draft
+capital) constant: **4 distinct `games_played_mean` values across all 480 players**, and a mean of
+~7 of 17 games for the whole league. The cohort prior is *correct for the population it was built
+for* (players with no prior-season hazard); it is being applied to everybody.
+
+**Two distinct consequences, and they are not equally bad.**
+1. **Levels are wrong for the live season** — `mean`, `q10`, `q90`, `ce_value` are all ~halved.
+   Anything that shows a user a projected point total for the season they are drafting is wrong by
+   about a factor of two. This is the part that must be fixed before Phase 14.
+2. **`games_played_mean` is inert as a signal** — with 4 distinct values it carries position and
+   draft capital and nothing else. `corr(games_played_mean, mean)` = **+0.79 / +0.80 / +0.00** for
+   2022 / 2025 / **2026**. `safe_floor`'s durability weight therefore does nothing on a live board
+   and does work on backtest seasons; kept weighted deliberately, since the defect is upstream and
+   temporary while the intent is permanent.
+
+**What is NOT affected.** *Relative ordering within position* is nearly untouched, because the
+collapse is close to a common multiplier — which is exactly why 16.14 standardizes every signal
+**within position** before weighting it, and why the personality set is unaffected by this entry.
+Rankings, VBD, and the cost report all read `value_board`, not the distribution, and are untouched.
+The lockbox eval ran on 2023/2024, both fully played, and is untouched.
+
+**Fix.** The target-season covariate read needs a fallback that does not depend on the season
+having been played: predict at the player's **most recent completed season's** covariates (with an
+age/experience roll-forward), falling back to the cohort prior only for players who genuinely have
+no history — which is the population it was written for. Roughly: in
+`availability_projection`, when `availability_frame(con, [season])` is empty, build the frame from
+`season - 1` and carry it forward, stamping the result so the substitution is visible rather than
+silent. `team_games` must then come from the schedule (17), not from `week.nunique()` of an
+unplayed season.
+
+**Guard to add with the fix.** A gate asserting the distribution's `mean` sits within a stated band
+of the consensus projection it was built from — the check that would have caught this the day the
+2026 board landed. `steps/phase5_5_utility.py` is the natural home.
+
+**Who is affected.** Any consumer of `player_distributions` / `cached_distribution` **for a season
+that has not started** — i.e. the live product, and nothing that has been validated so far. Not the
+frozen value board, not the optimizer's ranking behaviour, not the lockbox. Not a blocker for
+Session H or I; **is** a blocker for Phase 14 surfacing per-player distribution numbers.

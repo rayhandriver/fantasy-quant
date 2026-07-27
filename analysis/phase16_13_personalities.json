@@ -1,0 +1,193 @@
+{
+  "season": 2026,
+  "teams": 10,
+  "rounds": 15,
+  "n_drafts_pooled": 12,
+  "enrichment_coverage": {
+    "n_rows": 225,
+    "boom_prob": 0.8178,
+    "q90": 0.8178,
+    "bust_prob": 0.8178,
+    "q10": 0.8178,
+    "games_played_mean": 0.8178,
+    "mean": 0.8178,
+    "upside": 0.8178,
+    "floor": 0.8178,
+    "vbd": 0.8578,
+    "overall_rank": 0.8578,
+    "rookie": 1.0,
+    "cos": 1.0
+  },
+  "missing_distribution_by_position": {
+    "DEF": 22,
+    "PK": 18,
+    "WR": 1
+  },
+  "beta_adp_s": -1.6831104194233042,
+  "adp_scale": 50.0,
+  "reach_ceilings": {
+    "autopilot": {
+      "picks": 0.0,
+      "utility_cap": 0.0,
+      "hype_gain": 0.0
+    },
+    "balanced": {
+      "picks": null,
+      "utility_cap": null,
+      "hype_gain": 1.0
+    },
+    "upside_chaser": {
+      "picks": 18.0,
+      "utility_cap": 0.6059197509923895,
+      "hype_gain": 1.5
+    },
+    "safe_floor": {
+      "picks": 15.0,
+      "utility_cap": 0.5049331258269912,
+      "hype_gain": 0.5
+    },
+    "homer": {
+      "picks": 24.0,
+      "utility_cap": 0.807893001323186,
+      "hype_gain": 2.5
+    }
+  },
+  "profiles": {
+    "autopilot": {
+      "signal_z": {
+        "upside": -0.0733,
+        "floor": 0.0214,
+        "boom_prob": 0.1026,
+        "bust_prob": 0.0383,
+        "games_played_mean": 0.6741,
+        "q90": 0.3442,
+        "q10": 0.1572,
+        "vbd": 0.3866,
+        "rookie": -0.0107,
+        "cos": -0.1113
+      },
+      "early_pos_mix": {
+        "RB": 132,
+        "WR": 180,
+        "QB": 12,
+        "TE": 0
+      },
+      "mean_adp_minus_pick": -2.236
+    },
+    "balanced": {
+      "signal_z": {
+        "upside": -0.0517,
+        "floor": -0.0315,
+        "boom_prob": 0.0814,
+        "bust_prob": 0.0182,
+        "games_played_mean": 0.6728,
+        "q90": 0.2703,
+        "q10": 0.0875,
+        "vbd": 0.2871,
+        "rookie": -0.0159,
+        "cos": -0.0887
+      },
+      "early_pos_mix": {
+        "RB": 147,
+        "WR": 160,
+        "QB": 3,
+        "TE": 14
+      },
+      "mean_adp_minus_pick": 2.662
+    },
+    "upside_chaser": {
+      "signal_z": {
+        "upside": 0.023,
+        "floor": -0.0393,
+        "boom_prob": 0.1166,
+        "bust_prob": 0.0193,
+        "games_played_mean": 0.6728,
+        "q90": 0.2595,
+        "q10": 0.0665,
+        "vbd": 0.2711,
+        "rookie": -0.024,
+        "cos": -0.0468
+      },
+      "early_pos_mix": {
+        "RB": 139,
+        "WR": 159,
+        "QB": 4,
+        "TE": 22
+      },
+      "mean_adp_minus_pick": 3.797
+    },
+    "safe_floor": {
+      "signal_z": {
+        "upside": -0.0825,
+        "floor": 0.0395,
+        "boom_prob": 0.0844,
+        "bust_prob": -0.0416,
+        "games_played_mean": 0.6827,
+        "q90": 0.2732,
+        "q10": 0.1251,
+        "vbd": 0.2839,
+        "rookie": -0.0236,
+        "cos": -0.1142
+      },
+      "early_pos_mix": {
+        "RB": 138,
+        "WR": 171,
+        "QB": 6,
+        "TE": 9
+      },
+      "mean_adp_minus_pick": 2.298
+    },
+    "homer": {
+      "signal_z": {
+        "upside": -0.0544,
+        "floor": -0.0264,
+        "boom_prob": 0.0667,
+        "bust_prob": 0.026,
+        "games_played_mean": 0.6728,
+        "q90": 0.2612,
+        "q10": 0.0898,
+        "vbd": 0.2798,
+        "rookie": 0.0051,
+        "cos": 0.0079
+      },
+      "early_pos_mix": {
+        "RB": 142,
+        "WR": 165,
+        "QB": 4,
+        "TE": 13
+      },
+      "mean_adp_minus_pick": 3.161
+    },
+    "homer(JAX fan)": {
+      "signal_z": {
+        "upside": -0.0465,
+        "floor": -0.0266,
+        "boom_prob": 0.0662,
+        "bust_prob": 0.0165,
+        "games_played_mean": 0.6759,
+        "q90": 0.25,
+        "q10": 0.0781,
+        "vbd": 0.2676,
+        "rookie": -0.0033,
+        "cos": -0.0122
+      },
+      "early_pos_mix": {
+        "RB": 144,
+        "WR": 169,
+        "QB": 1,
+        "TE": 10
+      },
+      "mean_adp_minus_pick": 3.514
+    }
+  },
+  "face_validity": {
+    "upside_chases_ceiling": true,
+    "upside_over_safe_on_shape": true,
+    "safe_buys_floor": true,
+    "safe_over_upside_on_floor": true,
+    "safe_avoids_bust_tail": true,
+    "homer_chases_changed_situations": true,
+    "autopilot_is_pure_adp_order": true
+  },
+  "validation_note": "face validity + unit tests only \u2014 no corpus Brier gate. A personality set is a realism feature; 11.1 already owns 'predicts the average manager', and deviating from it is the entire point here."
+}

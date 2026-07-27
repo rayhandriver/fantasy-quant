@@ -1249,6 +1249,24 @@ strategy). Full scoping + the 4 answered decisions: `PLAN.md`, 2026-07-23 (perso
   are `NaN` and handled by the personality's fallback; **no modeling change** (reads frozen outputs only).
 - **Reuse:** `projections/distribution.py` `player_distributions` contract, `valuation/value_board.py`,
   the existing board-load path in `draft/simulator.py`.
+- **☑ DONE 2026-07-26 (Session H)** — `draft/enrichment.py` (the join helper) + `draft/simulator.py`
+  (`PASSTHROUGH_COLS`, `board_player_key`). Coverage on the live 2026 board **81.8 % distribution /
+  85.8 % value**; the whole skill-player gap is **one WR** (the rest is 22 DEF + 18 PK, which carry no
+  projection by construction). An ADP-only board is byte-for-byte unchanged, asserted.
+  - **Source note:** reads `cached_distribution(con, season, …)`, **not** the `player_distributions`
+    table — that table holds **2025 only**, so a live-season mock would have found it empty. Same
+    reader `optimizer.assemble_value` uses; PIT via `as_of = draft_date(con, season)`.
+  - **Scope added beyond the spec, and it is load-bearing:** `mean` (as a control) plus the derived
+    `upside`/`floor` (`residual_shape`), because the raw quantiles turned out to be a *level* signal
+    — see 16.14 below. Also `rookie` (which `_prepare_board` had been dropping) and `cos`.
+  - **Placement note:** the join helper is in a new `draft/enrichment.py`, not in `simulator.py` as
+    the heading says. `simulator.py` is a Phase-1 leaf that ten modules import; pulling `value_board`
+    + `distribution` + `situation.events` into it would invert the dependency graph. The passthrough
+    half — the part that genuinely belongs there — did go into `simulator.py`.
+  - **★ Two personalities that had never worked now do.** `homer` scaled a `fandom` coefficient whose
+    feature was identically 0 (nothing in the mock path ever passed `fav`) and `rookie_hawk` scaled a
+    column `_prepare_board` discarded. Both were literal no-ops from Phase 11.3 through a full phase
+    and a green test suite, because **an inert personality still completes a legal draft.**
 
 ### 16.14 — Risk/value personality set → `draft/personalities.py`
 - **Do:** extend `Personality` with a `signal_weights: dict` term (a linear bonus on the enriched board
@@ -1271,6 +1289,42 @@ strategy). Full scoping + the 4 answered decisions: `PLAN.md`, 2026-07-23 (perso
   utility in the intended direction. **No corpus Brier gate** (user decision — realism/UX feature).
 - **Reuse:** the existing `Personality`/`make_opponent_pick_fn` machinery (Phase 11.3), 16.13's enriched
   board, 16.10's hype board.
+- **☑ DONE 2026-07-26 (Session H)** — `draft/personalities.py`, `steps/phase16_13_personalities.py`,
+  `tests/test_personalities.py` (30 offline tests). **496 tests total, ruff clean, all seven
+  live-board face-validity checks PASS**; `autopilot` reproduces `pick_by_adp(noise=0)` *exactly*
+  over a whole draft, not merely in tendency.
+  - **★★ THE SPEC AS WRITTEN BUILDS TWO PERSONALITIES THAT AGREE WITH EACH OTHER.** `signal_weights=
+    {"boom_prob": +, "q90": +}` vs `{"q10": +, …}` runs, passes a synthetic test, and on the real
+    board `safe_floor` drafts a **higher** mean `q90` than `upside_chaser`. Measured within position
+    on the frozen board: `corr(q90, mean)` = **+0.984 / +0.985 / +0.999** (2022 / 2025 / 2026) and
+    `corr(q90, q10)` = +0.62…+0.74. **The raw quantiles are a *level* signal — "is this player
+    good" — not a shape signal.** Both weights are quality tilts; the two managers just drafted good
+    players from opposite-sounding rationales. Shipped build weights `upside`/`floor` (16.13's
+    level-residualized versions): orthogonal to level by construction, `corr(upside, floor) = −0.86`.
+    *This is the 16.10 lesson recurring on a **signal** instead of a coefficient, and it presented
+    the same way — as a plausible result rather than an error.*
+  - **Mechanisms:** `signal_weights` (utility per within-position sd of the live pool);
+    `max_reach_picks`, a reach ceiling in **ADP picks** converted through the model's own `β_adp_s`
+    exactly as `apply_hype` does, covering the discretionary tilt but *not* β reshaping or
+    `early_pos_penalty` (capping those would silently neuter `zero_rb` and `autopilot`); `hype_gain`,
+    the per-seat multiplier on the shared shock that **16.15 will route the 16.9 narrative shock
+    through**; `fav_teams`, which finally makes the fitted `fandom` term reachable.
+  - **User addition (2026-07-26):** with no hype/`cos`/favourite-team target on the clock, a story
+    chaser must take best value rather than manufacture a reach. Not special-cased — it falls out of
+    the reach ceiling, and is tested as an **exact** pick-log equality against `balanced`.
+  - **Ceilings were measured, not guessed:** at 10 picks every tilt sits inside `balanced`'s own
+    noise over 8 pooled seeds (real but illegible); at 18 the ordering separates and holds. Shipped
+    **18 / 15 / 24** (the homer spends `MAX_PICK_DELTA`, the largest single-player claim the curated
+    hype board may make).
+  - **Read the effect sizes honestly:** ±0.05 z on a pooled drafted pool. A manager who reaches at
+    most 1–2 rounds cannot move 90 picks much, and one seeded draft cannot even resolve the sign —
+    every face-validity number pools 8–12 drafts. The bar is **direction and mutual opposition**, not
+    magnitude.
+  - **New tech debt T17** (🟠) surfaced by 16.13's coverage report: `availability_projection` returns
+    **0 rows** for an unplayed season, so the live Phase-5 `mean` collapses to **37 %** of the
+    consensus projection it is built from. Session H is insulated by the within-position
+    standardization (a uniform multiplier cancels); `games_played_mean` is the one casualty and is
+    now inert on a live board.
 
 ### 16.15 — Mock-room composition + hype coupling + app → `draft/simulator.py`, `app/`
 - **Do:** (a) a **configurable opponent seat-assignment** — a default *realistic mix* over the 9 opponents

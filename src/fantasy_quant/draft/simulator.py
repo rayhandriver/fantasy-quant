@@ -27,10 +27,32 @@ _CANON = {"QB": "QB", "RB": "RB", "WR": "WR", "TE": "TE",
           "PK": "K", "K": "K", "DEF": "DST", "DST": "DST", "D/ST": "DST"}
 DRAFTABLE = ("QB", "RB", "WR", "TE", "K", "DST")
 
+#: Optional board columns :func:`_prepare_board` carries through untouched when a caller supplies
+#: them (Phase 16.13). Everything here is **read-only context** a pick policy may consult — the
+#: enrichment never changes how the draft runs, only what an opponent personality is able to *see*.
+#: An ADP-only board simply has none of them and every consumer falls back (the marginalization
+#: convention :meth:`~fantasy_quant.draft.opponent_model.OpponentModel.candidate_utility` already
+#: uses for unknown Tier-B context). Populate via
+#: :func:`~fantasy_quant.draft.enrichment.enrich_board`.
+PASSTHROUGH_COLS = ("team", "rookie", "boom_prob", "q90", "bust_prob", "q10",
+                    "games_played_mean", "mean", "upside", "floor", "vbd", "overall_rank", "cos")
+
 
 def canon_pos(pos) -> str | None:
     """FFC/nflverse position -> canonical ``QB/RB/WR/TE/K/DST`` (or None if not draftable)."""
     return _CANON.get(str(pos).upper().strip())
+
+
+def board_player_key(board: pd.DataFrame) -> pd.Series:
+    """The board's join key: ``gsis_id`` where present, else the player name.
+
+    Split out so any frame that has to line up with a board (16.13's enrichment, a value index)
+    derives the key **the same way** the simulator does. Re-implementing the fallback is how a
+    joiner silently misses team defenses, which carry no gsis and key on their name.
+    """
+    name_col = "player_name" if "player_name" in board.columns else "name"
+    key_col = "gsis_id" if "gsis_id" in board.columns else name_col
+    return board[key_col].where(board[key_col].notna(), board[name_col])
 
 
 @dataclass(frozen=True)
@@ -194,10 +216,15 @@ def value_pick_fn(state: DraftState) -> int:
 # --------------------------------------------------------------------------------------------
 def _prepare_board(board: pd.DataFrame) -> pd.DataFrame:
     """Normalize any ADP frame to canonical columns, drop non-draftable / null-ADP rows,
-    sort by ADP and re-index 0..n-1 (the row-labels used throughout the draft)."""
+    sort by ADP and re-index 0..n-1 (the row-labels used throughout the draft).
+
+    Any :data:`PASSTHROUGH_COLS` the caller supplied ride along untouched (16.13), so an enriched
+    board reaches ``draftable_pool`` with its risk/value context intact. Columns the caller did not
+    supply are simply absent — never synthesized — so an ADP-only board is byte-for-byte what it
+    always was.
+    """
     name_col = "player_name" if "player_name" in board.columns else "name"
     rank_col = "adp_pos_rank" if "adp_pos_rank" in board.columns else "pos_rank"
-    key_col = "gsis_id" if "gsis_id" in board.columns else name_col
     adp = pd.to_numeric(board["adp"], errors="coerce")
     # `value` (lower = draft sooner) drives value_pick_fn; defaults to ADP when no rank_fn set it.
     value = pd.to_numeric(board["value"], errors="coerce") if "value" in board.columns else adp
@@ -206,9 +233,12 @@ def _prepare_board(board: pd.DataFrame) -> pd.DataFrame:
         "pos": board["position"].map(canon_pos),
         "adp": adp,
         "pos_rank": board[rank_col] if rank_col in board.columns else np.nan,
-        "player_key": board[key_col].where(board[key_col].notna(), board[name_col]),
+        "player_key": board_player_key(board),
         "value": value,
     })
+    for c in PASSTHROUGH_COLS:
+        if c in board.columns:
+            b[c] = board[c]
     b = b[b["pos"].isin(DRAFTABLE) & b["adp"].notna()]
     b = b.sort_values("adp").reset_index(drop=True)
     return b

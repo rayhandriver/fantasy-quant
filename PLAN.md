@@ -1244,3 +1244,67 @@ decision (1) makes momentum an *input* to the hype-board nomination.
 T15's depth-varying candidate set, and surface the limitation meanwhile).
 
 **Next: Session H** — opponent personalities 16.13–16.15 (face-validity + unit tests, no Brier gate).
+
+---
+
+## Session H (2026-07-26) — 16.13 board enrichment + 16.14 the five headline personalities
+
+**Scope: 16.13 + 16.14 only.** 16.15 (mock-room composition, hype coupling, app selector) is
+explicitly *not* in this session — stopped at the sub-phase gate for user approval, per §3.7.
+
+**Decisions taken (user, 2026-07-26, asked before building).**
+1. **Distribution source = `cached_distribution(con, season, …)`, any season** — not the
+   `player_distributions` DuckDB table, which holds **2025 only**. This is the same reader
+   `optimizer.assemble_value` uses, works for 2026 and every backtest season, and keeps the join
+   PIT via `as_of = draft_date(con, season)`. First call ~12 s per season, memoized after.
+2. **Signal scaling = z-score within position**, over the live candidate pool. Makes weights
+   readable ("utility per sd"), stops a risk tilt doubling as a positional lean, and — unplanned but
+   load-bearing — cancels the uniform multiplicative bias T17 turned out to introduce.
+3. **Homer = optional favourite team, defaulting to story-chasing** (hype board + change-of-
+   situation), **and must not reach for a crazy target**: with nothing to chase it takes best value.
+   Implemented as `max_reach_picks`, a reach ceiling in ADP picks — the fallback falls out of the
+   design rather than being special-cased, and is tested as an exact pick-log equality.
+4. **Leave the session uncommitted** for user review. (Session G had since been committed through
+   `5f6383b`, so the working tree holds Session H alone — 13 files.)
+
+**Deviation from the 16.14 spec, deliberately.** The spec names
+`signal_weights={"boom_prob": +, "q90": +}` for the upside chaser and `{"q10": +, …}` for the safe
+drafter. Built exactly that way, **the two personalities agree with each other on real data** —
+within position `corr(q90, mean) ≈ 0.98` in every season, so both weights are quality tilts. The
+shipped build weights `upside`/`floor`, the level-residualized versions, and `enrichment.py` gained
+`residual_shape` to derive them. The raw quantiles stay on the board for reporting consumers. Full
+measurement in `findings.md`; this is the 16.10 lesson (*a coefficient is not transportable without
+its controls*) recurring on a **signal**.
+
+**Also deliberate:** the join helper lives in a new `draft/enrichment.py` rather than in
+`simulator.py` as the spec's heading says. `simulator.py` is a Phase-1 leaf with only numpy/pandas
+imports and ten modules depend on it; pulling `value_board` + `distribution` + `situation.events`
+into it would invert the dependency graph. `simulator.py` got the passthrough half
+(`PASSTHROUGH_COLS`, `board_player_key`), which is the part that genuinely belongs there.
+
+**Outcomes.** 496 tests (was 466), ruff clean, both done-bars PASS on the live 2026 board.
+- **16.13 ☑** enrichment coverage 81.8 % distribution / 85.8 % value; the entire skill-player gap is
+  **one WR** (the rest is 22 DEF + 18 PK, which carry no projection by construction).
+- **16.14 ☑** five headliners; all seven live-board face-validity checks pass, `autopilot`
+  reproduces `pick_by_adp(noise=0)` **exactly**, and the two risk tilts are opposed rather than
+  merely different.
+- **Two dead personalities revived**: `homer` (nothing ever passed `fav`) and `rookie_hawk`
+  (`_prepare_board` dropped the column) had been literal no-ops since Phase 11.3.
+
+**Dead ends / corrections worth not repeating.**
+- **The face-validity bar has to be "they disagree with each other", not "each differs from
+  balanced".** The weaker bar passed the broken build.
+- **The synthetic fixture was easier than reality** — it drew `q90`/`q10` independently, which made
+  residualization look unnecessary. Now generated from a shared level + an opposing shape factor.
+- **A single seeded draft cannot read a 1–2-round reach.** The sign flips between seeds; every
+  face-validity number pools 8–12 drafts.
+- **The reach ceiling had to be measured.** At 10 picks the personalities are real but illegible
+  (inside balanced's own noise); at 18 they separate. Shipped 18 / 15 / 24.
+
+**New tech debt: T17** (🟠 the live season has no per-player availability — `availability_projection`
+returns 0 rows for an unplayed season, so the Phase-5 `mean` collapses to 37 % of the consensus
+projection it is built from). Not a blocker for H or I; **is** a blocker for Phase 14 showing a user
+any distribution number. Session H is insulated from it by decision (2).
+
+**Next: 16.15** — mock-room seat composition, routing the 16.9 shock through the `hype_gain` seats,
+and the app selector. `hype_gain` and `fav_teams` are already in place for it.

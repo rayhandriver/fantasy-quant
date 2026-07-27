@@ -2696,3 +2696,129 @@ choice-set band: level error 59.5 % → 8.8 %, availability Brier +0.0644 → +0
 curated, opt-in, default-OFF channel. **Phase 16 did not find an edge. It found four ways the
 apparent edges were measurement artifacts, and shipped the plumbing to express a human's judgment
 honestly when the model has nothing to say.**
+
+## Session H (2026-07-26) — opponent personalities: 16.13 board enrichment · 16.14 the five headliners
+
+**496 tests** (was 466), ruff clean, both done-bars PASS on the live 2026 board.
+`steps/phase16_13_personalities.py` → `analysis/phase16_13_personalities.json`.
+
+### 16.13 — enriching the mock board (`draft/enrichment.py`, `draft/simulator.py`)
+
+A read-only join off two frozen contracts — `distribution.cached_distribution` and `value_board`,
+the same two readers `optimizer.assemble_value` already uses — attaching `boom_prob · q90 ·
+bust_prob · q10 · games_played_mean · mean · vbd · overall_rank`, plus `rookie` (Sleeper
+`years_exp == 0`) and `cos` (16.5's event board). `simulator.PASSTHROUGH_COLS` carries whatever is
+present through `_prepare_board`; an ADP-only board is byte-for-byte what it always was, asserted.
+
+**Coverage on the 2026 board: 81.8 % distribution / 85.8 % value, and the shortfall is exactly
+right** — 22 DEF + 18 PK + one WR. Kickers and defenses carry no projection at all, so the only
+skill-player gap in the entire league is a single receiver. Reported rather than assumed, because a
+silent NaN pool is read by a personality as "neutral", which is indistinguishable from "average".
+
+**Two personalities that had never worked started working.** `homer` scaled a `fandom` coefficient
+whose feature was identically 0 — `make_opponent_pick_fn` never passed `fav` — and `rookie_hawk`
+scaled a `rookie` column `_prepare_board` dropped on the floor. Both had been literal no-ops since
+Phase 11.3, through a full phase and a test suite, because **a personality that does nothing still
+completes a legal draft**. New entry in the glossary under *inert personality*.
+
+### ★★ 16.14's first cut built two personalities that agreed with each other
+
+The obvious build is an upside chaser weighting `q90` and a safe drafter weighting `q10`. It ran, it
+passed a synthetic face-validity test, and **on the real board `safe_floor` drafted a *higher*
+mean `q90` than `upside_chaser`.**
+
+The measurement, within position, on the frozen board:
+
+| season | corr(q90, mean) | corr(q90, q10) | corr(gpm, mean) | distinct gpm |
+|--------|-----------------|----------------|-----------------|--------------|
+| 2022   | +0.984          | +0.739         | +0.791          | 298          |
+| 2025   | +0.985          | +0.712         | +0.800          | 307          |
+| 2026   | **+0.999**      | +0.616         | **+0.000**      | **4**        |
+
+`q90` is not a ceiling signal. It is a **level** signal — "is this player good" — and so is `q10`.
+Weighting either buys quality, which is why two opposite-sounding managers drafted the same players
+from opposite rationales. Neither a bug in the code nor noise: it reproduces in every season.
+
+**The fix is the control, not the coefficient.** `enrichment.residual_shape` regresses the level out
+inside each position, leaving `upside` / `floor` — *more ceiling (floor) than a player projected
+this high usually carries*. `corr` with `mean` is 0 by construction and `corr(upside, floor)` is
+**−0.86** on 2022/2025: genuinely opposed for the first time. On 2026 it is only −0.20, which is
+T17 showing through.
+
+**This is the fourth member of the F.5/F.6/16.9/16.10 family, and the closest relative is 16.10.**
+There it was *a coefficient is not transportable without its controls* — partial weights used
+unconditionally ranked by board depth. Here it is a **signal** rather than a coefficient and the
+missing control is the projected level, but the failure mode is identical and it presented the same
+way: **as a plausible modelling result rather than as an error.** The only reason it was caught is
+that the face-validity bar was stated as *the two must disagree with each other*, not merely *each
+must differ from balanced* — a weaker bar passes a broken build.
+
+**The synthetic fixture was complicit and has been fixed.** It drew `q90` and `q10` independently,
+so the residualization looked unnecessary and the two personalities looked cleanly opposed. It now
+generates both from a shared **level** plus an opposing **shape** factor, reproducing the real
+board's correlation structure (`corr(q90, mean)` ≈ 0.98, `corr(upside, floor)` ≈ −0.86). *A fixture
+that is easier than reality is a fixture that certifies bugs.*
+
+### 16.14 — the five headliners (`draft/personalities.py`)
+
+`autopilot · balanced · upside_chaser · safe_floor · homer`, plus the 11.3 library extras
+(`chalk`, `zero_rb`, `reacher`, `rookie_hawk`) unchanged. Three mechanisms:
+
+* **`signal_weights`** — utility per within-position sd of the live candidate pool.
+* **`max_reach_picks`** — a reach ceiling in **ADP picks**, converted through the model's own
+  `β_adp_s` exactly as `apply_hype` does. Covers the discretionary tilt (hype + signals + fandom
+  excess) and deliberately *not* β reshaping or `early_pos_penalty`, so `zero_rb` and `autopilot`
+  are not silently neutered. The user's requested fallback — *"if there is no reasonable hype or COS
+  pick at the slot, go for best value, don't reach for a crazy target"* — is not special-cased; it
+  falls out, and is tested as an **exact** pick-log equality.
+* **`hype_gain`** — a per-seat multiplier on the shared per-draft shock, which is the dial 16.15
+  will use to route 16.9's narrative shock through the seats that would actually chase it.
+
+**The ceilings were measured, not guessed.** At a 10-pick ceiling every tilt is real but illegible —
+pooled over 8 seeds, `upside_chaser` and `safe_floor` sit inside `balanced`'s own noise on every
+signal they weight, because a ±0.17-utility clip is nothing against a softmax over 40 candidates. At
+18 the ordering separates and stays separated. Shipped at 18 / 15 / 24 (the homer's ceiling is
+`MAX_PICK_DELTA`, the largest claim the curated hype board may make about one player).
+
+**Live-board face validity** (12 pooled drafts each, 10×15, mean within-position z of what each room
+drafted):
+
+| personality | upside | floor | boom | bust | cos | q90(raw) |
+|-------------|--------|-------|------|------|-----|----------|
+| autopilot   | −0.073 | +0.021 | +0.103 | +0.038 | −0.111 | **+0.344** |
+| balanced    | −0.052 | −0.032 | +0.081 | +0.018 | −0.089 | +0.270 |
+| upside_chaser | **+0.023** | −0.039 | **+0.117** | +0.019 | −0.047 | +0.260 |
+| safe_floor  | −0.083 | **+0.040** | +0.084 | **−0.042** | −0.114 | +0.273 |
+| homer       | −0.054 | −0.026 | +0.067 | +0.026 | **+0.008** | +0.261 |
+
+All seven checks pass, including `autopilot_is_pure_adp_order` as an **exact** equality against
+`pick_by_adp(noise=0)` over the whole draft. Note `upside_chaser` carries the *lowest* raw `q90` of
+the tilting seats — the correct signature of a shape tilt: chasing upside means declining to chase
+level. **Effect sizes are small (±0.05 z) and that is honest** — a manager who reaches at most 1–2
+rounds cannot move a 90-player drafted pool much, and the whole room still drafts roughly the top of
+the board. Face validity here is about *direction and opposition*, not magnitude.
+
+**A pleasing emergent behaviour:** a homer *with* a favourite team chases changed situations
+**less** than a homer without one (`cos` −0.012 vs +0.008). The reach ceiling is a shared budget, so
+fandom crowds out narrative — which is exactly how a real homer behaves.
+
+**Validation is face validity + 30 offline unit tests, with no Brier gate** (user decision,
+2026-07-23). That is the right bar and worth stating plainly: 11.1 already owns *predicts the
+average manager*, and deviating from it is the entire point of a personality. A personality set that
+scored better against the corpus would be a worse personality set.
+
+### New tech debt: T17 — the live season has no per-player availability
+
+Found by 16.13's coverage report and pinned down exactly: `availability_projection(con, 2026)`
+returns **0 rows**, because it predicts each player's hazard at his covariates *for the target
+season* and a season that has not been played has no `weekly` rows. Every player therefore falls to
+the T3-A cohort prior — **4 distinct `games_played_mean` values across 480 players**, ~6.6 of 17
+games — and the Phase-5 `mean` collapses to **37 % of the consensus projection it is built from**
+(2025: 75 %). Levels for the live season are wrong by about a factor of two.
+
+**What saves Session H from it:** the collapse is close to a common multiplier, and 16.14
+standardizes every signal **within position** before weighting it, so a uniform multiplicative bias
+cancels. The one casualty is `games_played_mean`, now inert on a live board (corr with everything =
+0.00); `safe_floor` keeps the weight anyway, since the defect is upstream and temporary while the
+intent is permanent. Blocker for Phase 14 surfacing distribution numbers; not for H or I. Full entry
+and the fix in `docs/TECH-DEBT.md`.

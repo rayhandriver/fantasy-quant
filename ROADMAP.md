@@ -361,9 +361,27 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
     the threshold, **+0.109** at 0.50 over 7,957 replayed windows) but *reacting* to it degrades the
     availability Brier monotonically (0.2121 → 0.2186). **Ships default OFF**; kept as a live-draft
     alert for 14.4.
-- **← NOW: Session H — opponent personalities 16.13–16.15.** 16.13 board enrichment (frozen dist/value fields), 16.14
-  the 5 personalities (`signal_weights`), 16.15 mock-room composition + hype coupling (engine; selector → 14).
-  **~full-phase (600–1,200L).**
+- **← NOW: Session H — opponent personalities 16.13–16.15.** ◐ **16.13 ☑ · 16.14 ☑ (2026-07-26) · 16.15
+  NOT STARTED** — stopped at the sub-phase gate for user approval.
+  - **16.13 board enrichment ☑** (`draft/enrichment.py`, `draft/simulator.py`). Read-only join off
+    `cached_distribution` + `value_board` — **not** the `player_distributions` table, which holds 2025
+    only. Live-2026 coverage **81.8 % dist / 85.8 % value**; the entire skill-player gap is one WR.
+    Also revived `homer` and `rookie_hawk`, **literal no-ops since Phase 11.3** (nothing ever passed
+    `fav`; `_prepare_board` dropped `rookie`).
+  - **16.14 the five headliners ☑** (`draft/personalities.py`) — `autopilot · balanced · upside_chaser
+    · safe_floor · homer`, via `signal_weights` + a `max_reach_picks` reach ceiling + `hype_gain`.
+    **All 7 live-board face-validity checks PASS**; `autopilot` reproduces `pick_by_adp(noise=0)`
+    exactly. **496 tests** (was 466), ruff clean.
+  - **★★ The spec as written builds two personalities that AGREE.** Within position
+    `corr(q90, mean) = +0.98…+0.999` in every season — the raw quantiles are a **level** signal, so
+    an upside chaser weighting `q90` and a safe drafter weighting `q10` both just draft good players.
+    Shipped build weights the level-residualized `upside`/`floor` (`corr = −0.86`). *The 16.10 lesson
+    recurring on a signal rather than a coefficient.*
+  - **New tech debt T17** (🟠): `availability_projection` returns 0 rows for an unplayed season, so
+    the live Phase-5 `mean` is **37 %** of the consensus projection it is built from. Blocker for
+    Phase 14 surfacing, not for H or I.
+  - **Remaining: 16.15** — seat composition, routing the 16.9 shock through the `hype_gain` seats, and
+    the app selector spec. `hype_gain`/`fav_teams` are already in place for it.
 - **Session I — Phase 17 League-Format Fidelity 17.1–17.4.** 17.1 roster+lineup generalization (superflex/
   multi-flex; the `season.py` solver + format-aware VBD replacement — the meaty bit), 17.2 custom scoring, 17.3
   generic settings contract (engine/parser; form UI → 14), 17.4 keeper. **~full-phase (1,000–1,800L).**
