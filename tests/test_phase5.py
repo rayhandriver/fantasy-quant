@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from fantasy_quant.projections import conformal, distribution, injury, quantile, variance
 from fantasy_quant.valuation import utility
@@ -205,3 +206,137 @@ def test_risk_adjusted_board_ranks_safe_over_volatile_at_equal_mean():
     assert top["player_key"] == "safe" and top["ce_rank"] == 1           # lower variance wins
     assert (out.set_index("player_key").loc["volatile", "risk_premium"]
             > out.set_index("player_key").loc["safe", "risk_premium"])     # pays more for its risk
+
+
+# --------------------------------------------------------------------------------------------
+# T17 — the live season's rolled-forward availability frame (and the level guard)
+# --------------------------------------------------------------------------------------------
+def _t17_con(seasons=(2022, 2023, 2024), n_players: int = 12):
+    """A minimal DB for the availability path: `weekly` + `player_ids` + an empty `combine`.
+
+    Player ``i`` misses every 5th week on an offset, so the grid carries both classes (a logistic
+    hazard needs them) and games-played varies; players 10 and 11 play only 3 games so they sit
+    below the ``min_prior_games`` gate.
+    """
+    import duckdb
+    pos_cycle = ["QB", "RB", "WR", "TE"]
+    rows = []
+    for s in seasons:
+        for i in range(n_players):
+            weeks = range(1, 4) if i >= 10 else [w for w in range(1, 18) if (w + i) % 5]
+            for w in weeks:
+                rows.append({"season": s, "gsis_id": f"00-{i:07d}", "week": w,
+                             "recent_team": f"T{i % 4}", "position": pos_cycle[i % 4],
+                             "season_type": "REG"})
+    ids = [{"gsis_id": f"00-{i:07d}", "name": f"P{i}", "position": pos_cycle[i % 4],
+            "birthdate": f"{1995 + i % 6}-03-01", "draft_year": 2018, "draft_round": 1,
+            "draft_ovr": 10 if i % 3 == 0 else 200, "height": 72, "weight": 200,
+            "pfr_id": None, "db_season": 2024} for i in range(n_players)]
+    con = duckdb.connect()
+    con.register("_w", pd.DataFrame(rows))
+    con.register("_i", pd.DataFrame(ids))
+    con.execute("CREATE TABLE weekly AS SELECT * FROM _w")
+    con.execute("CREATE TABLE player_ids AS SELECT * FROM _i")
+    con.execute("CREATE TABLE combine (pfr_id VARCHAR, forty DOUBLE, vertical DOUBLE, "
+                "broad_jump DOUBLE, cone DOUBLE, shuttle DOUBLE, bench DOUBLE)")
+    return con
+
+
+def test_projected_frame_is_built_at_the_target_seasons_width():
+    con = _t17_con()
+    f = injury.projected_availability_frame(con, 2025)
+    assert set(f["season"]) == {2025}
+    assert f["week"].min() == 1 and f["week"].max() == 17            # the TARGET season's schedule
+    # exactly the established universe (>=8 prior games) x 17 weeks -- players 10/11 are excluded
+    assert f["player_key"].nunique() == 10
+    assert len(f) == 10 * 17
+    assert f.groupby("player_key")["week"].nunique().eq(17).all()
+
+
+def test_projected_frame_uses_no_target_season_data():
+    """PIT: the frame for an unplayed season is built strictly from ``season - 1``."""
+    con = _t17_con(seasons=(2022, 2023, 2024))
+    only_2024 = injury.projected_availability_frame(con, 2025)["player_key"].unique()
+    # a player who appears ONLY in the target season cannot leak in (there is no such data yet)
+    con.execute("INSERT INTO weekly VALUES (2025, '00-0009999', 1, 'T9', 'RB', 'REG')")
+    assert set(injury.projected_availability_frame(con, 2025)["player_key"]) == set(only_2024)
+
+
+def test_projected_frame_carries_prior_season_availability_and_target_season_age():
+    con = _t17_con()
+    f = injury.projected_availability_frame(con, 2025)
+    row = f[f["player_key"] == "00-0000000"].iloc[0]
+    assert row["prior_avail"] == pytest.approx(14 / 17, abs=1e-6)     # 2024 games / team games
+    # age is as-of Sep-1 of the TARGET season, not one year stale
+    born = pd.Timestamp("1995-03-01")
+    assert row["age"] == pytest.approx((pd.Timestamp("2025-09-01") - born).days / 365.25, abs=0.01)
+
+
+def test_projected_frame_has_no_outcome_column_populated():
+    """It is a prediction frame; feeding it to the fit would train on nothing."""
+    f = injury.projected_availability_frame(_t17_con(), 2025)
+    assert f["available"].isna().all()
+
+
+def test_projected_frame_empty_without_a_prior_season():
+    f = injury.projected_availability_frame(_t17_con(seasons=(2022,)), 2025)
+    assert f.empty and list(f.columns)[:3] == ["season", "player_key", "pos"]
+
+
+def test_availability_projection_stamps_observed_vs_rolled_forward():
+    con = _t17_con()
+    obs = injury.availability_projection(con, 2024, train_seasons=[2022, 2023])
+    fwd = injury.availability_projection(con, 2025, train_seasons=[2022, 2023])
+    assert (obs["covariate_source"] == "observed").all()              # a played season is untouched
+    assert (fwd["covariate_source"] == "rolled_forward").all()
+    assert len(fwd) and (fwd["team_games"] == 17).all()               # the target season's schedule
+    assert fwd["games_played_mean"].between(0, 17).all()
+
+
+def test_rolled_forward_availability_is_not_a_four_value_constant():
+    """The T17 symptom: everyone on the cohort prior collapses to a per-(pos, tier) constant."""
+    fwd = injury.availability_projection(_t17_con(), 2025, train_seasons=[2022, 2023])
+    assert fwd["avail_p"].round(6).nunique() > 4
+
+
+def test_player_tiers_falls_back_to_the_crosswalk_for_an_unplayed_season():
+    con = _t17_con()
+    t = injury.player_tiers(con, [2025])
+    assert len(t) == 12                                    # the crosswalk universe, not zero rows
+    assert set(t["capital_tier"]) == {"hi", "lo"}          # the split the cohort prior routes on
+    assert t.loc[t["player_key"] == "00-0000000", "capital_tier"].iloc[0] == "hi"
+
+
+# -- the level guard ---------------------------------------------------------------------------
+def _level_frames(mean_scale: float):
+    dist = pd.DataFrame({"player_key": [f"p{i}" for i in range(10)], "pos": ["RB"] * 10,
+                         "mean": np.arange(10, 0, -1) * 10.0 * mean_scale})
+    proj = pd.DataFrame({"player_key": [f"p{i}" for i in range(10)],
+                         "proj_points": np.arange(10, 0, -1) * 10.0})
+    return dist, proj
+
+
+def test_level_ratio_is_the_top_of_board_haircut():
+    dist, proj = _level_frames(0.7)
+    assert distribution.level_ratio(dist, proj, top_n=5) == pytest.approx(0.7)
+    assert distribution.level_ratio(dist, proj, top_n=100) == pytest.approx(0.7)   # clips to n
+
+
+def test_assert_level_band_passes_inside_and_raises_below():
+    dist, proj = _level_frames(0.65)
+    assert distribution.assert_level_band(dist, proj, 2025, top_n=5) == pytest.approx(0.65)
+    collapsed, proj = _level_frames(0.37)          # the live-2026 board before T17 was fixed
+    with pytest.raises(AssertionError, match="level ratio"):
+        distribution.assert_level_band(collapsed, proj, 2026, top_n=5)
+
+
+def test_assert_level_band_raises_when_the_hazard_is_inert():
+    dist, proj = _level_frames(1.0)                # availability barely applied at all
+    with pytest.raises(AssertionError, match="level ratio"):
+        distribution.assert_level_band(dist, proj, 2026, top_n=5)
+
+
+def test_level_ratio_raises_on_a_disjoint_board():
+    dist, proj = _level_frames(0.7)
+    with pytest.raises(ValueError, match="share no players"):
+        distribution.level_ratio(dist, proj.assign(player_key="other"))

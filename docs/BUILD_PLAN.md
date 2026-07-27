@@ -1337,6 +1337,35 @@ strategy). Full scoping + the 4 answered decisions: `PLAN.md`, 2026-07-23 (perso
 - **Done:** a mock runs against a named, realistic, user-tunable personality room; the hype shock rides the
   right seats; the app exposes the selector — **all read-only w.r.t. the frozen value/optimizer/cost stack.**
 - **Reuse:** `draft/simulator.py` `simulate_draft` opponent-fn plumbing, 16.9's shock, `app/streamlit_app.py`.
+- **☑ BUILT 2026-07-27** (`draft/personalities.py` — `DEFAULT_ROOM`/`make_room`/
+  `normalized_hype_gains`/`make_room_pick_fn`; `steps/phase16_15_mock_room.py` →
+  `analysis/phase16_15_mock_room.json`; selector spec `docs/PLAYER-VIEW.md` §9; 12 tests).
+  - **Deviation from this plan, deliberate:** the room lives in `personalities.py`, **not**
+    `simulator.py`. Composing a room needs `Personality`, and making the draft engine every earlier
+    phase runs on import the Phase-16 personality library would invert the layering — a realism
+    feature underneath the frozen optimizer/sim path. `personalities.py` already imports only
+    `opponent_model`, so this adds no import edge.
+  - **(a) composition ☑** — hand-set default mix, **corpus-checked** on 3,309 eligible-redraft
+    managers (median QB share 12.6 %, RB 31 %, **1.7 % RB-light** ⇒ no `zero_rb` seat by default).
+    The corpus can *check* a mix but cannot supply one: tendency is observable, personality is a
+    latent label. Position share is computed **from picks alone** because the stored `avg_reach` is
+    a pooled-board mismatch (**T18**).
+  - **(b) hype coupling ☑, and it is a NULL at the shipped shock size** — Phase 16's fifth. The
+    calibrated 16.9 draw is **1.48 ADP picks**; largest per-seat move **0.036**, routing-vs-gain
+    **+0.07**. The *same* shock ×10 gives **+0.91** (sweep ×1→×40: +0.07 · +0.53 · +0.84 · +0.91 ·
+    +0.95), so the mechanism is correct and waiting on a signal worth routing. The done-bar gates
+    the **mechanism** at `AMP_GATE` and **reports** the shipped size — tuning the shock up to pass
+    would tune a calibrated parameter to a face-validity check.
+  - **★ Ceiling scope changed:** `max_reach_picks` bounds a seat's **own opinion**
+    (`signal_weights` + fandom excess); the shared shock is applied **outside** it. 16.9 fitted the
+    shock uncapped and uniform, so clipping it uses a fitted parameter outside its estimation
+    conditions. Folded in, a seat whose signals saturate its ceiling cannot express the story and
+    **nothing fails**. Visible only once the bar was restated across **all nine seats** — the
+    two-ended *chasers − autopickers* gap passes on a room routing the story backwards.
+  - **(c) app selector ☑** — spec only (the app itself is Phase 14, by the app-strictly-last rule):
+    `docs/PLAYER-VIEW.md` §9 carries the call contract, the per-personality UI labels, the default
+    room, and four honesty rules (not predictive · the hype channel is a null · composition
+    redistributes rather than amplifies · the ceiling bounds opinion, not the room's story).
 
 **Done-when (personality cluster):** 16.13 enriches the board read-only; 16.14's 5 personalities pass
 face-validity + mechanics unit tests; 16.15 assigns a realistic room, couples the shock, and surfaces the

@@ -53,10 +53,10 @@ from fantasy_quant.valuation.value_board import value_board
 #: signal.
 DIST_COLS: tuple[str, ...] = ("boom_prob", "q90", "bust_prob", "q10", "games_played_mean", "mean")
 
-#: Derived *shape* columns: ``q90``/``q10`` with the projected level regressed out, within position.
-#: See :func:`residual_shape` — these, not the raw quantiles, are what a ceiling- or floor-seeking
-#: personality must tilt on.
-SHAPE_COLS: tuple[str, ...] = ("upside", "floor")
+#: Derived *shape* columns: ``q90``/``q10``/``games_played_mean`` with the projected level regressed
+#: out, within position. See :func:`residual_shape` — these, not the raw columns, are what a
+#: ceiling-, floor- or durability-seeking personality must tilt on.
+SHAPE_COLS: tuple[str, ...] = ("upside", "floor", "durability")
 
 #: Frozen Phase-4 value-board columns the enrichment lifts onto the board. ``overall_rank`` is a
 #: rank — **lower is better** — so a personality that wants good players weights it *negative*.
@@ -107,8 +107,20 @@ def residual_shape(board: pd.DataFrame, *, level: str = "mean") -> pd.DataFrame:
     Regressing the level out inside each position leaves the partial signal that was wanted all
     along — "more ceiling than a player projected this high usually has". It works: ``corr`` with
     ``mean`` is 0 by construction, and ``corr(upside, floor)`` is **−0.86** (2022/2025), i.e.
-    genuinely opposed. On 2026 it is only −0.20, which is T17 showing through — the live season's
-    games-played draw collapses to four cohort values and flattens the cloud's shape.
+    genuinely opposed.
+
+    ★ **``durability`` is the same correction applied a third time, and T17 is why it exists.**
+    While the live board was broken, ``games_played_mean`` held four cohort constants and was
+    ``corr = +0.00`` with the level — inert, and documented as such. Repairing T17 turned it into a
+    real per-player forecast and, in doing so, into a **level** column: ``corr(games_played_mean,
+    mean)`` within position is **+0.90 / +0.47 / +0.51 / +0.46** (QB/RB/TE/WR, 2026). So a raw
+    durability weight became a quality tilt the moment the data got better — the failure mode
+    arriving through an *upstream fix* rather than through new code. ``durability`` is the
+    level-residualized column, and it is what ``safe_floor`` weights.
+
+    (The same repair is visible in the shape pair itself: ``corr(upside, floor)`` on 2026 was
+    **−0.20** while T17 was live — the flattened games-played draw collapsing the cloud — and is
+    **−0.71** once availability is rolled forward properly, back in family with 2022/2025.)
 
     Same family as the 16.10 finding carried forward in ``CLAUDE.md``: *a coefficient is not
     transportable without its controls.* Here it is a **signal**, not a coefficient, and the missing
@@ -122,6 +134,7 @@ def residual_shape(board: pd.DataFrame, *, level: str = "mean") -> pd.DataFrame:
     return pd.DataFrame({
         "upside": _residualize(board.get("q90"), board[level], pos),
         "floor": _residualize(board.get("q10"), board[level], pos),
+        "durability": _residualize(board.get("games_played_mean"), board[level], pos),
     }, index=board.index)
 
 

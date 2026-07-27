@@ -48,9 +48,9 @@ COEF_JSON = Path("analysis/phase11_opponent_model.json")
 #: level-controlled shape signals the personalities actually tilt on; the raw ``q90``/``q10`` are
 #: kept alongside them precisely as the **contrast** — see the note printed under the table.
 PROFILE: dict[str, str] = {
-    "upside": "upside", "floor": "floor", "boom_prob": "boom", "bust_prob": "bust",
-    "games_played_mean": "games", "q90": "q90(raw)", "q10": "q10(raw)", "vbd": "vbd",
-    "rookie": "rookie", "cos": "cos",
+    "upside": "upside", "floor": "floor", "durability": "durab", "boom_prob": "boom",
+    "bust_prob": "bust", "games_played_mean": "games(raw)", "q90": "q90(raw)", "q10": "q10(raw)",
+    "vbd": "vbd", "rookie": "rookie", "cos": "cos",
 }
 
 
@@ -126,6 +126,19 @@ def main() -> None:
           f"(kickers/defenses carry no projection at all — that shortfall is structural)")
     assert cov["q90"] > 0.75, "the frozen distribution should cover most of a draftable board"
 
+    # -- why `safe_floor` does not weight durability: the two intents are opposed on this board ---
+    # Reported, not assumed. `durability` is level-residualized games-played (T17 made the raw
+    # column a real forecast and, in the same move, a level proxy). At a fixed projected level it
+    # runs AGAINST the floor, so a "safe" manager has to pick one; ours picks the floor.
+    shp = board.dropna(subset=["durability", "floor", "bust_prob"])
+    tension = {a: float(np.corrcoef(shp["durability"], shp[a])[0, 1])
+               for a in ("floor", "bust_prob", "upside")}
+    print(f"\n  durability vs the other shape signals (n={len(shp)}): "
+          + "  ".join(f"{k} {v:+.3f}" for k, v in tension.items()))
+    print("    ↑ floor and durability are OPPOSED at a fixed level, so a floor-buying manager\n"
+          "      cannot also be an above-average durability buyer. The weight still earns its\n"
+          "      place — see the A/B below — it just cannot win that argument outright.")
+
     # ===== 16.14 — the personalities ===========================================================
     beta_adp = float(model.beta[list(ALL_FEATURES).index("adp_s")])
     print(f"\n=== 16.14 — the five headline personalities (β_adp_s = {beta_adp:+.4f}) ===")
@@ -154,14 +167,39 @@ def main() -> None:
     print("  " + f"{'personality':20s}" + "".join(f"{lbl:>10s}" for lbl in PROFILE.values()))
     for name, p in prof.items():
         print(f"  {name:20s}" + "".join(f"{p['signal_z'][c]:>+10.3f}" for c in PROFILE))
-    print("  ↑ note the q90(raw) column does NOT track upside — within position it is ~0.98\n"
-          "    collinear with the projected level, so it measures quality, not shape. That is the\n"
-          "    whole reason `upside`/`floor` exist; see enrichment.residual_shape.")
+    print("  ↑ note the q90(raw)/games(raw) columns do NOT track upside/durab — within position\n"
+          "    they are collinear with the projected level (quantiles ~0.98; games +0.46…+0.90\n"
+          "    once T17 was fixed), so they measure quality, not shape. That is the whole reason\n"
+          "    `upside`/`floor`/`durability` exist; see enrichment.residual_shape.")
 
     print("\n  first-3-round positional mix / mean (ADP − pick), + = the room reached:")
     for name, p in prof.items():
         mix = " ".join(f"{k}={p['early_pos_mix'][k]:3d}" for k in ("RB", "WR", "QB", "TE"))
         print(f"  {name:22s} {mix}   reach {p['mean_adp_minus_pick']:+.2f}")
+
+    # -- does the durability weight MOVE anything? the A/B, not a comparison to balanced ----------
+    # `durability` was a no-op for its whole first life: it was weighted in `signal_weights` but
+    # missing from `simulator.PASSTHROUGH_COLS`, so `signal_bonus` skipped it and the room still
+    # drafted legally (the third time this bug class has landed — cf. `fandom`, `rookie`). The
+    # check that catches it is the weight against ITSELF-OFF. Comparing to `balanced` cannot do it:
+    # floor and durability are opposed, so this manager sits below balanced on durability whether
+    # the weight is on (-0.123) or off (-0.174) at n=80 -- the gap to balanced is ~0 and flips sign
+    # with the seed, while the A/B gain is a stable +0.05.
+    safe_off = Personality("safe_floor_no_durability",
+                           signal_weights={k: v for k, v in P["safe_floor"].signal_weights.items()
+                                           if k != "durability"},
+                           temperature=P["safe_floor"].temperature,
+                           hype_gain=P["safe_floor"].hype_gain,
+                           max_reach_picks=P["safe_floor"].max_reach_picks)
+    ab_off = _profile(board, zboard, safe_off, **kw)
+    durab_gain = (prof["safe_floor"]["signal_z"]["durability"]
+                  - ab_off["signal_z"]["durability"])
+    print(f"\n  durability A/B (safe_floor with vs without the weight, {args.n_drafts} drafts):")
+    print(f"    durability z {ab_off['signal_z']['durability']:+.3f} -> "
+          f"{prof['safe_floor']['signal_z']['durability']:+.3f}   (gain {durab_gain:+.3f})")
+    print(f"    floor z      {ab_off['signal_z']['floor']:+.3f} -> "
+          f"{prof['safe_floor']['signal_z']['floor']:+.3f}   "
+          f"— what the durability tilt costs him, exactly as the −0.34 opposition predicts")
 
     # -- the face-validity done-bar -------------------------------------------------------------
     up, safe, bal = prof["upside_chaser"], prof["safe_floor"], prof["balanced"]
@@ -171,6 +209,8 @@ def main() -> None:
         "safe_buys_floor": safe["signal_z"]["floor"] > bal["signal_z"]["floor"],
         "safe_over_upside_on_floor": safe["signal_z"]["floor"] > up["signal_z"]["floor"],
         "safe_avoids_bust_tail": safe["signal_z"]["bust_prob"] < bal["signal_z"]["bust_prob"],
+        # a weight must MOVE something, not merely run (the 16.14 inert-`fandom` lesson)
+        "durability_weight_moves_the_pool": durab_gain > 0.02,
         "homer_chases_changed_situations":
             prof["homer"]["signal_z"]["cos"] > bal["signal_z"]["cos"],
     }
@@ -199,6 +239,13 @@ def main() -> None:
                                "utility_cap": P[n].reach_cap(beta_adp),
                                "hype_gain": P[n].hype_gain} for n in HEADLINERS},
         "profiles": prof,
+        "durability_tension": tension,
+        "durability_ab": {"with": prof["safe_floor"]["signal_z"]["durability"],
+                          "without": ab_off["signal_z"]["durability"], "gain": durab_gain,
+                          "floor_with": prof["safe_floor"]["signal_z"]["floor"],
+                          "floor_without": ab_off["signal_z"]["floor"],
+                          "vs_balanced": (prof["safe_floor"]["signal_z"]["durability"]
+                                          - bal["signal_z"]["durability"])},
         "face_validity": checks,
         "validation_note": ("face validity + unit tests only — no corpus Brier gate. A personality "
                             "set is a realism feature; 11.1 already owns 'predicts the average "

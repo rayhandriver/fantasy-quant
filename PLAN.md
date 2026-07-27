@@ -1308,3 +1308,61 @@ any distribution number. Session H is insulated from it by decision (2).
 
 **Next: 16.15** — mock-room seat composition, routing the 16.9 shock through the `hype_gain` seats,
 and the app selector. `hype_gain` and `fav_teams` are already in place for it.
+
+## Session H2 (2026-07-27) — T17 repaired · 16.13 revised · 16.15 the mock room (SESSION H COMPLETE)
+
+**524 tests** (was 496), ruff clean. DEV-only; the spent lockbox untouched; the frozen
+value/optimizer/VBD/cost-report stack untouched (16.13 only *reads* it). Session H committed.
+
+**Resumed a session interrupted mid-flight.** The working tree held ~90 minutes of uncommitted,
+unvalidated work — T17's fix, a 16.13 revision and 16.15's first cut — with no docs, no unit tests
+for 16.15, and a dangling `T18` reference in a code comment pointing at a register entry that did
+not exist. All three landed; the audit of what was and was not done is what opened the session.
+
+**Decision taken this session (user, 1 question):** the shared 16.9 shock is applied **outside**
+`max_reach_picks` rather than folded into the same clip. Alternatives offered and declined: ship
+as-is and document the coupling as a null; or give every seat a ceiling (rejected — it would shrink
+total dispersion below 16.9's calibration and requires fitting ceilings for `balanced`/`reacher`).
+
+**Order of work.** audit → measure the coupling → decide → implement + docstrings → harden the
+done-bar → unit tests (incl. a regression test verified to fail on the old behaviour) → selector
+spec → doc sync → commit.
+
+**What shipped.**
+1. **T17 ☑** — `injury.projected_availability_frame` rolls covariates forward for an unplayed
+   season, `team_games` from the schedule, `covariate_source` stamped. **2026 level ratio
+   0.37 → 0.721** (2025 holdout 0.683). Plus the **level-band guard** (`distribution.level_ratio` /
+   `assert_level_band`, band 0.55–0.85) wired into `steps/phase5_5_utility.py` and run on the live
+   season as well as the holdout.
+2. **16.13 revised** — `residual_shape` gained `durability`; `safe_floor` weights it instead of the
+   raw `games_played_mean`. Forced by T17: fixing the data turned that column into a level proxy.
+3. **16.15 ☑** — `DEFAULT_ROOM`/`make_room`/`normalized_hype_gains`/`make_room_pick_fn`, the
+   hardened done-bar, `docs/PLAYER-VIEW.md` §9, 12 tests.
+
+**Corrections worth not repeating.**
+- **My first diagnosis of the clip was overstated and I corrected it mid-session.** "Homer clips
+  90 % of candidates, 17 % of the shock survives" was measured on the **test fixture**
+  (`β_adp_s = −0.85`). On the live board's fitted β (−1.68) the caps are ~2× larger and homer clips
+  **0.0 %**; upside 26 %, safe 33 %. The fix stands on the estimation-conditions argument, not on a
+  large current effect — it would start costing after an 11.1 refit that shrank `β_adp_s`.
+  *Measure the real board before quoting a fixture's number as the system's behaviour.*
+- **A zero vector is not an "off" control.** `argsort` on zeros labels the top-N rows by board
+  order — by ADP — which autopick seats take by construction. It produced a large fake effect on
+  exactly the seats the control should say nothing about, and it briefly looked like a result.
+- **A two-ended bar cannot see the middle of the room.** *Chasers − autopickers* passes on a room
+  routing the story backwards, because autopickers get sniped either way.
+- **The regression test was verified to fail on the pre-fix code** before being kept. An untested
+  regression test is the "inert thing still passes" failure mode wearing a lab coat.
+- **The autopilot-in-a-mixed-room test could not be an equality against an all-autopilot draft** —
+  the rooms legitimately diverge after round 1 because the other eight seats are different people.
+  Restated as the autopicker's own invariant (lowest ADP available at each of its turns).
+- **`CHOICE_TOP_K` is a hard ADP-rank filter applied before utility**, so a shock on a player
+  outside the top 40 available expresses nothing. Session G's contract lesson, from the other side.
+
+**New tech debt: T18** (🟡 `sleeper_manager_profiles.avg_reach` is scored against a pooled ADP board
+across mixed formats → a +91.9-pick mean QB reach; a board mismatch, not a behaviour). Unconsumed
+today; fix before a manager-facing readout or an 11.3 refit keys on it. **T17 closed.**
+
+**Next: Session I — Phase 17 League-Format Fidelity 17.1–17.4.** Then J (optional dynasty) → K
+(Phase 14.1 MVP + all surfacing, strictly last). Stage-0 FFC chore: last pull 2026-07-24, **due
+after 07-30**.

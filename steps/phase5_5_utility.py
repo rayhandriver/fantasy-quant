@@ -14,7 +14,8 @@ from __future__ import annotations
 from fantasy_quant.backtest.scoring import season_points
 from fantasy_quant.config import CALIBRATION_SEASONS
 from fantasy_quant.data import db
-from fantasy_quant.projections import conformal, distribution, quantile
+from fantasy_quant.projections import conformal, distribution, injury, quantile
+from fantasy_quant.projections.consensus import consensus_projection
 from fantasy_quant.valuation import utility
 
 
@@ -77,6 +78,31 @@ def main() -> None:
     print(f"  unconditional (full board n={len(ev)}, 0-filled): coverage {cov_uncond:.0%}   "
           f"— role/depth attrition beyond injury (documented limitation)")
     assert 0.65 <= cov_cond <= 0.90, "the conditional interval should cover near its 80% target"
+
+    # -- T17 LEVEL GUARD: the mean must still resemble the projection it is built from -----------
+    # The distribution is the projection times an availability fraction. When availability silently
+    # falls back to the cohort prior for a whole board, that fraction collapses and nothing else
+    # fails — no exception, no empty frame, just a board that is half its own projection. This is
+    # the check that would have caught T17 the day the 2026 board landed, so it runs on the holdout
+    # AND on the live (unplayed) season, which is the one that breaks.
+    live = int(con.execute("SELECT MAX(season) FROM adp_snapshots").fetchone()[0])
+    print(f"\nT17 level guard (band {distribution.LEVEL_BAND}, "
+          f"top {distribution.LEVEL_TOP_N} by projection):")
+    r_hold = distribution.assert_level_band(dist, consensus_projection(con, season), season)
+    print(f"  [PASS] {season} (holdout, observed covariates): ratio {r_hold:.3f}")
+    if live != season:
+        live_dist, _ = distribution.assemble_distribution(con, live, n_draws=distribution.N_DRAWS)
+        avail_src = injury.availability_projection(con, live)["covariate_source"].iloc[0]
+        r_live = distribution.assert_level_band(dist=live_dist,
+                                                proj=consensus_projection(con, live), season=live)
+        print(f"  [PASS] {live} (live, {avail_src} covariates): ratio {r_live:.3f}")
+        # the honest caveat, printed rather than buried: a draft-day forecast cannot condition on
+        # a player appearing, so the rolled-forward path sits ABOVE the observed path's very tight
+        # 0.638–0.683 range. That is unconditionality, not a defect — but it means a live number is
+        # slightly optimistic relative to how the backtest seasons scored. See findings.md.
+        if r_live > 0.70:
+            print(f"       note: {r_live:.3f} sits above the 2019–2025 observed range "
+                  f"(0.638–0.683) — expected for a rolled-forward season (T17).")
 
     # -- PERSIST the frozen contract ---------------------------------------------------------------
     keep = [*distribution.DIST_CONTRACT, "risk_premium", "ce_rank", "ce_pos_rank"]

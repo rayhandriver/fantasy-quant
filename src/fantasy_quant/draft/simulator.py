@@ -34,8 +34,13 @@ DRAFTABLE = ("QB", "RB", "WR", "TE", "K", "DST")
 #: convention :meth:`~fantasy_quant.draft.opponent_model.OpponentModel.candidate_utility` already
 #: uses for unknown Tier-B context). Populate via
 #: :func:`~fantasy_quant.draft.enrichment.enrich_board`.
+#: ⚠ Must remain a superset of ``personalities.SIGNAL_COLS`` — a weightable signal that is not
+#: passed through is silently skipped by ``signal_bonus`` and the weight becomes a no-op that still
+#: completes a legal draft. That has now happened three times (``fandom``, ``rookie``,
+#: ``durability``), so ``test_personalities`` asserts the containment.
 PASSTHROUGH_COLS = ("team", "rookie", "boom_prob", "q90", "bust_prob", "q10",
-                    "games_played_mean", "mean", "upside", "floor", "vbd", "overall_rank", "cos")
+                    "games_played_mean", "mean", "upside", "floor", "durability", "vbd",
+                    "overall_rank", "cos")
 
 
 def canon_pos(pos) -> str | None:

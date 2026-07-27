@@ -148,6 +148,7 @@ Reached by clicking a player anywhere. Contents, top to bottom:
 | #8 Opportunity | ✅ built (Phase-3 `features/opportunity.py`) |
 | #6 Situation-change | ⏳ **needs Phase 16** (value-side 16.1–16.6) — the one *bar* gating dependency |
 | Reach-risk / drift readout | ✅ **engine-side built** 2026-07-26 (16.12 `draft/drift.py::availability_readout`) — UI still owed by Phase 14 |
+| Mock-room opponent selector | ✅ **engine-side built** 2026-07-27 (16.15 `draft/personalities.py::make_room`) — UI owed by Phase 14; spec in §9 |
 
 **The new-signal dependencies both point at Phase 16.** Building Phase 16 next double-serves: the value-side
 (16.1/16.2 mined signals + 16.4 fingerprints + 16.6 tab) lights up the Beta-Lab tab *and* supplies the deep
@@ -173,7 +174,80 @@ Implementation order (unchanged from ROADMAP): **Phase 16 → Phase 14.1 backend
 (this spec)**. The FastAPI backend (14.1) exposes a per-player endpoint returning the 8 bar values +
 percentiles (overall & positional) + the confidence flag; the frontend renders them per this doc.
 
-## 9. Deferred / open
+## 9. The mock-room opponent selector (16.15)
+
+*The "who am I drafting against" control on the mock-draft view. Not a player card — it lives on the
+draft screen — but it is specced here because it is the last piece of app surface Phase 16 owes, and
+because its honesty rules are the same family as §6.*
+
+### 9.1 The contract
+
+The UI needs **two inputs and one call**. Everything else is defaulted engine-side:
+
+```python
+room = make_room(mix, n_opponents=n_teams - 1, seed=..., fav_teams=...)   # draft/personalities.py
+opponent_pick_fn = make_room_pick_fn(model, room, hype=...)               # -> simulate_draft
+```
+
+- **`mix`** — a tuple of personality names, exactly `n_teams - 1` long. Omit it for `DEFAULT_ROOM`.
+  `make_room` raises on a wrong-length mix and on an unknown name (a typo must not degrade to
+  `balanced`), so the UI can surface both as form errors rather than validating them itself.
+- **`n_opponents`** — derived from the league size the user already set. Never a separate control.
+- **`seed`** — shuffles seats so a personality is not confounded with a draft slot. `None` keeps the
+  listed order, which is what a "name my room" power-user flow wants.
+- **`fav_teams`** — attaches to the `homer` seat only; expose it as a team picker that appears when a
+  homer is in the room, and hide it otherwise.
+
+`available_personalities` in `analysis/phase16_15_mock_room.json` is the list to populate the
+dropdown from — read it, don't hardcode it, so a personality added later shows up for free.
+
+### 9.2 What to show for each seat
+
+| Personality | One-line label for the UI |
+|---|---|
+| `autopilot` | Follows ADP exactly. No opinions, no reaches. |
+| `balanced` | The average manager the behavioural model was fit on. |
+| `upside_chaser` | Buys ceiling and story; tolerates the bust risk. |
+| `safe_floor` | Buys floor and availability; avoids the bust tail. |
+| `homer` | Chases the narrative — and his own team, if you name one. |
+| `chalk` · `zero_rb` · `reacher` · `rookie_hawk` | Phase-11.3 library extras, available as overrides. |
+
+**Default room** (9 seats): 2 × autopilot, 3 × balanced, and one each of upside_chaser, safe_floor,
+homer, reacher. Show it as the pre-filled state, editable per seat.
+
+**No `zero_rb` seat by default, and say why if asked:** across 3,309 eligible-redraft managers in the
+Sleeper corpus only **1.7 %** draft RB-light. A strategy roughly 1 manager in 60 runs does not belong
+in a typical room; it stays one override away.
+
+### 9.3 Honesty rules (same standing as §6)
+
+1. **Do not present the room as predictive.** The personality set is validated by *face validity and
+   mechanics tests only* — no Brier gate, by decision (2026-07-23). 11.1 already owns "predicts the
+   average manager"; deviating from it is the entire point of a personality, so a personality cannot
+   be scored on that metric. Frame the control as **realism**, never as "this is how your league
+   drafts".
+2. **Never label the hype channel a prediction.** At the shipped 16.9 shock size, seat composition
+   changes a seat's share of hyped players by ≤0.04 with a rank correlation of +0.07 to seat gain —
+   a null (16.15). The routing mechanism is proven at larger shock sizes; the *shipped* signal is not
+   big enough to move a room. If the UI ever visualizes "who chased the story", it is illustrating a
+   mechanism, not reporting a measurement.
+3. **Composition redistributes the story, it does not amplify it.** Per-seat `hype_gain` is
+   normalized to room-mean 1, so a room full of chasers does not secretly rescale a parameter 16.9
+   fitted against realized draft-slot dispersion. Any UI that lets a user "turn up the hype" is
+   changing a calibrated quantity and must say so.
+4. **A seat's reach ceiling bounds its own opinion, not the room's story.** If the UI shows a
+   "max reach" per personality, label it accordingly — a loud enough shared story can carry a seat
+   past it, by design.
+
+### 9.4 Target surface
+
+Same split as §7: **click-to-select seat chips** in the Streamlit MVP (14.1) — a `st.selectbox` per
+seat over the personality list, plus a "shuffle seats" toggle bound to `seed` — and a proper
+drag-to-assign room editor in the Next.js frontend (14.3). The engine call is identical either way.
+
+---
+
+## 10. Deferred / open
 
 - Exact tier cutoffs (green/yellow/red percentile bands) — set at build time; likely tertiles, tunable.
 - Whether the deep page shows player-vs-player **comps** — nice-to-have, later.

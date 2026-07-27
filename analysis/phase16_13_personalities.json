@@ -13,6 +13,7 @@
     "mean": 0.8178,
     "upside": 0.8178,
     "floor": 0.8178,
+    "durability": 0.8178,
     "vbd": 0.8578,
     "overall_rank": 0.8578,
     "rookie": 1.0,
@@ -55,16 +56,17 @@
   "profiles": {
     "autopilot": {
       "signal_z": {
-        "upside": -0.0733,
-        "floor": 0.0214,
+        "upside": 0.1135,
+        "floor": -0.0747,
+        "durability": -0.1592,
         "boom_prob": 0.1026,
         "bust_prob": 0.0383,
-        "games_played_mean": 0.6741,
-        "q90": 0.3442,
-        "q10": 0.1572,
+        "games_played_mean": 0.0326,
+        "q90": 0.3055,
+        "q10": 0.2358,
         "vbd": 0.3866,
         "rookie": -0.0107,
-        "cos": -0.1113
+        "cos": -0.1174
       },
       "early_pos_mix": {
         "RB": 132,
@@ -76,16 +78,17 @@
     },
     "balanced": {
       "signal_z": {
-        "upside": -0.0517,
-        "floor": -0.0315,
+        "upside": 0.1232,
+        "floor": -0.0793,
+        "durability": -0.1284,
         "boom_prob": 0.0814,
         "bust_prob": 0.0182,
-        "games_played_mean": 0.6728,
-        "q90": 0.2703,
-        "q10": 0.0875,
+        "games_played_mean": 0.0204,
+        "q90": 0.2338,
+        "q10": 0.1665,
         "vbd": 0.2871,
         "rookie": -0.0159,
-        "cos": -0.0887
+        "cos": -0.0946
       },
       "early_pos_mix": {
         "RB": 147,
@@ -97,58 +100,61 @@
     },
     "upside_chaser": {
       "signal_z": {
-        "upside": 0.023,
-        "floor": -0.0393,
-        "boom_prob": 0.1166,
-        "bust_prob": 0.0193,
-        "games_played_mean": 0.6728,
-        "q90": 0.2595,
-        "q10": 0.0665,
-        "vbd": 0.2711,
-        "rookie": -0.024,
-        "cos": -0.0468
+        "upside": 0.1891,
+        "floor": -0.1232,
+        "durability": -0.1261,
+        "boom_prob": 0.1215,
+        "bust_prob": 0.0091,
+        "games_played_mean": 0.0007,
+        "q90": 0.2087,
+        "q10": 0.1134,
+        "vbd": 0.2716,
+        "rookie": -0.0321,
+        "cos": -0.0547
       },
       "early_pos_mix": {
-        "RB": 139,
-        "WR": 159,
-        "QB": 4,
-        "TE": 22
+        "RB": 140,
+        "WR": 162,
+        "QB": 5,
+        "TE": 17
       },
-      "mean_adp_minus_pick": 3.797
+      "mean_adp_minus_pick": 3.703
     },
     "safe_floor": {
       "signal_z": {
-        "upside": -0.0825,
-        "floor": 0.0395,
-        "boom_prob": 0.0844,
-        "bust_prob": -0.0416,
-        "games_played_mean": 0.6827,
-        "q90": 0.2732,
-        "q10": 0.1251,
-        "vbd": 0.2839,
-        "rookie": -0.0236,
-        "cos": -0.1142
+        "upside": 0.0776,
+        "floor": -0.0285,
+        "durability": -0.1184,
+        "boom_prob": 0.0625,
+        "bust_prob": -0.0396,
+        "games_played_mean": 0.0311,
+        "q90": 0.2333,
+        "q10": 0.1899,
+        "vbd": 0.2763,
+        "rookie": -0.0092,
+        "cos": -0.1131
       },
       "early_pos_mix": {
-        "RB": 138,
-        "WR": 171,
+        "RB": 130,
+        "WR": 175,
         "QB": 6,
-        "TE": 9
+        "TE": 13
       },
-      "mean_adp_minus_pick": 2.298
+      "mean_adp_minus_pick": 2.742
     },
     "homer": {
       "signal_z": {
-        "upside": -0.0544,
-        "floor": -0.0264,
-        "boom_prob": 0.0667,
-        "bust_prob": 0.026,
-        "games_played_mean": 0.6728,
-        "q90": 0.2612,
-        "q10": 0.0898,
-        "vbd": 0.2798,
-        "rookie": 0.0051,
-        "cos": 0.0079
+        "upside": 0.1451,
+        "floor": -0.1056,
+        "durability": -0.1073,
+        "boom_prob": 0.0627,
+        "bust_prob": 0.0245,
+        "games_played_mean": 0.0255,
+        "q90": 0.2212,
+        "q10": 0.1411,
+        "vbd": 0.2781,
+        "rookie": 0.0034,
+        "cos": 0.0031
       },
       "early_pos_mix": {
         "RB": 142,
@@ -160,16 +166,17 @@
     },
     "homer(JAX fan)": {
       "signal_z": {
-        "upside": -0.0465,
-        "floor": -0.0266,
-        "boom_prob": 0.0662,
-        "bust_prob": 0.0165,
-        "games_played_mean": 0.6759,
-        "q90": 0.25,
-        "q10": 0.0781,
-        "vbd": 0.2676,
-        "rookie": -0.0033,
-        "cos": -0.0122
+        "upside": 0.1424,
+        "floor": -0.0905,
+        "durability": -0.1209,
+        "boom_prob": 0.0665,
+        "bust_prob": 0.0156,
+        "games_played_mean": 0.0079,
+        "q90": 0.2063,
+        "q10": 0.132,
+        "vbd": 0.267,
+        "rookie": -0.003,
+        "cos": -0.0201
       },
       "early_pos_mix": {
         "RB": 144,
@@ -177,8 +184,21 @@
         "QB": 1,
         "TE": 10
       },
-      "mean_adp_minus_pick": 3.514
+      "mean_adp_minus_pick": 3.517
     }
+  },
+  "durability_tension": {
+    "floor": -0.33999677713908305,
+    "bust_prob": 0.22749592588808382,
+    "upside": 0.023474347568709034
+  },
+  "durability_ab": {
+    "with": -0.1184,
+    "without": -0.1799,
+    "gain": 0.0615,
+    "floor_with": -0.0285,
+    "floor_without": 0.0097,
+    "vs_balanced": 0.009999999999999981
   },
   "face_validity": {
     "upside_chases_ceiling": true,
@@ -186,6 +206,7 @@
     "safe_buys_floor": true,
     "safe_over_upside_on_floor": true,
     "safe_avoids_bust_tail": true,
+    "durability_weight_moves_the_pool": true,
     "homer_chases_changed_situations": true,
     "autopilot_is_pure_adp_order": true
   },

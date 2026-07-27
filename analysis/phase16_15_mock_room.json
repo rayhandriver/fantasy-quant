@@ -1,0 +1,126 @@
+{
+  "season": 2026,
+  "teams": 10,
+  "rounds": 15,
+  "n_drafts": 24,
+  "default_room": [
+    "autopilot",
+    "autopilot",
+    "balanced",
+    "balanced",
+    "balanced",
+    "upside_chaser",
+    "safe_floor",
+    "homer",
+    "reacher"
+  ],
+  "seat_gains": {
+    "autopilot#0": {
+      "raw": 0.0,
+      "normalized": 0.0
+    },
+    "autopilot#1": {
+      "raw": 0.0,
+      "normalized": 0.0
+    },
+    "balanced#2": {
+      "raw": 1.0,
+      "normalized": 1.0588235294117647
+    },
+    "balanced#3": {
+      "raw": 1.0,
+      "normalized": 1.0588235294117647
+    },
+    "balanced#4": {
+      "raw": 1.0,
+      "normalized": 1.0588235294117647
+    },
+    "upside_chaser#5": {
+      "raw": 1.5,
+      "normalized": 1.5882352941176472
+    },
+    "safe_floor#6": {
+      "raw": 0.5,
+      "normalized": 0.5294117647058824
+    },
+    "homer#7": {
+      "raw": 2.5,
+      "normalized": 2.6470588235294117
+    },
+    "reacher#8": {
+      "raw": 1.0,
+      "normalized": 1.0588235294117647
+    }
+  },
+  "corpus_check": {
+    "n_managers": 3309,
+    "qb_share_median": 0.12631578947368421,
+    "rb_share_median": 0.3103448275862069,
+    "rb_light_share": 0.016923541855545482,
+    "te_heavy_share": 0.3937745542459958
+  },
+  "shock_sd_utility": 0.04967530256668924,
+  "shock_sd_adp_picks": 1.4756994548138391,
+  "amp_gate": 10.0,
+  "loud_share_channel_off": {
+    "autopilot#0": 0.1111111111111111,
+    "autopilot#1": 0.12222222222222222,
+    "balanced#2": 0.11944444444444445,
+    "balanced#3": 0.1361111111111111,
+    "balanced#4": 0.125,
+    "upside_chaser#5": 0.1111111111111111,
+    "safe_floor#6": 0.10833333333333334,
+    "homer#7": 0.1111111111111111,
+    "reacher#8": 0.1111111111111111
+  },
+  "loud_share_shipped_size": {
+    "autopilot#0": 0.1111111111111111,
+    "autopilot#1": 0.1111111111111111,
+    "balanced#2": 0.1111111111111111,
+    "balanced#3": 0.12222222222222222,
+    "balanced#4": 0.12222222222222222,
+    "upside_chaser#5": 0.1,
+    "safe_floor#6": 0.11388888888888889,
+    "homer#7": 0.14722222222222223,
+    "reacher#8": 0.09444444444444444
+  },
+  "loud_share_amplified": {
+    "autopilot#0": 0.019444444444444445,
+    "autopilot#1": 0.05555555555555555,
+    "balanced#2": 0.17222222222222222,
+    "balanced#3": 0.15833333333333333,
+    "balanced#4": 0.16666666666666666,
+    "upside_chaser#5": 0.15555555555555556,
+    "safe_floor#6": 0.08611111111111111,
+    "homer#7": 0.3111111111111111,
+    "reacher#8": 0.09444444444444444
+  },
+  "chaser_minus_autopicker_on": 0.012500000000000011,
+  "chaser_minus_autopicker_off": -0.005555555555555564,
+  "spearman_delta_vs_gain_shipped": 0.0699497416782669,
+  "spearman_delta_vs_gain_amplified": 0.9093466418174697,
+  "spearman_channel_off_vs_gain": -0.018265030599088926,
+  "max_seat_move_shipped": 0.03611111111111112,
+  "max_seat_move_amplified": 0.2,
+  "shipped_size_verdict": "NULL at the shipped shock size, and it is 16.9's null rather than a 16.15 defect. The calibrated draw is 1.48 ADP picks; the largest per-seat change in hyped-player share is 0.036 and its rank correlation with seat gain is +0.070 \u2014 inside the softmax's own noise. Amplified x10 the same measurement gives +0.909, so the routing is built correctly and is waiting on a signal worth routing. 16.9 already reported its own size as unidentified; nothing here re-opens it. Phase 16's FIFTH null.",
+  "available_personalities": [
+    "autopilot",
+    "balanced",
+    "chalk",
+    "homer",
+    "reacher",
+    "rookie_hawk",
+    "safe_floor",
+    "upside_chaser",
+    "zero_rb"
+  ],
+  "face_validity": {
+    "room_drafts_a_legal_board": true,
+    "gains_normalized_to_mean_one": true,
+    "autopilot_seats_do_not_reach": 1.0,
+    "mechanism_routes_in_proportion_to_gain": true,
+    "mechanism_needs_the_open_channel": true
+  },
+  "selector_contract": "Phase 14 calls make_room(mix, n_opponents=n_teams-1, seed=..., fav_teams=...) and passes the result to make_room_pick_fn(model, room, hype=...). The UI needs only the personality names (available_personalities) and one seat count; everything else is defaulted. Full spec incl. the honesty rules: docs/PLAYER-VIEW.md \u00a79.",
+  "validation_note": "face validity + unit tests only \u2014 no Brier gate (decided 2026-07-23). A room is a realism feature; 11.1 already owns 'predicts the average manager'."
+}

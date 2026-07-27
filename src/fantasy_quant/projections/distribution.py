@@ -257,3 +257,49 @@ def cached_distribution(con, season: int, ruleset: RuleSet | None = None, n_draw
         _DIST_CACHE[key] = assemble_distribution(con, season, rs, n_draws=n_draws, seed=seed,
                                                  return_games=True)
     return _DIST_CACHE[key]
+
+
+# --------------------------------------------------------------------------------------------
+# T17 — the level guard: does the assembled mean still resemble the projection it is built from?
+# --------------------------------------------------------------------------------------------
+#: Admissible ``sum(mean) / sum(proj_points)`` over the top of the board. The distribution is the
+#: projection times an availability fraction, so this ratio *should* sit meaningfully below 1 — it
+#: is the games-played haircut, and 2019–2025 measure it at a very tight **0.638–0.683**. The band
+#: is deliberately much wider than that spread because it is a **structural** guard, not a
+#: calibration target: below the floor the availability multiplier is eating almost half the
+#: projection (T17's live-2026 board scored **0.37** — every player on the cohort prior), above the
+#: ceiling availability is barely being applied at all (an inert hazard). Both are the kind of
+#: break that should stop a run, and neither is reachable by ordinary year-to-year drift.
+LEVEL_BAND: tuple[float, float] = (0.55, 0.85)
+LEVEL_TOP_N = 60
+
+
+def level_ratio(dist: pd.DataFrame, proj: pd.DataFrame, top_n: int = LEVEL_TOP_N) -> float:
+    """``sum(mean) / sum(proj_points)`` over the ``top_n`` players by projection.
+
+    Restricted to the top of the board on purpose: that is the part a user actually reads, and it
+    is the part where both frames agree on who exists, so the ratio measures the availability
+    haircut rather than a difference in universe.
+    """
+    m = dist.merge(proj[["player_key", "proj_points"]], on="player_key", how="inner")
+    if m.empty:
+        raise ValueError("level_ratio: distribution and projection share no players")
+    top = m.sort_values("proj_points", ascending=False).head(int(top_n))
+    denom = float(top["proj_points"].sum())
+    if denom <= 0:
+        raise ValueError("level_ratio: projection sums to zero over the top of the board")
+    return float(top["mean"].sum()) / denom
+
+
+def assert_level_band(dist: pd.DataFrame, proj: pd.DataFrame, season: int,
+                      band: tuple[float, float] = LEVEL_BAND,
+                      top_n: int = LEVEL_TOP_N) -> float:
+    """Assert :func:`level_ratio` sits inside ``band``; return it. The check that would have caught
+    T17 the day the 2026 board landed."""
+    r = level_ratio(dist, proj, top_n)
+    lo, hi = band
+    assert lo <= r <= hi, (
+        f"{season}: distribution/projection level ratio {r:.3f} outside [{lo}, {hi}] over the "
+        f"top {top_n}. Below the floor usually means availability collapsed to the cohort prior "
+        f"(cf. docs/TECH-DEBT.md T17); above the ceiling means the hazard is not being applied.")
+    return r

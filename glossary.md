@@ -1267,3 +1267,67 @@ scaling a `fandom` coefficient whose feature was **identically zero** (nothing i
 ever passed `fav`), and `rookie_hawk` scaled a `rookie` column `_prepare_board` dropped. Both were
 literal no-ops for a whole phase and no test noticed, because a personality that does nothing still
 completes a legal draft. The lesson: assert a tilt **moves** something, not merely that it runs.
+
+## Session H2 terms — the mock room, and T17's knock-on (2026-07-27)
+
+**rolled-forward availability** (T17, `injury.projected_availability_frame`) — the fix for a season
+that has not been played: predict each player's hazard at his **most recent completed season's**
+covariates, with `team_games` from the schedule rather than `week.nunique()` of a season with no
+weeks, and stamp `covariate_source` (`observed` | `rolled_forward`) on the result so the
+substitution is visible in the output rather than inferred. Took the live 2026 level ratio from
+**0.37 → 0.721** (2025 holdout: 0.683). The rolled-forward path sits slightly *above* the observed
+range on purpose — a draft-day forecast cannot condition on a player appearing — so a live number is
+mildly optimistic, which is unconditionality rather than a defect.
+
+**level-band guard** (`distribution.level_ratio` / `assert_level_band`) — asserts the distribution's
+mean stays within a stated band (0.55–0.85) of the consensus projection it is built from, on the top
+N by projection. Runs on the holdout **and on the live unplayed season, which is the one that
+breaks**. The generalizable form: *assert the relationship between a derived quantity and its input,
+not merely that the derivation ran* — T17 threw no exception, returned no empty frame and failed no
+test; it just quietly halved a board.
+
+**a fix that breaks a signal by improving it** (T17 → 16.13) — repairing the availability data
+turned `games_played_mean` from four cohort constants (`corr` with the level **+0.00**, documented
+as inert) into a real forecast **and thereby into a level proxy** (+0.46…+0.90 within position). So
+`safe_floor`'s durability weight became a quality tilt with no code change and a green suite. Third
+instance of *level vs shape*, first to arrive through data rather than code. Rule: **re-measure a
+signal's correlation with the level after any change to the data it is built from** — the F.5
+"re-audit after a step change in input volume" rule, generalized from volume to quality.
+
+**own opinion vs shared story** (16.15) — the scope of `max_reach_picks`. The reach ceiling bounds
+what a seat decides **for itself** (`signal_weights`, a homer's fandom excess); the shared 16.9
+narrative draw is applied *outside* it, because it is the room's story and carries its own fitted
+scale. Folded into the same clip, a seat whose signals already saturate its ceiling cannot express
+the story at all — and nothing fails, since a personality that ignores the shock still drafts
+legally. Justified on the estimation conditions, not on the current magnitude: **16.9 fitted the
+shock uncapped and uniform**, so clipping it uses a fitted parameter outside where it was estimated.
+(Measured scope: on the fixture's smaller β the clip bit hard — homer 90 % of candidates; on the
+live board's fitted β it bites 0 % for homer, 26–33 % for upside/safe. The fold-in would start
+costing after any 11.1 refit that shrank `β_adp_s`.)
+
+**a two-ended bar** (16.15) — a face-validity check stated as the gap between the *extremes* of a
+population, which cannot see the middle of it going backwards. *Chasers − autopickers* passes on a
+room that routes the story to the wrong seats, because the autopickers' share of hyped players falls
+when the channel opens regardless of **who** is chasing (they get sniped). Replaced by a rank
+correlation across every seat. The companion clause to 16.14's *state your bars as oppositions*.
+
+**the control must be the same measurement** (16.15) — closing a channel by passing a **zero
+vector** is not a control: `argsort` on zeros labels the top-N rows by board order, i.e. by ADP,
+which autopick seats take by construction, so the "off" arm measures a different quantity and
+manufactures a large fake effect on exactly the seats it should say nothing about. Close the channel
+(`hype=None`) and keep the **same labels**.
+
+**mechanism gate vs shipped-size report** (16.15, `AMP_GATE`) — when a substep's plumbing is sound
+but the signal it carries is a known null, gate the **mechanism** at an amplification big enough to
+resolve it and **report** the shipped-size result separately. 16.15's routing is +0.07 at the
+calibrated 1.48-pick shock and +0.91 at ×10; sweeping ×1→×40 gives +0.07 · +0.53 · +0.84 · +0.91 ·
++0.95. The alternative — turning the shock up so the substep looks better — would tune a calibrated
+parameter to a face-validity check. Same move as Phase 9.5's `winprob_sims ≥ 200`, same shape as
+16.16's *the detector works, reacting to it does not*.
+
+**hand-set mix, corpus-checked** (16.15, `DEFAULT_ROOM`) — a manager's **tendency** is observable in
+the draft corpus; his **personality** is a latent label nothing in the data assigns. So the default
+room is hand-set and the corpus is used to *check* it rather than supply it: 3,309 eligible-redraft
+managers give median QB share 12.6 %, RB share 31 %, and only **1.7 % RB-light** — which is why no
+`zero_rb` seat is in a default room. The check computes position share **from picks alone, with no
+ADP reference**, because the stored `avg_reach` is a pooled-board mismatch (**T18**).

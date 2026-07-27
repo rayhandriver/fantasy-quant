@@ -144,6 +144,64 @@ def availability_frame(con, seasons, min_prior_games: int = 8) -> pd.DataFrame:
         ["season", "player_key", "pos", "team", "week", "available", *FEATURES]]
 
 
+def projected_availability_frame(con, season: int, min_prior_games: int = 8) -> pd.DataFrame:
+    """T17 — the person-period grid for a season that has **not been played yet**.
+
+    :func:`availability_frame` builds its grid from ``weekly``, so a future season yields nothing
+    and every player falls to the T3-A cohort prior — a per-``(pos, tier)`` constant written for
+    rookies and backups, applied to the whole league (see ``docs/TECH-DEBT.md`` T17). But the
+    hazard's covariates do not actually need the target season to have happened: ``prior_avail``
+    is last season's durability, ``age`` is arithmetic on a birthdate, the position dummies are
+    known, and ``week_norm`` is the schedule. Only ``available`` — the *outcome* — is missing, and
+    prediction does not need it.
+
+    So this synthesizes the grid the target season *would* have: the established universe
+    (``season - 1`` games ≥ ``min_prior_games``, the same gate :func:`availability_frame` applies)
+    × the target season's weeks, carrying each player's prior-season team and primary position.
+    ``available`` is ``NaN`` throughout and this frame must never be passed to
+    :func:`fit_availability` — it is a prediction frame only.
+
+    Players below the gate (rookies, backups, anyone who missed most of last season) are absent by
+    design and still route to the cohort prior downstream, which is the population it was built
+    for. Returns the same columns as :func:`availability_frame`.
+    """
+    cols = ["season", "player_key", "pos", "team", "week", "available", *FEATURES]
+    prior = games_played(con, [int(season) - 1])
+    if prior.empty:
+        return pd.DataFrame(columns=cols)
+
+    est = prior[prior["games"] >= min_prior_games].reset_index(drop=True).copy()
+    if est.empty:
+        return pd.DataFrame(columns=cols)
+    est["prior_avail"] = (est["games"] / est["team_games"]).clip(0, 1)
+
+    # the target season's own week count — so `team_games` downstream (a `week.nunique()`) is the
+    # season being drafted, never the prior season's. This is why T17's "team_games must come from
+    # the schedule" note needs no schedule ingest: the grid is built at the right width.
+    n_weeks = _season_games(season)
+    grid = est.loc[est.index.repeat(n_weeks)].reset_index(drop=True)
+    grid["week"] = np.tile(np.arange(1, n_weeks + 1), len(est))
+    grid["season"] = int(season)
+    grid["week_norm"] = grid["week"] / n_weeks
+
+    # age as-of Sep-1 of the TARGET season, straight from the crosswalk: `player_features` keys its
+    # universe off `weekly`, so it is empty for an unplayed season, but a birthdate is not.
+    bd = con.execute(
+        """SELECT gsis_id AS player_key, MAX(birthdate) AS birthdate
+           FROM player_ids WHERE gsis_id IS NOT NULL GROUP BY 1"""
+    ).df()
+    grid = grid.merge(bd, on="player_key", how="left")
+    asof = pd.Timestamp(f"{int(season)}-09-01")
+    grid["age"] = ((asof - pd.to_datetime(grid["birthdate"], errors="coerce")).dt.days
+                   / 365.25).round(2)
+    grid["age"] = grid["age"].fillna(grid["age"].median())
+
+    for pos in ("RB", "WR", "TE"):
+        grid[f"is_{pos}"] = (grid["pos"] == pos).astype(float)
+    grid["available"] = np.nan          # no outcome exists yet — prediction frame only
+    return grid[cols]
+
+
 # --------------------------------------------------------------------------------------------
 # the hazard model + dispersion (pure-ish)
 # --------------------------------------------------------------------------------------------
@@ -209,14 +267,22 @@ def availability_projection(con, season: int, train_seasons=None) -> pd.DataFram
 
     # target-season players: predict availability at each player's covariates (mean over the season)
     tgt = availability_frame(con, [season])
+    source = "observed"
+    if tgt.empty:
+        # T17: the season has not been played, so there is no observed person-period grid. Roll the
+        # covariates forward rather than dropping every player onto the cohort prior. The
+        # substitution is stamped on the result (`covariate_source`) so it is visible, not silent.
+        tgt = projected_availability_frame(con, season)
+        source = "rolled_forward"
     if tgt.empty:
         return pd.DataFrame(columns=["player_key", "pos", "avail_p", "games_played_mean",
-                                     "team_games", "rho"])
+                                     "team_games", "rho", "covariate_source"])
     tgt = tgt.assign(p=predict_availability(fit, tgt))
     out = (tgt.groupby(["player_key", "pos"]).agg(
         avail_p=("p", "mean"), team_games=("week", "nunique")).reset_index())
     out["games_played_mean"] = out["avail_p"] * out["team_games"]
     out["rho"] = rho
+    out["covariate_source"] = source
     return out
 
 
@@ -239,6 +305,19 @@ def player_tiers(con, seasons) -> pd.DataFrame:
     for s in seasons:
         pf = player_features_mod.player_features(con, [int(s)])[
             ["gsis_id", "position", "draft_ovr"]].copy()
+        if pf.empty:
+            # T17, second order: `player_features` keys its universe off `weekly`, so an unplayed
+            # season yields nothing and every cohort player would be filled to the LOW capital
+            # tier downstream — i.e. a first-round rookie RB priced as an undrafted flier, which
+            # is the exact split the T3-A prior exists to make (hi 0.67 vs lo 0.42). Position and
+            # draft capital are season-independent facts, so read them from the crosswalk.
+            pf = con.execute(
+                """SELECT gsis_id, ARG_MAX(position, db_season) AS position,
+                          MAX(draft_ovr) AS draft_ovr
+                   FROM player_ids
+                   WHERE gsis_id IS NOT NULL AND position IN ('QB','RB','WR','TE')
+                   GROUP BY gsis_id"""
+            ).df()
         pf["season"] = int(s)
         frames.append(pf)
     pf = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(

@@ -61,8 +61,58 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★ Next-session pointer (2026-07-26, ◐ SESSION H PART 1/2 — 16.13 ☑ · 16.14 ☑. NEXT = 16.15,
-> then Session I.) READ THIS FIRST — it is written to resume cold.**
+> **★★ Next-session pointer (2026-07-27, ★ SESSION H COMPLETE — 16.13 ☑ · 16.14 ☑ · 16.15 ☑ ·
+> T17 ☑. NEXT = Session I, Phase 17 formats.) READ THIS FIRST — it is written to resume cold.**
+>
+> **State:** **524 tests** (was 496), ruff clean, every done-bar gate PASS on the live 2026 board.
+> `steps/phase16_15_mock_room.py` → `analysis/phase16_15_mock_room.json`; the T17 guard lives in
+> `steps/phase5_5_utility.py`. **Committed** — Session H is one commit on top of `5f6383b`
+> (Session G). DEV-only; the spent lockbox untouched; the frozen value/distribution/optimizer/VBD/
+> cost-report stack untouched (16.13 only *reads* it). Stage-0 FFC chore: last pull 2026-07-24,
+> **next due after 07-30** (`steps/stage0_adp_snapshot.py`).
+>
+> **★★ THE FINDING TO CARRY FORWARD — an upstream fix can break a downstream signal by making it
+> better.** T17 turned `games_played_mean` from four cohort constants into a real forecast, and in
+> the same move into a **level** column (`corr` with `mean` within position: +0.00 before, then
+> +0.46…+0.90). `safe_floor`'s durability weight silently became a quality tilt — no code change, a
+> green suite, and a plausible-looking personality. Third instance of the *level vs shape* lesson,
+> first to arrive through **data** rather than code, fixed the same way (`residual_shape` gained
+> `durability`). **A regression test pins a signal's behaviour, not its meaning:** nothing in the
+> suite could have caught this. What catches it is re-measuring a signal's correlation with the
+> level after **any** change to the data it is built from — the F.5 "re-audit after a step change in
+> input volume" rule, generalized from volume to quality.
+>
+> **★ 16.15 = Phase 16's FIFTH null, and it is 16.9's null.** At the shipped shock (1.48 ADP picks)
+> the room does nothing: largest per-seat move **0.036**, routing-vs-gain **+0.07**. The same shock
+> ×10 gives **+0.91** (sweep ×1→×40: +0.07 · +0.53 · +0.84 · +0.91 · +0.95). So the coupling is
+> **built correctly and waiting on a signal worth routing**. The done-bar **gates the mechanism** at
+> `AMP_GATE` and **reports** the shipped size — turning the shock up to pass would tune a calibrated
+> parameter to a face-validity check. (Same shape as 16.16: the detector works, reacting does not.)
+>
+> **★ The reach ceiling bounds a seat's OWN OPINION, not the room's story.** `max_reach_picks` caps
+> `signal_weights` + fandom excess; the shared 16.9 draw is applied outside the clip, because 16.9
+> fitted it **uncapped and uniform**. Folded in, a seat whose signals saturate its ceiling cannot
+> express the story at all — and nothing fails, since a personality that ignores the shock still
+> drafts legally. **Two bar-design lessons came out of finding it:** (1) a **two-ended** bar
+> (*chasers − autopickers*) passes on a room routing the story backwards, because autopickers get
+> sniped either way — state the bar across **every** seat; (2) a **zero vector is not an off
+> control** — `argsort` on zeros labels the top-N by board order, i.e. by ADP, which autopick seats
+> take by construction, manufacturing a large fake effect on exactly the seats it should be silent
+> about. Close the channel, keep the same labels.
+>
+> **⚠ Correction recorded, because the number is quotable and was wrong:** "homer clips 90 % of
+> candidates" was measured on the **test fixture** (`β_adp_s = −0.85`). On the live board's fitted β
+> (−1.68) homer clips **0.0 %** (upside 26 %, safe 33 %). The fix stands on the estimation-conditions
+> argument, not on a large current effect. *Measure the real board before quoting a fixture number
+> as the system's behaviour.*
+>
+> **★ NEXT: Session I — Phase 17 League-Format Fidelity 17.1–17.4** (roster/lineup generalization
+> incl. superflex + format-aware VBD replacement, custom scoring, the generic settings contract,
+> keeper). A full-phase item, ~1,000–1,800 lines. Then J (optional dynasty 15.1) → **K = Phase 14.1
+> MVP + all surfacing, strictly last, do not bundle.** `docs/TECH-DEBT.md`: **T17 ☑**, new **T18**
+> (🟡 `avg_reach` is a pooled-board mismatch, unconsumed today); T13/T15 still open.
+>
+> _(Prior pointer — history.)_ **★★ (2026-07-26, ◐ SESSION H PART 1/2 — 16.13 ☑ · 16.14 ☑.)**
 >
 > **State:** **496 tests** (was 466), ruff clean, every done-bar gate PASS.
 > `steps/phase16_13_personalities.py` → `analysis/phase16_13_personalities.json`. **UNCOMMITTED**

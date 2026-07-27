@@ -11,6 +11,8 @@ cannot be the ADP coefficient wearing a disguise.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -26,11 +28,15 @@ from fantasy_quant.draft.enrichment import (
 )
 from fantasy_quant.draft.opponent_model import _ADP_SCALE, ALL_FEATURES, OpponentModel
 from fantasy_quant.draft.personalities import (
+    DEFAULT_ROOM,
     HEADLINERS,
     MIN_Z_GROUP,
     SIGNAL_COLS,
     Personality,
     make_opponent_pick_fn,
+    make_room,
+    make_room_pick_fn,
+    normalized_hype_gains,
     personalities,
     pos_z,
     signal_bonus,
@@ -422,3 +428,209 @@ def test_hype_gain_scales_the_shared_shock_per_seat():
     hot = hyped_share(Personality("hot", hype_gain=3.0))
     cold = hyped_share(Personality("cold", hype_gain=0.0))
     assert hot > cold
+
+
+# --------------------------------------------------------------------------------------------
+# the no-op guard: a weightable signal that never reaches the pool (Session H2)
+# --------------------------------------------------------------------------------------------
+def test_every_weightable_signal_survives_prepare_board():
+    """``signal_bonus`` skips columns the pool does not carry, so a signal that is weightable but
+    not passed through is a **silent no-op** — the weight validates, the draft completes, and the
+    personality does nothing. That shipped three times (``fandom``, ``rookie``, ``durability``).
+    This containment is the assertion that ends the bug class."""
+    missing = set(SIGNAL_COLS) - set(PASSTHROUGH_COLS)
+    assert not missing, (
+        f"weightable but dropped by _prepare_board: {sorted(missing)} — add them to "
+        f"simulator.PASSTHROUGH_COLS or they are inert")
+
+
+def test_durability_is_a_shape_signal_orthogonal_to_level():
+    """T17 turned ``games_played_mean`` into a real forecast **and** into a level proxy; the
+    residualized column is what a durability tilt must weight."""
+    board = pd.DataFrame({
+        "position": ["RB"] * 8 + ["WR"] * 8,
+        "mean": np.r_[np.linspace(200, 60, 8), np.linspace(210, 70, 8)],
+        # games tracks the level (the post-T17 defect) plus a small idiosyncratic part
+        "games_played_mean": np.r_[np.linspace(16, 9, 8), np.linspace(16, 9, 8)]
+        + np.tile([0.9, -0.9], 8),
+        "q90": np.r_[np.linspace(300, 90, 8), np.linspace(310, 95, 8)],
+        "q10": np.r_[np.linspace(120, 30, 8), np.linspace(130, 35, 8)],
+    })
+    shape = residual_shape(board)
+    assert "durability" in shape.columns
+    for _pos, g in board.assign(d=shape["durability"]).groupby("position"):
+        assert abs(np.corrcoef(g["d"], g["mean"])[0, 1]) < 1e-9      # level removed by construction
+    # and the raw column is NOT orthogonal — which is the whole reason the residual exists
+    raw = board.groupby("position").apply(
+        lambda g: np.corrcoef(g["games_played_mean"], g["mean"])[0, 1], include_groups=False)
+    assert (raw > 0.9).all()
+
+
+def test_safe_floor_weights_the_residual_not_the_raw_games_column():
+    w = personalities()["safe_floor"].signal_weights
+    assert "durability" in w and "games_played_mean" not in w
+
+
+# ================================================================================================
+# 16.15 — the mock room: composition, gain normalization, seat routing
+# ================================================================================================
+def test_make_room_defaults_to_the_listed_nine_seats():
+    room = make_room()
+    assert [p.name for p in room] == list(DEFAULT_ROOM)
+    assert len(room) == 9, "a 10-team league has nine opponents"
+
+
+def test_make_room_rejects_a_mix_that_does_not_fill_the_room():
+    with pytest.raises(ValueError, match="exactly 9"):
+        make_room(("balanced", "chalk"))
+
+
+def test_make_room_rejects_an_unknown_personality():
+    """A typo in a room spec must not silently degrade to 'balanced' — the same argument
+    ``Personality.__post_init__`` makes for ``signal_weights``."""
+    with pytest.raises(ValueError, match="unknown personalities"):
+        make_room(("balanced",) * 8 + ("upside_chazer",))
+
+
+def test_make_room_seed_shuffles_reproducibly():
+    """Seats are shuffled so a personality is not confounded with a draft slot; the same seed must
+    still give the same room, or a 'seeded' comparison across builds means nothing."""
+    a = [p.name for p in make_room(seed=7)]
+    b = [p.name for p in make_room(seed=7)]
+    assert a == b
+    assert sorted(a) == sorted(DEFAULT_ROOM), "a shuffle, not a resample"
+    assert any(a != [p.name for p in make_room(seed=s)] for s in (1, 2, 3)), "seed must matter"
+
+
+def test_make_room_attaches_fav_teams_to_the_homer_seat_only():
+    room = make_room(fav_teams=("KC",))
+    fav = {p.name: p.fav_teams for p in room if p.fav_teams}
+    assert fav == {"homer": ("KC",)}
+
+
+def test_normalized_hype_gains_have_mean_one_and_preserve_ratios():
+    """16.9 fitted the shock's size with the draw applied uniformly, so a room must redistribute
+    it, never rescale it."""
+    room = make_room()
+    g = normalized_hype_gains(room)
+    assert g.mean() == pytest.approx(1.0)
+    raw = np.array([p.hype_gain for p in room])
+    nz = raw > 0
+    assert np.allclose(g[nz] / raw[nz], g[nz][0] / raw[nz][0]), "one scale factor for the room"
+
+
+def test_normalized_hype_gains_leave_an_all_autopilot_room_at_zero():
+    """The degenerate room has no hype channel at all; it must be left alone, not divided by 0."""
+    g = normalized_hype_gains(make_room(("autopilot",) * 9))
+    assert np.all(g == 0.0) and np.all(np.isfinite(g))
+
+
+def test_make_room_pick_fn_maps_seats_around_your_own_team():
+    """Seat ``i`` is the ``i``-th *other* team, so the mapping has to skip your seat. Off by one
+    here silently gives every seat someone else's personality, and every draft still completes."""
+    board = _enriched_board(60, seed=1)
+    seen: list[int] = []
+    room = make_room()
+
+    def spy(state, team):
+        seen.append(team)
+        return make_room_pick_fn(_model(), room)(state, team)
+
+    st = simulate_draft(board, n_teams=10, rounds=2, seed=0, your_team=3, opponent_pick_fn=spy)
+    assert 3 not in seen, "your own seat is never routed to a personality"
+    assert set(seen) == set(range(10)) - {3}
+    assert st.your_team == 3
+
+
+def test_make_room_pick_fn_rejects_a_team_outside_the_room():
+    board = _enriched_board(40, seed=1)
+    st = simulate_draft(board, n_teams=4, rounds=1, seed=0)
+    with pytest.raises(ValueError, match="the room has 9 seats"):
+        make_room_pick_fn(_model(), make_room())(st, 12)
+
+
+def test_a_room_of_one_personality_matches_broadcasting_that_personality():
+    """The routing layer must add nothing of its own: nine identical seats have to reproduce the
+    single-personality path exactly, pick for pick."""
+    board = _enriched_board(120, seed=2)
+    kw = dict(n_teams=10, rounds=6, seed=4)
+    room = simulate_draft(board, opponent_pick_fn=make_room_pick_fn(
+        _model(), make_room(("balanced",) * 9)), **kw)
+    solo = simulate_draft(board, opponent_pick_fn=make_opponent_pick_fn(
+        _model(), personalities()["balanced"]), **kw)
+    assert list(room.pick_log()["player_key"]) == list(solo.pick_log()["player_key"])
+
+
+def test_an_autopilot_seat_still_takes_best_available_inside_a_mixed_room():
+    """The room must not homogenize its seats. Asserted as the autopicker's own invariant —
+    lowest ADP still on the board at each of its turns — rather than against an all-autopilot
+    draft, which diverges after round 1 for the honest reason that the other eight seats are
+    different people."""
+    board = _enriched_board(120, seed=2)
+    room = make_room(("autopilot",) + ("balanced",) * 8)
+    st = simulate_draft(board, n_teams=10, rounds=6, seed=4,
+                        opponent_pick_fn=make_room_pick_fn(_model(), room))
+    log = st.pick_log()
+    adp = dict(zip(board_player_key(board).astype(str), board["adp"], strict=True))
+    taken: set[str] = set()
+    for _, row in log.iterrows():
+        key = str(row["player_key"])
+        if row["team"] == 1:                       # seat 0 = the first team after yours (team 0)
+            best = min(set(adp) - taken, key=lambda k: adp[k])
+            assert adp[key] == adp[best], f"autopilot reached at overall pick {row['overall_pick']}"
+        taken.add(key)
+
+
+def test_the_reach_ceiling_does_not_swallow_the_shared_shock():
+    """★ The 16.15 regression. The ceiling bounds a seat's OWN opinion; the shared 16.9 draw is
+    applied outside it. Folded into the same clip, a seat whose ``signal_weights`` already saturate
+    its ceiling cannot express the story at all — and nothing fails, because a personality that
+    ignores the shock still completes a legal draft. Here the signal tilt is deliberately
+    saturating and the shock is unmissable, so a build that clips them together drafts as if the
+    shock were not there."""
+    board = _enriched_board(120, seed=6)
+    # deep enough that nothing but a story reaches him, but inside `CHOICE_TOP_K` — the candidate
+    # set is a hard ADP-rank filter applied *before* utility, so a shock on player 90 of a 120-man
+    # board can express nothing at all. (Session G's contract lesson, from the other side.)
+    target = 38
+    hype = np.zeros(len(board))
+    hype[target] = 40.0
+    pers = Personality("capped", signal_weights={"floor": 3.0}, max_reach_picks=1.0,
+                       hype_gain=1.0, sample=False)
+    kw = dict(n_teams=10, rounds=2, seed=0)
+    with_hype = simulate_draft(board, opponent_pick_fn=make_opponent_pick_fn(
+        _model(), pers, hype=hype), **kw)
+    without = simulate_draft(board, opponent_pick_fn=make_opponent_pick_fn(_model(), pers), **kw)
+    key = str(board_player_key(board).iloc[target])
+    assert key in set(with_hype.pick_log().query("not is_you")["player_key"])
+    assert key not in set(without.pick_log().query("not is_you")["player_key"])
+
+
+def test_the_story_routes_in_proportion_to_seat_gain():
+    """The substep's claim, at a shock size big enough to resolve. The done-bar runs this on the
+    live board and reports the *shipped* 16.9 size separately, where it is a null."""
+    board = _enriched_board(150, seed=9)
+    keys = board_player_key(board).astype(str)
+    gains = (0.0, 0.5, 1.0, 2.0, 4.0)
+    room = tuple(replace(personalities()["balanced"], name=f"g{g}", hype_gain=g)
+                 for g in gains) + tuple(
+        replace(personalities()["balanced"], name=f"g{g}b", hype_gain=g) for g in gains[:4])
+    norm = normalized_hype_gains(room)
+    hit, tot = np.zeros(9), np.zeros(9)
+    for s in range(6):
+        rng = np.random.default_rng(500 + s)
+        shock = rng.normal(0, 1.0, len(board))       # ~30 picks: the mechanism, not 16.9's size
+        loud = set(keys.iloc[np.argsort(-shock)[:25]])
+        st = simulate_draft(board, n_teams=10, rounds=10, seed=s,
+                            opponent_pick_fn=make_room_pick_fn(_model(), room, hype=shock))
+        log = st.pick_log().query("not is_you")
+        team = log["team"].to_numpy()
+        seats = np.where(team > st.your_team, team - 1, team)
+        is_loud = log["player_key"].astype(str).isin(loud).to_numpy()
+        for seat, ld in zip(seats, is_loud, strict=True):
+            tot[seat] += 1
+            hit[seat] += float(ld)
+    share = hit / np.maximum(tot, 1)
+    rho = pd.Series(share).corr(pd.Series(norm), method="spearman")
+    assert rho > 0.7, f"story did not route in proportion to gain (spearman {rho:+.3f})"
+    assert share[np.argmax(norm)] > share[np.argmin(norm)]

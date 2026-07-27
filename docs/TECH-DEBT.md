@@ -27,7 +27,8 @@ At a glance:
 | **T14** | ✅ | 11.2 does not scale. **Diagnosis corrected 2026-07-26**: the bootstrap was 0.79 s (0.008 %); the cost was pandas in `simulate_survival` (99.3 %). Fixed both → **396 s → 12.7 s, bit-identical** | when 11.2 is next re-run at scale | ☑ 2026-07-26 |
 | **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☑ 2026-07-25 |
 | **T15** | 🟡 | simulated draft-slot dispersion is **flat in board depth** (+0.08 vs realized +0.68) — `adp_s` is linear in raw ADP + a hard rank band, so deep sleepers look more reliably gettable than they are | before Phase 14 surfaces availability to a user; an 11.1 respecification | ☐ 2026-07-26 |
-| **T17** | 🟠 | **the live season has no per-player availability at all** — `availability_projection(con, 2026)` returns **0 rows** (a future season has no played weeks to predict on), so every player falls to the T3-A cohort prior: **4 distinct `games_played_mean` values across 480 players**, ~6.6 vs 12.9 games, and the Phase-5 `mean` collapses to **37 % of the consensus projection** (2025: 75 %) | before Phase 14 shows a user any distribution number for the season they are drafting | ☐ 2026-07-26 |
+| **T17** | ✅ | **the live season has no per-player availability at all** — `availability_projection(con, 2026)` returned **0 rows**, collapsing the live Phase-5 `mean` to **37 % of the consensus projection**. Fixed by rolling the covariates forward (`projected_availability_frame`) + a **level-band guard** that now runs on the live season, where it breaks | before Phase 14 shows a user any distribution number for the season they are drafting | ☑ 2026-07-27 |
+| **T18** | 🟡 | `sleeper_manager_profiles.avg_reach` is measured against a **pooled** ADP board, so it reports a **+91.9-pick** mean QB reach — a board mismatch, not a behaviour. Anything keying on it (a future 11.3 fit, a manager-facing "you reach" readout) inherits the error; 16.15 works around it by computing position share from picks alone | before `avg_reach` is consumed by a model or shown to a user | ☐ 2026-07-27 |
 
 ---
 
@@ -675,8 +676,33 @@ frozen value stack. Not a blocker for Session H.
 
 ---
 
-## 🟠 T17 — the live season has no per-player availability; the Phase-5 cloud halves
-*(opened 2026-07-26, Session H, found by 16.13's enrichment coverage report)*
+## ✅ T17 — the live season has no per-player availability; the Phase-5 cloud halves
+*(opened 2026-07-26, Session H, found by 16.13's enrichment coverage report · **CLOSED 2026-07-27**)*
+
+> **☑ FIXED 2026-07-27 (Session H2), exactly as specced below.**
+> `injury.projected_availability_frame(con, season)` builds the target-season frame from the most
+> recent completed season, carrying covariates forward and taking `team_games` from the schedule
+> rather than `week.nunique()` of an unplayed season; `availability_projection` falls back to it and
+> **stamps `covariate_source` (`observed` | `rolled_forward`)** so the substitution is visible in the
+> output rather than inferred. The cohort prior keeps the population it was written for.
+> **Result: the 2026 level ratio goes 0.37 → 0.721**, against 0.683 on the 2025 holdout.
+>
+> **The guard shipped with it and is the durable half.** `distribution.level_ratio` +
+> `assert_level_band` (band 0.55–0.85 on the top 60 by projection) now run in
+> `steps/phase5_5_utility.py` **on the holdout *and* on the live unplayed season — the one that
+> breaks**. A guard that only runs where the data is complete would not have caught this.
+>
+> **One honest caveat, printed rather than buried:** the rolled-forward path sits *above* the
+> observed path's tight 0.638–0.683 range, because a draft-day forecast cannot condition on a player
+> appearing. That is unconditionality, not a defect — but a live number is mildly optimistic
+> relative to how the backtest seasons scored, and the step says so.
+>
+> **Knock-on that mattered more than the fix:** repairing this turned `games_played_mean` from four
+> cohort constants into a real forecast **and, in the same move, into a level proxy** (+0.46…+0.90
+> with `mean` within position), which silently converted `safe_floor`'s durability weight into a
+> quality tilt. Consequence 2 below is therefore obsolete in a way that *created* work: see
+> `enrichment.residual_shape`'s `durability` column. **An upstream data fix can break a downstream
+> signal by making it better.**
 
 **Symptom.** On the 2026 board the frozen distribution is roughly **half** the consensus projection
 it is built from. Top-60 `mean / proj_points`: **0.37 in 2026 vs 0.75 in 2025**. The ratio tracks
@@ -730,3 +756,33 @@ of the consensus projection it was built from — the check that would have caug
 that has not started** — i.e. the live product, and nothing that has been validated so far. Not the
 frozen value board, not the optimizer's ranking behaviour, not the lockbox. Not a blocker for
 Session H or I; **is** a blocker for Phase 14 surfacing per-player distribution numbers.
+
+---
+
+## 🟡 T18 — `avg_reach` in the manager profiles is a board mismatch, not a behaviour
+*(opened 2026-07-27, Session H2, found while sanity-checking 16.15's room composition)*
+
+**Symptom.** `sleeper_manager_profiles.avg_reach` reports a mean **QB reach of +91.9 picks**. No
+manager reaches ninety picks for a quarterback; the number is not describing drafting.
+
+**Root cause.** The stored per-manager reach is each pick's ADP minus its actual slot, where the ADP
+comes from a **pooled** board while the picks come from drafts of many league sizes, scorings and
+formats (the F.5 corpus is 7,699 human drafts spanning redraft, dynasty, 2QB and IDP). A superflex
+or 2QB draft takes quarterbacks dozens of picks before a 1-QB consensus board says they should go,
+and the difference is booked as manager behaviour. This is the F.5 `scoring="ppr"` lesson one level
+down: *a derived per-entity statistic inherits every mismatch between the entity's context and the
+reference it is scored against.*
+
+**Why it has not bitten yet.** Nothing consumes `avg_reach`. 11.3's personalities are hand-set
+tilts, not fitted from profiles, and 16.15's corpus check deliberately routes around it — position
+share is computed **from picks alone, with no ADP reference**, which is why that check is
+trustworthy where `avg_reach` is not.
+
+**Fix.** Score each pick against the board for **its own draft's format** (size, scoring, superflex
+flag are all on `sleeper_drafts`), or restrict the profile to the eligible-redraft subset the rest of
+the behavioural work already filters to. Either way, add a range gate — a mean reach outside roughly
+±2 rounds is a join defect, not a manager.
+
+**Who is affected.** Nobody today. It becomes load-bearing the moment a manager-facing "you tend to
+reach" readout (Phase 14) or an 11.3 refit keyed on profiles lands, so it is worth fixing before
+either — and it is cheap while the corpus is fresh.

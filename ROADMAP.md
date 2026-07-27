@@ -99,11 +99,13 @@ backtestable**, validated live on 2026) · ☐ **16.12** consumption = realism (
 lookahead) + app readout (`P(available)` + reach-risk in `docs/PLAYER-VIEW.md`). **Validation bar (user
 2026-07-23): walk-forward + own held-out metric.**
 **Opponent-personality set (16.13–16.15; added 2026-07-23 — heterogeneous mock-draft opponents; extends the
-existing `draft/personalities.py`, Phase 11.3):** ☐ **16.13** opponent-board enrichment (attach frozen
-read-only Phase-5 dist + `value_board` fields to the sim board; `draft/simulator.py`) · ☐ **16.14** the 5
+existing `draft/personalities.py`, Phase 11.3):** ☑ **16.13** opponent-board enrichment (attach frozen
+read-only Phase-5 dist + `value_board` fields to the sim board; `draft/simulator.py`) · ☑ **16.14** the 5
 headline personalities — **Autopilot** (deterministic ADP autopick), **Balanced**, **Upside Chaser** (boom/
-q90), **Safe/Floor** (q10/durability), **Homer/Narrative-Chaser** (fandom + hype board; `draft/personalities.py`)
-· ☐ **16.15** mock-room composition + hype-shock coupling + app selector. Decisions (user 2026-07-23): BPA =
+`upside`), **Safe/Floor** (`floor`/`durability`), **Homer/Narrative-Chaser** (fandom + hype board;
+`draft/personalities.py`) — note the shipped weights are the **level-residualized** columns, not the raw
+quantiles · ☑ **16.15** mock-room composition + hype-shock coupling + app selector (all ☑ 2026-07-27; see
+the Session-H entry below for the two nulls and the ceiling-scope fix). Decisions (user 2026-07-23): BPA =
 **ADP autopilot only** · enrich with **real frozen fields** · validation = **face-validity + unit-tested
 mechanics** (no Brier gate).
 **Live reactivity + data (added 2026-07-23):** ☐ **0.11** ECR + Underdog ADP ingest (true expert-rank + sharp
@@ -240,7 +242,7 @@ how 11+7 combined a spine-completion phase with a 4-substep exploratory phase:
 
 **(2026-07-26: Session F.6 ☑ — the re-derivation sweep. 11.1/11.2/S6 re-fit on the *eligible*
 redraft corpus after the behavioral path was found to carry F.5's contamination bug; 16.8 re-asked
-and the null HELD (headline +9.25 %, ablation +0.01 %). **Session G ☑ COMPLETE 2026-07-26** — 16.9 + 16.11 + 16.10 + 16.12 + 16.16; the availability track ends with **four** honest nulls, and everything it ships is opt-in and default OFF. ← NOW: Session H.)**
+and the null HELD (headline +9.25 %, ablation +0.01 %). **Session G ☑ COMPLETE 2026-07-26** — 16.9 + 16.11 + 16.10 + 16.12 + 16.16; the availability track ends with **four** honest nulls, and everything it ships is opt-in and default OFF. **Session H ☑ COMPLETE 2026-07-27** — 16.13 + 16.14 + 16.15 + T17; the personality set ships as a *realism* feature (face validity + mechanics, no Brier gate) and the hype coupling is Phase 16's **fifth** null. ← NOW: Session I (Phase 17 formats).)**
 
 **★ SESSION PLAN (re-ordered 2026-07-23 — the full remaining backlog, dependency-optimal, app strictly last,
 same ~1.5–2.2k-line one-concept discipline).** Covers everything not done: Phase 16 (3 tracks) + 0.11 + 16.16,
@@ -361,8 +363,8 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
     the threshold, **+0.109** at 0.50 over 7,957 replayed windows) but *reacting* to it degrades the
     availability Brier monotonically (0.2121 → 0.2186). **Ships default OFF**; kept as a live-draft
     alert for 14.4.
-- **← NOW: Session H — opponent personalities 16.13–16.15.** ◐ **16.13 ☑ · 16.14 ☑ (2026-07-26) · 16.15
-  NOT STARTED** — stopped at the sub-phase gate for user approval.
+- **Session H ☑ COMPLETE 2026-07-27 — opponent personalities 16.13–16.15.** **16.13 ☑ · 16.14 ☑
+  (2026-07-26) · 16.15 ☑ · T17 ☑ (2026-07-27).** 524 tests, ruff clean, all done-bars PASS.
   - **16.13 board enrichment ☑** (`draft/enrichment.py`, `draft/simulator.py`). Read-only join off
     `cached_distribution` + `value_board` — **not** the `player_distributions` table, which holds 2025
     only. Live-2026 coverage **81.8 % dist / 85.8 % value**; the entire skill-player gap is one WR.
@@ -380,8 +382,27 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   - **New tech debt T17** (🟠): `availability_projection` returns 0 rows for an unplayed season, so
     the live Phase-5 `mean` is **37 %** of the consensus projection it is built from. Blocker for
     Phase 14 surfacing, not for H or I.
-  - **Remaining: 16.15** — seat composition, routing the 16.9 shock through the `hype_gain` seats, and
-    the app selector spec. `hype_gain`/`fav_teams` are already in place for it.
+  - **16.15 the mock room ☑** (`draft/personalities.py`: `DEFAULT_ROOM`/`make_room`/
+    `normalized_hype_gains`/`make_room_pick_fn`; selector spec `docs/PLAYER-VIEW.md` §9). Default mix
+    hand-set, **corpus-checked** on 3,309 eligible-redraft managers (1.7 % RB-light ⇒ no `zero_rb`
+    seat); per-seat gains **normalized to room-mean 1** so composition redistributes 16.9's shock
+    instead of rescaling it.
+  - **★ 16.15's headline is Phase 16's FIFTH null, and it is 16.9's null.** At the shipped 1.48-pick
+    shock the largest per-seat move is **0.036** and routing-vs-gain is **+0.07**; the same shock ×10
+    gives **+0.91** (sweep ×1→×40: +0.07 · +0.53 · +0.84 · +0.91 · +0.95). The coupling is built
+    correctly and waiting on a signal worth routing, so the done-bar **gates the mechanism**
+    (`AMP_GATE`) and **reports the shipped size**. Turning the shock up to pass would tune a
+    calibrated parameter to a face-validity check.
+  - **★ The reach ceiling now bounds a seat's own opinion, not the shared story** — folded into one
+    clip, a seat whose signals saturate its ceiling cannot express the shock, and nothing fails.
+    Found only because the bar was restated across **all nine seats**: *chasers − autopickers* passes
+    on a room routing the story backwards, since autopickers get sniped either way.
+  - **T17 ☑** — `injury.projected_availability_frame` rolls covariates forward for an unplayed season
+    (2026 level ratio **0.37 → 0.721**), plus a **level-band guard** in `steps/phase5_5_utility.py`
+    that runs on the live season too. Knock-on: the repair turned `games_played_mean` into a *level*
+    proxy, so 16.13 gained a residualized `durability` column and `safe_floor` weights that. **New
+    T18** (🟡): `avg_reach` in the manager profiles is a pooled-board mismatch (+91.9-pick mean QB
+    reach), unconsumed today.
 - **Session I — Phase 17 League-Format Fidelity 17.1–17.4.** 17.1 roster+lineup generalization (superflex/
   multi-flex; the `season.py` solver + format-aware VBD replacement — the meaty bit), 17.2 custom scoring, 17.3
   generic settings contract (engine/parser; form UI → 14), 17.4 keeper. **~full-phase (1,000–1,800L).**
