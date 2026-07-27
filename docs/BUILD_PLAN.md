@@ -1149,6 +1149,24 @@ proxy. What is backtestable: the Sleeper human corpus (149 drafts, 2017–2020) 
 - **Done:** the board loads, is user-approved before wiring, and shifts a hyped player's simulated draft slot
   in the expected direction; explicitly labeled **curated, not a backtested claim.**
 - **Reuse:** 16.3's research/review workflow; the 16.9 shock as the application channel.
+- **☑ BUILT 2026-07-26 (Session G 2/2)** — `adp/hype_board.py` + `reference/hype_board.csv` (24 rows,
+  20 directional claims, `reviewed=false`) + `steps/phase16_10_hype_board.py` + `tests/test_hype.py`.
+  **All 5 gates PASS**; sign agreement **94 %** on 18 resolvable claims, corr(claim, shift) **+0.72**.
+  - **Method = derived rows, curated claims** (16.5's *derived-vs-curated* rule): `nominate()` ranks
+    the live board on the 16.8 ablation survivors + 16.11 momentum, the human writes
+    `pick_delta`/`note`/`source`. **16 of 24 rows machine-nominated**; the rest are research-only,
+    which is the split working. Regeneration merges forward, so a signed row survives a re-run.
+  - **★ Elasticity ≈ 0.44 realized picks per claimed pick** — ADP is one term among many and `top_k`
+    filters before utility. A curated row is a **nudge, not a repricing**; never surface `pick_delta`
+    as a predicted draft slot.
+  - **Four measurement defects found and fixed, each of which had produced a plausible wrong list:**
+    partial coefficients used without their depth/position controls (→ an ADP-120–175 list, then a
+    TE-flooded one); `log(adp)` alone leaking curvature (→ the top of the board surfacing spuriously);
+    momentum entered in rounds/week against weights in rounds (→ the loudest live mover dropped out);
+    and a signed composite ranked one-sided (→ the strongest *fader* claim dropped out). See findings.
+  - **Two done-bar traps:** undrafted players must be **censored, not dropped** (else hype reports a
+    deep player moving *later*), and claims must be applied **leave-one-in** (a draft is zero-sum, so
+    20 simultaneous claims crowd each other out). → **T16** for the 15-round expressibility limit.
 
 ### 16.11 — Live 2026 momentum / ADP velocity → `adp/momentum.py`
 - **Do:** compute ADP **velocity** = slope of a player's ADP across the Stage-0 2026 snapshot **series**
@@ -1158,6 +1176,16 @@ proxy. What is backtestable: the Sleeper human corpus (149 drafts, 2017–2020) 
   historical intra-season series), validated **live on 2026** as snapshots accrue — the 16.4-style
   descriptive-honesty bar, not a walk-forward gate.
 - **Reuse:** `adp_snapshots` series, `data/sources/adp.py`.
+- **☑ BUILT 2026-07-26 (Session G 2/2)** — `adp/momentum.py` + `steps/phase16_11_momentum.py` +
+  `analysis/phase16_11_momentum.json`. **All 5 honesty gates PASS.** 192 players, **3 FFC snapshots**
+  over 15 days. Built **before 16.10**, since derived-first nomination makes momentum an input to it.
+  - Sign-flipped to 16.7's convention (`velocity > 0` = drafted earlier), **centered** on the board's
+    own median slope (the pool deepens through a preseason, so every ADP creeps later together — the
+    median player must end at exactly zero, now asserted), and **EB-shrunk** by each player's own
+    standard error (3 snapshots ⇒ 1 residual df; **44 %** of the raw spread survives; 2-snapshot
+    players shrink to exactly 0).
+  - `momentum_summary` leads with `backtestable: False`; `movers()` filters kickers, whose ADP swings
+    15+ picks between boards and dominates a raw sort.
 
 ### 16.12 — Consumption: realism + advice + app readout → `draft/`, `draft/optimizer.py` (9.4), `app/`
 - **Do:** wire the drift signal into all three consumers the user chose (**both** realism and advice):
@@ -1174,6 +1202,21 @@ proxy. What is backtestable: the Sleeper human corpus (149 drafts, 2017–2020) 
   lookahead + the app).
 - **Reuse:** `draft/optimizer.py` (`survival_prob`, `RiskModel`), `draft/availability.py`, `app/streamlit_app.py`,
   `docs/PLAYER-VIEW.md` spec.
+- **☑ BUILT 2026-07-26 (Session G 2/2)** — `draft/drift.py` + `steps/phase16_12_consumption.py` +
+  `tests/test_drift_consumption.py`. **All 6 gates PASS.** Per the user decision, **(c) is engine-side
+  only** — the UI stays in Phase 14 ("app strictly last").
+  - **(a)** 179 players shift >0.5 picks; hyped rows move **+2.90 picks earlier** on average.
+  - **(b)** `RiskModel.hype` shifts effective ADP inside the 9.1/9.4 urgency term (mean survival change
+    −0.029). Only 3 of 20 claims reprice at a 60-pick window — correct and self-limiting, since
+    `survival_prob` saturates beyond it: advice moves exactly the players near *your* window.
+  - **(c)** `availability_readout` returns `p_available` **and** `p_available_baseline` side by side,
+    plus `drift_picks`, a 3-bucket `reach_risk` and a `drift_material` flag. Reporting the *pair* is
+    the point — an unbacktested adjustment never reaches a human as a bare number.
+  - **(d) isolation, the gate that protects the spent lockbox:** `DriftConfig()` is a provable no-op
+    and a `RiskModel` built without `hype` is **bit-identical** to the pre-16.12 frozen path. Asserted
+    by constructing the model the old way and comparing with `array_equal`, plus a companion assertion
+    that the opt-in path *does* change something so the guarantee cannot pass vacuously. Drift also
+    rides only the `scarcity_w > 0` branch, so a covariance-only greedy is untouched.
 
 **Done-when (availability track):** 16.7/16.8 report an honest walk-forward drift-predictability verdict on
 the Sleeper corpus; 16.9 reproduces realized draft-slot dispersion without regressing availability Brier;
@@ -1281,6 +1324,21 @@ selector — the whole cluster provably isolated from the frozen value stack.
 - **Done:** **face-validity in replay** — on real Sleeper drafts, the detector fires on actual runs and the
   updated availability forecast beats the static one *within the run window* (a light held-out check, not a full
   Brier gate). **Reuse:** `draft/availability.py` `simulate_survival`, 11.1 features, the Sleeper corpus.
+- **☑ BUILT 2026-07-26 (Session G 2/2) — the detector WORKS, reacting to it DOES NOT. Phase 16's fourth
+  null; ships DEFAULT OFF (`RUN_W = 0`).** `opponent_model.detect_run`/`run_bonus`, an opt-in `run_w` in
+  `simulate_survival` + `availability_brier` (both inert at 0), `steps/phase16_16_run_detection.py`.
+  - **Q1 fires correctly — after a fix.** Intensity is a position's share of the last 10 picks minus its
+    share of the **live candidate set** (top-40 by ADP). Scored against the *whole remaining pool* — which
+    is WR-heavy at every depth — it fired on **61 %** of 7,957 replayed windows and *anti*-discriminated
+    (0.268 vs 0.278). Against the candidate set the threshold sweep is **monotone**: at intensity 0.50 a
+    flagged position takes **0.382** of the next 5 picks vs 0.274 unflagged (**+0.109**). The threshold is
+    a free parameter, so the whole curve is reported rather than one flattering point.
+  - **Q2 fails, monotonically.** Paired availability Brier on 4,300 run-opened windows: `run_w`
+    **0.0 → 0.2121 · 0.5 → 0.2123 · 1.0 → 0.2128 · 2.0 → 0.2186**. Every bump is worse, in order of size.
+    *Likely reading (flagged as a reading): **double-counting** — 11.1 already carries `pos_run3`, so an
+    extra positional bump adds bias without information. Confirming it means refitting 11.1 (cf. T15).*
+  - **Kept, not default** — the detector is a genuinely useful **live-draft alert** for 14.4 ("RBs are
+    flying"), a UX claim its face-validity evidence supports independently of forecasting.
 
 # Phase 17 — League-Format Fidelity & Custom Settings *(new 2026-07-23; correct advice for ANY league)*
 *Goal: the engine hard-codes vanilla 10-team full-PPR 1-QB (`RosterSlots.qb=1`, `flex=1`, `season.py` raises

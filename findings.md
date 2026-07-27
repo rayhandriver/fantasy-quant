@@ -2514,3 +2514,185 @@ that matter). Shock **built, wired, tested, default OFF** — the repo's establi
 default" pattern (Phase 7, props, the 13.2 win-tilt, MCTS). It is available for 16.10/16.15, which
 need a *channel* to express a curated narrative through, and that channel is now correct even
 though the quantitative shock has no measured skill.
+
+---
+
+## Session G (2/2) — 16.10 hype board · 16.11 momentum · 16.12 consumption · 16.16 run detection *(2026-07-26)*
+
+**Headline: Phase 16's availability track closes with a fourth null, and the two channels that ship
+are both explicitly unbacktested and default OFF.** 16.16's run detector *works* — it fires
+selectively and its discrimination rises monotonically with the firing threshold — but reacting to
+it makes the availability forecast monotonically **worse**. The curated hype board (16.10) and the
+live momentum series (16.11) do what they are supposed to mechanically, and neither can be
+validated even in principle. So the deliverable of this half-session is a set of correctly-wired,
+honestly-labelled, off-by-default channels plus a *provable* isolation guarantee for the frozen
+stack — not a new edge.
+
+**Built in dependency order, not spec order.** Because the hype-board nomination is derived-first
+(user decision), 16.11 is an *input* to 16.10 and was built first.
+
+### 16.11 — live ADP momentum (`adp/momentum.py`, `steps/phase16_11_momentum.py`)
+
+Velocity over the Stage-0 within-season snapshot series, in picks/week, sign-flipped so
+`velocity > 0` = drafted earlier (16.7's convention, end to end). All descriptive-honesty gates
+PASS. **192 players, 3 FFC snapshots (2026-07-09/18/24) over 15 days.**
+
+Two mechanical corrections, both required:
+
+* **Centering.** The board *deepens* through a preseason (2026 PPR: 201 → 216 → 225 boarded players
+  across the three dates), so every ADP creeps later together. Velocity is net of the board's own
+  median slope (−0.058 picks/wk), leaving the median player at exactly zero movement — an
+  invariant the step now asserts rather than claims.
+* **EB shrinkage.** Three snapshots give **one residual degree of freedom** per player. Shrinking
+  by each player's own standard error retains **44 %** of the raw spread and behaves correctly:
+  Alvin Kamara (se 0.04) keeps −5.21 of −5.21, while Tyjae Spears (se 2.12) falls from +4.15 to
+  +2.11. Two-snapshot players have infinite standard error and shrink to exactly zero.
+
+**This is forward-only and structurally unbacktestable** — not for want of effort. FFC publishes one
+board per season and 0.11 established the FantasyPros ECR archive is kickoff-dated, so no historical
+intra-season ADP series exists anywhere reachable. `momentum_summary` leads with
+`backtestable: False` so the label travels with the data.
+
+*Also worth keeping: a raw sort of movers is dominated by kickers (Trey Smack −15.3, Cairo Santos
++22.6), whose ADP is nearly arbitrary between boards. `movers()` filters to skill positions — a hype
+readout that shows them is reporting noise with names on it.*
+
+### 16.10 — the curated hype board (`adp/hype_board.py`, `reference/hype_board.csv`)
+
+**24 rows, 20 directional claims, written `reviewed=false`.** All five gates PASS. The review gate
+is structural: `load_hype_board` drops unreviewed rows by default, so the shipped board is inert
+until you sign it, *independently* of whether the channel is switched on.
+
+**Method: derived rows, curated claims.** 16.5's *derived-vs-curated* rule applied where the answer
+genuinely is not in a feed. `nominate()` ranks the live board using the three coefficients that
+survived 16.8's ablation (`rookie` +0.73, `adp_stdev` +0.35/SD, `vbd_gap` +0.18/SD) plus 16.11
+momentum; the human writes `pick_delta`/`note`/`source`. **16 of 24 rows were machine-nominated**;
+the other 8 exist only because research found something no table carries — which is the split
+working as intended, and is where the human budget belongs.
+
+**★ Three measurement defects found and fixed, each of which had produced a plausible-looking but
+wrong candidate list.** This is the same family as F.5/F.6/16.9: every one presented as a result.
+
+1. **Partial coefficients need their controls.** 16.8's weights were fit with `adp_rounds` and
+   position dummies in the model, so they mean "holding depth and position fixed". Used
+   unconditionally they rank players by **depth** — ADP standard deviation grows mechanically with
+   ADP (0.7 picks at the top of the 2026 board, 33 near the bottom) — and the first run returned an
+   ADP-120-to-175 list with nothing from the early rounds. Adding a position control then fixed a
+   second, separate flooding: our value board likes *every* TE more than ADP does, which is a real
+   value claim about a position and no evidence at all that an individual TE has a narrative.
+2. **Nest the functional form.** Controlling on `log(adp)` alone leaked curvature: Bijan Robinson,
+   Jahmyr Gibbs and Ja'Marr Chase surfaced as "unusually disputed" purely from misfit, and dropped
+   out once `adp` was added alongside. The 1.01 debate is genuinely real (confirmed in the
+   research — consensus was Bijan through May, Gibbs ahead by June) but **the derivation was not
+   detecting it**, and a plausible output is exactly how that goes unnoticed.
+3. **Commensurate units.** The 16.8 weights are in *rounds of drift*; velocity is *rounds per
+   week*. Entered directly, momentum was nearly inert and dropped Daniel Jones — the single loudest
+   live mover, +5.3 picks/wk, a locked-in starter on a fresh $88M deal — out of the top 45
+   entirely. Multiplying by a data-derived horizon (weeks to a nominal Sep-1 draft) makes it rounds;
+   it is **capped at ±2 rounds** because linearly extrapolating a three-point slope five weeks
+   forward is not a credible forecast.
+
+**★ A fourth: the composite is signed, so ranking by raw score nominates only risers.** Zach
+Charbonnet — the strongest claim on the board at −10 picks (placed on the PUP list, out a minimum
+four games) — fell off the list entirely. `nominate` now ranks by |score|, which surfaces the real
+faders (Alvin Kamara at the momentum floor, Isiah Pacheco, Adonai Mitchell, Baker Mayfield).
+
+**★ What the channel actually buys: elasticity ≈ 0.44 realized picks per claimed pick**
+(corr(claim, shift) **+0.72**, sign agreement **94 %** on 18 resolvable claims). ADP is only one
+term in the fitted utility and `top_k` is a hard rank filter applied before it, so **a curated row
+is a nudge, not a repricing.** `pick_delta` must never be surfaced to a user as a predicted change
+in draft slot.
+
+**★ Two measurement traps in the done-bar itself, both of which first reported the mechanism
+backwards.**
+
+* **Censoring, not dropping.** Averaging only the slots a player *was* taken at reported that
+  hyping Cam Ward (ADP 167.7) pushed him **later**. It did not: it made him get drafted *at all* in
+  rooms where he had gone untaken, and every new appearance near the final pick drags a conditional
+  mean backwards. Undrafted is now scored `n_picks + 1`, with `draft_rate` reported alongside —
+  for a deep player the channel legitimately expresses as *more often drafted* before *earlier*.
+* **Crowding-out.** A draft has a fixed number of picks, so hype is zero-sum. Applying all 20
+  claims at once made the hyped players compete with each other: a +4 row (Kenyon Sadiq) got drafted
+  *less* often while +12 and +8 rows rose. That is correct behaviour and worth knowing for 16.12,
+  but it is not what "does this row move this player" asks — so the per-claim gate runs
+  **leave-one-in** against a shared baseline.
+
+**★ And a structural one worth carrying: a claim can be below the simulator's resolution.** At the
+league-standard 15 rounds (150 picks against a 201-deep board), a +12-pick claim on a board-rank-171
+player produced a **bit-identical** 30-draft result, and only moved when the offset was raised ~5×.
+At 18 rounds it resolves. *Check the measurement design can contain the effect before concluding
+the effect is absent* — and note the consequence for the product: **in a standard 15-round league
+several curated rows cannot express at all** (→ T16).
+
+### 16.12 — consumption (`draft/drift.py`, `steps/phase16_12_consumption.py`)
+
+All three consumers wired, plus the fourth thing that actually matters. **All six gates PASS.**
+
+* **(a) realism** — `drift_utility` converts pick-space claims to opponent utility through the
+  fitted model's *own* `adp_s` coefficient, so "six picks early" means exactly what it would have
+  meant had his ADP been six picks lower, and the units follow automatically if 11.1 is ever refit.
+  Measured: **179 players shift >0.5 picks and the hyped rows move +2.90 picks earlier on average** —
+  note the ripple is far wider than the 20 claims, because a draft is zero-sum.
+* **(b) advice, opt-in** — `RiskModel.hype` shifts effective ADP inside the 9.1/9.4 urgency term,
+  so a hyped player prices as likelier to be gone by your next turn (mean survival change **−0.029**,
+  max **−0.38**). Worth knowing: **only 3 of 20 claims reprice at all** at a 60-pick window, because
+  `survival_prob` saturates at 1.0 for anyone far beyond it. That is correct and self-limiting — the
+  advice path moves exactly the players near *your* window, which is the only place advice matters.
+* **(c) readout, engine-side only** — `availability_readout` returns `p_available` **and**
+  `p_available_baseline` side by side, plus `drift_picks`, a three-bucket `reach_risk` label and a
+  `drift_material` flag. UI stays in Phase 14 per the standing "app strictly last" rule. Reporting
+  the *pair* is deliberate: the honest presentation of an unbacktested adjustment is never the
+  adjusted number alone. On the 2026 board 18 picks out: 162 `likely available`, 19 `coin flip`,
+  2 rows materially moved by drift.
+* **(d) isolation — the one that protects Session D.** `DriftConfig()` is a provable no-op and a
+  `RiskModel` built without `hype` is **bit-identical** to the pre-16.12 frozen path;
+  `tests/test_drift_consumption.py` asserts it by constructing the model the old way and comparing
+  with `array_equal`, and separately asserts the opt-in path *does* change something so the
+  guarantee cannot pass vacuously. The drift term also rides only the `scarcity_w > 0` branch, so a
+  covariance-only greedy is untouched.
+
+### 16.16 — run detection: **the detector works, reacting to it does not** (Phase 16's fourth null)
+
+**Question 1 — does it fire on real runs? Yes, and this took a fix.** Run intensity = a position's
+share of the last 10 picks minus its share of the **live candidate set** (top-40 available by ADP).
+The first implementation used the *whole remaining pool* as the baseline; because a board is
+WR-heavy at every depth, the reference rate for a scarce position is near zero, and the detector
+fired on **61 %** of real windows while the flagged position was taken *slightly less* often over
+the next five picks (0.268 vs 0.278) — no discrimination at all. Against the candidate set — the
+same choice-set discipline Session G established for the fitted β, now applied to a rate — the
+threshold sweep is cleanly monotone across 7,957 replayed windows:
+
+| threshold | fires | flagged pos. share of next 5 | vs unflagged | discrimination |
+|---|---|---|---|---|
+| 0.10 | 86.8 % | 0.277 | 0.277 | −0.001 |
+| 0.20 | 50.0 % | 0.290 | 0.263 | +0.027 |
+| 0.30 | 22.5 % | 0.303 | 0.269 | +0.034 |
+| 0.40 |  8.0 % | 0.345 | 0.271 | +0.074 |
+| 0.50 |  2.4 % | **0.382** | 0.274 | **+0.109** |
+
+The threshold is a free parameter, so the whole curve is reported rather than one number chosen to
+look good — and monotonicity across the entire sweep is the real evidence, not the operating point.
+
+**Question 2 — does reacting help? No, and it degrades monotonically.** Paired availability Brier on
+4,300 run-opened windows: **run_w 0.0 → 0.2121 · 0.5 → 0.2123 · 1.0 → 0.2128 · 2.0 → 0.2186.** Every
+non-zero bump is worse than static, in order of size.
+
+*The most likely reading — flagged as a reading, not a separately tested result — is
+**double-counting**: 11.1 already carries a `pos_run3` term, so an additional positional bump adds
+bias without adding information. A monotone degradation in the bump size is the signature of that
+rather than of a signal that is merely useless.* Confirming it would mean re-fitting 11.1 without
+`pos_run3`, which is an 11.1 respecification and out of scope here (cf. T15).
+
+**Ships DEFAULT OFF (`RUN_W = 0`), null reported** — the pre-agreed 16.9 treatment. The detector
+itself is kept and is genuinely useful as a **live-draft alert** for 14.4 ("RBs are flying"),
+which is a UX claim its face-validity evidence *does* support, quite separately from forecasting.
+
+### The shape of Phase 16, now that it is done
+
+Four honest nulls on the availability side (16.8 drift model, 16.9 narrative shock, 16.16 run
+reaction) plus the value side's three (16.1, 16.2, 16.4's deflationary 20.9 %). Everything that
+ships from this phase is either a *contract fix* that improved a validated metric (the 16.9
+choice-set band: level error 59.5 % → 8.8 %, availability Brier +0.0644 → +0.0708) or an explicitly
+curated, opt-in, default-OFF channel. **Phase 16 did not find an edge. It found four ways the
+apparent edges were measurement artifacts, and shipped the plumbing to express a human's judgment
+honestly when the model has nothing to say.**

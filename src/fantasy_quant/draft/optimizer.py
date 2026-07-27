@@ -275,6 +275,10 @@ class RiskModel:
     rank_y: np.ndarray = field(repr=False)     # matching priority rank (1 = draft first)
     scarcity_w: float = 0.0                    # 9.1/9.4 urgency weight (0 = covariance-only greedy)
     noise: float = DEFAULT_NOISE               # opponent ADP noise the survival model assumes
+    #: Phase-16.12 **opt-in** availability drift: player_key -> picks earlier than the board says.
+    #: Empty (the default) leaves this class bit-identical to its pre-16.12 behaviour, which
+    #: `tests/test_drift_consumption.py` asserts by re-running the frozen greedy.
+    hype: dict[str, float] = field(default_factory=dict, repr=False)
 
     def effective_rank(self, pool: pd.DataFrame, roster: pd.DataFrame,
                        window_end: float | None = None) -> np.ndarray:
@@ -295,7 +299,13 @@ class RiskModel:
 
         if self.scarcity_w > 0:
             cliff = positional_cliff(pool["player_key"], pool["pos"], self.bv)
-            p_gone = 1.0 - survival_prob(pool["adp"].to_numpy(float), window_end, self.noise)
+            adp = pool["adp"].to_numpy(float)
+            if self.hype:
+                # 16.12(b): a hyped player's *effective* draft cost is earlier, so he is likelier
+                # to be gone by your next turn — "he won't last, consider reaching". Opt-in only;
+                # an empty `hype` skips this entirely and leaves `adp` the identical object.
+                adp = adp - np.array([self.hype.get(k, 0.0) for k in pool["player_key"]], float)
+            p_gone = 1.0 - survival_prob(adp, window_end, self.noise)
             urgency = self.scarcity_w * cliff * p_gone
         else:
             urgency = np.zeros(len(pool))
@@ -318,12 +328,17 @@ class RiskModel:
 
 def build_risk_model(board: pd.DataFrame, value_index: pd.DataFrame, corr: CorrelationModel,
                      lam: float, scarcity_w: float = DEFAULT_SCARCITY_W,
-                     noise: float = DEFAULT_NOISE) -> RiskModel:
+                     noise: float = DEFAULT_NOISE,
+                     hype: dict[str, float] | None = None) -> RiskModel:
     """Assemble the :class:`RiskModel` from a value-attached board + the value index. The rank
     curve interpolates the board's own ``base_value → value`` mapping, so a zero penalty reproduces
     the static rank (and λ=0, ``scarcity_w=0`` the covariance-blind, myopic draft) exactly.
     ``scarcity_w`` weights the 9.1/9.4 urgency term; ``noise`` is the opponent ADP noise the
-    survival model assumes (match the simulator's)."""
+    survival model assumes (match the simulator's).
+
+    ``hype`` is the Phase-16.12 opt-in drift map (``player_key -> picks earlier``); leaving it
+    ``None`` — the default — keeps every number this model produces identical to the frozen,
+    lockbox-evaluated stack."""
     vi = value_index.dropna(subset=["base_value"]).drop_duplicates("player_key").copy()
     for c in ("sd", "team", "role_rank"):        # tolerate pre-Phase-8 value indexes
         if c not in vi.columns:
@@ -344,6 +359,7 @@ def build_risk_model(board: pd.DataFrame, value_index: pd.DataFrame, corr: Corre
         role={k: int(r) for k, r in zip(vi["player_key"], vi["role_rank"], strict=False)
               if pd.notna(r)},
         rank_x=x, rank_y=y, scarcity_w=float(scarcity_w), noise=float(noise),
+        hype=dict(hype or {}),
     )
 
 

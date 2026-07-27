@@ -631,3 +631,43 @@ improves one of those and quietly degrades another is the failure mode to guard 
 (16.12) — deep sleepers currently look more reliably gettable than they are. **Not** the frozen
 value stack, which is untouched by all of this. Worth doing before Phase 14 surfaces availability
 numbers to a user; not worth blocking Session H on.
+
+---
+
+## 🟡 T16 — a curated hype row cannot express in a standard 15-round league
+*(opened 2026-07-26, Session G (2/2), by the 16.10 done-bar)*
+
+**Symptom.** The 16.10 apply path works, but its effect depends on whether the claimed player is
+inside the drafted range at all. At the league-standard **15 rounds** (150 picks against a 201-deep
+2026 board), a **+12-pick** claim on Daniel Jones (board rank 171) produced a **bit-identical**
+30-draft result — not a small effect, *no* effect — and only moved once the utility offset was
+raised roughly fivefold. At **18 rounds** the same claim resolves normally. The 16.10 done-bar
+therefore runs at 18 rounds, and its passing gates should be read as "the mechanism is correct",
+not "these claims will be visible to a 15-round drafter".
+
+**Why.** `top_k` admits only the top-40 available by ADP, so a board-rank-171 player enters a
+candidate set only in the final handful of picks of a 150-pick draft. An additive offset applied to
+a player who is almost never a candidate changes almost nothing. Compounding it, the measured
+**elasticity is ≈0.44 realized picks per claimed pick**, so even an in-range claim is a nudge.
+
+**Consequence for the product.** Of the 20 directional claims on the current board, the deep ones
+(ADP > ~150: Cam Ward, Germie Bernard, Rashod Bateman, Brandon Aiyuk, Brian Robinson Jr.) are the
+*most* likely to be genuine sleeper narratives and the *least* likely to express in the format most
+users actually play. A hype board that visibly does nothing is worse than no hype board.
+
+**Fix options, cheapest first.**
+1. **Scale the offset by depth** in `apply_hype` so a deep claim gets the utility it needs to enter
+   the band — a workaround, and it breaks the clean "`pick_delta` means an equivalent ADP shift"
+   contract, so it must be documented if taken.
+2. **Fix it properly via T15.** A depth-varying candidate set (soft/widening band) is the same
+   change T15 already prescribes, and it dissolves this problem as a side effect: deep players
+   become reachable candidates, so an offset on them has somewhere to act.
+3. **Surface the limitation** rather than fix it — have `availability_readout` mark a claim as
+   `unexpressible` when the player's ADP is beyond the league's pick count. Cheap, honest, and
+   worth doing regardless of 1 or 2.
+
+**Recommendation: (3) now, (2) with T15.** Do not do (1) alone — it trades a documented contract
+for a cosmetic effect.
+
+**Who is affected.** Mock-draft realism and the 16.12 readout for deep players only. **Not** the
+frozen value stack. Not a blocker for Session H.

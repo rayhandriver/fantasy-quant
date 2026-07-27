@@ -20,7 +20,13 @@ import pandas as pd
 
 from fantasy_quant.adp.boards import resolve_boards
 from fantasy_quant.adp.drift_panel import eligible_drafts
-from fantasy_quant.draft.opponent_model import CHOICE_TOP_K, _load_profiles
+from fantasy_quant.draft.opponent_model import (
+    CHOICE_TOP_K,
+    RUN_WINDOW,
+    _load_profiles,
+    detect_run,
+    run_bonus,
+)
 from fantasy_quant.draft.optimizer import DEFAULT_NOISE, survival_prob
 from fantasy_quant.draft.simulator import canon_pos
 
@@ -48,7 +54,8 @@ def _draft_blocks(draft_of_win: np.ndarray) -> dict[int, np.ndarray]:
 def simulate_survival(cand: pd.DataFrame, avail0: np.ndarray, seat_plan: list[dict],
                       model, *, n_sims: int, rng: np.random.Generator,
                       recent0: list | None = None,
-                      top_k: int | None = CHOICE_TOP_K) -> np.ndarray:
+                      top_k: int | None = CHOICE_TOP_K,
+                      run_w: float = 0.0) -> np.ndarray:
     """MC survival of each ``cand`` row over a window of opponent picks.
 
     ``cand`` is a positional-index board (``adp``, ``pos``, optional ``team``/``rookie``);
@@ -62,6 +69,11 @@ def simulate_survival(cand: pd.DataFrame, avail0: np.ndarray, seat_plan: list[di
     logit's β is only interpretable relative to its choice set, so simulating over the whole board
     is applying the model outside its contract; ``top_k=None`` restores that (pre-Session-G)
     behaviour and is kept only for the comparison that measured the difference.
+
+    ``run_w`` switches on the Phase-16.16 reactive run adjustment: each simulated pick re-reads the
+    room's positional run intensity (:func:`~fantasy_quant.draft.opponent_model.detect_run`) and
+    bumps candidates at a running position. ``run_w=0`` — the default — takes the identical code
+    path as before, so the validated 11.2 forecast is unchanged unless a caller opts in.
     """
     m = len(cand)
     idx_all = np.arange(m)
@@ -106,6 +118,10 @@ def simulate_survival(cand: pd.DataFrame, avail0: np.ndarray, seat_plan: list[di
                         counts[j] += 1.0
                 X[:, run_col] = counts[pos_codes]
             u = X[ai] @ beta
+            if run_w:
+                # 16.16: intensity is measured against the *still-available* pool, so it reflects
+                # the room's live supply/demand rather than a fixed prior.
+                u = u + run_bonus(pos_arr[ai], detect_run(recent, pos_arr[ai]), run_w)
             choice = int(rng.choice(ai, p=_softmax(u)))
             avail[choice] = False
             recent.append(pos_arr[choice])
@@ -124,7 +140,8 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
                        n_sims: int = 60, contested_k: int = 30,
                        max_drafts_per_season: int = 8, noise: float = DEFAULT_NOISE,
                        n_boot: int = 400, seed: int = 0,
-                       top_k: int | None = CHOICE_TOP_K) -> dict:
+                       top_k: int | None = CHOICE_TOP_K,
+                       run_w: float = 0.0, require_run: float | None = None) -> dict:
     """Score availability forecasts on real draft windows. For every seat's consecutive pick pair
     in a sample of human drafts, predict P(available at the seat's next pick) for the contested
     band (the ``contested_k`` lowest-ADP available players) under (a) the behavioral flow and
@@ -136,6 +153,14 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
     (season, scoring, teams) board — see :mod:`fantasy_quant.adp.boards`. ``max_drafts_per_season``
     is the sampling budget, and it, not the corpus, is what held the reported ``n_drafts`` to 21
     through Session F.5.
+
+    Phase 16.16 adds two optional knobs, both inert at their defaults so the validated 11.2 number
+    is reproduced exactly: ``run_w`` makes the simulated flow react to positional runs, and
+    ``require_run`` restricts scoring to windows that **open during a run** (max positional
+    intensity at the window start ≥ the threshold). Those are the windows where a reactive model
+    can differ from a static one at all, so scoring everything would dilute the comparison to
+    nothing — the same dilution 12.4 measured when an injury signal was judged leaguewide instead
+    of on the designated subset.
     """
     rng = np.random.default_rng(seed)
     drafts = eligible_drafts(con, seasons)
@@ -247,10 +272,19 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
                                       "need": need})
                 recent0 = [pos_at[p] for p in range(max(1, t1 - 2), t1 + 1) if p in pos_at]
 
+                if require_run is not None:
+                    # the run as it stands when the window OPENS — the only information a live
+                    # drafter would actually have at that moment
+                    look = [pos_at[p] for p in range(max(1, t1 - RUN_WINDOW + 1), t1 + 1)
+                            if p in pos_at]
+                    inten = detect_run(look, bd["pos"].to_numpy()[avail_rows])
+                    if not inten or max(inten.values()) < require_run:
+                        continue
+
                 # behavioral survival (only need it for the contested rows)
                 surv_full = simulate_survival(
                     bd, avail0, seat_plan, model, n_sims=n_sims, rng=rng, recent0=recent0,
-                    top_k=top_k)
+                    top_k=top_k, run_w=run_w)
                 p_beh = surv_full[contested]
                 cadp = bd["adp"].to_numpy()[contested]
                 beh_br.append(float(np.mean((p_beh - realized) ** 2)))
@@ -260,6 +294,10 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
                     for nz in _NOISE_GRID})
                 draft_of_win.append(di)
 
+    if not beh_br:
+        # the `require_run` filter can legitimately empty the sample on a small budget; say so
+        # rather than dividing by zero and reporting a nan as if it were a measurement.
+        return {"n_windows": 0, "n_drafts": 0, "require_run": require_run, "run_w": run_w}
     beh_br = np.array(beh_br)
     draft_of_win = np.array(draft_of_win)
     base_grid = {nz: np.array([b[nz] for b in base_br]) for nz in _NOISE_GRID}
@@ -286,4 +324,5 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
         "brier_gain_vs_best": float(d.mean()),
         "brier_gain_ci": [float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))],
         "beats_best_adp_noise": bool(np.percentile(boots, 2.5) > 0),
+        "run_w": float(run_w), "require_run": require_run,
     }

@@ -61,8 +61,59 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★ Next-session pointer (2026-07-26, ★ SESSION G IN PROGRESS — T14 ☑ + 16.9 ☑.
-> RESUME AT 16.10.) READ THIS FIRST — it is written to resume cold.**
+> **★★ Next-session pointer (2026-07-26, ★ SESSION G COMPLETE — T14 ☑ · 16.9 ☑ · 16.11 ☑ · 16.10 ☑
+> · 16.12 ☑ · 16.16 ☑. NEXT = SESSION H.) READ THIS FIRST — it is written to resume cold.**
+>
+> **State:** **466 tests** (was 425), ruff clean, every done-bar gate PASS. **UNCOMMITTED** — left on
+> a clean-diff basis for your review (your choice this session). DEV-only; the spent lockbox is
+> untouched; the frozen value/distribution/optimizer/VBD/cost-report stack is **provably** untouched
+> (see the isolation gate below). Stage-0 FFC chore: last pull 2026-07-24, **next due after 07-30**.
+>
+> **★★ THE FINDING TO CARRY FORWARD — a coefficient is not transportable without its controls.**
+> 16.10 ranks nominations using the three weights that survived 16.8's ablation. Those are *partial*
+> coefficients, fit with `adp_rounds` and position dummies in the model. Used unconditionally they
+> ranked players by **board depth** (ADP standard deviation grows mechanically with ADP: 0.7 picks at
+> the top of the 2026 board, 33 near the bottom) and then, once depth was controlled, by **position**
+> (our value board likes every TE more than ADP does). Two plausible-looking, wrong candidate lists.
+> A third defect hid in the *units* — the weights are in rounds, velocity is rounds/week, so momentum
+> was nearly inert until multiplied by a horizon. **This is the F.5/F.6/16.9 family again: every one
+> presented as a modelling result rather than as an error.** When reusing a fitted coefficient
+> anywhere new, reproduce its controls and check its units before reading the output.
+>
+> **★ Phase 16's availability track is DONE and it is four honest nulls** (16.8 drift model, 16.9
+> narrative shock, 16.16 run reaction — plus the value side's 16.1/16.2 and 16.4's deflationary
+> 20.9 %). Everything that ships is either a **contract fix** that improved a validated metric (16.9's
+> choice-set band) or an explicitly **curated, opt-in, default-OFF** channel. Phase 16 found no edge;
+> it found four ways the apparent edges were measurement artifacts.
+>
+> **★ 16.16 = the detector works, reacting to it does not.** Run intensity measured against the **live
+> candidate set** (top-40 by ADP, *not* the whole remaining pool — that version fired on 61 % of
+> windows and anti-discriminated) gives monotone discrimination, **+0.109** at threshold 0.50 across
+> 7,957 replayed windows. But paired availability Brier on 4,300 run-opened windows degrades
+> monotonically in the bump size: **0.2121 → 0.2123 → 0.2128 → 0.2186**. Likely double-counting
+> (11.1 already carries `pos_run3`); confirming it needs an 11.1 refit, cf. T15. **Default OFF**,
+> detector kept as a live-draft alert for 14.4.
+>
+> **★ What you owe the hype board.** `reference/hype_board.csv` ships **24 rows / 20 directional
+> claims, all `reviewed=false` — therefore inert.** Nothing consumes it until you set `reviewed=true`
+> per row. Your review surface is `pick_delta` / `note` / `confidence`; the rows themselves are
+> derived and regenerate safely (`steps/phase16_10_hype_board.py --write` merges your edits forward).
+> Four rows are deliberate **non-claims** (`pick_delta=0`, e.g. Brian Robinson Jr., whose board-topping
+> ADP disagreement is *handcuff contingency*, not hype) — kept visible so you can see where the
+> derivation fired and the research found nothing.
+>
+> **★ New tech debt: T16** (🟡 a deep curated claim cannot express in a standard **15-round** league —
+> a +12-pick claim on a board-rank-171 player gave a *bit-identical* 30-draft result and needed ~5×
+> the offset to move; the 16.10 done-bar therefore runs at 18 rounds. Recommendation: surface the
+> limitation now, and let **T15**'s depth-varying candidate set dissolve it properly. Do not hack the
+> offset scale alone.) **T14 ☑, T15 still open.**
+>
+> **★ NEXT: Session H — opponent personalities 16.13–16.15.** 16.13 board enrichment (attach the frozen
+> Phase-5 distribution + `value_board` fields read-only), 16.14 the five headline personalities
+> (`signal_weights`), 16.15 mock-room composition + hype coupling. Validation = face-validity + unit
+> tests, **no Brier gate** (decided 2026-07-23). Then I (Phase 17 formats) → K (Phase 14 app, last).
+>
+> _(Prior pointer — history.)_ **★★ (2026-07-26, ★ SESSION G part 1/2 — T14 ☑ + 16.9 ☑.)**
 >
 > **State:** **425 tests** (was 411), ruff clean. Committed on `main`. DEV-only; the spent lockbox is
 > untouched; the frozen value/distribution/optimizer/VBD/cost-report stack is not touched by any of

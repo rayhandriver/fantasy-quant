@@ -240,7 +240,7 @@ how 11+7 combined a spine-completion phase with a 4-substep exploratory phase:
 
 **(2026-07-26: Session F.6 ☑ — the re-derivation sweep. 11.1/11.2/S6 re-fit on the *eligible*
 redraft corpus after the behavioral path was found to carry F.5's contamination bug; 16.8 re-asked
-and the null HELD (headline +9.25 %, ablation +0.01 %). ← NOW: Session G.)**
+and the null HELD (headline +9.25 %, ablation +0.01 %). **Session G ☑ COMPLETE 2026-07-26** — 16.9 + 16.11 + 16.10 + 16.12 + 16.16; the availability track ends with **four** honest nulls, and everything it ships is opt-in and default OFF. ← NOW: Session H.)**
 
 **★ SESSION PLAN (re-ordered 2026-07-23 — the full remaining backlog, dependency-optimal, app strictly last,
 same ~1.5–2.2k-line one-concept discipline).** Covers everything not done: Phase 16 (3 tracks) + 0.11 + 16.16,
@@ -282,8 +282,8 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   target share is a roster fact. Guard added (`assert_regime_coverage`) after an `LA`-vs-`LAR` join failure
   silently deleted Sean McVay's whole Rams tenure on the first run.
   **★ SESSION E COMPLETE.** (data 0.11 + drift 16.7–16.8 = Session F, now also complete — see below).
-  16.6 tab stays deferred to the Phase-14 app block. **← RESUME AT SESSION G** (apply the drift:
-  16.9–16.12 + 16.16), reading Session F's null first: 16.9 gets no mean drift signal to amplify.
+  16.6 tab stays deferred to the Phase-14 app block. (Session G — apply the drift, 16.9–16.12 + 16.16
+  — is now also **☑ COMPLETE 2026-07-26**; see its entry below.)
 - **Session F — data 0.11 + availability drift 16.7–16.8. ☑ COMPLETE 2026-07-25.** 382 tests (+23), ruff
   clean; uncommitted for user review. **The availability track returns an honest null too — 16.8's verdict
   is DOES NOT PREDICT** (headline skill +1.05 % CI[−1.48,+4.96] vs a pre-set 2 % bar; **ablation without
@@ -330,7 +330,7 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   `source_divergence` ablation mandatory** → **11.3 personalities** + **S6 adaptive** (both ride the fitted
   β). Open decisions: ECR board fallback (recovers 2025's 278 eligible drafts), and whether to re-run the
   2025 dress rehearsal (a further read of the calibration holdout).
-- **Session G — apply the drift 16.9–16.12 + 16.16.** ◐ **IN PROGRESS (2026-07-26).** **T14 ☑** (the
+- **Session G — apply the drift 16.9–16.12 + 16.16.** ☑ **COMPLETE (2026-07-26).** **T14 ☑** (the
   warm-up: 11.2 396 s → 12.7 s, bit-identical — and its **diagnosis was wrong**, the bootstrap was 0.79 s
   while 99.3 % sat in pandas inside `simulate_survival`). **16.9 ☑ BUILT — an honest NULL, and the third
   in Phase 16.** The premise inverted under measurement: the simulator **over**-dispersed draft slots by
@@ -339,11 +339,29 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   That fix alone met the level done-bar (**59.5 % → 8.8 %** error) and *improved* the availability Brier
   (**+0.0644 → +0.0708**). The shock itself moves nothing: realized depth slope +0.679, banded +0.077,
   +shock +0.057, and a 50× size sweep stays inside the metric's own noise → **default OFF, kept as the
-  expression channel for 16.10/16.15**. Residual shape miss → **T15**. **425 tests, ruff clean.**
-  **← RESUME AT 16.10** (curated hype board — mechanism + `reviewed=false` board, user review after),
-  then 16.11 momentum → 16.12 consumption → 16.16 run detection.
-  **~full-phase (800–1,400L); may split if 16.9/16.16 run heavy.**
-- **Session H — opponent personalities 16.13–16.15.** 16.13 board enrichment (frozen dist/value fields), 16.14
+  expression channel for 16.10/16.15**. Residual shape miss → **T15**.
+  **Part 2/2 (same day): 16.11 + 16.10 + 16.12 + 16.16 — 466 tests (was 425), ruff clean, every
+  done-bar gate PASS.** Built in **dependency order**: 16.11 before 16.10, since derived-first
+  nomination makes momentum an input to the hype board.
+  - **16.11 momentum ☑** (`adp/momentum.py`) — 192 players over 3 FFC snapshots / 15 days; centered on
+    the board's own drift, EB-shrunk (44 % of the raw spread survives, 2-snapshot players → exactly 0);
+    **forward-only and structurally unbacktestable**, labelled so in its own return value.
+  - **16.10 hype board ☑** — 24 rows / 20 directional claims, written `reviewed=false`; the **review
+    gate is structural** (`load_hype_board` drops unreviewed rows, independent of the on/off switch).
+    Method = **derived rows, curated claims**; 16/24 rows machine-nominated. **Elasticity ≈ 0.44
+    realized picks per claimed pick** — a nudge, not a repricing. Four measurement defects found and
+    fixed en route (partial coefficients used without their controls; a `log(adp)` curvature leak;
+    momentum in incommensurate units; a signed composite ranked one-sided) → **T16** (a deep claim
+    cannot express in a 15-round league).
+  - **16.12 consumption ☑** (`draft/drift.py`) — realism + opt-in advice + **engine-side** readout (UI
+    stays in Phase 14 per "app strictly last"). **Isolation proven:** `DriftConfig()` is a no-op and a
+    `RiskModel` without `hype` is **bit-identical** to the frozen path — asserted both ways so the
+    guarantee cannot pass vacuously.
+  - **16.16 run detection ☑ = Phase 16's FOURTH NULL.** The detector works (discrimination monotone in
+    the threshold, **+0.109** at 0.50 over 7,957 replayed windows) but *reacting* to it degrades the
+    availability Brier monotonically (0.2121 → 0.2186). **Ships default OFF**; kept as a live-draft
+    alert for 14.4.
+- **← NOW: Session H — opponent personalities 16.13–16.15.** 16.13 board enrichment (frozen dist/value fields), 16.14
   the 5 personalities (`signal_weights`), 16.15 mock-room composition + hype coupling (engine; selector → 14).
   **~full-phase (600–1,200L).**
 - **Session I — Phase 17 League-Format Fidelity 17.1–17.4.** 17.1 roster+lineup generalization (superflex/

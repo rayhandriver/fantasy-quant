@@ -1199,3 +1199,48 @@ New `adp/narrative.py`, `steps/phase16_9_narrative.py`, `analysis/phase16_9_narr
   expression channel 16.10/16.15 need. Residual shape miss logged as **T15** (an 11.1
   respecification — soft/widening band or log-ADP utility — not attempted inside 16.9).
 - **Next: 16.10** (mechanism now, user reviews the board after), then 16.11 → 16.12 → 16.16.
+
+## 2026-07-26 — Session G (2/2, COMPLETE): 16.11 · 16.10 · 16.12 · 16.16
+
+**User pre-authorised 7 decisions up front** (asked before any code, per the standing pattern), then
+waived the §3.7 sub-step gate so the four substeps ran straight through with one report at the end:
+
+1. **Hype board authoring = derived-first, then annotate.** The machine ranks *who* (16.8 ablation
+   survivors + 16.11 momentum), Claude web-researches only the `note`/`source` per row. Chosen over
+   pure web research explicitly because of 16.5's *derived-vs-curated* lesson.
+2. **Hype default OFF everywhere, opt-in** — the "kept, not default" pattern.
+3. **16.11 velocity on the FFC-only series** (3 snapshots), labelled thin, rather than pooling the
+   Sleeper boards for a longer lever arm — pooling different populations is the F.5 failure mode.
+4. **Straight through, one report at the end** (§3.7 waived).
+5. **16.12(c) engine-side readout only** — no Streamlit UI; the app stays strictly last (Session K).
+6. **If 16.16 nulls, ship default OFF and report it** — the 16.9 treatment, not deletion. *(It did.)*
+7. **Leave the session uncommitted** for user review.
+
+**Build order deviated from the spec, deliberately:** 16.11 was built **before** 16.10, because
+decision (1) makes momentum an *input* to the hype-board nomination.
+
+**Outcomes.** 466 tests (was 425), ruff clean, every done-bar gate PASS.
+- **16.11 ☑** forward-only and structurally unbacktestable — labelled in the return value, not just
+  the docstring. Centered on the board's own drift; EB-shrunk (44 % of raw spread survives).
+- **16.10 ☑** 24 rows / 20 claims, `reviewed=false`, structural review gate. **Elasticity ≈ 0.44
+  realized picks per claimed pick.** Four measurement defects found and fixed en route — see
+  findings; the durable one is *partial coefficients need their controls*.
+- **16.12 ☑** all three consumers + a **proven isolation gate**: `DriftConfig()` is a no-op and a
+  `RiskModel` without `hype` is bit-identical to the frozen path, asserted both directions.
+- **16.16 ☑ = Phase 16's fourth null.** Detector works (monotone discrimination, +0.109 at threshold
+  0.50); reacting to it degrades the availability Brier monotonically. Default OFF, kept as a
+  live-draft alert for 14.4.
+
+**Dead ends / corrections worth not repeating.**
+- Ranking nominations by raw (signed) score surfaces only risers; the strongest claim on the board is
+  a *fader* (Charbonnet, PUP list). Rank by |score|.
+- The 16.10 done-bar reported the mechanism **backwards twice** before it was measured correctly:
+  once from dropping undrafted players (→ censor at `n_picks+1`) and once from applying all 20 claims
+  simultaneously in a zero-sum draft (→ leave-one-in).
+- 16.16's first baseline was the whole remaining pool; a board is WR-heavy at every depth, so the
+  detector fired on 61 % of windows and anti-discriminated. The baseline must be the **candidate set**.
+
+**New tech debt: T16** (deep curated claims cannot express in a 15-round league; fix properly via
+T15's depth-varying candidate set, and surface the limitation meanwhile).
+
+**Next: Session H** — opponent personalities 16.13–16.15 (face-validity + unit tests, no Brier gate).

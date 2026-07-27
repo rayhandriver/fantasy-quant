@@ -147,13 +147,27 @@ Reached by clicking a player anywhere. Contents, top to bottom:
 | #5 Bargain | ✅ built (`value_board` + ADP board) |
 | #8 Opportunity | ✅ built (Phase-3 `features/opportunity.py`) |
 | #6 Situation-change | ⏳ **needs Phase 16** (value-side 16.1–16.6) — the one *bar* gating dependency |
-| Reach-risk / drift readout | ⏳ **needs Phase 16** (availability-side 16.7–16.12, added 2026-07-23) |
+| Reach-risk / drift readout | ✅ **engine-side built** 2026-07-26 (16.12 `draft/drift.py::availability_readout`) — UI still owed by Phase 14 |
 
 **The new-signal dependencies both point at Phase 16.** Building Phase 16 next double-serves: the value-side
 (16.1/16.2 mined signals + 16.4 fingerprints + 16.6 tab) lights up the Beta-Lab tab *and* supplies the deep
 page's situation-change **bar #6**; the availability-side (16.7–16.12) supplies the **reach-risk /
 draft-market-drift readout** + the honest `P(available at your pick)`. Everything else the cards need already
 exists behind frozen contracts.
+
+> **Update 2026-07-26 (Session G complete).** The availability-side readout now **exists engine-side**:
+> `draft/drift.py::availability_readout` returns `p_available`, `p_available_baseline`, `drift_picks`,
+> a three-bucket `reach_risk` label (`likely gone` / `coin flip` / `likely available`) and a
+> `drift_material` flag. Three rules the UI must honour, because they are the honest part:
+> 1. **Always render the pair**, never the drift-adjusted probability alone — the adjustment rests on
+>    a curated board and a forward-only momentum series, and Phase 16 returned four honest nulls.
+> 2. **Never show `pick_delta` as a predicted change in draft slot.** Measured elasticity is ≈0.44
+>    realized picks per claimed pick; it is a nudge, not a repricing.
+> 3. **Deep claims may be inert in a 15-round league** (→ T16). Mark them rather than showing a
+>    reach-risk that cannot move.
+>
+> The drift channels are **opt-in and default OFF**, and the shipped `reference/hype_board.csv` is
+> `reviewed=false` — so by default this readout shows the plain 11.2 availability oracle.
 
 Implementation order (unchanged from ROADMAP): **Phase 16 → Phase 14.1 backend → Phase 14.3 frontend
 (this spec)**. The FastAPI backend (14.1) exposes a per-player endpoint returning the 8 bar values +

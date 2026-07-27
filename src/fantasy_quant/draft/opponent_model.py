@@ -66,6 +66,66 @@ CHOICE_TOP_K = 40
 
 
 # =============================================================================================
+# Phase 16.16 — live run detection
+# =============================================================================================
+#: Picks looked back when deciding whether a positional **run** is happening. Deliberately much
+#: longer than ``pos_run3``: three picks is a local texture the fitted β already prices, whereas a
+#: run is a room-level regime ("RBs are flying") that persists across a full turn of the snake.
+RUN_WINDOW = 10
+
+#: Utility bump per unit of run intensity, when run detection is switched on. There is no fitted
+#: value — 16.16 is a *reactive* adjustment applied on top of a frozen β with no corpus refit — so
+#: this is a declared judgment behind an off-by-default switch, sized to be comparable to the
+#: fitted ``pos_run3`` coefficient over its plausible range.
+RUN_W = 0.0        # OFF by default; steps/phase16_16_run_detection.py measures what it buys
+
+
+def detect_run(recent_pos, pool_pos, *, window: int = RUN_WINDOW) -> dict[str, float]:
+    """Positional **run intensity**: how much faster a position is coming off the board than its
+    ADP-implied rate.
+
+    ``recent_pos`` is the trailing sequence of drafted positions (most recent last) and ``pool_pos``
+    must be the positions of the **top-k still-available players by ADP** — the live candidate set,
+    not the whole remaining pool. That distinction is the whole measurement. Scored against the
+    entire undrafted board, the baseline is dominated by the deep tail (a board carries far more
+    WRs than QBs at any depth), so the reference rate for a scarce position is near zero and the
+    detector fires on essentially any occurrence: measured that way it fired on **61 %** of real
+    windows and the flagged position was taken *slightly less* often over the next five picks than
+    in unflagged ones (0.268 vs 0.278) — a detector with no discrimination at all.
+
+    Restricting the baseline to the candidate set is also the same choice-set discipline Session G
+    established for the fitted β: a rate is only meaningful relative to the set of players actually
+    in contention.
+
+    For each position, intensity is the observed share of the last ``window`` picks minus its share
+    of that candidate set. Positive ⇒ a run: the room is taking that position faster than the
+    board implies, so your window on it is closing faster than ADP alone says. Both terms are
+    shares, so the statistic is scale-free and needs no corpus refit — it is computable live,
+    mid-draft, from what any drafter can see.
+    """
+    recent = list(recent_pos)[-int(window):]
+    if not recent:
+        return {}
+    pool = list(pool_pos)
+    n_pool = len(pool)
+    obs: dict[str, float] = {}
+    for p in recent:
+        obs[p] = obs.get(p, 0.0) + 1.0 / len(recent)
+    sup: dict[str, float] = {}
+    for p in pool:
+        sup[p] = sup.get(p, 0.0) + 1.0 / n_pool if n_pool else 0.0
+    return {p: obs.get(p, 0.0) - sup.get(p, 0.0) for p in set(obs) | set(sup)}
+
+
+def run_bonus(pos_array, intensity: dict[str, float], run_w: float = RUN_W) -> np.ndarray:
+    """Per-candidate utility bump from :func:`detect_run`. ``run_w=0`` returns exact zeros, so the
+    frozen availability path is untouched unless a caller opts in."""
+    if not run_w or not intensity:
+        return np.zeros(len(pos_array))
+    return float(run_w) * np.array([intensity.get(p, 0.0) for p in pos_array], float)
+
+
+# =============================================================================================
 # feature construction
 # =============================================================================================
 def _load_board(con, source: str, scoring: str, teams: int) -> pd.DataFrame:

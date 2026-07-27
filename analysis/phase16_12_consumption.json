@@ -1,0 +1,132 @@
+{
+  "season": 2026,
+  "n_board": 201,
+  "config": {
+    "production": {
+      "enabled": true,
+      "hype_board": true,
+      "momentum_w": 0.0,
+      "backtested": false,
+      "caveat": "curated / forward-only inputs: 16.8 found no per-player drift signal and 16.9 could not identify a shock size; these channels are opt-in and default off"
+    },
+    "demonstration": {
+      "enabled": true,
+      "hype_board": true,
+      "momentum_w": 0.0,
+      "backtested": false,
+      "caveat": "curated / forward-only inputs: 16.8 found no per-player drift signal and 16.9 could not identify a shock size; these channels are opt-in and default off"
+    }
+  },
+  "review_state": {
+    "n_rows": 24,
+    "n_reviewed": 0
+  },
+  "realism": {
+    "n_players_moved": 179,
+    "mean_abs_move_all": 3.653511658011298,
+    "mean_move_hyped": 2.898884910962748,
+    "mean_abs_move_hyped": 4.617536871747066
+  },
+  "advice": {
+    "n_repriced": 3,
+    "mean_survival_change_hyped": -0.02913898913878583,
+    "direction_correct": true,
+    "max_abs_change": 0.3828545159368112
+  },
+  "readout": {
+    "n_rows": 181,
+    "by_reach_risk": {
+      "likely available": 162,
+      "coin flip": 19
+    },
+    "n_drift_material": 2,
+    "max_abs_delta": 0.09999999999999998,
+    "sample": [
+      {
+        "player_key": "00-0037239",
+        "pos": "WR",
+        "adp": 20.9,
+        "p_available": 0.375,
+        "p_available_baseline": 0.3333333333333333,
+        "drift_picks": 0.0,
+        "reach_risk": "coin flip"
+      },
+      {
+        "player_key": "00-0038134",
+        "pos": "RB",
+        "adp": 22.5,
+        "p_available": 0.44166666666666665,
+        "p_available_baseline": 0.4666666666666667,
+        "drift_picks": 0.0,
+        "reach_risk": "coin flip"
+      },
+      {
+        "player_key": "LOV121782",
+        "pos": "RB",
+        "adp": 22.6,
+        "p_available": 0.43333333333333335,
+        "p_available_baseline": 0.49166666666666664,
+        "drift_picks": 3.0,
+        "reach_risk": "coin flip"
+      },
+      {
+        "player_key": "00-0036554",
+        "pos": "WR",
+        "adp": 23.4,
+        "p_available": 0.375,
+        "p_available_baseline": 0.425,
+        "drift_picks": 0.0,
+        "reach_risk": "coin flip"
+      },
+      {
+        "player_key": "00-0039064",
+        "pos": "WR",
+        "adp": 25.6,
+        "p_available": 0.4166666666666667,
+        "p_available_baseline": 0.3416666666666667,
+        "drift_picks": 0.0,
+        "reach_risk": "coin flip"
+      },
+      {
+        "player_key": "00-0036410",
+        "pos": "WR",
+        "adp": 27.0,
+        "p_available": 0.4583333333333333,
+        "p_available_baseline": 0.4666666666666667,
+        "drift_picks": 0.0,
+        "reach_risk": "coin flip"
+      },
+      {
+        "player_key": "00-0039067",
+        "pos": "WR",
+        "adp": 27.3,
+        "p_available": 0.5,
+        "p_available_baseline": 0.5416666666666666,
+        "drift_picks": 0.0,
+        "reach_risk": "coin flip"
+      },
+      {
+        "player_key": "00-0034857",
+        "pos": "QB",
+        "adp": 27.9,
+        "p_available": 0.5583333333333333,
+        "p_available_baseline": 0.525,
+        "drift_picks": 0.0,
+        "reach_risk": "coin flip"
+      }
+    ]
+  },
+  "isolation": {
+    "identical": true,
+    "hype_on_changes_something": true,
+    "n_rows_changed_when_on": 1
+  },
+  "gates": {
+    "production_config_is_inert": true,
+    "drift_changes_mock_flow": true,
+    "hyped_players_go_earlier": true,
+    "advice_repricing_works": true,
+    "readout_produced": true,
+    "frozen_stack_untouched": true
+  }
+}

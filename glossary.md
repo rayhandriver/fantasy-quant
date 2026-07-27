@@ -4,7 +4,11 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-25 — **16.3b playcaller-regime terms** (play-caller vs HC vs OC · playcaller
+> **Last updated:** 2026-07-26 — **Session G (2/2) terms** (curated-not-backtested · the review gate ·
+> derived rows / curated claims · partial-coefficient reuse · nesting the functional form · two-sided
+> nomination · velocity / ADP momentum · forward-only · commensurate units · elasticity · below the
+> simulator’s resolution · censoring not dropping · crowding-out · run intensity · sweeping a free
+> parameter). _Previously:_ **16.3b playcaller-regime terms** (play-caller vs HC vs OC · playcaller
 > regime · head-coach scaffold + its 2024 limitation · `in_house` · move-graph cross-reference ·
 > first-time play-caller · majority-season inclusion rule · **lineage fallback / mentor regime** ·
 > `same_team` · fingerprint source) **+ 16.5 derived-event-board terms** (**derived-vs-curated**, the
@@ -1122,3 +1126,101 @@ metric never moved beyond its own between-sample noise (two runs at the same set
 +0.057). The grid still has an argmin, and reporting it as "the calibrated value" would have
 dressed a noise draw as a fitted parameter. *Before quoting an optimum, check that the objective
 varies more across the parameter than it does across reruns at a fixed parameter.*
+
+## Session G (2/2) terms — hype board, momentum, drift consumption, run detection (2026-07-26)
+
+**curated-not-backtested** — the explicit label every 16.10/16.11 output carries. Phase 16's
+availability track produced three nulls and one unbacktestable series, so the hype board's
+`pick_delta` and the momentum velocity are *claims*, not measurements. They are opt-in, default
+OFF, and every function that surfaces one (`DriftConfig.describe`, `momentum_summary`,
+`availability_readout`) states the caveat in its own return value rather than in a docstring.
+Contrast a **frozen contract** (Phase 4/5), which is validated and may be relied on silently.
+
+**the review gate** — `reviewed` on `reference/hype_board.csv`, enforced *structurally*:
+`load_hype_board` drops unreviewed rows by default, so a Claude-drafted board is inert until a
+human signs it. Independent of the on/off switch — `DriftConfig(hype=True)` against an unsigned
+board still contributes exactly zero. Same contract as `reference/coaches.csv` (16.3).
+
+**derived rows / curated claims** — how 16.5's *derived-vs-curated* rule applies when the answer is
+genuinely not in any feed. The **row set** is derived (`nominate` ranks the live board), the
+**annotation** is curated (`pick_delta`/`note`/`source`). The machine picks *who*, the human writes
+*why and how much*. Regeneration merges forward so a signed row survives a re-run.
+
+**partial-coefficient reuse** — reusing a fitted model's coefficients as a ranking requires
+reproducing its *controls*. 16.8's surviving weights (`rookie` +0.73, `adp_stdev` +0.35/SD,
+`vbd_gap` +0.18/SD) were estimated with `adp_rounds` and position dummies in the model, so they
+mean "holding depth and position fixed". Scored unconditionally they rank players by **depth** (ADP
+standard deviation grows mechanically with ADP: ~0.7 picks at the top of the 2026 board, ~33 near
+the bottom) and by **position** (our value board likes every TE more than ADP does) — the first two
+runs of `nominate` returned an ADP-120-to-175 list, then a TE-flooded one. `_z_resid` residualizes
+each carrier on `log(adp)` **and** `adp` **and** position dummies first. *A coefficient is only
+transportable together with the things it was conditioned on.*
+
+**nesting the functional form** — the depth control carries both `log(adp)` and `adp` rather than
+betting on one. With `log` alone, a carrier that happens to grow *linearly* in ADP leaks its
+curvature into the residual: the very top of the board (Bijan Robinson, Jahmyr Gibbs, Ja'Marr
+Chase) surfaced as "unusually disputed" purely from misfit, and dropped out once `adp` was added.
+*The 1.01 debate is real; the derivation was not detecting it.*
+
+**two-sided nomination** — the composite is signed (positive = the room reaches for him), so
+ranking by raw score surfaces only risers. A **fader** is exactly as worth researching — the
+strongest claim on the 2026 board is Zach Charbonnet at −10 picks (PUP list, out a minimum four
+games) — so `nominate` ranks by |score| and preserves direction in the column.
+
+**velocity / ADP momentum** — slope of a player's ADP across the Stage-0 within-season snapshot
+series, in picks per week, **sign-flipped** so `velocity > 0` = drafted earlier = the hype
+direction (matching 16.7's `drift` end to end). Two mechanical corrections: **centered** on the
+board's own median slope (the pool deepens through a preseason, so every ADP creeps later together)
+and **EB-shrunk** toward zero by each player's standard error (three snapshots ⇒ one residual
+degree of freedom; 44 % of the raw spread survives). Two-snapshot players have infinite standard
+error and shrink to exactly zero.
+
+**forward-only** — a signal computable now but never backtestable, *structurally* rather than for
+want of effort. No historical intra-season ADP series exists anywhere reachable: FFC publishes one
+board per season and 0.11 established the FantasyPros ECR archive is kickoff-dated. Judged on the
+16.4 **descriptive-honesty** bar (compute correctly, label provenance, expose thinness), never a
+walk-forward gate.
+
+**commensurate units** — combining a fitted coefficient with an unfitted signal requires putting
+them on one scale first. 16.8's weights are in *rounds of drift*; velocity is *rounds per week*.
+Entered directly, momentum was nearly inert and dropped the loudest live mover (Daniel Jones, +5.3
+picks/wk, a locked-in starter on a new $88M deal) out of the top 45 entirely. Multiplying by a
+data-derived horizon (weeks to the nominal Sep-1 draft) makes it rounds — and it is **capped**,
+because linearly extrapolating a three-point slope five weeks forward is not a credible forecast.
+
+**elasticity (of a curated claim)** — realized picks of movement per claimed pick, measured at
+**≪ 1**. ADP is only one term in the fitted utility and `top_k` is a hard rank filter applied
+before it, so a hype row is a *nudge*, not a repricing. Never surface `pick_delta` to a user as a
+predicted change in draft slot.
+
+**below the simulator's resolution** — a claim can be structurally unmeasurable rather than merely
+noisy. At the league-standard 15 rounds (150 picks against a 201-deep board), a +12-pick claim on a
+board-rank-171 player produced a **bit-identical** 30-draft result and only moved when the offset
+was raised ~5×; at 18 rounds the same claim resolves. *Check that the measurement design can
+contain the effect before concluding the effect is absent.*
+
+**censoring, not dropping** — when a player is undrafted he must still contribute a value, or the
+statistic is conditioned on the very thing being changed. Averaging only the slots a player *was*
+taken at reported that hyping Cam Ward pushed him **later**; in fact it made him get drafted at all,
+in rooms where he had gone untaken, and each new appearance near the final pick dragged the
+conditional mean backwards. Score undrafted as `n_picks + 1` and report `draft_rate` alongside —
+for a deep player the channel legitimately expresses as *more often drafted* before *drafted
+earlier*.
+
+**crowding-out** — a draft has a fixed number of picks, so hype is zero-sum: applying twenty claims
+at once makes the hyped players compete with each other and the small claims lose to the large ones
+(a +4 row got drafted *less* often while +12 and +8 rows rose). Correct behaviour, and the reason
+the per-claim done-bar runs **leave-one-in** against a shared baseline.
+
+**run intensity** (16.16) — a position's share of the last `RUN_WINDOW` picks minus its share of
+the **live candidate set** (top-`CHOICE_TOP_K` available by ADP). Scale-free, computable mid-draft,
+no corpus refit. The baseline choice is the whole measurement: scored against the entire remaining
+pool — which is WR-heavy at every depth — the detector fired on **61 %** of real windows and the
+flagged position was taken *slightly less* often over the next five picks (0.268 vs 0.278). Against
+the candidate set, discrimination is monotone in the threshold, reaching **+0.109** (0.382 vs
+0.274) at intensity 0.50. *The same choice-set discipline as the fitted β, applied to a rate.*
+
+**sweeping a free parameter** — a detector's firing threshold is a knob, and picking one silently
+is how a detector gets tuned until it looks like it works. 16.16 reports the whole
+threshold/fire-rate/discrimination curve and selects an operating point from it, so a reader can
+see that discrimination rises monotonically rather than at one chosen point.
