@@ -56,6 +56,7 @@ import pandas as pd
 
 from fantasy_quant.draft.opponent_model import (
     _ADP_SCALE,
+    SKILL_POSITIONS,
     OpponentModel,
 )
 from fantasy_quant.draft.opponent_model import (
@@ -63,6 +64,123 @@ from fantasy_quant.draft.opponent_model import (
 )
 
 _NEED_TARGET = {"QB": 1, "RB": 4, "WR": 4, "TE": 1}
+
+
+#: **Frozen measurement — the 95th percentile of realized human *reaching*, per round, in 10-team
+#: ADP picks**, over the 1,144-draft FFC-boarded Sleeper corpus (2017–2024). Rounds 1–15.
+#:
+#: ★ This is the "hard per-round deviation ceiling at the corpus p95" 16.14R's done-when asks for,
+#: and it is deliberately part of the **mechanism**, not only of the measurement: a *count* budget
+#: ("three big reaches a draft") bounds how often, never how far, so without this the seat's third
+#: allowed swing was a 78-pick reach that no human draft has ever contained. The two controls are
+#: complementary and both are needed.
+#:
+#: ⚠ **Reach side only.** ``mock.reach_profile`` pools |drift| — reaches *and* falls — because that
+#: is how T15's published corpus figures were computed, and at round 15 that p90 is 52 picks,
+#: almost all of it elite players **falling**. A ceiling on how far a manager may *jump* cannot be
+#: read off a number that is mostly about players sliding, and using it would license a reacher
+#: three times wilder than any human.
+#:
+#: The shape is worth reading: reaching peaks in **round 5** (50 picks) and shrinks to 19 by round
+#: 15 — a real drafter's big swings happen once the elite tier is gone and the board is flat, then
+#: stop when there is nothing left to reach past.
+CORPUS_REACH_P95: tuple[float, ...] = (14.6, 24.1, 33.9, 43.5, 50.0, 46.6, 46.7, 47.8,
+                                       44.1, 39.1, 33.7, 30.8, 30.0, 27.1, 19.0)
+
+
+def value_hawk_budget(window_mult: float) -> ReachBudget:
+    """The value hawk's reach window: ``window_mult`` x the realized human p95, per round.
+
+    ★ **Stated as a multiple of what humans actually do**, so ``window_mult = 1.0`` means "reaches
+    as far as the 95th-percentile real manager and no further" and the acceptance constraint
+    ("realized reach p95 <= the corpus p95") is a *measured outcome* rather than an identity — a
+    seat given a 1.25x ceiling may still land under the corpus p95 simply because its objective
+    rarely wants to reach that far. That is what makes the step-7 sweep over
+    ``{1.00, 1.15, 1.25}`` informative instead of circular.
+
+    The count tiers are relaxed away: a value argmax does not "take three swings a draft", it takes
+    the best available player inside its window at every pick, so the window *is* the whole control.
+    """
+    return ReachBudget(
+        large_max=10 ** 6, large_from_round=1, medium_max=10 ** 6, medium_from_round=1,
+        early_rounds=0, early_max_picks=np.inf,
+        round_ceiling=tuple(float(window_mult) * x for x in CORPUS_REACH_P95),
+    )
+
+
+@dataclass(frozen=True)
+class ReachBudget:
+    """16.14R step 5b — how many big reaches a seat is allowed, and when (user spec, 2026-07-27).
+
+    A real reacher does not reach uniformly. He takes two or three swings a draft, mostly after the
+    early rounds have thinned the board, and he does not open with one. ``width_mult`` cannot say
+    that: it is a *distributional* control, so a seat with a wide width reaches a little on every
+    pick instead of a lot on a few. This is the shape control that goes with it.
+
+    Tiers are in **ADP picks** of deviation (``adp − overall_pick``, positive = reaching):
+
+    ``> large_picks``               a swing. ``large_max`` per draft, none before
+                                    ``large_from_round``.
+    ``medium_picks … large_picks``  a lean. ``medium_max`` per draft, none before
+                                    ``medium_from_round``.
+    ``<= medium_picks``             ordinary drafting, never counted or capped.
+
+    Rounds ``1 … early_rounds`` are clamped to ``early_max_picks`` whatever the budget says —
+    the top of the board is where a nonsense reach is most visible and most expensive.
+
+    ★ **Stateful per seat, computed statelessly.** The budget depends on what this seat has
+    already done, but ``make_opponent_pick_fn`` returns a pure softmax and the 9.5 win-prob policy
+    runs whole drafts on a :meth:`~fantasy_quant.draft.simulator.DraftState.clone`. Carrying
+    mutable per-seat memory alongside would mean ``clone`` has to deep-copy it or every rollout
+    silently diverges — a bug that would surface as a modelling result, which is this repo's most
+    expensive failure mode. So :meth:`used` re-derives the count from the draft log at every pick.
+    It is O(picks so far), it is exactly reproducible under a seed, and it is correct on a clone by
+    construction.
+
+    ★ **Applied as a filter *before* utility**, the same class of object as ``BandSpec`` and T20's
+    mandatory needs. A budget that worked by penalising utility would be traded off against a
+    strong enough opinion, which is not what a budget is.
+    """
+    large_picks: float = 25.0
+    large_max: int = 3
+    large_from_round: int = 5
+    medium_picks: float = 8.0
+    medium_max: int = 5
+    medium_from_round: int = 3
+    early_rounds: int = 3
+    early_max_picks: float = 8.0
+    round_ceiling: tuple[float, ...] | None = CORPUS_REACH_P95
+
+    def used(self, state, team: int) -> tuple[int, int]:
+        """``(large, medium)`` reaches this seat has already spent, re-read from the draft log."""
+        large = medium = 0
+        for row in state.log:
+            if row["team"] != team:
+                continue
+            d = float(row["adp"]) - float(row["overall_pick"])
+            if d > self.large_picks:
+                large += 1
+            elif d > self.medium_picks:
+                medium += 1
+        return large, medium
+
+    def cap(self, state, team: int) -> float:
+        """The largest deviation, in ADP picks, this seat may make at the pick on the clock."""
+        rnd = state.round()
+        large, medium = self.used(state, team)
+        if rnd >= self.large_from_round and large < self.large_max:
+            allowed = np.inf
+        elif rnd >= self.medium_from_round and medium < self.medium_max:
+            allowed = self.large_picks
+        else:
+            allowed = self.medium_picks
+        if rnd <= self.early_rounds:
+            allowed = min(allowed, self.early_max_picks)
+        if self.round_ceiling:
+            # the count budget says how *often*; this says how *far*. Neither implies the other,
+            # and without this the third permitted swing was a 78-pick reach (see CORPUS_REACH_P95).
+            allowed = min(allowed, float(self.round_ceiling[min(rnd, len(self.round_ceiling)) - 1]))
+        return float(allowed)
 
 #: Enriched board columns (16.13) a personality may weight in ``signal_weights``. Note
 #: ``overall_rank`` is a **rank** — lower is better — so wanting good players means a *negative*
@@ -75,9 +193,18 @@ _NEED_TARGET = {"QB": 1, "RB": 4, "WR": 4, "TE": 1}
 #: agree instead of opposing. :func:`~fantasy_quant.draft.enrichment.residual_shape` has the
 #: measurement. The raw columns stay available because a *reporting* consumer legitimately wants
 #: them.
+#: ⚠⚠ **``boom_prob``/``bust_prob`` are stale by construction on a live board — do not weight
+#: them (T22).** They are the *prior season's* realized weekly rates, where "prior" means
+#: ``max(train_seasons)``, and ``train_seasons`` for a live season is ``DEV_SEASONS``, which ends at
+#: **2022**. On the 2026 board they are the 2022 rates, and **292 of the 306 zeros are
+#: ``fillna(0.0)``** — anyone absent in 2022 is recorded as never booming *and* never busting. Use
+#: ``tail_risk`` (T19), which is built from the current quantiles. They stay listed because a
+#: *reporting* consumer may legitimately want them, with the staleness stated.
+#: 16.14R step 3 adds ``role_share``/``role_delta``/``td_regression`` — structural context a value
+#: objective is blind to. Every seat's default weight on them is **0.0**; only the value hawk asks.
 SIGNAL_COLS: tuple[str, ...] = ("boom_prob", "q90", "bust_prob", "q10", "games_played_mean",
-                                "mean", "upside", "floor", "durability", "vbd", "overall_rank",
-                                "cos")
+                                "mean", "upside", "floor", "durability", "tail_risk", "vbd",
+                                "overall_rank", "cos", "role_share", "role_delta", "td_regression")
 
 #: Minimum members a position group needs before its z-scores mean anything. Below this (or at zero
 #: variance) the group contributes 0 — no tilt, rather than a tilt built on one observation.
@@ -250,6 +377,16 @@ class Personality:
 
     **T15 / 16.14R — the width half of the contract:**
 
+    ``level_floor``      within-position z of the projected ``mean`` below which this seat applies
+                         ``level_floor_penalty`` utility. ``None`` = off. **16.14R step 4** — a
+                         *minimum projected level*, so that "reliably useless" cannot win a
+                         downside contest. It is deliberately **not** expressible as a
+                         ``signal_weights`` entry: a linear weight on ``mean`` is a quality tilt
+                         that trades off against everything else, whereas this is a **threshold**
+                         that says a player below it is not a candidate for *this* manager however
+                         safe he looks. Applied inside the reach ceiling, since declining to draft
+                         a replacement-level player is an opinion like any other.
+
     ``width_mult``       how far this seat strays from the board, as a multiple of the fitted
                          average manager. Implemented as ``β_adp_s / width_mult``, because the
                          derived width law says deviation width in ADP picks is ``∝ 1/|β_adp_s|`` —
@@ -276,6 +413,11 @@ class Personality:
     max_reach_picks: float | None = None
     sample: bool | None = None
     width_mult: float = 1.0
+    level_floor: float | None = None
+    level_floor_penalty: float = 1.0
+    reach_budget: ReachBudget | None = None
+    objective: str = "behavioral"
+    context_weights: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         unknown = set(self.signal_weights) - set(SIGNAL_COLS)
@@ -353,7 +495,12 @@ def personalities() -> dict[str, Personality]:
         "upside_chaser": Personality(
             "upside_chaser",
             scale={"rookie": 2.0},
-            signal_weights={"upside": 0.45, "boom_prob": 0.35, "cos": 0.20},
+            # T19/T22: `boom_prob` was 2022's realized rate with 65 % manufactured zeros — the
+            # ceiling-chaser's second weight was a stale column, not a signal. `tail_risk` is the
+            # same idea on current quantiles, and *positive* here on purpose: for a manager
+            # chasing ceiling, wide is the point (the 15.2 best-ball finding, "variance is GOOD",
+            # from the other side of the same board).
+            signal_weights={"upside": 0.45, "tail_risk": 0.35, "cos": 0.20},
             temperature=1.3, hype_gain=1.5, max_reach_picks=REACH_UPSIDE,
             width_mult=WIDTH_UPSIDE),
         # floor over ceiling: buys the tenth percentile, actively avoids the bust tail, and drafts
@@ -375,9 +522,33 @@ def personalities() -> dict[str, Personality]:
         #     durability buyer: his gap to `balanced` is +0.010 / −0.001 / −0.009 as the draft
         #     count grows, i.e. noise around zero. The done-bar therefore A/Bs the weight against
         #     itself-off rather than against `balanced`; see `steps/phase16_13_personalities.py`.
+        # ★ 16.14R step 4 — the objective is **lowest downside**, not *highest floor*.
+        #
+        # The user's objection to this seat in the 2x5 mock was that it drafted boom-or-bust
+        # players (Zay Flowers, a post-injury Malik Nabers, the rookie Carnell Tate, Quentin
+        # Johnston, Jaydon Blue). Two-thirds of that was T19 — the board's `floor` column was
+        # inverted at depth, so the seat drafted exactly what it was told was safest — but
+        # repairing the input does not by itself make the seat *risk-averse*, because "highest
+        # floor" and "lowest downside" are different objectives. This is the second half:
+        #
+        #   `floor`      +  the repaired retention signal (T19)
+        #   `tail_risk`  -  an explicit penalty on the q90-q10 spread. A wide outcome is what
+        #                   boom-or-bust *is*; a manager who wants certainty pays to avoid it,
+        #                   and this is the only weight that prices width directly.
+        #   `rookie`     -  via `override`, not `scale`: the fitted beta is +0.020, so scaling
+        #                   cannot reach a meaningful negative and would silently do nothing.
+        #                   A rookie has no NFL floor to buy, whatever his projection says.
+        #   `durability` +  availability net of level (T17), the closest thing the frozen stack
+        #                   has to an injury-return penalty — a player the injury model expects to
+        #                   miss time reads low here whether or not anyone labelled the injury.
+        #   `level_floor`   and the guard that makes the whole thing honest: without a minimum
+        #                   projected level, "lowest downside" is won by a player with no upside,
+        #                   no downside and no role. Reliably useless must not beat solid.
         "safe_floor": Personality(
             "safe_floor",
-            signal_weights={"floor": 0.45, "durability": 0.30, "bust_prob": -0.35},
+            override={"rookie": -0.35},
+            signal_weights={"floor": 0.45, "durability": 0.30, "tail_risk": -0.40},
+            level_floor=-0.60, level_floor_penalty=0.9,
             temperature=0.8, hype_gain=0.5, max_reach_picks=REACH_SAFE,
             width_mult=WIDTH_SAFE),
         # the narrative seat, and the channel 16.15 routes the 16.9 shock through. `fav_teams` is
@@ -390,9 +561,40 @@ def personalities() -> dict[str, Personality]:
                              signal_weights={"cos": 0.35}, hype_gain=2.5,
                              max_reach_picks=REACH_HOMER, width_mult=WIDTH_HOMER),
         # -- 11.3 library extras (unchanged) ----------------------------------------------------
+        # ★ 16.14R step 6 — the value hawk REPLACES the homer (reversing the 2026-07-23 cut).
+        # Not a `signal_weights` seat: see `make_value_hawk_pick_fn` for why one cannot work.
+        # Its reach window is a multiple of the realized human p95 (`window_mult`, swept in step 7);
+        # `homer`'s `fandom` scaling stays fitted-but-unused rather than deleted.
+        "value_hawk": Personality(
+            "value_hawk",
+            objective="portfolio_ce",
+            context_weights=dict(DEFAULT_CONTEXT_WEIGHTS),
+            reach_budget=value_hawk_budget(1.0),
+            sample=False, hype_gain=0.0, width_mult=1.0),
         "chalk": Personality("chalk", override=zero_out, temperature=0.6, width_mult=0.55),
         "zero_rb": Personality("zero_rb", early_pos_penalty={"RB": 2.5}),
-        "reacher": Personality("reacher", temperature=2.2, width_mult=WIDTH_REACHER),
+        # ★ 16.14R step 5 — DIRECTION first, then the budget.
+        #
+        # The user's objection was that this seat's reaches "are nonsensical and have no basis",
+        # and the definition said exactly that: `Personality("reacher", temperature=2.2,
+        # width_mult=WIDTH_REACHER)` — width with **no `signal_weights` at all**. A hot softmax over
+        # a widening band with zero opinion attached is not a reacher, it is noise with a name, and
+        # it measured as noise (mean `pool_rank` 20.5 against a corpus p90 of 13.1).
+        #
+        # A reacher that reaches **for something** is most of the fix, so the direction comes first
+        # and the budget second — a budget over directed reaching is a different object from a
+        # budget over noise, and capping the second one just makes quieter noise. The channels were
+        # already assigned to this seat by 16.14R; they had simply never been wired:
+        #   rookie  via `override` (fitted beta +0.020 — `scale` cannot reach anything meaningful)
+        #   cos     the 16.5 change-of-situation loudness, inherited from the retired homer
+        #   hype    the 16.10 curated board + the 16.9 per-draft narrative shock (`hype_gain`)
+        # `tail_risk` positive because a reacher is buying the wide outcome, not the safe one.
+        "reacher": Personality(
+            "reacher",
+            override={"rookie": 0.45},
+            signal_weights={"cos": 0.35, "upside": 0.25, "tail_risk": 0.20},
+            hype_gain=2.5, temperature=2.2, width_mult=WIDTH_REACHER,
+            reach_budget=ReachBudget()),
         "rookie_hawk": Personality("rookie_hawk", scale={"rookie": 3.0}),
     }
 
@@ -472,9 +674,33 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
     curve = width_curve if width_curve is not None else getattr(model, "width_curve", WIDTH_CURVE)
     j_adp = cols.index("adp_s") if "adp_s" in cols else None
     b_adp = float(beta[j_adp]) if j_adp is not None else 0.0
+    #: board-wide within-position level z for `level_floor`, computed once (see the note at use).
+    level_z: np.ndarray | None = None
 
     def pick(state, team) -> int:
+        nonlocal level_z
+        if level_z is None and pers.level_floor is not None and "mean" in state.board.columns:
+            # once per draft, over the whole board — see the note where it is applied
+            level_z = np.zeros(len(state.board), float)
+            level_z[:] = pos_z(state.board["mean"], state.board["pos"].to_numpy())
         pool = state.draftable_pool(team)
+        # T21 — the choice-set contract's *position* half. β was fit under `skill_only=True`, so
+        # the simulation must offer the same four positions. Applied AFTER `draftable_pool` and
+        # only when it leaves something: when T20's mandatory-needs filter has already restricted
+        # the pool to K/DST, that restriction wins and this is a no-op. The hard filter completes
+        # the roster; the choice model never sees a position it was not estimated on.
+        skill = pool[pool["pos"].isin(SKILL_POSITIONS)]
+        if not skill.empty:
+            pool = skill
+        # 16.14R step 5b — the reach budget, a hard filter before utility (see `ReachBudget`).
+        # Kept ahead of the band so the budget bounds the *candidate set* rather than fighting the
+        # softmax, and always leaves the least-reachy candidate so a draft can never stall.
+        if pers.reach_budget is not None:
+            allowed = pers.reach_budget.cap(state, team)
+            if np.isfinite(allowed):
+                dev = pool["adp"].to_numpy(float) - float(state.overall_pick)
+                within = pool[dev <= allowed]
+                pool = within if not within.empty else pool.nsmallest(1, "adp")
         k = (band.top_k(state.overall_pick, state.n_teams) if band is not None else fixed_k)
         if k is not None and len(pool) > k:
             pool = pool.nsmallest(k, "adp")
@@ -508,6 +734,20 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
             tilt = tilt + excess
         if pers.signal_weights:
             tilt = tilt + signal_bonus(pool, pers.signal_weights)
+        # 16.14R step 4 — the minimum projected level. A threshold, not a weight: it fires only
+        # below `level_floor` and is flat above it, so it cannot be traded off against a very
+        # attractive floor the way a linear `mean` weight would be.
+        #
+        # ⚠ The z is taken over the **whole board** within position, not over the candidate pool.
+        # Pool-relative was the first implementation and it is wrong in a way that measured as
+        # *inert*: inside a 40-player ADP band the worst candidate is z ~ -1.5 whoever he is, so a
+        # band-relative floor fires on somebody at every pick and is just a level tilt in disguise
+        # — it moved nothing because the ADP term was already declining those players. Board-wide,
+        # "below -0.6 sd of all RBs" means genuinely replacement-level, which is a fact about the
+        # player rather than about who happens to be on the clock beside him.
+        if level_z is not None:
+            tilt = tilt - pers.level_floor_penalty * (
+                level_z[pool.index.to_numpy()] < pers.level_floor)
         if cap is not None:
             tilt = np.clip(tilt, -cap, cap)
 
@@ -531,6 +771,118 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
         g = rng or state.rng
         j = int(g.choice(len(pool), p=pr)) if draw else int(np.argmax(pr))
         return int(pool.index[j])
+
+    return pick
+
+
+# ==================================================================================================
+# 16.14R step 6 — the value hawk: a bounded-window portfolio-CE argmax, not a signal_weights tilt
+# ==================================================================================================
+#: Board context the value hawk prices, in **utility per within-neighbourhood sd**, negative =
+#: avoid. These are the three blind spots step 3 put on the board; see
+#: :data:`~fantasy_quant.draft.enrichment.CONTEXT_COLS`.
+DEFAULT_CONTEXT_WEIGHTS: dict[str, float] = {
+    "role_share": 0.30,        # own your backfield — a contested role is a discount, not a bonus
+    "role_delta": 0.25,        # the signed situation change `cos` could never express
+    "td_regression": -0.30,    # last year's touchdown luck is next year's regression
+}
+
+
+def _local_z(values, key, pos, *, window: int = 24) -> np.ndarray:
+    """Within-position, **neighbourhood-local** z of a board column (see the note below).
+
+    ★ The context columns are partly a level restatement — ``corr(role_share, vbd)`` is +0.88 RB /
+    +0.67 WR and ``corr(td_regression, vbd)`` +0.63 RB — so a flat within-position z would let the
+    value hawk pay twice for the same fact and, worse, would make "avoid TD regression" a tilt away
+    from good players. Standardizing against a player's **ADP neighbours** asks the question that
+    is actually wanted: *more contested / luckier than the players going around him*. Same
+    construction as the T19 shape signals, for the same reason, one layer along.
+    """
+    v = pd.to_numeric(pd.Series(values), errors="coerce").to_numpy(float)
+    k = pd.to_numeric(pd.Series(key), errors="coerce").to_numpy(float)
+    p = np.asarray(pos)
+    out = np.zeros(len(v), float)
+    for g in np.unique(p):
+        idx = np.flatnonzero((p == g) & np.isfinite(v) & np.isfinite(k))
+        if len(idx) < MIN_Z_GROUP:
+            continue
+        order = idx[np.argsort(k[idx], kind="stable")]
+        vv = v[order]
+        n = len(order)
+        w = max(MIN_Z_GROUP, min(int(window), int(n * 0.5)))
+        for i in range(n):
+            nb = vv[max(0, i - w):min(n, i + w + 1)]
+            sd = float(nb.std())
+            out[order[i]] = 0.0 if sd <= 0 else (vv[i] - float(nb.mean())) / sd
+    return out
+
+
+def make_value_hawk_pick_fn(personality: Personality, risk, *, n_teams: int = 10):
+    """``pick(state, team)`` for a seat that drafts the **best available portfolio value**.
+
+    ★ **Why this cannot be a ``signal_weights`` personality, measured rather than argued.**
+    ``signal_bonus`` z-scores *within position*, and within position ``corr(vbd, adp)`` is
+    **−0.955 RB / −0.933 WR / −0.907 TE / −0.859 QB** — so ``pos_z(vbd)`` throws away the only
+    content ``vbd`` has that ADP does not, namely the **cross-position** comparison, and what
+    survives is ADP with a sign flip. Built that way in the 2x5 mock the seat gained +0.065 vbd-z
+    over ``balanced`` and finished **5.5 / 10**, behind ``safe_floor``: a chalk tilt with extra
+    width. The objective has to be **roster-level**, and the repo already has one.
+
+    So this is the **Phase-9 greedy in an opponent seat**: :meth:`RiskModel.effective_rank` scores
+    each candidate by its *marginal* contribution to portfolio CE — value over replacement, minus
+    ``2λσ`` against the same-team covariance this roster already carries, plus the 9.1/9.4 scarcity
+    urgency. It is the same code the user's own optimizer runs, pointed at somebody else's roster,
+    which is exactly what "the manager who always takes the best value on the board" means.
+
+    Two things bound it, and both are the session's own rules:
+
+    * a **reach window** (``personality.reach_budget``) — an unbounded value argmax is not a
+      manager, it is our board with a seat number, and it would reach past every human profile;
+    * **step-3 context**, priced through :func:`_local_z` so the seat is not paying twice for the
+      level it is already maximizing.
+
+    ⚠ **The evaluation trap, restated because it is easy to fall into here:** this seat optimizes
+    our board, so any comparison scored *on our board* it wins by construction. The lockbox already
+    settled that personalization is noise-dominated on realized points. Report its projection
+    ranking as **descriptive**; evaluative claims run on realized points.
+    """
+    weights = dict(personality.context_weights or {})
+
+    def pick(state, team: int) -> int:
+        pool = state.draftable_pool(team)
+        skill = pool[pool["pos"].isin(SKILL_POSITIONS)]
+        if not skill.empty:
+            pool = skill
+        if personality.reach_budget is not None:
+            allowed = personality.reach_budget.cap(state, team)
+            if np.isfinite(allowed):
+                dev = pool["adp"].to_numpy(float) - float(state.overall_pick)
+                within = pool[dev <= allowed]
+                pool = within if not within.empty else pool.nsmallest(1, "adp")
+        if len(pool) == 1:
+            return int(pool.index[0])
+
+        last = state.n_teams * state.rounds
+        nxt = None
+        for p in range(state.overall_pick + 1, last + 1):        # my next turn on the clock
+            rnd0 = (p - 1) // state.n_teams
+            idx = (p - 1) % state.n_teams
+            seat = idx if rnd0 % 2 == 0 else state.n_teams - 1 - idx
+            if seat == team:
+                nxt = p
+                break
+        eff = risk.effective_rank(pool, state.roster(team), None if nxt is None else nxt - 1)
+        eff = np.where(np.isnan(eff), pool["adp"].to_numpy(float), eff)   # ADP fallback
+
+        # step-3 context, neighbourhood-local so it does not re-price the level (see `_local_z`).
+        # `effective_rank` is a *priority rank* (lower = sooner), so a desirable trait subtracts.
+        if weights:
+            adp = pool["adp"].to_numpy(float)
+            pos = pool["pos"].to_numpy()
+            for col, w in weights.items():
+                if col in pool.columns and w:
+                    eff = eff - w * n_teams * _local_z(pool[col], adp, pos)
+        return int(pool.index[int(np.argmin(eff))])
 
     return pick
 
@@ -561,6 +913,25 @@ DEFAULT_ROOM: tuple[str, ...] = (
     "autopilot", "autopilot",                 # every league has someone on autopick or asleep
     "balanced", "balanced", "balanced",       # the fitted average manager is the modal seat
     "upside_chaser", "safe_floor", "homer", "reacher",
+)
+
+
+#: **16.14R step 7 — the ten-seat room a fully simulated mock drafts.** Corpus-weighted:
+#: ``balanced`` (the fitted average manager) dominates, one of each character seat, and — the
+#: change this step exists for — **one** ``autopilot``, not two.
+#:
+#: ★ Two autopilot seats over-represented a behaviour that is **0.2 %** of real seats, and it
+#: mattered: over 60 seeded drafts of the 2x5 mock they finished **1.69 / 10** and won **48.3 %**.
+#: That is not skill, it is **harvested spill** — mean drift −19.8 picks, i.e. they were handed the
+#: value the reaching seats left behind. Halving them fixes both the realism and the spill.
+#:
+#: ``homer`` is out because 16.14R retired it (its narrative channel moved to ``reacher``, and its
+#: ``fandom`` weight is fitted-but-unused rather than deleted); ``chalk`` replaces one ``balanced``
+#: because a near-ADP drafter who is not a *bot* is a real and common seat.
+REALISTIC_ROOM: tuple[str, ...] = (
+    "autopilot",                                       # exactly one, see above
+    "balanced", "balanced", "balanced", "balanced",    # the modal manager
+    "value_hawk", "safe_floor", "reacher", "upside_chaser", "chalk",
 )
 
 

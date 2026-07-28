@@ -21,10 +21,13 @@ from fantasy_quant.draft.enrichment import (
     COS_WEIGHTS,
     DIST_COLS,
     SHAPE_COLS,
+    SHAPE_METHODS,
     VALUE_COLS,
     attach_enrichment,
     enrichment_coverage,
     residual_shape,
+    role_shares,
+    shape_inputs,
 )
 from fantasy_quant.draft.opponent_model import _ADP_SCALE, ALL_FEATURES, OpponentModel
 from fantasy_quant.draft.personalities import (
@@ -346,7 +349,7 @@ def test_autopilot_ignores_the_narrative_shock():
     assert list(plain.pick_log()["player_key"]) == list(shocked.pick_log()["player_key"])
 
 
-_FACE_COLS = ["upside", "floor", "boom_prob", "bust_prob", "games_played_mean", "rookie", "cos"]
+_FACE_COLS = ["upside", "floor", "tail_risk", "games_played_mean", "rookie", "cos"]
 
 
 def test_upside_chaser_skews_to_ceiling_and_youth():
@@ -358,11 +361,17 @@ def test_upside_chaser_skews_to_ceiling_and_youth():
 
 
 def test_safe_floor_skews_to_floor_and_away_from_the_bust_tail():
+    """T19/T22: the "away from the bust tail" half is now measured on ``tail_risk``.
+
+    ``bust_prob`` used to carry it and cannot: on a live board it is the **2022** season's realized
+    rate with 56 % of its values manufactured by ``fillna(0.0)``, so a seat weighting it was
+    tilting on four-year-old data where it was not tilting on nothing.
+    """
     board = _enriched_board(240, seed=7)
     safe = _mean_signal_z(personalities()["safe_floor"], board, _FACE_COLS)
     bal = _mean_signal_z(personalities()["balanced"], board, _FACE_COLS)
     assert safe["floor"] > bal["floor"]
-    assert safe["bust_prob"] < bal["bust_prob"]
+    assert safe["tail_risk"] < bal["tail_risk"]
 
 
 def test_upside_and_safe_disagree_with_each_other():
@@ -373,7 +382,7 @@ def test_upside_and_safe_disagree_with_each_other():
     safe = _mean_signal_z(personalities()["safe_floor"], board, _FACE_COLS)
     assert up["upside"] > safe["upside"]
     assert safe["floor"] > up["floor"]
-    assert safe["bust_prob"] < up["bust_prob"]
+    assert safe["tail_risk"] < up["tail_risk"], "the ceiling-chaser must want the wider outcome"
 
 
 def test_homer_reaches_for_his_own_team_when_one_is_set():
@@ -473,26 +482,43 @@ def test_every_weightable_signal_survives_prepare_board():
         f"simulator.PASSTHROUGH_COLS or they are inert")
 
 
-def test_durability_is_a_shape_signal_orthogonal_to_level():
+def test_durability_is_a_shape_signal_not_a_level_proxy():
     """T17 turned ``games_played_mean`` into a real forecast **and** into a level proxy; the
-    residualized column is what a durability tilt must weight."""
+    level-controlled column is what a durability tilt must weight.
+
+    ★ **This asserts the signal's meaning, not the estimator's construction.** It used to demand
+    ``corr(durability, mean) < 1e-9`` — true *by construction* of an OLS residual and of nothing
+    else. T19 replaced that estimator (a residual of a censored variable is not a shape signal at
+    all), and the exact-zero assertion failed on an estimator that is **better** on the real board:
+    ``corr(durability, adp)`` runs +0.63/+0.19/+0.29/+0.52 by position under ``linear`` and
+    +0.02/−0.05/−0.05/+0.00 under the shipped ``rank``. A test that pins the mechanism fails the
+    upgrade and passes the bug — the same lesson T17 itself recorded.
+
+    The fixture is also realistic on purpose. A *noiseless monotone* input is the one case a local
+    rank provably cannot detrend (every window sees the same ordering), and the old fixture was
+    exactly that. Real boards are not, which is why the measured numbers above are what they are.
+    """
+    rng = np.random.default_rng(3)
+    n = 40
     board = pd.DataFrame({
-        "position": ["RB"] * 8 + ["WR"] * 8,
-        "mean": np.r_[np.linspace(200, 60, 8), np.linspace(210, 70, 8)],
-        # games tracks the level (the post-T17 defect) plus a small idiosyncratic part
-        "games_played_mean": np.r_[np.linspace(16, 9, 8), np.linspace(16, 9, 8)]
-        + np.tile([0.9, -0.9], 8),
-        "q90": np.r_[np.linspace(300, 90, 8), np.linspace(310, 95, 8)],
-        "q10": np.r_[np.linspace(120, 30, 8), np.linspace(130, 35, 8)],
+        "position": ["RB"] * n + ["WR"] * n,
+        "adp": np.r_[np.linspace(5, 190, n), np.linspace(4, 195, n)],
+        "mean": np.r_[np.linspace(230, 40, n), np.linspace(240, 45, n)] + rng.normal(0, 12, 2 * n),
     })
+    # games tracks the level (the post-T17 defect) with real idiosyncratic spread on top
+    board["games_played_mean"] = np.clip(
+        6.0 + 0.04 * board["mean"] + rng.normal(0, 1.8, 2 * n), 1, 17)
+    board["q90"] = 1.40 * board["mean"] + rng.normal(0, 18, 2 * n)
+    board["q10"] = np.clip(0.30 * board["mean"] + rng.normal(0, 22, 2 * n), 0, None)
+
     shape = residual_shape(board)
     assert "durability" in shape.columns
-    for _pos, g in board.assign(d=shape["durability"]).groupby("position"):
-        assert abs(np.corrcoef(g["d"], g["mean"])[0, 1]) < 1e-9      # level removed by construction
-    # and the raw column is NOT orthogonal — which is the whole reason the residual exists
-    raw = board.groupby("position").apply(
-        lambda g: np.corrcoef(g["games_played_mean"], g["mean"])[0, 1], include_groups=False)
-    assert (raw > 0.9).all()
+    wide = board.assign(d=shape["durability"])
+    for _pos, g in wide.groupby("position"):
+        raw = abs(np.corrcoef(g["games_played_mean"], g["mean"])[0, 1])
+        res = abs(np.corrcoef(g["d"], g["mean"])[0, 1])
+        assert raw > 0.5, "fixture must reproduce the post-T17 level entanglement"
+        assert res < 0.5 * raw, f"level not controlled: raw {raw:.2f} -> {res:.2f}"
 
 
 def test_safe_floor_weights_the_residual_not_the_raw_games_column():
@@ -663,3 +689,236 @@ def test_the_story_routes_in_proportion_to_seat_gain():
     rho = pd.Series(share).corr(pd.Series(norm), method="spearman")
     assert rho > 0.7, f"story did not route in proportion to gain (spearman {rho:+.3f})"
     assert share[np.argmax(norm)] > share[np.argmin(norm)]
+
+
+# ==================================================================================================
+# T21 — the choice-set contract's position half
+# ==================================================================================================
+def test_simulation_and_fit_share_one_position_contract():
+    """Fit and simulation must name the **same** candidate positions, from one constant.
+
+    The Session-G guard in the other direction (``CHOICE_TOP_K``) already exists; this is its
+    position twin. ``build_choice_frame(skill_only=True)`` — the default the shipped beta was fit
+    under — and ``make_opponent_pick_fn`` now both read :data:`SKILL_POSITIONS`, so a future edit
+    to one cannot silently widen the other.
+    """
+    import inspect
+
+    from fantasy_quant.draft import opponent_model
+    from fantasy_quant.draft import personalities as pers_mod
+
+    assert opponent_model.SKILL_POSITIONS == ("QB", "RB", "WR", "TE")
+    src = inspect.getsource(pers_mod.make_opponent_pick_fn)
+    assert "SKILL_POSITIONS" in src, "the simulator must band on the fitted position set"
+    assert pers_mod.SKILL_POSITIONS is opponent_model.SKILL_POSITIONS
+
+
+def test_the_model_never_nominates_a_kicker():
+    """T21's symptom, pinned: a fitted beta estimated on skill players only cannot pick one.
+
+    ``value_hawk`` took Brandon Aubrey (K, ADP 128) at pick 119 in the 2x5 mock because the
+    simulator banded the whole board while the fit saw four positions. Kickers are rare enough in
+    15 rounds that this reads as a handful of odd picks rather than a shifted distribution — an
+    aggregate metric cannot see an occasional impossible event, so it needs its own assertion.
+    """
+    board = _enriched_board(180, seed=5)
+    board.loc[board.index[:20], "position"] = "PK"        # a fat band of kickers, mid-board
+    pick_fn = make_opponent_pick_fn(_model(), personalities()["balanced"])
+    res = simulate_draft(board, n_teams=10, rounds=8,     # rounds < starters: no forcing
+                         opponent_pick_fn=pick_fn,
+                         your_pick_fn=lambda st: int(st.draftable_pool(st.your_team).index[0]),
+                         seed=3)
+    log = res.pick_log()
+    assert not log[~log["is_you"]]["pos"].isin(("K", "DST")).any()
+
+
+# ==================================================================================================
+# T19 — the repaired shape signals
+# ==================================================================================================
+def test_a_censored_q10_does_not_invert_the_floor_signal():
+    """T19, as an opposition: censoring must not make the *safety* signal prefer *deeper* players.
+
+    The board reproduces the real one's defect — ``q10`` floored at 0 for the deep half — and the
+    assertion is the one the shipped ``linear`` estimator fails: ``corr(floor, adp) <= 0``.
+    """
+    rng = np.random.default_rng(11)
+    n = 60
+    adp = np.linspace(2, 200, n)
+    mean = np.clip(300 - 1.4 * adp + rng.normal(0, 15, n), 5, None)
+    q10 = np.clip(0.45 * mean - 55 + rng.normal(0, 12, n), 0, None)   # censors at depth
+    board = pd.DataFrame({
+        "position": ["RB"] * n, "adp": adp, "mean": mean, "q10": q10,
+        "q90": 1.5 * mean + rng.normal(0, 20, n),
+        "games_played_mean": np.clip(6 + 0.03 * mean + rng.normal(0, 2, n), 1, 17),
+    })
+    censored_share = float((q10 == 0).mean())
+    assert censored_share > 0.25, "fixture must actually censor"
+
+    shipped = residual_shape(board, method="linear")["floor"]
+    fixed = residual_shape(board)["floor"]
+    assert np.corrcoef(shipped, adp)[0, 1] > 0, "fixture must reproduce the T19 inversion"
+    assert np.corrcoef(fixed, adp)[0, 1] <= 0, "repaired floor still prefers deeper players"
+
+
+def test_shape_inputs_are_scale_free_ratios():
+    """The resolution was the *scale*, not the fit — a censored q10 lands at the bottom of a
+    bounded ratio, where it belongs, instead of at the top of a residual."""
+    board = pd.DataFrame({
+        "position": ["RB"] * 3, "adp": [10.0, 50.0, 150.0], "mean": [200.0, 120.0, 40.0],
+        "q10": [90.0, 30.0, 0.0], "q90": [320.0, 210.0, 95.0],
+        "games_played_mean": [15.0, 12.0, 8.0],
+    })
+    raw = shape_inputs(board)
+    assert raw["floor"].iloc[2] == 0.0, "a censored player has the worst possible relative floor"
+    assert raw["floor"].iloc[0] > raw["floor"].iloc[1] > raw["floor"].iloc[2]
+    # tail_risk is the (q90 - q10)/mean spread 16.14R step 4 asks for by name
+    assert raw["tail_risk"].iloc[2] > raw["tail_risk"].iloc[0]
+
+
+def test_shape_methods_are_all_runnable_and_named():
+    """Every documented method must actually run — the dead ends are kept *runnable* so the
+    before/after in ``steps/phase16_14r_2_floor.py`` stays reproducible, not just described."""
+    board = _enriched_board(120, seed=2)
+    for m in SHAPE_METHODS:
+        out = residual_shape(board, method=m)
+        assert list(out.columns) == list(SHAPE_COLS)
+        assert out["floor"].notna().sum() > 0
+    with pytest.raises(ValueError, match="unknown shape method"):
+        residual_shape(board, method="nope")
+
+
+def test_tail_risk_replaces_the_stale_boom_bust_weights():
+    """T22: no shipped personality may weight a column four seasons stale on a live board."""
+    for name in ("safe_floor", "upside_chaser"):
+        w = personalities()[name].signal_weights
+        assert "bust_prob" not in w and "boom_prob" not in w, f"{name} still weights a stale column"
+        assert "tail_risk" in w
+    # and they want opposite things from it
+    assert personalities()["safe_floor"].signal_weights["tail_risk"] < 0
+    assert personalities()["upside_chaser"].signal_weights["tail_risk"] > 0
+
+
+# ==================================================================================================
+# 16.14R step 3 — the derived context columns
+# ==================================================================================================
+def test_role_share_is_a_share_of_the_team_position_group():
+    """A bell-cow owns his team's positional projection; a committee splits it."""
+    board = pd.DataFrame({
+        "gsis_id": [f"00-{i}" for i in range(5)],
+        "name": ["Bell Cow", "Split A", "Split B", "Other QB", "Lone TE"],
+        "position": ["RB", "RB", "RB", "QB", "TE"],
+        "team": ["AAA", "BBB", "BBB", "AAA", "AAA"],
+        "adp": [5.0, 40.0, 45.0, 60.0, 80.0],
+        "mean": [250.0, 120.0, 110.0, 300.0, 150.0],
+        "pos": ["RB", "RB", "RB", "QB", "TE"],
+    })
+
+    class _FakeCon:
+        def execute(self, *_a, **_k):
+            class _R:
+                def df(self_inner):
+                    return pd.DataFrame(columns=["gsis_id", "team", "pos", "pts"])
+            return _R()
+
+    out = role_shares(_FakeCon(), 2026, board)
+    assert out.loc[0, "role_share"] == pytest.approx(1.0)          # sole RB on his team
+    assert out.loc[1, "role_share"] == pytest.approx(120 / 230)    # half a committee
+    assert out.loc[2, "role_share"] == pytest.approx(110 / 230)
+    assert out["role_delta"].isna().all(), "no prior season -> unknown, not zero"
+
+
+def test_context_columns_are_weightable_and_default_off():
+    """Step 3's contract: on the board, in ``SIGNAL_COLS``, and weighted by nobody by default."""
+    from fantasy_quant.draft.enrichment import CONTEXT_COLS
+
+    for c in CONTEXT_COLS:
+        assert c in SIGNAL_COLS, f"{c} must be weightable"
+        assert c in PASSTHROUGH_COLS, f"{c} must survive _prepare_board"
+    for name, pers in personalities().items():
+        for c in CONTEXT_COLS:
+            assert c not in pers.signal_weights, f"{name} weights {c} by default"
+
+
+# ==================================================================================================
+# 16.14R steps 4-7 — the reworked seats
+# ==================================================================================================
+def test_reach_budget_counts_from_the_draft_log_not_from_memory():
+    """The budget is stateful per seat but re-derived every pick, so a clone cannot diverge."""
+    from fantasy_quant.draft.personalities import ReachBudget
+
+    b = ReachBudget(round_ceiling=None)
+    board = _enriched_board(120, seed=1)
+    st = simulate_draft(board, n_teams=10, rounds=15, seed=0)
+    st.log = [
+        {"team": 3, "adp": 100.0, "overall_pick": 30.0},     # +70 -> large
+        {"team": 3, "adp": 40.0, "overall_pick": 28.0},      # +12 -> medium
+        {"team": 4, "adp": 200.0, "overall_pick": 20.0},     # another seat's, ignored
+    ]
+    assert b.used(st, 3) == (1, 1)
+    assert b.used(st, 4) == (1, 0)
+
+
+def test_reach_budget_gates_by_round_and_by_count():
+    from fantasy_quant.draft.personalities import ReachBudget
+
+    b = ReachBudget(round_ceiling=None)
+    board = _enriched_board(120, seed=1)
+    st = simulate_draft(board, n_teams=10, rounds=15, seed=0)
+    st.log = []
+
+    st.overall_pick = 5                                       # round 1: clamped early
+    assert b.cap(st, 0) == b.early_max_picks
+    st.overall_pick = 45                                      # round 5: a swing is allowed
+    assert b.cap(st, 0) == float("inf")
+    st.log = [{"team": 0, "adp": 200.0, "overall_pick": 40.0}] * 3   # three swings spent
+    assert b.cap(st, 0) == b.large_picks
+
+
+def test_the_round_ceiling_bounds_how_far_not_just_how_often():
+    """A count budget cannot bound magnitude; ``CORPUS_REACH_P95`` is why the seat is possible."""
+    from fantasy_quant.draft.personalities import CORPUS_REACH_P95, ReachBudget
+
+    b = ReachBudget()
+    board = _enriched_board(120, seed=1)
+    st = simulate_draft(board, n_teams=10, rounds=15, seed=0)
+    st.log = []
+    st.overall_pick = 45                                      # round 5, budget says "unlimited"
+    assert b.cap(st, 0) == CORPUS_REACH_P95[4]                # ... the ceiling says otherwise
+    assert len(CORPUS_REACH_P95) == 15
+
+
+def test_level_floor_is_a_threshold_over_the_board_not_the_pool():
+    """A pool-relative floor fires on somebody at every pick and is a level tilt in disguise."""
+    board = _enriched_board(200, seed=4)
+    p = replace(personalities()["safe_floor"], level_floor=5.0, level_floor_penalty=50.0)
+    res = simulate_draft(board, n_teams=10, rounds=6, seed=1,
+                         opponent_pick_fn=make_opponent_pick_fn(_model(), p))
+    assert len(res.pick_log()) == 60, "an extreme floor must not stall or crash the draft"
+
+
+def test_value_hawk_is_not_a_signal_weights_seat():
+    """Open decision #1, pinned: ``pos_z(vbd)`` deletes VBD's only non-ADP content."""
+    vh = personalities()["value_hawk"]
+    assert vh.objective == "portfolio_ce"
+    assert not vh.signal_weights, "a signal_weights value hawk is a chalk tilt with extra width"
+    assert vh.context_weights, "it must price the step-3 blind spots"
+
+
+def test_a_portfolio_ce_seat_without_a_risk_model_fails_loudly():
+    """*An inert thing still passes* — so this refuses to run instead of drafting as balanced."""
+    from fantasy_quant.draft import mock as mock_mod
+
+    room = mock_mod.full_room(("value_hawk", *["balanced"] * 9), n_teams=10)
+    with pytest.raises(ValueError, match="portfolio_ce"):
+        mock_mod.assert_room_objectives(room, None)
+    mock_mod.assert_room_objectives(room, object())            # any risk model satisfies it
+
+
+def test_realistic_room_has_one_autopilot_and_ten_seats():
+    """Step 7's composition decision, pinned with the reason it was made."""
+    from fantasy_quant.draft.personalities import REALISTIC_ROOM
+
+    assert len(REALISTIC_ROOM) == 10
+    assert REALISTIC_ROOM.count("autopilot") == 1, "two autopilot seats manufacture their own spill"
+    assert "homer" not in REALISTIC_ROOM, "16.14R retired the homer in favour of the value hawk"
+    assert "value_hawk" in REALISTIC_ROOM

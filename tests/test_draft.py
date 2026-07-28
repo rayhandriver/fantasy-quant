@@ -110,3 +110,83 @@ def test_rejects_unavailable_pick():
         return 999999  # not on the board
     with pytest.raises(ValueError, match="unavailable pick"):
         simulate_draft(_synthetic_board(), your_pick_fn=bad, seed=0)
+
+
+# ==================================================================================================
+# T20 — roster legality: the mandatory-needs filter
+# ==================================================================================================
+def _realistic_board(n_skill: int = 45) -> pd.DataFrame:
+    """A board shaped like the real one **in the way T20 depends on**: K/DST sit deep.
+
+    ``_synthetic_board`` interleaves every position from ADP 1, so kickers go at pick 6 and a
+    pure-ADP seat fills its K/DST slots by accident. On a real FFC board kickers start at ADP ~128
+    and defenses at ~95 — which is why no seat ever reached them inside 15 rounds, and why the
+    rule has to exist. A fixture that is easier than reality is a fixture that certifies bugs.
+    """
+    rows, adp = [], 1.0
+    for i in range(n_skill):
+        for pos in ("RB", "WR", "QB", "TE", "WR", "RB"):
+            rows.append({"name": f"{pos}{i}_{adp:.0f}", "position": pos, "adp": adp,
+                         "pos_rank": i + 1, "gsis_id": f"id_{pos}_{i}_{adp:.0f}"})
+            adp += 1.0
+    for i in range(20):                                  # deep, like the real board
+        rows.append({"name": f"K{i}", "position": "K", "adp": 130.0 + i,
+                     "pos_rank": i + 1, "gsis_id": f"id_K_{i}"})
+        rows.append({"name": f"DST{i}", "position": "DEF", "adp": 95.0 + 2 * i,
+                     "pos_rank": i + 1, "gsis_id": None})
+    return pd.DataFrame(rows)
+
+
+def test_mandatory_needs_are_the_non_flexable_starter_slots():
+    """QB/K/DST have no substitute; RB/WR/TE demand is FLEX-coverable and so is never mandatory."""
+    res = simulate_draft(_realistic_board(), n_teams=10, rounds=1, seed=0)
+    need = res.mandatory_needs(3)
+    assert set(need) <= {"QB", "K", "DST"}
+    assert need.get("K") == 1 and need.get("DST") == 1
+    assert "RB" not in need and "WR" not in need and "TE" not in need
+
+
+def test_every_seat_finishes_legal_when_the_draft_is_long_enough():
+    """T20's contract: >=1 K and >=1 DST for **every** seat once ``rounds >= slots.starters``."""
+    res = simulate_draft(_realistic_board(), n_teams=10, rounds=15, seed=7)
+    for t in range(10):
+        counts = res.roster_counts(t)
+        assert counts.get("K", 0) >= 1, f"team {t} has no kicker: {counts}"
+        assert counts.get("DST", 0) >= 1, f"team {t} has no defense: {counts}"
+
+
+def test_without_the_rule_seats_would_finish_illegal():
+    """The defect T20 fixes, pinned: a short draft on the same board leaves the slots empty."""
+    res = simulate_draft(_realistic_board(), n_teams=10, rounds=8, seed=7)
+    assert not res.pick_log()["pos"].isin(("K", "DST")).any()
+
+
+def test_no_forcing_in_a_draft_shorter_than_the_starting_lineup():
+    """A 5-round best-ball has no legal full lineup to protect, so the rule must stay off —
+    forcing a kicker in round 5 would be worse than the hole it fills."""
+    res = simulate_draft(_realistic_board(), n_teams=10, rounds=5, seed=7)
+    drafted = set(res.pick_log()["pos"])
+    assert "K" not in drafted and "DST" not in drafted
+
+
+def test_the_filter_only_bites_at_the_end():
+    """It is a *deadline*, not a preference: the pool is unrestricted while a team has spare picks.
+
+    Asserted on :meth:`DraftState.draftable_pool` rather than on the pick log, because a pure-ADP
+    seat legitimately takes a defense at defense ADP — "a K/DST was drafted early" and "a K/DST was
+    *forced* early" are different events and only the second one is a bug.
+    """
+    res = simulate_draft(_realistic_board(), n_teams=10, rounds=15, seed=7)
+    res.rosters = [[] for _ in range(res.n_teams)]       # rewind to a fresh roster, same board
+    res.available = set(res.board.index)
+
+    pool = res.draftable_pool(0)                          # 15 picks left, 3 mandatory slots
+    assert set(pool["pos"]) > {"K", "DST"}, "pool restricted while the team has spare picks"
+
+    # burn 12 picks on skill players -> 3 left, 3 mandatory (QB/K/DST) -> the deadline
+    skill = res.board[res.board["pos"].isin(("RB", "WR", "TE"))].index[:12]
+    res.rosters[0] = list(skill)
+    res.available -= set(skill)
+    assert res.picks_remaining(0) == 3
+    assert res.mandatory_needs(0) == {"QB": 1, "K": 1, "DST": 1}
+    assert set(res.draftable_pool(0)["pos"]) == {"QB", "K", "DST"}

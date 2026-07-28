@@ -1,0 +1,90 @@
+{
+  "generated": "2026-07-28T05:35:38.488184+00:00",
+  "season": 2026,
+  "board_source": "ffc",
+  "n_offensive_rows": 184,
+  "coverage": {
+    "role_share": 0.9946,
+    "role_delta": 0.8967,
+    "td_regression": 0.8967
+  },
+  "min_coverage": 0.5,
+  "corr_with_vbd": [
+    {
+      "signal": "role_share",
+      "QB": null,
+      "RB": 0.881,
+      "WR": 0.674,
+      "TE": null
+    },
+    {
+      "signal": "role_delta",
+      "QB": -0.064,
+      "RB": 0.312,
+      "WR": 0.085,
+      "TE": -0.239
+    },
+    {
+      "signal": "td_regression",
+      "QB": 0.47,
+      "RB": 0.628,
+      "WR": 0.46,
+      "TE": 0.343
+    }
+  ],
+  "spot_check": {
+    "DK Metcalf": {
+      "on_board": true,
+      "expected_signal": "role_delta",
+      "pos": "WR",
+      "adp": 56.2,
+      "values": {
+        "role_share": 0.358,
+        "role_delta": -0.113,
+        "td_regression": 0.285
+      },
+      "pos_percentile": {
+        "role_share": 0.359,
+        "role_delta": 0.013,
+        "td_regression": 0.667
+      }
+    },
+    "Dylan Sampson": {
+      "on_board": true,
+      "expected_signal": "role_share",
+      "pos": "RB",
+      "adp": 160.7,
+      "values": {
+        "role_share": 0.337,
+        "role_delta": 0.077,
+        "td_regression": -0.003
+      },
+      "pos_percentile": {
+        "role_share": 0.214,
+        "role_delta": 0.411,
+        "td_regression": 0.161
+      }
+    },
+    "James Cook": {
+      "on_board": true,
+      "expected_signal": "td_regression",
+      "pos": "RB",
+      "adp": 13.7,
+      "values": {
+        "role_share": 0.788,
+        "role_delta": 0.134,
+        "td_regression": 0.393
+      },
+      "pos_percentile": {
+        "role_share": 0.786,
+        "role_delta": 0.607,
+        "td_regression": 0.804
+      }
+    }
+  },
+  "verdict": {
+    "all_columns_present": true,
+    "coverage_usable": true,
+    "spot_checks_carry_their_signal": true
+  }
+}

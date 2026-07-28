@@ -1,0 +1,16 @@
+{
+  "n_windows": 36972,
+  "n_drafts": 252,
+  "beh_brier": 0.19517124921152645,
+  "base_brier_default_noise5": 0.35220651268604586,
+  "base_brier_best_tuned": 0.28416824690960046,
+  "best_noise": 36.0,
+  "brier_gain_vs_best": 0.088996997698074,
+  "brier_gain_ci": [
+    0.0802676630544871,
+    0.09957274861959921
+  ],
+  "beats_best_adp_noise": true,
+  "run_w": 0.0,
+  "require_run": null
+}

@@ -1407,6 +1407,135 @@ drafted pool shows the survivor tilts + the enriched tie-break without breaking 
 value hawk beats the room on the *descriptive* projection metric **and that is reported as descriptive**;
 reacher's max reach ≤ 2× balanced's at every round; safe's durability tilt is level-residualized.
 
+---
+
+## ★★ 16.14R — THE EXECUTION ORDER (written 2026-07-27 session 5, after the 2×5 mock room)
+
+> **★ STATUS (2026-07-28): ALL SEVEN STEPS DONE.** Run straight through under a waived §3.7 gate
+> (user instruction). Steps and their artifacts:
+> **1** `adp/boards.py` `include_dst` + `DraftState.mandatory_needs` + `SKILL_POSITIONS` (T20 ☑,
+> T21 ☑) · **2** `steps/phase16_14r_2_floor.py` → `analysis/phase16_14r_floor.json` (T19 ☑, **T22
+> opened**) · **3** `steps/phase16_14r_3_context.py` → `..._context.json` · **4**
+> `steps/phase16_14r_4_safe_floor.py` → `..._safe_floor.json` · **5**
+> `steps/phase16_14r_5_reacher.py` → `..._reacher.json` · **6**
+> `steps/phase16_14r_6_value_hawk.py` → `..._value_hawk.json` · **7**
+> `steps/phase16_14r_7_room.py` → `..._room.json` + `analysis/mock_16_14R_picks.csv`, plus
+> `steps/phase16_14r_signal_report.py` → `analysis/t19_signals.csv`.
+>
+> **Two deviations from the text below, both forced by measurement and both written up in
+> `PLAN.md`/`findings.md`:** step 2's fix was a change of **scale** (ratios to the projected level),
+> not of estimator — Tobit *and* the rank both failed on the raw quantiles; and step 5's per-round
+> corpus-p95 ceiling had to become part of the **mechanism** (`CORPUS_REACH_P95`), because a count
+> budget bounds how *often* a seat reaches and never how *far*.
+
+**Read this before starting 16.14R.** A full 15-round mock was run with **2 seats each of
+autopilot / value_hawk / safe_floor / reacher / balanced** (`analysis/` not written — DEV run;
+driver + CSVs in the session scratchpad, method reproduced in `findings.md` §"The 2×5 mock room").
+The user reviewed all 150 picks by eye and raised three seat-level objections. **All three have a
+measured mechanism, and two of them are defects in things 16.14R was going to build *on top of*.**
+That changes the order: **the signals and the board have to be repaired before any personality is
+re-specified**, or each rework tunes around a broken input.
+
+The seven steps below are the plan of record. **Stop and report after each** (CLAUDE.md rule 7).
+
+### Step 1 — Roster legality + the K/DST guarantee → `adp/boards.py`, `draft/simulator.py`
+User instruction (2026-07-27): *every* seat must finish with at least one K and one DST whenever
+`rounds >= slots.starters`. Today **no seat ever drafts a DST and `autopilot` averages 0.16 kickers**.
+- **1a.** Thread `include_dst` through `_ffc_board`/`resolve_board`, **default OFF**, and turn it on in
+  `mock.room_board`. Team defenses are already in `adp_snapshots` (60 DEF rows for 2026 FFC PPR
+  10-team: SEA 94.7, DEN 100.9, LAR 106.5) and are dropped only by the `gsis_id IS NOT NULL` clause —
+  they carry `ffc_player_id` instead. Everything downstream already supports them: `board_player_key`
+  name-keys defenses *by design*, `canon_pos` maps `DEF→DST`, `DRAFTABLE` includes `DST`.
+  Default-OFF is load-bearing — see Step 1c.
+- **1b.** `DraftState.mandatory_needs(team)` = unfilled **non-flexable** starter demand (QB/K/DST from
+  `RosterSlots.base_demand()` minus `flex_positions`). In `draftable_pool`, when a team's remaining
+  picks equal its unfilled mandatory slots, restrict the pool to those positions. A **hard filter
+  applied before utility** — the same class of object as `BandSpec`, so it does not touch the fitted
+  β's meaning. Gate the whole rule on `rounds >= slots.starters`.
+- **1c.** **Exclude K/DST from the simulation candidate band.** `build_choice_frame(skill_only=True)`
+  — the default the shipped β was fit under — restricts candidates to QB/RB/WR/TE, but the sim bands
+  the *whole board*, so the fitted β can nominate kickers it never saw. That is the Session-G
+  choice-set contract violation in a second home, live today (it is why `value_hawk` took Brandon
+  Aubrey at pick 119). Fixing it is what makes 1a safe: DST goes on the board for the roster rule,
+  never into the choice set.
+- **Done:** a test asserts every seat ends with ≥1 K and ≥1 DST at `rounds=15`, and that **no**
+  forcing happens at `rounds < 9`. Re-run the batch and confirm bars #1/#2 are unmoved.
+
+### Step 2 — Repair `floor` before any personality consumes it → `draft/enrichment.py`
+**`floor` is inverted at depth and this is why `safe_floor` drafts boom-or-bust players.** `floor` is
+`q10` residualized on `mean` within position, but **`q10` is censored at exactly 0 for 42.9 % of
+offensive board rows** (59.0 % past ADP 100, 5.7 % inside ADP 50). Regressing a censored variable on
+level hands the largest positive residuals to players just above the censoring point, so:
+`corr(floor, adp)` = **+0.179 RB / +0.124 WR**. The highest-`floor` RBs on the live board are
+**Jonah Coleman** (ADP 171, mean 35.2, q10 1.3) and **Jaydon Blue** (ADP 140, mean 38.7, q10 1.8);
+the highest-`floor` WR is **Zachariah Branch** (ADP 165). The seat was not misbehaving — those are
+the players the board told it were safest.
+- Replace the linear residualization with a **censoring-aware** fit (Tobit) or a rank-based
+  conditional quantile (q10 percentile within an ADP neighbourhood rather than a global
+  within-position regression).
+- **Also decide `boom_prob`/`bust_prob`:** they are exactly **0 for 64.7 % / 56.0 %** of offensive
+  rows, so `safe_floor`'s `bust_prob: −0.35` — a third of its weight budget — is inert on more than
+  half the board. Either widen the Phase-5 threshold so they discriminate, or drop them from
+  `SIGNAL_COLS`. **Do not leave an inert weight in a shipped personality** (fourth instance of
+  *an inert thing still passes*).
+- **Done (state it as an opposition, per the 16.14 lesson):** `corr(floor, adp) <= 0` within **every**
+  position, and the top-10 `floor` list is not dominated by ADP > 130 players. Report the new
+  top-floor lists to the user before any seat consumes them.
+
+### Step 3 — Board scope: the three things the value hawk is blind to → `draft/enrichment.py`
+This settles **16.14R open decision #3** with evidence. The user's value-hawk objections (DK Metcalf,
+Dylan Sampson, James Cook) are **not mis-weights — they are blind spots**. None of the following is
+on the 16.13 board, so *no* objective function over today's board can avoid those picks:
+1. **Signed** situation change. `cos` exists but is **unsigned**: `COS_WEIGHTS` scores *how loud the
+   story is*, never whether it is good or bad. Rachaad White reads `cos` **1.0** (max) and DK Metcalf
+   **0.6**. Split into magnitude + direction.
+2. **Committee / depth-chart share** (Sampson behind Judkins) — available from `depth_charts`.
+3. **TD-dependency / regression risk** (Cook) — from the Phase-3 efficiency work.
+- Ships as **labelled, read-only, default-OFF** context, per the "level, not the residual" rule.
+- **Done:** coverage report + a spot-check that Sampson/Metcalf/Cook carry the expected signals.
+
+### Step 4 — `safe_floor` rework → `draft/personalities.py`
+Objective becomes **lowest downside**, not *highest residual floor*: the Step-2 floor, an explicit
+penalty on `q90 − q10` spread, rookie and injury-return penalties (Carnell Tate, Malik Nabers), and a
+**minimum projected level** so "reliably useless" cannot win. **Done (opposition form):** `safe_floor`
+and `reacher` disagree on ≥ X % of picks, and its drafted pool shows *lower spread* than `balanced` —
+not merely higher floor.
+
+### Step 5 — `reacher`: direction first, then a reach budget → `draft/personalities.py`
+**The reacher currently has width with no direction.** Its literal definition is
+`Personality("reacher", temperature=2.2, width_mult=WIDTH_REACHER)` — **no `signal_weights` at all**.
+The user's "these reaches are nonsensical and have no basis" is exact: it is a hot softmax over a
+widening band with zero opinion attached. Mean `pool_rank` **20.5** vs a corpus p90 of 13.1.
+- **5a. Direction first** — rookies, the 16.10 hype board, the 16.9 shock (the retired homer's
+  channel, which 16.14R already assigns here). *A reacher that reaches **for something** is most of
+  the fix.*
+- **5b. Then the budget** (user's spec, 2026-07-27): ≤2–3 **large** reaches (>25 picks) permitted only
+  in round 5+; 3–5 **medium** (8–15 picks) in round 3+; rounds 1–3 clamped near `balanced`.
+  ⚠ **Architectural note:** a budget is **stateful per seat**, and `make_opponent_pick_fn` is a
+  stateless softmax today. This needs per-seat draft memory — scope it before starting.
+- **Done:** reacher's max reach ≤ 2× balanced's at *every* round (already in the done-when), plus a
+  hard per-round deviation ceiling at the corpus p95.
+
+### Step 6 — Build `value_hawk` properly → `draft/personalities.py`, `draft/optimizer.py`
+Bounded-window argmax on the value board = the Phase-9 greedy with a reach constraint, **on the
+Step-3 board**. **This resolves 16.14R open decision #1 in favour of portfolio CE, and the argument
+is now measured, not aesthetic:** within position, `corr(vbd, adp)` = **−0.955 RB / −0.924 WR /
+−0.859 QB / −0.907 TE**, and `signal_bonus` z-scores *within position* — so `pos_z(vbd)` destroys
+VBD's only non-ADP content (the cross-position comparison) and the seat becomes a chalk tilt with
+extra width. Measured in the mock: it gained **+0.065** vbd-z over `balanced` and finished **5.5/10**,
+behind `safe_floor`. **A `signal_weights` value hawk cannot work.** CE is roster-level and survives.
+Report its projection ranking as **descriptive** (the evaluation trap, unchanged).
+
+### Step 7 — Room composition + full re-measure
+Drop to **≤1 autopilot**. Over 60 seeded drafts it finished **1.69 / 10** and won **48.3 %** while
+2-of-10 seats over-represents a behaviour that is **0.2 %** of real seats. Re-run all five T15 bars,
+the seat-faithfulness population, and the **16.10 done-bar at 15 rounds to close T16**.
+
+**What the mock already proved about composition (do not re-derive):** swapping `homer` +
+`upside_chaser` for `value_hawk` + a second `safe_floor` moved the open T15 faithfulness gap from
+median `pool_rank` **10.40 → 8.59** (corpus 7.62) and the moderate band **13.5 % → 24.3 %** (corpus
+54.3 %) **with no model change at all**. Some of what reads as a model defect is a composition choice.
+
 ### 16.15 — Mock-room composition + hype coupling + app → `draft/simulator.py`, `app/`
 - **Do:** (a) a **configurable opponent seat-assignment** — a default *realistic mix* over the 9 opponents
   (e.g. a couple Autopilot/Balanced, one each Upside/Safe/Homer/Reacher), user-overridable; (b) **couple the

@@ -38,9 +38,10 @@ DRAFTABLE = ("QB", "RB", "WR", "TE", "K", "DST")
 #: passed through is silently skipped by ``signal_bonus`` and the weight becomes a no-op that still
 #: completes a legal draft. That has now happened three times (``fandom``, ``rookie``,
 #: ``durability``), so ``test_personalities`` asserts the containment.
-PASSTHROUGH_COLS = ("team", "rookie", "boom_prob", "q90", "bust_prob", "q10",
-                    "games_played_mean", "mean", "upside", "floor", "durability", "vbd",
-                    "overall_rank", "cos")
+PASSTHROUGH_COLS = ("team", "rookie", "boom_prob", "q90", "bust_prob", "q10", "q50",
+                    "games_played_mean", "mean", "upside", "floor", "durability", "tail_risk",
+                    "vbd", "overall_rank", "cos", "role_share", "role_delta",
+                    "td_regression")
 
 
 def canon_pos(pos) -> str | None:
@@ -145,10 +146,48 @@ class DraftState:
             return False
         return self.roster_counts(team).get(pos, 0) < self.slots.pos_caps.get(pos, 99)
 
+    def mandatory_needs(self, team: int) -> dict[str, int]:
+        """Unfilled **non-flexable** starter demand — the slots nothing else can cover (QB/K/DST).
+
+        A FLEX slot is satisfiable by any of ``slots.flex_positions``, so RB/WR/TE demand is never
+        *mandatory* in the sense that matters here: a team short at RB still fields a legal lineup.
+        QB, K and DST have no substitute. Returns only the positions still owed something.
+        """
+        counts = self.roster_counts(team)
+        flex = set(self.slots.flex_positions)
+        owed = {p: n - counts.get(p, 0) for p, n in self.slots.base_demand().items()
+                if p not in flex}
+        return {p: n for p, n in owed.items() if n > 0}
+
+    def picks_remaining(self, team: int) -> int:
+        """Picks this team has left in the draft (every seat gets exactly ``rounds``)."""
+        return max(0, self.rounds - len(self.rosters[team]))
+
     def draftable_pool(self, team: int) -> pd.DataFrame:
         """Available players at a position the team is still under its (soft) cap for, ADP-ascending
-        — falls back to the full available board when every under-cap position is exhausted."""
+        — falls back to the full available board when every under-cap position is exhausted.
+
+        ★ **T20 — one hard filter sits in front of the soft caps.** When a team has exactly as many
+        picks left as it has unfilled :meth:`mandatory_needs`, the pool is restricted to those
+        positions, so the draft cannot end with an unfillable starting slot. Before T20 nothing did
+        this: the caps steer a team *away* from over-drafting and never *toward* completing a
+        lineup, so a pure-ADP seat never reached kicker ADP (128–163) inside 15 rounds and no seat
+        ever took a defense at all.
+
+        It is deliberately a **filter applied before utility**, the same class of object as
+        ``BandSpec``: it changes which candidates exist, never what the fitted β thinks of one, so
+        no coefficient is being used outside its estimation conditions. And it is gated on
+        ``rounds >= slots.starters`` — in a short draft (a 5-round best-ball, an 8-round mock)
+        there is no legal full lineup to protect and forcing a kicker in round 5 would be worse
+        than the hole it fills.
+        """
         avail = self.available_board()
+        if self.rounds >= self.slots.starters:
+            need = self.mandatory_needs(team)
+            if need and self.picks_remaining(team) <= sum(need.values()):
+                forced = avail[avail["pos"].isin(need)]
+                if not forced.empty:
+                    return forced
         counts = self.roster_counts(team)
         caps = self.slots.pos_caps
         under = avail["pos"].map(lambda p: counts.get(p, 0) < caps.get(p, 99)).to_numpy()

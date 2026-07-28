@@ -4,7 +4,11 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-26 — **Session G (2/2) terms** (curated-not-backtested · the review gate ·
+> **Last updated:** 2026-07-27 — **the 2×5 mock-room terms** (bottom section: the 2×5 room · censored
+> signal · the level-vs-shape family's fourth and first self-inflicted instance · inert weight · width
+> without direction · reach budget · blind spot vs mis-weight · unsigned situation score · mandatory
+> needs / roster-completion rule · a filter not a data gap · the choice-set contract's second home ·
+> composition is not a model change). _Previously:_ 2026-07-26 — **Session G (2/2) terms** (curated-not-backtested · the review gate ·
 > derived rows / curated claims · partial-coefficient reuse · nesting the functional form · two-sided
 > nomination · velocity / ADP momentum · forward-only · commensurate units · elasticity · below the
 > simulator’s resolution · censoring not dropping · crowding-out · run intensity · sweeping a free
@@ -1501,3 +1505,133 @@ because T15's own register warned that "a change which improves one and quietly 
 the failure mode". It duly caught exactly that: the step-2 spec improved the elite-fall gate and
 11.2's Brier (+0.0708 → +0.0890) while breaking bar #5. **Each metric checked by the person who
 cares about it is the same thing as no check.**
+
+## The 2×5 mock-room terms (2026-07-27, session 5 — signal repair before personality repair)
+
+**the 2×5 room** — a fully-simulated 10-seat mock with **two seats each** of autopilot / value hawk /
+safe floor / reacher / balanced, seats shuffled so a personality is never confounded with a draft
+slot. Distinct from `DEFAULT_ROOM` (nine opponents built to sit *opposite* a human) and from
+`DEFAULT_FULL_ROOM` (ten seats, the T15 measurement composition). Run at 60 seeds because *one draft
+is ten picks per round*.
+
+**censored signal** (T19, the session's headline) — a variable with a hard floor or ceiling that a
+large share of the population sits exactly on. `q10` is **exactly 0 for 42.9 %** of offensive board
+rows. **Regressing a censored variable on a level control and calling the residual a shape signal
+inverts it**: the linear fit predicts a negative value for replacement-level players, so the ones just
+above the censoring point earn the largest positive residuals. Measured effect —
+`corr(floor, adp)` = **+0.179 RB / +0.124 WR**, i.e. the "safety" signal prefers *deeper* players.
+The general caution: **check the ranking a signal produces, not just its coverage** — coverage was
+100 % and the ranking was upside down.
+
+**the level-vs-shape family, fourth instance — and the first self-inflicted one.** `q90`/`q10`
+(16.14) → `games_played_mean` (T17) → `vbd` (this session) → **`floor` (T19)**. T19 is different in
+kind: it was **created by the fix for 16.14**. Residualizing removed the level and left something
+*anti*-correlated with quality in the tail rather than orthogonal to it. *A residualization is not
+free — it is a modelling assumption about the tail.*
+
+**inert weight** — a `signal_weights` entry on a column that cannot fire for most of the board.
+`boom_prob` is exactly 0 for **64.7 %** of offensive rows and `bust_prob` for **56.0 %**, so
+`safe_floor` spends 0.35 of a 1.10 budget on nothing. Fourth instance of *an inert thing still
+passes*. **Assert that a tilt moves something, on the real board, not the fixture.**
+
+**width without direction** — the `reacher`'s actual state: `temperature=2.2` and a wide
+`width_mult`, with **no `signal_weights` at all**. It reaches, and what it reaches for is noise. The
+user's phrase *"nonsensical and have no basis"* is literal, not rhetorical. **Direction is repaired
+before width is budgeted**, because a budget over directed reaching is a different object from a
+budget over noise.
+
+**reach budget** (user spec, 2026-07-27) — bounding a seat by the **count** of deviations in each size
+class per draft rather than by a per-pick ceiling: ≤2–3 large (>25 picks) in round 5+, 3–5 medium
+(8–15 picks) in round 3+, clamped near `balanced` in rounds 1–3. Consequence to scope before
+building: a budget is **stateful per seat**, and `make_opponent_pick_fn` is a stateless softmax today.
+
+**blind spot vs mis-weight** (the value-hawk distinction) — a seat making bad picks because its
+weights are wrong is a *tuning* problem; a seat making bad picks because the board does not carry the
+information is a *scope* problem, and no objective function fixes it. The user's three value-hawk
+objections (signed situation, committee share, TD-regression) are all the second kind. **Diagnose
+which one you have before re-specifying a personality.**
+
+**unsigned situation score** — `cos` measures *how loud a story is*, never whether it is good or bad
+(`COS_WEIGHTS`: team_change 1.0, new_to_league 0.9, room_change 0.6, context_only 0.4). Rachaad White
+reads 1.0 and DK Metcalf 0.6 — one is opportunity, one is competition, and the column cannot tell
+them apart. Splitting it into magnitude + direction is 16.14R Step 3.
+
+**mandatory needs / roster-completion rule** (T20) — unfilled **non-flexable** starter demand
+(`base_demand()` minus `flex_positions` ⇒ QB/K/DST). When a team's remaining picks equal its unfilled
+mandatory slots, the pool is restricted to those positions. Deliberately a **hard filter applied
+before utility** — the same class of object as `BandSpec` — so every pick policy inherits it and the
+fitted β's meaning is untouched. Gated on `rounds >= slots.starters`.
+
+**a filter, not a data gap** — team defenses were absent from every board not because the data was
+missing but because `_ffc_board` requires `gsis_id IS NOT NULL` and defenses key on `ffc_player_id`.
+The data was present and complete the whole time (60 `DEF` rows for 2026 FFC PPR 10-team).
+**Before sourcing new data, check whether the pipeline is discarding what you already have.**
+
+**the choice-set contract, second home** (T21) — `build_choice_frame(skill_only=True)` fits on
+QB/RB/WR/TE while the simulator bands the whole board, so the fitted β nominates kickers it never saw.
+Same failure as Session G's `top_k` mismatch, and it survived for the T15 reason: **an aggregate
+metric cannot see an occasional impossible event.**
+
+**composition is not a model change** — swapping `homer` + `upside_chaser` for `value_hawk` + a second
+`safe_floor` moved T15's open faithfulness gap from median `pool_rank` 10.40 → **8.59** (corpus 7.62)
+and the moderate band 13.5 % → **24.3 %** with no code change at all. *Check what seating alone buys
+before spending a session on the model.*
+
+## 16.14R execution terms (2026-07-27/28) — the signal repair, and what it taught
+
+**shape input (`shape_inputs`)** — the *scale-free ratio* a shape signal is built from before any
+level control: `floor = q10/mean`, `upside = q90/mean`, `tail_risk = (q90−q10)/mean`. T19's actual
+resolution. **The point is the scale, not the estimator**: a censored `q10` has no well-behaved
+*residual* under any likelihood, but it has a perfectly well-behaved *ratio* — it sits at the
+bottom, which is the honest reading of a 10th percentile of zero. Contrast **level-vs-shape**, whose
+fifth and sixth instances this session produced.
+
+**`tail_risk`** — relative outcome spread `(q90−q10)/mean`, level-controlled. The column that
+actually prices **boom-or-bust**, and the replacement for `bust_prob` (see *stale-by-construction*).
+Weighted **negative** by `safe_floor` and **positive** by `upside_chaser` and `reacher`: width is a
+cost to one manager and the whole point to another (the 15.2 best-ball finding from the other side).
+
+**stale-by-construction (T22)** — a column that is not wrong so much as *four years old*, because
+its upstream reads `max(train_seasons)` and `train_seasons` for a live season is `DEV_SEASONS`.
+`boom_prob`/`bust_prob` on the 2026 board are the **2022** rates with **292 of 306 zeros
+manufactured by `fillna(0.0)`**. Distinct from *inert*: an inert column says nothing, a
+stale-by-construction one says something confident and false — here, that a player absent in 2022
+*never busts*. Check what season a column is actually from before weighting it.
+
+**the one-sided-bar trap** — a bar written to catch a defect in one direction is passed by the same
+defect in the other. T19's bar (`corr(floor, adp) <= 0`) is cleanly passed by an estimator that
+over-corrects into a pure quality tilt, which is 16.14's original defect wearing a PASS. Fixed by
+always running the **oppositions** (`corr(upside, floor)` strongly negative, `corr(floor, mean)`
+near zero) alongside. Sibling of *state your bars as oppositions* and of *the ablation rule*.
+
+**neighbourhood-local z** — standardizing a board column against a player's **ADP neighbours**
+rather than his whole position, so a signal that is partly a level restatement is not paid for
+twice. Used for the step-3 context columns (`corr(role_share, vbd)` +0.88 RB) and, as
+`_neighbourhood_rank`, for the shape signals themselves. ⚠ **The window must be a fraction of the
+group, never a count**: a flat 25 was wider than the whole QB group, so the level control silently
+switched off for QB/TE only.
+
+**deadline filter** — a hard constraint that fires only when a seat's remaining picks equal its
+unfilled non-flexable slots (`DraftState.mandatory_needs`, T20). Guarantees a legal roster without
+becoming a preference: K/DST land in rounds 14–15 exactly as in a real league. Same class of object
+as `BandSpec` and the reach budget — *applied before utility*, so it never changes what a fitted β
+means. Corollary for tests: *"a K/DST was drafted early" and "a K/DST was forced early" are
+different events, and only the second is a bug.*
+
+**reach budget (`ReachBudget`)** — how *often* a seat may reach (count tiers by round), as opposed
+to `width_mult`, which is how *widely* it reaches on every pick. Stateful per seat but **re-derived
+from the draft log each pick**, so a `DraftState.clone` used by a 9.5 rollout cannot silently
+diverge from its parent.
+
+**`CORPUS_REACH_P95`** — frozen per-round 95th percentile of realized human *reaching*, in 10-team
+ADP picks, over 1,144 FFC-boarded corpus drafts. **A count budget bounds how often, never how far**,
+so this is part of the *mechanism*, not only the measurement. ⚠ **Reach side only**:
+`mock.reach_profile` pools |drift|, and its round-15 p90 of 52 picks is mostly elite players
+*falling* — a ceiling on how far a manager may **jump** cannot be read off a number that is mostly
+about players **sliding**.
+
+**resolution-limited sweep** — a parameter sweep whose spread is inside its own noise. 16.14R step
+6's window sweep separates 1.00× from 1.25× by **+13.1 CE against a pooled se of 10.7**, so the
+argmax is a noise draw. Rule adopted: *an unresolved choice does not buy itself a wider licence* —
+default to the tighter constraint and say the sweep failed to resolve. Sibling of T15's
+resolution-limited title objective and of 9.5's 60-sim finding.

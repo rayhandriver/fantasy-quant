@@ -1,0 +1,151 @@
+overall_pick,round,pick_in_round,team,is_you,player_key,player_name,pos,adp,pos_rank,seat_personality,reach_picks
+1,1,1,0,True,00-0036900,Ja'Marr Chase,WR,3.9,2,balanced,2.9
+2,1,2,1,False,00-0038542,Bijan Robinson,RB,1.6,1,autopilot,-0.4
+3,1,3,2,False,00-0039075,Puka Nacua,WR,2.7,1,balanced,-0.3
+4,1,4,3,False,00-0039139,Jahmyr Gibbs,RB,1.8,2,reacher,-2.2
+5,1,5,4,False,00-0033280,Christian McCaffrey,RB,5.1,3,upside_chaser,0.1
+6,1,6,5,False,00-0039040,De'Von Achane,RB,9.5,5,safe_floor,3.5
+7,1,7,6,False,00-0037248,James Cook III,RB,13.7,7,balanced,6.7
+8,1,8,7,False,00-0036963,Amon-Ra St. Brown,WR,7.2,4,chalk,-0.8
+9,1,9,8,False,00-0036322,Justin Jefferson,WR,10.3,5,value_hawk,1.3
+10,1,10,9,False,00-0040122,Ashton Jeanty,RB,11.9,6,balanced,1.9
+11,2,1,9,False,00-0037238,Drake London,WR,12.8,7,balanced,1.8
+12,2,2,8,False,00-0039064,Zay Flowers,WR,25.6,12,value_hawk,13.6
+13,2,3,7,False,00-0036358,CeeDee Lamb,WR,10.6,6,chalk,-2.4
+14,2,4,6,False,00-0037239,Chris Olave,WR,20.9,10,balanced,6.9
+15,2,5,5,False,00-0038543,Jaxon Smith-Njigba,WR,5.9,3,safe_floor,-9.1
+16,2,6,4,False,00-0035659,Terry McLaurin,WR,36.2,18,upside_chaser,20.2
+17,2,7,3,False,00-0036223,Jonathan Taylor,RB,7.7,4,reacher,-9.3
+18,2,8,2,False,LOV121782,Jeremiyah Love,RB,22.6,13,balanced,4.6
+19,2,9,1,False,00-0035676,A.J. Brown,WR,13.6,8,autopilot,-5.4
+20,2,10,0,True,00-0038597,Chase Brown,RB,16.3,9,balanced,-3.7
+21,3,1,0,True,00-0036997,Javonte Williams,RB,35.4,17,balanced,14.4
+22,3,2,1,False,00-0032764,Derrick Henry,RB,16.0,8,autopilot,-6.0
+23,3,3,2,False,00-0039067,Rashee Rice,WR,27.3,14,balanced,4.3
+24,3,4,3,False,00-0038134,Kenneth Walker III,RB,22.5,12,reacher,-1.5
+25,3,5,4,False,00-0036912,DeVonta Smith,WR,28.2,16,upside_chaser,3.2
+26,3,6,5,False,00-0040666,Omarion Hampton,RB,17.4,10,safe_floor,-8.6
+27,3,7,6,False,00-0037247,George Pickens,WR,18.5,9,balanced,-8.5
+28,3,8,7,False,00-0036554,Nico Collins,WR,23.4,11,chalk,-4.6
+29,3,9,8,False,00-0034857,Josh Allen,QB,27.9,1,value_hawk,-1.1
+30,3,10,9,False,00-0040124,Tetairoa McMillan,WR,33.3,17,balanced,3.3
+31,4,1,9,False,00-0039338,Brock Bowers,TE,35.7,2,balanced,4.7
+32,4,2,8,False,00-0040126,Colston Loveland,TE,46.8,3,value_hawk,14.8
+33,4,3,7,False,00-0034844,Saquon Barkley,RB,19.8,11,chalk,-13.2
+34,4,4,6,False,00-0039893,Brian Thomas Jr.,WR,83.3,39,balanced,49.3
+35,4,5,5,False,00-0035640,DK Metcalf,WR,56.2,28,safe_floor,21.2
+36,4,6,4,False,00-0031408,Mike Evans,WR,49.6,26,upside_chaser,13.6
+37,4,7,3,False,00-0039361,Bucky Irving,RB,46.6,20,reacher,9.6
+38,4,8,2,False,00-0031381,Davante Adams,WR,40.7,20,balanced,2.7
+39,4,9,1,False,00-0036410,Tee Higgins,WR,27.0,13,autopilot,-12.0
+40,4,10,0,True,00-0038120,Breece Hall,RB,30.3,15,balanced,-9.7
+41,5,1,0,True,00-0037740,Garrett Wilson,WR,28.2,15,balanced,-12.8
+42,5,2,1,False,00-0035700,Josh Jacobs,RB,28.3,14,autopilot,-13.7
+43,5,3,2,False,00-0040784,Quinshon Judkins,RB,49.7,22,balanced,6.7
+44,5,4,3,False,TAT143045,Carnell Tate,WR,62.6,31,reacher,18.6
+45,5,5,4,False,00-0036613,Jaylen Waddle,WR,40.8,21,upside_chaser,-4.2
+46,5,6,5,False,00-0039915,Ladd McConkey,WR,36.7,19,safe_floor,-9.3
+47,5,7,6,False,00-0040663,Harold Fannin Jr.,TE,68.9,5,balanced,21.9
+48,5,8,7,False,00-0039337,Malik Nabers,WR,43.1,22,chalk,-4.9
+49,5,9,8,False,00-0040129,Emeka Egbuka,WR,45.5,23,value_hawk,-3.5
+50,5,10,9,False,00-0040715,Cam Skattebo,RB,37.7,18,balanced,-12.3
+51,6,1,9,False,00-0040128,Tyler Warren,TE,54.3,4,balanced,3.3
+52,6,2,8,False,00-0040719,Bhayshul Tuten,RB,60.2,25,value_hawk,8.2
+53,6,3,7,False,00-0037744,Trey McBride,TE,28.7,1,chalk,-24.3
+54,6,4,6,False,00-0035685,David Montgomery,RB,56.2,23,balanced,2.2
+55,6,5,5,False,00-0037840,Kyren Williams,RB,32.8,16,safe_floor,-22.2
+56,6,6,4,False,00-0037228,Jaylen Warren,RB,64.9,26,upside_chaser,8.9
+57,6,7,3,False,00-0036389,Jalen Hurts,QB,95.6,11,reacher,38.6
+58,6,8,2,False,00-0036442,Joe Burrow,QB,46.9,2,balanced,-11.1
+59,6,9,1,False,00-0036973,Travis Etienne Jr.,RB,39.9,19,autopilot,-19.1
+60,6,10,0,True,00-0034827,DJ Moore,WR,64.9,33,balanced,4.9
+61,7,1,0,True,00-0040735,Luther Burden III,WR,45.8,24,balanced,-15.2
+62,7,2,1,False,00-0036275,D'Andre Swift,RB,47.5,21,autopilot,-14.5
+63,7,3,2,False,00-0038997,Josh Downs,WR,86.4,42,balanced,23.4
+64,7,4,3,False,00-0034960,Jakobi Meyers,WR,96.2,45,reacher,32.2
+65,7,5,4,False,00-0039849,Marvin Harrison Jr.,WR,64.4,32,upside_chaser,-0.6
+66,7,6,5,False,00-0033921,Chris Godwin Jr.,WR,78.7,37,safe_floor,12.7
+67,7,7,6,False,00-0037240,Jameson Williams,WR,48.5,25,balanced,-18.5
+68,7,8,7,False,00-0034796,Lamar Jackson,QB,55.8,3,chalk,-12.2
+69,7,9,8,False,00-0040734,TreVeyon Henderson,RB,58.0,24,value_hawk,-11.0
+70,7,10,9,False,00-0033077,Dak Prescott,QB,59.7,4,balanced,-10.3
+71,8,1,9,False,00-0034348,Courtland Sutton,WR,71.9,35,balanced,0.9
+72,8,2,8,False,00-0039851,Drake Maye,QB,63.3,5,value_hawk,-8.7
+73,8,3,7,False,00-0035261,Tony Pollard,RB,71.2,27,chalk,-1.8
+74,8,4,6,False,00-0036875,Rhamondre Stevenson,RB,71.5,28,balanced,-2.5
+75,8,5,5,False,00-0039919,Rome Odunze,WR,54.0,27,safe_floor,-21.0
+76,8,6,4,False,00-0036555,Chuba Hubbard,RB,79.5,31,upside_chaser,3.5
+77,8,7,3,False,00-0038996,Tucker Kraft,TE,73.2,7,reacher,-3.8
+78,8,8,2,False,00-0038124,Christian Watson,WR,59.9,30,balanced,-18.1
+79,8,9,1,False,00-0037664,Alec Pierce,WR,59.9,29,autopilot,-19.1
+80,8,10,0,True,00-0039910,Jayden Daniels,QB,86.9,9,balanced,6.9
+81,9,1,0,True,00-0036139,Rico Dowdle,RB,78.8,30,balanced,-2.2
+82,9,2,1,False,00-0036252,Michael Pittman Jr.,WR,70.9,34,autopilot,-11.1
+83,9,3,2,False,00-0039894,Xavier Worthy,WR,98.6,47,balanced,15.6
+84,9,4,3,False,TYS405541,Jordyn Tyson,WR,83.8,40,reacher,-0.2
+85,9,5,4,False,00-0038935,Brenton Strange,TE,153.7,18,upside_chaser,68.7
+86,9,6,5,False,00-0038559,Michael Wilson,WR,82.6,38,safe_floor,-3.4
+87,9,7,6,False,00-0039065,Sam LaPorta,TE,72.9,6,balanced,-14.1
+88,9,8,7,False,00-0036355,Justin Herbert,QB,80.1,7,chalk,-7.9
+89,9,9,8,False,00-0036970,Kyle Pitts Sr.,TE,85.2,8,value_hawk,-3.8
+90,9,10,9,False,00-0036407,Jerry Jeudy,WR,137.7,62,balanced,47.7
+91,10,1,9,False,00-0033293,Aaron Jones Sr.,RB,91.9,33,balanced,0.9
+92,10,2,8,False,PRI206342,Jadarian Price,RB,72.8,29,value_hawk,-19.2
+93,10,3,7,False,00-0037816,Romeo Doubs,WR,103.8,50,chalk,10.8
+94,10,4,6,False,00-0038544,Quentin Johnston,WR,97.1,46,balanced,3.1
+95,10,5,5,False,00-0030506,Travis Kelce,TE,93.9,9,safe_floor,-1.1
+96,10,6,4,False,00-0034753,Mark Andrews,TE,129.6,13,upside_chaser,33.6
+97,10,7,3,False,00-0037291,Jalen Nailor,WR,135.8,61,reacher,38.8
+98,10,8,2,False,00-0035710,Daniel Jones,QB,159.8,23,balanced,61.8
+99,10,9,1,False,00-0038606,Parker Washington,WR,73.4,36,autopilot,-25.6
+100,10,10,0,True,00-0037261,Khalil Shakir,WR,102.1,49,balanced,2.1
+101,11,1,0,True,00-0034855,Baker Mayfield,QB,129.3,17,balanced,28.3
+102,11,2,1,False,00-0033873,Patrick Mahomes,QB,74.8,6,autopilot,-27.2
+103,11,3,2,False,00-0038041,Jake Ferguson,TE,118.0,11,balanced,15.0
+104,11,4,3,False,LEM694125,Makai Lemon,WR,106.3,51,reacher,2.3
+105,11,5,4,False,00-0038611,Chris Rodriguez Jr.,RB,154.4,46,upside_chaser,49.4
+106,11,6,5,False,00-0040730,RJ Harvey,RB,90.3,32,safe_floor,-15.7
+107,11,7,6,False,00-0040242,Jacory Croskey-Merritt,RB,122.9,39,balanced,15.9
+108,11,8,7,False,00-0036158,J.K. Dobbins,RB,94.4,34,chalk,-13.6
+109,11,9,8,False,00-0039146,Jayden Reed,WR,84.9,41,value_hawk,-24.1
+110,11,10,9,False,00-0040162,Dylan Sampson,RB,160.7,50,balanced,50.7
+111,12,1,9,False,00-0038117,Wan'Dale Robinson,WR,89.0,43,balanced,-22.0
+112,12,2,8,False,00-0039344,Jonathon Brooks,RB,127.3,41,value_hawk,15.3
+113,12,3,7,False,00-0040236,Kyle Monangai,RB,105.6,37,chalk,-7.4
+114,12,4,6,False,BEL267684,Chris Bell,WR,160.4,71,balanced,46.4
+115,12,5,5,False,00-0040743,Tyler Shough,QB,151.7,22,safe_floor,36.7
+116,12,6,4,False,00-0036971,Trevor Lawrence,QB,84.9,8,upside_chaser,-31.1
+117,12,7,3,False,00-0037838,Isaiah Likely,TE,136.9,14,reacher,19.9
+118,12,8,2,False,00-0034383,Dalton Schultz,TE,171.8,23,balanced,53.8
+119,12,9,1,False,00-0038994,Jordan Addison,WR,92.6,44,autopilot,-26.4
+120,12,10,0,True,00-0039890,Adonai Mitchell,WR,165.3,76,balanced,45.3
+121,13,1,0,True,00-0033288,George Kittle,TE,106.9,10,balanced,-14.1
+122,13,2,1,False,00-0033106,Jared Goff,QB,94.2,10,autopilot,-27.8
+123,13,3,2,False,COL293648,Jonah Coleman,RB,171.1,56,balanced,48.1
+124,13,4,3,False,00-0034869,Sam Darnold,QB,146.1,19,reacher,22.1
+125,13,5,4,False,00-0036550,Rashod Bateman,WR,162.8,73,upside_chaser,37.8
+126,13,6,5,False,00-0039732,Bo Nix,QB,118.4,15,safe_floor,-7.6
+127,13,7,6,False,00-0026498,Matthew Stafford,QB,104.6,13,balanced,-22.4
+128,13,8,7,False,00-0039738,Blake Corum,RB,120.4,38,chalk,-7.6
+129,13,9,8,False,00-0037545,Rashid Shaheed,WR,130.7,57,value_hawk,1.7
+130,13,10,9,False,00-0037746,Brian Robinson Jr.,RB,163.9,52,balanced,33.9
+131,14,1,9,False,LA Rams Defense,LA Rams Defense,DST,106.5,3,balanced,-24.5
+132,14,2,8,False,00-0037692,Brandon Aubrey,K,128.4,1,value_hawk,-3.6
+133,14,3,7,False,Denver Defense,Denver Defense,DST,100.9,2,chalk,-32.1
+134,14,4,6,False,Detroit Defense,Detroit Defense,DST,140.3,9,balanced,6.3
+135,14,5,5,False,00-0031203,Cairo Santos,K,162.9,14,safe_floor,27.9
+136,14,6,4,False,Seattle Defense,Seattle Defense,DST,94.7,1,upside_chaser,-41.3
+137,14,7,3,False,00-0039409,Cam Little,K,154.1,9,reacher,17.1
+138,14,8,2,False,00-0039498,Harrison Mevis,K,149.9,7,balanced,11.9
+139,14,9,1,False,Houston Defense,Houston Defense,DST,109.6,4,autopilot,-29.4
+140,14,10,0,True,New England Defense,New England Defense,DST,110.9,5,balanced,-29.1
+141,15,1,0,True,00-0033303,Harrison Butker,K,154.9,11,balanced,13.9
+142,15,2,1,False,00-0037224,Cameron Dicker,K,140.3,2,autopilot,-1.7
+143,15,3,2,False,Philadelphia Defense,Philadelphia Defense,DST,127.8,6,balanced,-15.2
+144,15,4,3,False,Cincinnati Defense,Cincinnati Defense,DST,149.6,11,reacher,5.6
+145,15,5,4,False,SMA037753,Trey Smack,K,150.5,8,upside_chaser,5.5
+146,15,6,5,False,NY Jets Defense,NY Jets Defense,DST,173.7,20,safe_floor,27.7
+147,15,7,6,False,00-0032726,Ka'imi Fairbairn,K,143.5,3,balanced,-3.5
+148,15,8,7,False,00-0040074,Tyler Loop,K,156.9,12,chalk,8.9
+149,15,9,8,False,Jacksonville Defense,Jacksonville Defense,DST,132.4,7,value_hawk,-16.6
+150,15,10,9,False,00-0031492,Jason Myers,K,145.6,4,balanced,-4.4

@@ -1,0 +1,15 @@
+{
+  "15": {
+    "n_compared": 20,
+    "n_resolvable": 14,
+    "n_unresolved": 6,
+    "sign_agreement": 1.0,
+    "elasticity_picks_per_claimed_pick": 0.5654901960784309,
+    "mean_abs_shift": 2.634999999999997,
+    "corr_delta_shift": 0.48873356315162203,
+    "corr_delta_rate_shift": 0.4260628753848365,
+    "rounds": 15,
+    "n_drafts": 30,
+    "censored_at": 151.0
+  }
+}

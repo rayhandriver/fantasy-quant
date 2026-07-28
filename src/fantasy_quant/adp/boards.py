@@ -54,16 +54,38 @@ def nearest_board_size(teams: int) -> int:
     return min(FFC_TEAM_SIZES, key=lambda t: abs(t - int(teams)))
 
 
-def _ffc_board(con, season: int, scoring: str, teams: int) -> pd.DataFrame:
+#: FFC's ``position`` value for a team defense. They carry no ``gsis_id`` (they are not players),
+#: so the identity clause below is what has always dropped them — see :func:`_ffc_board`.
+DEF_POSITION = "DEF"
+
+
+def _ffc_board(con, season: int, scoring: str, teams: int,
+               *, include_dst: bool = False) -> pd.DataFrame:
+    """The FFC board for one cell. ``include_dst`` admits team defenses (T20).
+
+    **Default OFF, and that is load-bearing.** `gsis_id IS NOT NULL` is an identity filter that
+    happens to also be a position filter: defenses are people-less, so they carry ``ffc_player_id``
+    instead and fall out. Every fit path in the repo — 11.1's choice frame, 11.2's availability
+    windows, 16.7's drift panel — was estimated on boards without them, and the drift panel's
+    ``OFFENSE`` filter would silently drop them again downstream. Turning this on globally would
+    therefore change nothing measurable and one thing unmeasured: the fitted β's candidate set.
+    So it is opt-in, and only :func:`~fantasy_quant.draft.mock.room_board` opts in — the simulated
+    room is the one consumer that has to produce a **legal roster** rather than a comparable
+    measurement. See T21 for why the choice model must exclude them again on the way back in.
+    """
+    identity = ("(gsis_id IS NOT NULL OR position = ?)" if include_dst else "gsis_id IS NOT NULL")
+    params: list = [int(season), scoring, int(teams)]
+    if include_dst:
+        params.append(DEF_POSITION)
     return con.execute(
-        """
+        f"""
         SELECT gsis_id, name, position, team, adp, stdev, pos_rank, snapshot_date
         FROM adp_snapshots
         WHERE season = ? AND source = 'ffc' AND scoring = ? AND teams = ?
-          AND gsis_id IS NOT NULL
+          AND {identity}
         QUALIFY snapshot_date = MAX(snapshot_date) OVER ()
         """,
-        [int(season), scoring, int(teams)],
+        params,
     ).df()
 
 
@@ -149,15 +171,21 @@ def _ecr_board(con, season: int, scoring: str) -> pd.DataFrame:
 
 
 def resolve_board(con, season: int, scoring: str, teams: int,
-                  *, allow_ecr: bool = True) -> tuple[pd.DataFrame, str]:
+                  *, allow_ecr: bool = True,
+                  include_dst: bool = False) -> tuple[pd.DataFrame, str]:
     """The board for one ``(season, scoring, teams)`` cell, plus the source that answered.
 
     Tries FFC first (the market-realized ADP every earlier phase was built on) and falls back to
     ECR only when FFC published nothing for that season. Returns ``(board, source)`` where
     ``source`` is :data:`FFC`, :data:`ECR`, or ``""`` when neither has it — an empty board is a
     normal, reportable outcome, not an error.
+
+    ``include_dst`` (T20) admits team defenses on the **FFC** path only. ECR boards them under a
+    different vocabulary and no consumer needs them there yet, so an ECR-boarded season is
+    unchanged — a fallback season simply has no defenses, which the roster rule reports rather
+    than papers over.
     """
-    ffc = _ffc_board(con, season, scoring, teams)
+    ffc = _ffc_board(con, season, scoring, teams, include_dst=include_dst)
     if not ffc.empty:
         return ffc, FFC
     if not allow_ecr:
@@ -166,10 +194,11 @@ def resolve_board(con, season: int, scoring: str, teams: int,
     return (ecr, ECR) if not ecr.empty else (ecr, "")
 
 
-def resolve_boards(con, keys, *, allow_ecr: bool = True) -> dict[tuple, tuple[pd.DataFrame, str]]:
+def resolve_boards(con, keys, *, allow_ecr: bool = True,
+                   include_dst: bool = False) -> dict[tuple, tuple[pd.DataFrame, str]]:
     """:func:`resolve_board` over many ``(season, scoring, teams)`` keys, read once each."""
     out: dict[tuple, tuple[pd.DataFrame, str]] = {}
     for season, scoring, teams in {(int(s), str(sc), int(t)) for s, sc, t in keys}:
         out[(season, scoring, teams)] = resolve_board(
-            con, season, scoring, teams, allow_ecr=allow_ecr)
+            con, season, scoring, teams, allow_ecr=allow_ecr, include_dst=include_dst)
     return out

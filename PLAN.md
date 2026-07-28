@@ -1568,3 +1568,113 @@ Also open: **16.9's `NarrativeShock.intercept` is now formally stale** — it is
 units calibrated under the old transform. Not re-fit (16.9 measured it as unidentified; a 50× sweep
 moved the target less than its own noise), but `assert_transportable` now refuses to apply it across
 a spec change.
+
+## 2026-07-27 (session 5) — the 2×5 mock room; 16.14R re-ordered around what it found
+
+User instruction: run a full 15-round mock with **2 seats each of autopilot / value hawk / safe /
+reacher / balanced**, interspersed at random, then report picks by round, rosters by position, and an
+assessment. No sub-step gates for the run itself. Nothing committed to `analysis/`; the driver and
+CSVs live in the session scratchpad, and the method is written up in `findings.md` §"The 2×5 mock
+room".
+
+**One thing had to be resolved to run it at all:** `value_hawk` is not in the shipped library (16.14R
+is spec-agreed, not built). Rather than block, it was approximated run-locally from existing
+machinery — `signal_weights={"vbd": 0.70, "overall_rank": −0.30}`, `temperature 0.85`,
+`width_mult 1.15`, `max_reach_picks 14`. **It finished 5.5/10 and the reason is now the argument that
+settles 16.14R open decision #1.**
+
+**Then the user reviewed all 150 picks by eye and raised three seat-level objections. All three have a
+measured mechanism, and two are defects in things 16.14R was going to build *on top of*.** That is
+what re-ordered the session: **repair the signals and the board before re-specifying any personality**,
+or each rework tunes around a broken input. The ordered plan of record is
+`docs/BUILD_PLAN.md` §"16.14R — THE EXECUTION ORDER" (7 steps, gate after each).
+
+**Decisions taken this session (do not re-litigate):**
+1. **`floor` is repaired before any personality consumes it** (T19). It is not a weighting question —
+   `q10` is censored at 0 for 42.9 % of offensive rows, so the residualization inverts the signal and
+   `corr(floor, adp)` is **positive** for RB/WR. `safe_floor` drafted exactly what the board called
+   safest.
+2. **The board gains signed situation + committee share + TD-regression before the value hawk is
+   built** (16.14R open decision #3, settled). The user's three value-hawk objections are blind
+   spots; no objective over today's board avoids those picks.
+3. **Value hawk's objective is portfolio CE, not VBD** (open decision #1, settled, and the argument is
+   measured not aesthetic): `signal_bonus` z-scores within position and `corr(vbd, adp)` within
+   position is −0.86…−0.96, so `pos_z(vbd)` deletes VBD's only non-ADP content.
+4. **The reacher gets direction before it gets a budget.** It currently has **no `signal_weights` at
+   all** — a hot softmax with zero opinion. The user's budget spec (≤2–3 large reaches in round 5+,
+   3–5 medium in round 3+, clamped rounds 1–3) is adopted, with the noted consequence that a budget is
+   **stateful per seat** and `make_opponent_pick_fn` is stateless today.
+5. **K/DST get a hard roster-legality guarantee** (user instruction, T20): every seat finishes with
+   ≥1 K and ≥1 DST whenever `rounds >= slots.starters`. Implemented as a pool restriction — a hard
+   filter before utility, the same class as `BandSpec` — **not** as a pick-policy tweak, so every
+   policy inherits it and the fitted β's meaning is untouched.
+6. **DST goes on the board `include_dst`-flagged, default OFF** — on for the mock path, off for the
+   fit path and the drift panel, so no T15 measurement moves.
+7. **The default room drops to ≤1 autopilot** (Step 7). It won **48.3 %** of 60 seeded drafts at a
+   mean finish of 1.69/10 while representing 0.2 % of real seats.
+
+**Dead end recorded:** the first hypothesis for `safe_floor`'s bad picks was that rookies reach
+`pos_z` as NaN and get filled with 0 = "neutral" rather than "unknown". **Wrong** — 0 of 31 rookies on
+the 2026 board have a NaN `floor`; Phase 5 covers them. The real cause is censoring, found only by
+printing the top-`floor` lists. *Check the ranking a signal actually produces, not just its coverage.*
+
+**Left open, not blocking:** roster **shape** carries no personality signal (every seat hits the 6-WR
+`pos_caps` ceiling; 5.82–5.99 across the batch). Deliberately **not** registered as tech debt yet —
+it needs a decision on whether shape *should* vary by personality before it can be called a defect.
+
+**T15 remainder, restated so it is not lost:** seat-faithfulness population (Step 7) · per-seat board
+perturbation for the late-round 0.61× narrowness (16.14R direction half) · `NarrativeShock.intercept`
+formally stale, not re-fit because 16.9 measured it unidentified · **T16 not re-measured** — re-run
+the 16.10 done-bar at 15 rounds before marking it ✅ · T18 `avg_reach` still unconsumed.
+
+## 2026-07-27/28 — 16.14R steps 1–7, run straight through
+
+**Instruction:** *"go through the whole 7 step process without stopping until completion"* — the
+§3.7 sub-step gate was **waived for this session** (the Session E/F precedent), and eight decisions
+were taken up front so the run needed no further input.
+
+**Decisions taken (user, before any code):**
+
+| # | question | decision |
+|---|---|---|
+| 1 | how to repair `floor` | **build every estimator, pick by the pre-registered bar** |
+| 2 | `boom_prob`/`bust_prob` | **new enrichment column, Phase 5 untouched** (they are frozen contract) |
+| 3 | who may weight the step-3 context | **any seat may; defaults 0.0 except the value hawk** |
+| 4 | the reacher's reach budget | **recompute from `DraftState` each pick** (no new mutable state) |
+| 5 | the value hawk's window | **sweep {1.00, 1.15, 1.25} and pick by the bar** |
+| 6 | room composition | **corpus-weighted realistic** (1 autopilot, 4 balanced, 5 character seats) |
+| 7 | how the session ends | **leave everything uncommitted** for review |
+| 8 | deliverables | batch re-measure · T19 before/after · a fresh 15-round mock CSV |
+
+**Two assumptions stated and proceeded under**, both since borne out: `X` in step 4's "disagree on
+≥ X % of picks" was **pre-registered at 1/3** before measuring (it came in at 48.7 %), and
+`upside_chaser` was checked for the mirror defect in the same pass (it had it — its `boom_prob`
+weight was the same stale column).
+
+### Dead ends, kept because each would otherwise be re-proposed
+
+- **Tobit for `floor`.** The censored-normal MLE is the textbook answer to T19 as the ticket framed
+  it, it fits cleanly, and it nails the level control exactly (`corr(floor, mean)` = −0.000 by
+  construction). It still **fails** — top-10 floor list **100 % ADP > 130**. Kept runnable as
+  `method="tobit"`; it is the cleanest demonstration that the defect was never about the likelihood.
+- **A neighbourhood rank on the raw quantiles.** Passes T19's bar (`corr(floor, adp)` −0.10…−0.21)
+  and restores 16.14's original defect (`corr(upside, floor)` **+0.94 QB**). Kept as `"rank"`… on
+  *ratios*; the raw-quantile version is what the oppositions block exists to reject.
+- **`rank_delta`, the double rank.** Subtracting the level's own neighbourhood rank from an already
+  scale-free ratio **over**-controls: `corr(floor, adp)` +0.29, top-10 90 % deep. Kept named.
+- **A pool-relative `level_floor`.** Measured **inert** — inside a 40-player band the worst
+  candidate is z ≈ −1.5 whoever he is, so it fires every pick and is a level tilt in disguise. The
+  shipped version is board-wide.
+- **A rounds-derived corpus reach ceiling.** Recomputing `round` and picks instead of using the
+  panel's own gave a round-15 p95 of **8.8** against T15's published p90 of 52.3 — wrong by 6×, and
+  it failed the shipped reacher on 11 of 15 rounds before being caught.
+- **Choosing the value hawk's window by argmax.** The sweep is inside its own noise (+13.1 CE vs a
+  pooled se of 10.7), so the argmax is a noise draw and the **tightest** eligible window ships.
+
+### The one deviation from the plan of record
+
+BUILD_PLAN step 2 asked for "Tobit **or** a rank-based conditional quantile". Neither worked on the
+column as specified, and the fix was to change **what is being estimated** (ratios to the projected
+level) rather than the estimator. The step is met — `floor` is repaired against its own bar — but by
+a route the plan did not name. Written up in `findings.md` because the general form is reusable:
+*before choosing an estimator, check the variable is on a scale the estimator can be right about.*

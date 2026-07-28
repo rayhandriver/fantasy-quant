@@ -68,6 +68,21 @@ _ADP_SCALE = 50.0        # adp is divided by this so β is O(1)
 #: :class:`BandSpec`, and the tests that pinned them to this integer now pin them to that object.
 CHOICE_TOP_K = 40
 
+#: **The other half of the choice-set contract: which positions are candidates at all.**
+#: ``build_choice_frame(skill_only=True)`` — the default the shipped β was fit under — restricts
+#: both the candidate set and the observed picks to these four. The simulator, however, banded the
+#: *whole* board by ADP, so the fitted β could nominate a kicker it had never seen once (T21: a
+#: ``value_hawk`` took Brandon Aubrey at pick 119). That is the Session-G violation in a second
+#: home, and it hid for the same reason T15 did: kickers are rare enough in 15 rounds that it reads
+#: as a handful of odd picks rather than a shifted distribution — **an aggregate metric cannot see
+#: an occasional impossible event.**
+#:
+#: So this is now a named constant that fit and simulation both import, and ``test_personalities``
+#: fails if they diverge. K/DST reach a roster through
+#: :meth:`~fantasy_quant.draft.simulator.DraftState.mandatory_needs` (T20) — a hard filter outside
+#: the choice model — which is exactly what makes putting defenses on the board safe.
+SKILL_POSITIONS: tuple[str, ...] = ("QB", "RB", "WR", "TE")
+
 
 # =============================================================================================
 # T15 — how ADP enters utility, and how wide the candidate set is
@@ -351,7 +366,7 @@ def build_choice_frame(con, *, top_k: int | None = None, skill_only: bool = True
         bd["adp"] = pd.to_numeric(bd["adp"], errors="coerce")
         bd = bd.dropna(subset=["pos", "adp"])
         if skill_only:  # candidates are skill players only (K/DST availability is trivially late)
-            bd = bd[bd["pos"].isin(("QB", "RB", "WR", "TE"))]
+            bd = bd[bd["pos"].isin(SKILL_POSITIONS)]
         board_cache[key] = (bd.sort_values("adp").reset_index(drop=True), src)
     board_key_of = {
         str(d): (int(s), str(sc), int(t))
@@ -397,7 +412,7 @@ def build_choice_frame(con, *, top_k: int | None = None, skill_only: bool = True
     ).df()
     picks["pos"] = picks["position"].map(canon_pos)
     if skill_only:
-        picks = picks[picks["pos"].isin(("QB", "RB", "WR", "TE"))]
+        picks = picks[picks["pos"].isin(SKILL_POSITIONS)]
 
     # One draft contributes ~140 boarded picks x `top_k` candidates, so the full eligible corpus
     # is ~8M rows. Accumulated as Python tuples that does not fit in memory; rows are therefore
@@ -812,7 +827,7 @@ def band_coverage(con, bands, *, seasons=None, allow_ecr: bool = True,
             ORDER BY p.draft_id, p.pick_no""", ids).df()
     picks["pos"] = picks["position"].map(canon_pos)
     if skill_only:
-        picks = picks[picks["pos"].isin(("QB", "RB", "WR", "TE"))]
+        picks = picks[picks["pos"].isin(SKILL_POSITIONS)]
 
     miss = {id(b): 0 for b in bands}
     ksum = {id(b): 0 for b in bands}

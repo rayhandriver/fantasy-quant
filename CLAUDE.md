@@ -61,8 +61,138 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★★ Next-session pointer (2026-07-27, ★ T15 COMPLETE — steps 0–4 ☑, all five bars PASS.
-> NEXT = 16.14R. READ THIS FIRST.)**
+> **★★★ Next-session pointer (2026-07-28 — ★ 16.14R COMPLETE, all seven steps. T19/T20/T21 ☑,
+> T22 opened. NOT COMMITTED. READ THIS FIRST.)**
+>
+> **State:** **569 tests** (was 549), ruff clean, **UNCOMMITTED** together with the prior docs-only
+> sessions. New steps `steps/phase16_14r_{2..7}_*.py` + `phase16_14r_signal_report.py`; artifacts
+> `analysis/phase16_14r_{floor,context,safe_floor,reacher,value_hawk,room,signal_report,brier}.json`
+> + **`analysis/mock_16_14R_picks.csv`** (a full 15-round mock, for your eye) +
+> `analysis/t19_signals.csv`. DEV-only; the spent lockbox and the frozen value stack are untouched.
+>
+> **What ran.** The seven-step execution order, straight through under a **waived §3.7 gate** (your
+> instruction), with eight decisions taken up front (`PLAN.md` §2026-07-27/28). Step 1 roster
+> legality + K/DST · 2 the `floor` repair · 3 the three blind spots · 4 `safe_floor` · 5 `reacher` ·
+> 6 `value_hawk` · 7 composition + re-measure.
+>
+> | bar | T15 shipped | 16.14R | |
+> |---|---|---|---|
+> | 1 profile distance · round-1 | 0.2220 · 4.36 | **0.1156 · 3.70** | PASS |
+> | 2 elite p95 · past pick 10 | 17.0 · 28.5 % | 19.0 · **30.07 %** | **marginal FAIL** |
+> | 3 worst harvest excess | +0.21 sd | **+0.06 sd** | PASS |
+> | 4 11.2 Brier | +0.0890 | **+0.0890** | PASS, unchanged |
+> | 5 dispersion error | +17.0 % | **+5.6 %** | PASS |
+> | seat faithfulness | 10.40 · 13.5 % · 19.6 % | **9.38 · 27.8 % · 10.6 %** | corpus 7.62 · 54.3 % · 0.2 % |
+>
+> **★ Bar 2 is a marginal miss and is deliberately NOT tuned into a pass.** 30.07 % vs a 30.0 %
+> ceiling on n = 5,700, binomial se 0.61 pp ⇒ **+0.12 se**, i.e. indistinguishable; the p95 half
+> passes (19.0 ≤ 20.0) and the **2026 live board passes outright at 26.3 %**. The direction is a
+> real trade, **measured** (same code, 2021–24, 40 seeds, only the mix differing): the T15 room
+> scores 28.72 % and the shipped room 29.47 %, so composition costs **+0.75 pp** while profile
+> distance falls 0.118 → **0.093**, dispersion +10.4 % → **+6.5 %** and chalk 19.9 % → **10.7 %**.
+> That difference is itself +0.51 se, so the attribution gives the *direction and the trade*, not a
+> magnitude. **Decide explicitly whether to accept it or re-add a chalkier seat — do not reweight a
+> personality until the number crosses.**
+>
+> **★★ THE FINDING TO CARRY FORWARD — the problem was the SCALE, not the fit.** T19 framed itself as
+> *"OLS is the wrong likelihood for a censored variable"*, and **both** repairs that framing admits
+> failed: a censored-normal Tobit left a **100 %**-deep top-10 floor list, and a distribution-free
+> neighbourhood rank flipped `corr(upside, floor)` to **+0.94 QB** — 16.14's original defect,
+> restored, while passing T19's one-sided bar cleanly. A variable that piles up on a boundary of its
+> own support has no well-behaved residual however it is fitted. Rebuilding the signals as **ratios
+> to the projected level** (`shape_inputs`) puts a censored player at the *bottom* of a bounded
+> quantity, which is the honest reading, and only then does an estimator pass. *Before choosing an
+> estimator, check the variable is on a scale the estimator can be right about.*
+>
+> **★ Three more, each one line:**
+> 1. **A one-sided bar is passed by the same defect in the other direction.** Selection now requires
+>    T19's bar **and** 16.14's oppositions. That check is the only thing that rejected `rank` on raw
+>    quantiles.
+> 2. **`boom_prob`/`bust_prob` are four seasons stale on any live board (T22, new 🟡)** — they read
+>    `max(train_seasons)` and `train_seasons` for a live season is `DEV_SEASONS`, ending **2022**.
+>    **292 of 306 zeros are `fillna(0.0)`**, i.e. a player absent in 2022 reads as *never busts*: a
+>    fabricated safety claim, worst for exactly the rookies a floor-seeker should distrust. Frozen
+>    contract → logged, not edited; both seats now weight `tail_risk`. Same `max(train_seasons)`
+>    idiom as T17 — **a sweep for the pattern is probably worth more than either fix.**
+> 3. **`floor` is not what fixed the objected picks — `tail_risk` is.** Zay Flowers went *up* the
+>    floor percentile (0.76 → 0.85). The objection was about **width**, and width is not floor:
+>    Johnston 0.85 / Blue 0.84 / Metcalf 0.76 on `tail_risk`. T19 repaired the input to "highest
+>    floor"; step 4 changed the objective to "lowest downside". Both were needed.
+>
+> **⚠ Do not re-derive these dead ends** (all kept runnable, `PLAN.md` has the list): Tobit ·
+> neighbourhood rank on raw quantiles · `rank_delta` · a **pool-relative** `level_floor` (measured
+> inert — inside a 40-player band the worst candidate is z ≈ −1.5 whoever he is) · a rounds-derived
+> corpus reach ceiling (wrong by **6×**; the panel carries its own `round`, and `reach_profile`
+> pools |drift| so its round-15 p90 is mostly players *falling*) · picking the value-hawk window by
+> argmax (the sweep is inside its own noise, **+13.1 CE vs a pooled se of 10.7** → the tightest
+> window ships).
+>
+> **★ NEXT:** review + commit (7 steps' worth, one working tree). Then **Session I = Phase 17
+> League-Format Fidelity 17.1–17.4**, then J (optional dynasty) → **K = Phase 14.1 MVP + surfacing,
+> strictly last**. Stage-0 FFC chore: last pull **2026-07-24**, next due after 07-30.
+>
+> _(Prior pointer — the 2×5 mock that opened 16.14R, still the authority on why the order changed.)_
+>
+> **★★ (2026-07-27 session 5 — 16.14R RE-ORDERED, `docs/BUILD_PLAN.md` §"16.14R — THE EXECUTION ORDER".)**
+>
+> **State:** no code changed this session. Docs only: `docs/BUILD_PLAN.md` §16.14R execution order
+> (the 7-step plan of record), `docs/TECH-DEBT.md` **T19/T20/T21**, `findings.md` §"The 2×5 mock
+> room", `PLAN.md` §2026-07-27 (session 5), `glossary.md`. T15 remains COMPLETE (steps 0–4 ☑, five
+> bars PASS). The mock itself was a DEV run — driver + CSVs in the session scratchpad, nothing
+> written to `analysis/`.
+>
+> **What happened.** A full 15-round mock with **2 seats each of autopilot / value_hawk / safe_floor /
+> reacher / balanced**, plus 60 seeded drafts of the same mix. The T15 fix holds on the live board
+> (round-1 reach **12.31 → 4.58** picks, elite-fall p95 **30.0 → 17.0** vs a corpus 17.5, profile
+> distance r1–6 **0.713 → 0.244**). Then **the user reviewed all 150 picks by eye and raised three
+> seat-level objections — and two of them are defects in the *signals* 16.14R was going to build on
+> top of.** Hence the re-order.
+>
+> **★★ THE FINDING TO CARRY FORWARD — the fix for a level-vs-shape defect created the next one.**
+> `safe_floor` drafts boom-or-bust players because **`q10` is censored at exactly 0 for 42.9 % of
+> offensive board rows** (59.0 % past ADP 100). `residual_shape` regresses it on `mean`, so the
+> largest positive residuals go to players just above the censoring point and
+> **`corr(floor, adp)` = +0.179 RB / +0.124 WR** — the *safety* signal prefers *deeper* players. The
+> board's safest RBs are Jonah Coleman (ADP 171) and Jaydon Blue (ADP 140). **The seat drafted exactly
+> what the board told it was safest.** Fourth member of the family (`q90`/`q10` 16.14 ·
+> `games_played_mean` T17 · `vbd` · **`floor`**) and the first **self-inflicted** one: 16.14
+> residualized to remove a level proxy and produced a *depth* proxy, because removing the level from a
+> censored variable leaves something anti-correlated with quality rather than orthogonal to it.
+> *A residualization is a modelling assumption about the tail.* **T19.**
+>
+> **★ Three more things, each a one-line diagnosis:**
+> 1. **The `reacher` has width with no direction — literally.** It is
+>    `Personality("reacher", temperature=2.2, width_mult=WIDTH_REACHER)`, **no `signal_weights` at
+>    all**. Mean `pool_rank` 20.5 vs a corpus p90 of 13.1. Give it direction (rookies · 16.10 hype ·
+>    the 16.9 shock, all already assigned to it) **before** applying the user's reach budget — a
+>    budget over directed reaching is a different object from a budget over noise.
+> 2. **The value hawk's bad picks are blind spots, not mis-weights.** Signed situation, committee
+>    share and TD-regression are **not on the 16.13 board** (`cos` exists but is **unsigned** —
+>    Rachaad White 1.0, DK Metcalf 0.6). No objective over today's board avoids those picks ⇒ board
+>    scope moves first (open decision #3, settled). Separately: `pos_z(vbd)` deletes VBD's only
+>    non-ADP content (`corr(vbd, adp)` within position −0.86…−0.96), so a `signal_weights` value hawk
+>    **cannot** work ⇒ objective is **portfolio CE** (open decision #1, settled, measured).
+> 3. **K/DST — a filter, not a data gap.** `adp_snapshots` has the defenses (60 `DEF` rows, 2026 FFC
+>    PPR 10-team); `_ffc_board`'s `gsis_id IS NOT NULL` drops them because they key on
+>    `ffc_player_id`, and `board_player_key`/`canon_pos`/`DRAFTABLE` already support DST. **T20.**
+>    Found alongside it: **K is in the sim's candidate band but not the fit's** (`skill_only=True`) —
+>    Session-G choice-set violation, second home. **T21**, must land with T20.
+>
+> **★ NEXT = 16.14R Step 1** (roster legality + the K/DST guarantee — user instruction: ≥1 K and ≥1
+> DST per seat whenever `rounds >= slots.starters`). Then Step 2 **repair `floor` before any
+> personality consumes it**, Step 3 board scope, Step 4 safe_floor, Step 5 reacher, Step 6 value hawk,
+> Step 7 composition + re-measure. **Gate after each** (rule 7). Full text: `docs/BUILD_PLAN.md`.
+>
+> **⚠ Do not re-derive these:** `autopilot` won **48.3 %** of 60 drafts at mean finish 1.69/10 ⇒ the
+> default room drops to ≤1 autopilot (Step 7). Composition **alone** moved T15's open faithfulness gap
+> from median `pool_rank` 10.40 → **8.59** (corpus 7.62) with no model change. The late-round 0.61×
+> narrowness is **unchanged and expected** — it needs per-seat board perturbation, not another width
+> parameter. Dead end: rookies do **not** reach `pos_z` as NaN (0 of 31 on the 2026 board) — that was
+> the first, wrong, hypothesis for T19.
+>
+> _(Prior pointer — T15's own closeout, still the authority on the T15 bars.)_
+>
+> **★★ (2026-07-27, ★ T15 COMPLETE — steps 0–4 ☑, all five bars PASS. NEXT was 16.14R.)**
 >
 > **State:** **549 tests**, ruff clean, **UNCOMMITTED** (user's choice) together with the three prior
 > docs-only sessions. New: `draft/mock.py`, `steps/t15_{0,1,2,3,4}_*.py`, `steps/mock_draft.py`,

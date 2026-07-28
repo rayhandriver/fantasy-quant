@@ -45,6 +45,7 @@ import pandas as pd
 from fantasy_quant.adp import boards
 from fantasy_quant.adp.drift_panel import PANEL_COLS
 from fantasy_quant.adp.panel import OFFENSE, _canon_pos
+from fantasy_quant.draft import enrichment
 from fantasy_quant.draft.enrichment import enrich_board
 from fantasy_quant.draft.opponent_model import (
     ALL_FEATURES,
@@ -58,6 +59,7 @@ from fantasy_quant.draft.personalities import (
     WidthCurve,
     make_opponent_pick_fn,
     make_room,
+    make_value_hawk_pick_fn,
     normalized_hype_gains,
 )
 from fantasy_quant.draft.simulator import (
@@ -108,7 +110,7 @@ def load_opponent_model(path: Path | str = COEF_JSON) -> OpponentModel:
 
 
 def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF,
-               allow_ecr: bool = False, enrich: bool = True,
+               allow_ecr: bool = False, enrich: bool = True, include_dst: bool = True,
                cache_dir: Path | str | None = None) -> tuple[pd.DataFrame, str]:
     """The board a simulated room drafts, and the source that answered — ``(board, source)``.
 
@@ -126,12 +128,22 @@ def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF
     comparison is FFC-boarded seasons only (``adp/boards.py``: never pool the two into a headline).
     2025 is the only ECR season and the corpus side labels it, so it is reported separately.
 
-    ``cache_dir`` memoizes the enriched board per ``(season, scoring, teams)``. The Phase-5 cloud
-    behind :func:`~fantasy_quant.draft.enrichment.enrich_board` costs ~10 s warm and was measured at
-    ~6 min cold, which is fine once and intolerable once per batch.
+    ``include_dst`` (T20) is **on here and off everywhere else** — this is the one board that has
+    to produce a legal roster rather than a comparable measurement. It is safe because T21 keeps
+    defenses out of the choice model's candidate set, so the fitted β never sees a position it was
+    not estimated on; they reach a roster only through
+    :meth:`~fantasy_quant.draft.simulator.DraftState.mandatory_needs`. Nothing measured moves:
+    ``adp/panel.py`` filters to ``OFFENSE`` before the drift panel is built, so the added rows are
+    dropped again on the measurement side.
+
+    ``cache_dir`` memoizes the enriched board per ``(season, scoring, teams, include_dst)`` — the
+    flag is part of the key because it changes the rows, and a cache hit on a board built under the
+    other setting is exactly the silent-stale-input failure this repo keeps finding. The Phase-5
+    cloud behind :func:`~fantasy_quant.draft.enrichment.enrich_board` costs ~10 s warm and was
+    measured at ~6 min cold, which is fine once and intolerable once per batch.
     """
     raw, src = boards.resolve_board(con, int(season), str(scoring), int(teams),
-                                    allow_ecr=allow_ecr)
+                                    allow_ecr=allow_ecr, include_dst=include_dst)
     if raw.empty:
         return raw, src
     if not enrich:
@@ -139,7 +151,9 @@ def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF
 
     cache = None
     if cache_dir is not None:
-        cache = Path(cache_dir) / f"board_{season}_{scoring}_{teams}.parquet"
+        tag = "_dst" if include_dst else ""
+        cache = (Path(cache_dir) /
+                 f"board_{season}_{scoring}_{teams}{tag}_{enrichment.ENRICH_VERSION}.parquet")
         if cache.exists():
             return pd.read_parquet(cache), src
     board = enrich_board(con, int(season), raw, n_teams=int(teams))
@@ -164,7 +178,8 @@ def full_room(mix: Sequence[str] | None = None, *, n_teams: int = TEAMS_REF,
 
 
 def full_room_pick_fn(model: OpponentModel, room: Sequence[Personality], *,
-                      hype: np.ndarray | None = None, normalize_hype: bool = True, **kw):
+                      hype: np.ndarray | None = None, normalize_hype: bool = True,
+                      risk=None, **kw):
     """``pick(state, team) -> board label`` for a room where **every** seat is a personality.
 
     :func:`~fantasy_quant.draft.personalities.make_room_pick_fn` maps ``team -> seat`` by skipping
@@ -176,8 +191,16 @@ def full_room_pick_fn(model: OpponentModel, room: Sequence[Personality], *,
     seats = tuple(room)
     gains = (normalized_hype_gains(seats) if normalize_hype
              else np.array([p.hype_gain for p in seats], float))
-    fns = [make_opponent_pick_fn(model, replace(p, hype_gain=float(g)), hype=hype, **kw)
-           for p, g in zip(seats, gains, strict=True)]
+    # 16.14R step 6: a seat whose objective is `portfolio_ce` does not run the behavioral softmax
+    # at all — it runs the Phase-9 greedy in its seat. Without a `risk` model there is nothing for
+    # it to maximize, so it falls back to the behavioral path rather than silently drafting by ADP;
+    # `assert_room_objectives` is how a caller finds out instead of guessing.
+    fns = [
+        (make_value_hawk_pick_fn(replace(p, hype_gain=float(g)), risk, n_teams=len(seats))
+         if p.objective == "portfolio_ce" and risk is not None
+         else make_opponent_pick_fn(model, replace(p, hype_gain=float(g)), hype=hype, **kw))
+        for p, g in zip(seats, gains, strict=True)
+    ]
 
     def pick(state: DraftState, team: int) -> int:
         if not 0 <= team < len(fns):
@@ -185,6 +208,21 @@ def full_room_pick_fn(model: OpponentModel, room: Sequence[Personality], *,
         return fns[team](state, team)
 
     return pick
+
+
+def assert_room_objectives(room: Sequence[Personality], risk) -> None:
+    """Fail loudly when a room contains a ``portfolio_ce`` seat but no risk model to give it.
+
+    Without this the seat quietly runs the behavioral softmax with no ``signal_weights`` — i.e. it
+    becomes ``balanced`` wearing the value hawk's name, completes a legal draft, and every number
+    downstream looks plausible. *An inert thing still passes*, fourth instance; this is the
+    assertion the lesson asks for.
+    """
+    needy = sorted({p.name for p in room if p.objective == "portfolio_ce"})
+    if needy and risk is None:
+        raise ValueError(
+            f"room contains objective='portfolio_ce' seats {needy} but no risk model — pass "
+            f"`risk=` (see steps/phase16_14r_6_value_hawk.py) or they silently draft as balanced")
 
 
 def simulate_room_draft(board: pd.DataFrame, room: Sequence[Personality], model: OpponentModel, *,
@@ -199,6 +237,7 @@ def simulate_room_draft(board: pd.DataFrame, room: Sequence[Personality], model:
     """
     if len(room) != n_teams:
         raise ValueError(f"room has {len(room)} seats for {n_teams} teams")
+    assert_room_objectives(room, kw.get("risk"))
     b = _prepare_board(board)
     pick = full_room_pick_fn(model, room, hype=hype, **kw)
     state = DraftState(

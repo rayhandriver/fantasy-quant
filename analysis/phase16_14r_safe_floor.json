@@ -1,0 +1,78 @@
+{
+  "generated": "2026-07-28T04:37:53.357007+00:00",
+  "season": 2026,
+  "board_source": "ffc",
+  "config": {
+    "seeds": 16,
+    "rounds": 8
+  },
+  "drafted_pool_z": {
+    "safe_floor": {
+      "floor": 0.238272356,
+      "tail_risk": -0.269255515,
+      "upside": -0.3012179526,
+      "durability": 0.1136478412,
+      "mean": 0.7761494256,
+      "rookie": 0.0045740049
+    },
+    "balanced": {
+      "floor": 0.1053190368,
+      "tail_risk": -0.1394445763,
+      "upside": -0.1667717926,
+      "durability": 0.0051997594,
+      "mean": 0.6936356972,
+      "rookie": -0.0053838198
+    },
+    "reacher": {
+      "floor": 0.039854674,
+      "tail_risk": -0.0732679145,
+      "upside": -0.1028223769,
+      "durability": -0.0400248876,
+      "mean": 0.5149012357,
+      "rookie": -0.0136824625
+    },
+    "upside_chaser": {
+      "floor": -0.0708746087,
+      "tail_risk": 0.0573119539,
+      "upside": 0.036089215,
+      "durability": -0.1415606645,
+      "mean": 0.5252602366,
+      "rookie": -0.038979356
+    }
+  },
+  "bar1_disagreement": {
+    "disagreement": 0.4864,
+    "min": 0.3333333333333333,
+    "pass": true
+  },
+  "bar2_spread": {
+    "delta_tail_risk_vs_balanced": -0.1298,
+    "ci": [
+      -0.1688,
+      -0.0909
+    ],
+    "delta_floor_vs_balanced": 0.133,
+    "delta_mean_vs_balanced": 0.0825,
+    "delta_rookie_vs_balanced": 0.01,
+    "pass": true
+  },
+  "ablation": {
+    "board_share_below_floor": 0.2646,
+    "rookie_z_with_override": 0.0046,
+    "rookie_z_without": 0.0503,
+    "rookie_override_moves": true,
+    "sub_floor_pick_rate_with_guard": 0.1204,
+    "sub_floor_pick_rate_without": 0.1282,
+    "level_floor_binds": true
+  },
+  "weights": {
+    "floor": 0.45,
+    "durability": 0.3,
+    "tail_risk": -0.4
+  },
+  "verdict": {
+    "bar1_disagreement": true,
+    "bar2_lower_spread": true,
+    "every_knob_moves_something": true
+  }
+}

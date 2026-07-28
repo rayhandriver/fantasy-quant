@@ -1,0 +1,1298 @@
+{
+  "generated": "2026-07-28T04:12:33.251184+00:00",
+  "season": 2026,
+  "board_source": "ffc",
+  "n_offensive_rows": 184,
+  "bar": {
+    "max_corr": 0.0,
+    "max_deep_share": 0.3,
+    "deep_adp": 130.0
+  },
+  "censoring": {
+    "overall": 0.4293,
+    "adp_le_50": 0.0566,
+    "adp_50_100": 0.5625,
+    "adp_gt_100": 0.5904
+  },
+  "methods": {
+    "linear": {
+      "floor": {
+        "corr_by_pos": {
+          "QB": -0.0648,
+          "RB": 0.0656,
+          "WR": 0.0689,
+          "TE": -0.2031
+        },
+        "worst_corr": 0.0689,
+        "n_pos_passing": 2,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.7,
+        "top10": [
+          {
+            "name": "Zachariah Branch",
+            "pos": "WR",
+            "adp": 164.6,
+            "mean": 62.6253560536,
+            "q10": 11.0884183567,
+            "floor": 0.24372498
+          },
+          {
+            "name": "Travis Hunter",
+            "pos": "WR",
+            "adp": 160.3,
+            "mean": 94.5227974614,
+            "q10": 21.9378441436,
+            "floor": 0.1958322041
+          },
+          {
+            "name": "Kenyon Sadiq",
+            "pos": "TE",
+            "adp": 152.2,
+            "mean": 90.4271573048,
+            "q10": 20.9790999953,
+            "floor": 0.1895620927
+          },
+          {
+            "name": "Chris Bell",
+            "pos": "WR",
+            "adp": 160.4,
+            "mean": 89.2222037187,
+            "q10": 18.6172445493,
+            "floor": 0.1895067256
+          },
+          {
+            "name": "Ladd McConkey",
+            "pos": "WR",
+            "adp": 36.7,
+            "mean": 174.7320008901,
+            "q10": 84.4061315698,
+            "floor": 0.187990566
+          },
+          {
+            "name": "Emeka Egbuka",
+            "pos": "WR",
+            "adp": 45.5,
+            "mean": 175.8550888156,
+            "q10": 85.2165175311,
+            "floor": 0.1858899126
+          },
+          {
+            "name": "Mike Washington Jr.",
+            "pos": "RB",
+            "adp": 165.2,
+            "mean": 82.128772088,
+            "q10": 18.0328612436,
+            "floor": 0.1849092469
+          },
+          {
+            "name": "Antonio Williams",
+            "pos": "WR",
+            "adp": 145.9,
+            "mean": 99.0211562234,
+            "q10": 22.9446073109,
+            "floor": 0.1809409998
+          },
+          {
+            "name": "Jameson Williams",
+            "pos": "WR",
+            "adp": 48.5,
+            "mean": 182.949644784,
+            "q10": 91.6831999856,
+            "floor": 0.1795530982
+          },
+          {
+            "name": "Omar Cooper Jr.",
+            "pos": "WR",
+            "adp": 133.3,
+            "mean": 93.2434731256,
+            "q10": 18.6667811021,
+            "floor": 0.1680636715
+          }
+        ],
+        "pass": false
+      },
+      "upside": {
+        "corr_by_pos": {
+          "QB": -0.2541,
+          "RB": -0.0028,
+          "WR": -0.1498,
+          "TE": -0.0466
+        },
+        "worst_corr": -0.0028,
+        "n_pos_passing": 4,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.1,
+        "top10": [
+          {
+            "name": "Bijan Robinson",
+            "pos": "RB",
+            "adp": 1.6,
+            "mean": 265.0534366258,
+            "q10": 124.569527687,
+            "upside": 0.2425864613
+          },
+          {
+            "name": "Mike Evans",
+            "pos": "WR",
+            "adp": 49.6,
+            "mean": 82.7236644564,
+            "q10": 0.0,
+            "upside": 0.2391174179
+          },
+          {
+            "name": "Jahmyr Gibbs",
+            "pos": "RB",
+            "adp": 1.8,
+            "mean": 265.1669745152,
+            "q10": 128.8114320924,
+            "upside": 0.2271065594
+          },
+          {
+            "name": "Aaron Jones Sr.",
+            "pos": "RB",
+            "adp": 91.9,
+            "mean": 81.6521370374,
+            "q10": 0.0,
+            "upside": 0.1713210627
+          },
+          {
+            "name": "Puka Nacua",
+            "pos": "WR",
+            "adp": 2.7,
+            "mean": 264.1060000699,
+            "q10": 127.9428094471,
+            "upside": 0.1612887938
+          },
+          {
+            "name": "Trey McBride",
+            "pos": "TE",
+            "adp": 28.7,
+            "mean": 200.0481408329,
+            "q10": 92.9031235817,
+            "upside": 0.1571201522
+          },
+          {
+            "name": "Isiah Pacheco",
+            "pos": "RB",
+            "adp": 156.6,
+            "mean": 71.3087160999,
+            "q10": 0.0,
+            "upside": 0.1391522024
+          },
+          {
+            "name": "Christian McCaffrey",
+            "pos": "RB",
+            "adp": 5.1,
+            "mean": 235.5860778732,
+            "q10": 98.5406961192,
+            "upside": 0.1358088775
+          },
+          {
+            "name": "Chris Godwin Jr.",
+            "pos": "WR",
+            "adp": 78.7,
+            "mean": 88.5130152195,
+            "q10": 0.0,
+            "upside": 0.1357682597
+          },
+          {
+            "name": "Jaxon Smith-Njigba",
+            "pos": "WR",
+            "adp": 5.9,
+            "mean": 257.9518406429,
+            "q10": 132.0584321691,
+            "upside": 0.1319632433
+          }
+        ],
+        "pass": true
+      },
+      "durability": {
+        "corr_by_pos": {
+          "QB": 0.6308,
+          "RB": 0.1899,
+          "WR": 0.2853,
+          "TE": 0.5175
+        },
+        "worst_corr": 0.6308,
+        "n_pos_passing": 0,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.9,
+        "top10": [
+          {
+            "name": "Ray Davis",
+            "pos": "RB",
+            "adp": 173.3,
+            "mean": 54.7671268383,
+            "q10": 0.0,
+            "durability": 2.0573416195
+          },
+          {
+            "name": "Malik Washington",
+            "pos": "WR",
+            "adp": 155.8,
+            "mean": 96.473383105,
+            "q10": 0.0,
+            "durability": 2.0432002756
+          },
+          {
+            "name": "Cam Ward",
+            "pos": "QB",
+            "adp": 167.7,
+            "mean": 202.1286929875,
+            "q10": 57.7206900594,
+            "durability": 2.0394782219
+          },
+          {
+            "name": "Chig Okonkwo",
+            "pos": "TE",
+            "adp": 169.4,
+            "mean": 94.8819774046,
+            "q10": 0.0,
+            "durability": 1.9231362182
+          },
+          {
+            "name": "Jayden Higgins",
+            "pos": "WR",
+            "adp": 122.5,
+            "mean": 116.4922733962,
+            "q10": 0.0,
+            "durability": 1.9034602336
+          },
+          {
+            "name": "Tyler Allgeier",
+            "pos": "RB",
+            "adp": 167.0,
+            "mean": 75.9271690954,
+            "q10": 0.0,
+            "durability": 1.8318529324
+          },
+          {
+            "name": "Tre Tucker",
+            "pos": "WR",
+            "adp": 135.2,
+            "mean": 114.3490715894,
+            "q10": 0.0,
+            "durability": 1.8010853464
+          },
+          {
+            "name": "Adonai Mitchell",
+            "pos": "WR",
+            "adp": 165.3,
+            "mean": 97.0006902026,
+            "q10": 0.0,
+            "durability": 1.7756298503
+          },
+          {
+            "name": "Jalen Nailor",
+            "pos": "WR",
+            "adp": 135.8,
+            "mean": 107.1130310542,
+            "q10": 0.0,
+            "durability": 1.7474278509
+          },
+          {
+            "name": "Brian Robinson Jr.",
+            "pos": "RB",
+            "adp": 163.9,
+            "mean": 76.5814149648,
+            "q10": 0.0,
+            "durability": 1.7309449131
+          }
+        ],
+        "pass": false
+      }
+    },
+    "tobit": {
+      "floor": {
+        "corr_by_pos": {
+          "QB": -0.067,
+          "RB": -0.0102,
+          "WR": 0.0502,
+          "TE": -0.2575
+        },
+        "worst_corr": 0.0502,
+        "n_pos_passing": 3,
+        "n_pos_scored": 4,
+        "top10_deep_share": 1.0,
+        "top10": [
+          {
+            "name": "Zachariah Branch",
+            "pos": "WR",
+            "adp": 164.6,
+            "mean": 62.6253560536,
+            "q10": 11.0884183567,
+            "floor": 0.4167982493
+          },
+          {
+            "name": "Travis Hunter",
+            "pos": "WR",
+            "adp": 160.3,
+            "mean": 94.5227974614,
+            "q10": 21.9378441436,
+            "floor": 0.3327756543
+          },
+          {
+            "name": "Chris Bell",
+            "pos": "WR",
+            "adp": 160.4,
+            "mean": 89.2222037187,
+            "q10": 18.6172445493,
+            "floor": 0.3324540898
+          },
+          {
+            "name": "Antonio Williams",
+            "pos": "WR",
+            "adp": 145.9,
+            "mean": 99.0211562234,
+            "q10": 22.9446073109,
+            "floor": 0.3127892173
+          },
+          {
+            "name": "Omar Cooper Jr.",
+            "pos": "WR",
+            "adp": 133.3,
+            "mean": 93.2434731256,
+            "q10": 18.6667811021,
+            "floor": 0.3064561959
+          },
+          {
+            "name": "Germie Bernard",
+            "pos": "WR",
+            "adp": 161.1,
+            "mean": 96.2139203621,
+            "q10": 19.9789998087,
+            "floor": 0.3009647364
+          },
+          {
+            "name": "Kenyon Sadiq",
+            "pos": "TE",
+            "adp": 152.2,
+            "mean": 90.4271573048,
+            "q10": 20.9790999953,
+            "floor": 0.2957815451
+          },
+          {
+            "name": "Denzel Boston",
+            "pos": "WR",
+            "adp": 132.7,
+            "mean": 99.1554469273,
+            "q10": 21.0320914097,
+            "floor": 0.2926019132
+          },
+          {
+            "name": "Jonah Coleman",
+            "pos": "RB",
+            "adp": 171.1,
+            "mean": 35.2401272842,
+            "q10": 1.2988136104,
+            "floor": 0.2911581496
+          },
+          {
+            "name": "Mike Washington Jr.",
+            "pos": "RB",
+            "adp": 165.2,
+            "mean": 82.128772088,
+            "q10": 18.0328612436,
+            "floor": 0.2903381527
+          }
+        ],
+        "pass": false
+      },
+      "upside": {
+        "corr_by_pos": {
+          "QB": -0.2541,
+          "RB": -0.0028,
+          "WR": -0.1498,
+          "TE": -0.0466
+        },
+        "worst_corr": -0.0028,
+        "n_pos_passing": 4,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.1,
+        "top10": [
+          {
+            "name": "Bijan Robinson",
+            "pos": "RB",
+            "adp": 1.6,
+            "mean": 265.0534366258,
+            "q10": 124.569527687,
+            "upside": 0.2425864613
+          },
+          {
+            "name": "Mike Evans",
+            "pos": "WR",
+            "adp": 49.6,
+            "mean": 82.7236644564,
+            "q10": 0.0,
+            "upside": 0.2391174179
+          },
+          {
+            "name": "Jahmyr Gibbs",
+            "pos": "RB",
+            "adp": 1.8,
+            "mean": 265.1669745152,
+            "q10": 128.8114320924,
+            "upside": 0.2271065594
+          },
+          {
+            "name": "Aaron Jones Sr.",
+            "pos": "RB",
+            "adp": 91.9,
+            "mean": 81.6521370374,
+            "q10": 0.0,
+            "upside": 0.1713210627
+          },
+          {
+            "name": "Puka Nacua",
+            "pos": "WR",
+            "adp": 2.7,
+            "mean": 264.1060000699,
+            "q10": 127.9428094471,
+            "upside": 0.1612887938
+          },
+          {
+            "name": "Trey McBride",
+            "pos": "TE",
+            "adp": 28.7,
+            "mean": 200.0481408329,
+            "q10": 92.9031235817,
+            "upside": 0.1571201522
+          },
+          {
+            "name": "Isiah Pacheco",
+            "pos": "RB",
+            "adp": 156.6,
+            "mean": 71.3087160999,
+            "q10": 0.0,
+            "upside": 0.1391522024
+          },
+          {
+            "name": "Christian McCaffrey",
+            "pos": "RB",
+            "adp": 5.1,
+            "mean": 235.5860778732,
+            "q10": 98.5406961192,
+            "upside": 0.1358088775
+          },
+          {
+            "name": "Chris Godwin Jr.",
+            "pos": "WR",
+            "adp": 78.7,
+            "mean": 88.5130152195,
+            "q10": 0.0,
+            "upside": 0.1357682597
+          },
+          {
+            "name": "Jaxon Smith-Njigba",
+            "pos": "WR",
+            "adp": 5.9,
+            "mean": 257.9518406429,
+            "q10": 132.0584321691,
+            "upside": 0.1319632433
+          }
+        ],
+        "pass": true
+      },
+      "durability": {
+        "corr_by_pos": {
+          "QB": 0.6308,
+          "RB": 0.1899,
+          "WR": 0.2853,
+          "TE": 0.5175
+        },
+        "worst_corr": 0.6308,
+        "n_pos_passing": 0,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.9,
+        "top10": [
+          {
+            "name": "Ray Davis",
+            "pos": "RB",
+            "adp": 173.3,
+            "mean": 54.7671268383,
+            "q10": 0.0,
+            "durability": 2.0573416195
+          },
+          {
+            "name": "Malik Washington",
+            "pos": "WR",
+            "adp": 155.8,
+            "mean": 96.473383105,
+            "q10": 0.0,
+            "durability": 2.0432002756
+          },
+          {
+            "name": "Cam Ward",
+            "pos": "QB",
+            "adp": 167.7,
+            "mean": 202.1286929875,
+            "q10": 57.7206900594,
+            "durability": 2.0394782219
+          },
+          {
+            "name": "Chig Okonkwo",
+            "pos": "TE",
+            "adp": 169.4,
+            "mean": 94.8819774046,
+            "q10": 0.0,
+            "durability": 1.9231362182
+          },
+          {
+            "name": "Jayden Higgins",
+            "pos": "WR",
+            "adp": 122.5,
+            "mean": 116.4922733962,
+            "q10": 0.0,
+            "durability": 1.9034602336
+          },
+          {
+            "name": "Tyler Allgeier",
+            "pos": "RB",
+            "adp": 167.0,
+            "mean": 75.9271690954,
+            "q10": 0.0,
+            "durability": 1.8318529324
+          },
+          {
+            "name": "Tre Tucker",
+            "pos": "WR",
+            "adp": 135.2,
+            "mean": 114.3490715894,
+            "q10": 0.0,
+            "durability": 1.8010853464
+          },
+          {
+            "name": "Adonai Mitchell",
+            "pos": "WR",
+            "adp": 165.3,
+            "mean": 97.0006902026,
+            "q10": 0.0,
+            "durability": 1.7756298503
+          },
+          {
+            "name": "Jalen Nailor",
+            "pos": "WR",
+            "adp": 135.8,
+            "mean": 107.1130310542,
+            "q10": 0.0,
+            "durability": 1.7474278509
+          },
+          {
+            "name": "Brian Robinson Jr.",
+            "pos": "RB",
+            "adp": 163.9,
+            "mean": 76.5814149648,
+            "q10": 0.0,
+            "durability": 1.7309449131
+          }
+        ],
+        "pass": false
+      }
+    },
+    "rank": {
+      "floor": {
+        "corr_by_pos": {
+          "QB": -0.0691,
+          "RB": -0.1494,
+          "WR": -0.115,
+          "TE": -0.1236
+        },
+        "worst_corr": -0.0691,
+        "n_pos_passing": 4,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.2,
+        "top10": [
+          {
+            "name": "Tank Dell",
+            "pos": "WR",
+            "adp": 158.2,
+            "mean": 106.8427572082,
+            "q10": 25.8537849691,
+            "floor": 0.4827586207
+          },
+          {
+            "name": "Jaxon Smith-Njigba",
+            "pos": "WR",
+            "adp": 5.9,
+            "mean": 257.9518406429,
+            "q10": 132.0584321691,
+            "floor": 0.4772727273
+          },
+          {
+            "name": "Ashton Jeanty",
+            "pos": "RB",
+            "adp": 11.9,
+            "mean": 211.5962508795,
+            "q10": 105.8749496078,
+            "floor": 0.475
+          },
+          {
+            "name": "Mike Washington Jr.",
+            "pos": "RB",
+            "adp": 165.2,
+            "mean": 82.128772088,
+            "q10": 18.0328612436,
+            "floor": 0.4736842105
+          },
+          {
+            "name": "Jameson Williams",
+            "pos": "WR",
+            "adp": 48.5,
+            "mean": 182.949644784,
+            "q10": 91.6831999856,
+            "floor": 0.4615384615
+          },
+          {
+            "name": "Drake Maye",
+            "pos": "QB",
+            "adp": 63.3,
+            "mean": 261.2513883221,
+            "q10": 150.1224062564,
+            "floor": 0.4545454545
+          },
+          {
+            "name": "Justin Jefferson",
+            "pos": "WR",
+            "adp": 10.3,
+            "mean": 213.8035712861,
+            "q10": 108.5148394956,
+            "floor": 0.4375
+          },
+          {
+            "name": "Colston Loveland",
+            "pos": "TE",
+            "adp": 46.8,
+            "mean": 165.8840182885,
+            "q10": 82.9837878582,
+            "floor": 0.4375
+          },
+          {
+            "name": "KC Concepcion",
+            "pos": "WR",
+            "adp": 120.1,
+            "mean": 109.3087770096,
+            "q10": 25.807357221,
+            "floor": 0.4358974359
+          },
+          {
+            "name": "Tetairoa McMillan",
+            "pos": "WR",
+            "adp": 33.3,
+            "mean": 187.0658203486,
+            "q10": 94.039753593,
+            "floor": 0.4305555556
+          }
+        ],
+        "pass": true
+      },
+      "upside": {
+        "corr_by_pos": {
+          "QB": 0.1718,
+          "RB": 0.2455,
+          "WR": 0.2838,
+          "TE": 0.1369
+        },
+        "worst_corr": 0.2838,
+        "n_pos_passing": 0,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.4,
+        "top10": [
+          {
+            "name": "Mike Evans",
+            "pos": "WR",
+            "adp": 49.6,
+            "mean": 82.7236644564,
+            "q10": 0.0,
+            "upside": 0.4871794872
+          },
+          {
+            "name": "Zachariah Branch",
+            "pos": "WR",
+            "adp": 164.6,
+            "mean": 62.6253560536,
+            "q10": 11.0884183567,
+            "upside": 0.4782608696
+          },
+          {
+            "name": "Jonah Coleman",
+            "pos": "RB",
+            "adp": 171.1,
+            "mean": 35.2401272842,
+            "q10": 1.2988136104,
+            "upside": 0.46875
+          },
+          {
+            "name": "Jayden Daniels",
+            "pos": "QB",
+            "adp": 86.9,
+            "mean": 137.1254155659,
+            "q10": 0.0,
+            "upside": 0.4615384615
+          },
+          {
+            "name": "Chris Godwin Jr.",
+            "pos": "WR",
+            "adp": 78.7,
+            "mean": 88.5130152195,
+            "q10": 0.0,
+            "upside": 0.4615384615
+          },
+          {
+            "name": "Ricky Pearsall",
+            "pos": "WR",
+            "adp": 100.4,
+            "mean": 91.5979757993,
+            "q10": 0.0,
+            "upside": 0.4615384615
+          },
+          {
+            "name": "Tucker Kraft",
+            "pos": "TE",
+            "adp": 73.2,
+            "mean": 90.8693986904,
+            "q10": 16.2813001705,
+            "upside": 0.4545454545
+          },
+          {
+            "name": "Brenton Strange",
+            "pos": "TE",
+            "adp": 153.7,
+            "mean": 88.7639913873,
+            "q10": 0.0,
+            "upside": 0.4545454545
+          },
+          {
+            "name": "Jaydon Blue",
+            "pos": "RB",
+            "adp": 140.0,
+            "mean": 38.6637688508,
+            "q10": 1.7838419927,
+            "upside": 0.4464285714
+          },
+          {
+            "name": "Joe Burrow",
+            "pos": "QB",
+            "adp": 46.9,
+            "mean": 162.4885577878,
+            "q10": 31.1474724263,
+            "upside": 0.4375
+          }
+        ],
+        "pass": false
+      },
+      "durability": {
+        "corr_by_pos": {
+          "QB": 0.0183,
+          "RB": -0.0528,
+          "WR": -0.0461,
+          "TE": 0.0045
+        },
+        "worst_corr": 0.0183,
+        "n_pos_passing": 2,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.2,
+        "top10": [
+          {
+            "name": "Jayden Higgins",
+            "pos": "WR",
+            "adp": 122.5,
+            "mean": 116.4922733962,
+            "q10": 0.0,
+            "durability": 0.4871794872
+          },
+          {
+            "name": "Tetairoa McMillan",
+            "pos": "WR",
+            "adp": 33.3,
+            "mean": 187.0658203486,
+            "q10": 94.039753593,
+            "durability": 0.4861111111
+          },
+          {
+            "name": "TreVeyon Henderson",
+            "pos": "RB",
+            "adp": 58.0,
+            "mean": 169.3393252019,
+            "q10": 73.3791408779,
+            "durability": 0.4827586207
+          },
+          {
+            "name": "Ashton Jeanty",
+            "pos": "RB",
+            "adp": 11.9,
+            "mean": 211.5962508795,
+            "q10": 105.8749496078,
+            "durability": 0.475
+          },
+          {
+            "name": "Tyler Allgeier",
+            "pos": "RB",
+            "adp": 167.0,
+            "mean": 75.9271690954,
+            "q10": 0.0,
+            "durability": 0.4722222222
+          },
+          {
+            "name": "Caleb Williams",
+            "pos": "QB",
+            "adp": 108.9,
+            "mean": 231.4366835161,
+            "q10": 75.2697332991,
+            "durability": 0.4615384615
+          },
+          {
+            "name": "Emeka Egbuka",
+            "pos": "WR",
+            "adp": 45.5,
+            "mean": 175.8550888156,
+            "q10": 85.2165175311,
+            "durability": 0.4615384615
+          },
+          {
+            "name": "Tre Tucker",
+            "pos": "WR",
+            "adp": 135.2,
+            "mean": 114.3490715894,
+            "q10": 0.0,
+            "durability": 0.4594594595
+          },
+          {
+            "name": "Drake Maye",
+            "pos": "QB",
+            "adp": 63.3,
+            "mean": 261.2513883221,
+            "q10": 150.1224062564,
+            "durability": 0.4545454545
+          },
+          {
+            "name": "Kyle Monangai",
+            "pos": "RB",
+            "adp": 105.6,
+            "mean": 103.6075114929,
+            "q10": 0.0,
+            "durability": 0.4482758621
+          }
+        ],
+        "pass": false
+      }
+    },
+    "rank_delta": {
+      "floor": {
+        "corr_by_pos": {
+          "QB": 0.1893,
+          "RB": 0.29,
+          "WR": 0.256,
+          "TE": 0.0602
+        },
+        "worst_corr": 0.29,
+        "n_pos_passing": 0,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.9,
+        "top10": [
+          {
+            "name": "Jaydon Blue",
+            "pos": "RB",
+            "adp": 140.0,
+            "mean": 38.6637688508,
+            "q10": 1.7838419927,
+            "floor": 0.8214285714
+          },
+          {
+            "name": "Jonah Coleman",
+            "pos": "RB",
+            "adp": 171.1,
+            "mean": 35.2401272842,
+            "q10": 1.2988136104,
+            "floor": 0.8125
+          },
+          {
+            "name": "Travis Hunter",
+            "pos": "WR",
+            "adp": 160.3,
+            "mean": 94.5227974614,
+            "q10": 21.9378441436,
+            "floor": 0.6428571429
+          },
+          {
+            "name": "Zachariah Branch",
+            "pos": "WR",
+            "adp": 164.6,
+            "mean": 62.6253560536,
+            "q10": 11.0884183567,
+            "floor": 0.5652173913
+          },
+          {
+            "name": "Chris Bell",
+            "pos": "WR",
+            "adp": 160.4,
+            "mean": 89.2222037187,
+            "q10": 18.6172445493,
+            "floor": 0.5555555556
+          },
+          {
+            "name": "Kenyon Sadiq",
+            "pos": "TE",
+            "adp": 152.2,
+            "mean": 90.4271573048,
+            "q10": 20.9790999953,
+            "floor": 0.5454545455
+          },
+          {
+            "name": "Omar Cooper Jr.",
+            "pos": "WR",
+            "adp": 133.3,
+            "mean": 93.2434731256,
+            "q10": 18.6667811021,
+            "floor": 0.5263157895
+          },
+          {
+            "name": "KC Concepcion",
+            "pos": "WR",
+            "adp": 120.1,
+            "mean": 109.3087770096,
+            "q10": 25.807357221,
+            "floor": 0.4615384615
+          },
+          {
+            "name": "Antonio Williams",
+            "pos": "WR",
+            "adp": 145.9,
+            "mean": 99.0211562234,
+            "q10": 22.9446073109,
+            "floor": 0.4545454545
+          },
+          {
+            "name": "Denzel Boston",
+            "pos": "WR",
+            "adp": 132.7,
+            "mean": 99.1554469273,
+            "q10": 21.0320914097,
+            "floor": 0.3846153846
+          }
+        ],
+        "pass": false
+      },
+      "upside": {
+        "corr_by_pos": {
+          "QB": 0.1614,
+          "RB": 0.3546,
+          "WR": 0.3579,
+          "TE": 0.1576
+        },
+        "worst_corr": 0.3579,
+        "n_pos_passing": 0,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.4,
+        "top10": [
+          {
+            "name": "Mike Evans",
+            "pos": "WR",
+            "adp": 49.6,
+            "mean": 82.7236644564,
+            "q10": 0.0,
+            "upside": 0.9743589744
+          },
+          {
+            "name": "Zachariah Branch",
+            "pos": "WR",
+            "adp": 164.6,
+            "mean": 62.6253560536,
+            "q10": 11.0884183567,
+            "upside": 0.9565217391
+          },
+          {
+            "name": "Jonah Coleman",
+            "pos": "RB",
+            "adp": 171.1,
+            "mean": 35.2401272842,
+            "q10": 1.2988136104,
+            "upside": 0.9375
+          },
+          {
+            "name": "Jayden Daniels",
+            "pos": "QB",
+            "adp": 86.9,
+            "mean": 137.1254155659,
+            "q10": 0.0,
+            "upside": 0.9230769231
+          },
+          {
+            "name": "Chris Godwin Jr.",
+            "pos": "WR",
+            "adp": 78.7,
+            "mean": 88.5130152195,
+            "q10": 0.0,
+            "upside": 0.9230769231
+          },
+          {
+            "name": "Tucker Kraft",
+            "pos": "TE",
+            "adp": 73.2,
+            "mean": 90.8693986904,
+            "q10": 16.2813001705,
+            "upside": 0.9090909091
+          },
+          {
+            "name": "Ricky Pearsall",
+            "pos": "WR",
+            "adp": 100.4,
+            "mean": 91.5979757993,
+            "q10": 0.0,
+            "upside": 0.8974358974
+          },
+          {
+            "name": "Jaydon Blue",
+            "pos": "RB",
+            "adp": 140.0,
+            "mean": 38.6637688508,
+            "q10": 1.7838419927,
+            "upside": 0.8928571429
+          },
+          {
+            "name": "Joe Burrow",
+            "pos": "QB",
+            "adp": 46.9,
+            "mean": 162.4885577878,
+            "q10": 31.1474724263,
+            "upside": 0.875
+          },
+          {
+            "name": "Fernando Mendoza",
+            "pos": "QB",
+            "adp": 172.9,
+            "mean": 106.286857535,
+            "q10": 0.0,
+            "upside": 0.8571428571
+          }
+        ],
+        "pass": false
+      },
+      "durability": {
+        "corr_by_pos": {
+          "QB": 0.2626,
+          "RB": 0.3506,
+          "WR": 0.3757,
+          "TE": 0.2521
+        },
+        "worst_corr": 0.3757,
+        "n_pos_passing": 0,
+        "n_pos_scored": 4,
+        "top10_deep_share": 0.7,
+        "top10": [
+          {
+            "name": "Ray Davis",
+            "pos": "RB",
+            "adp": 173.3,
+            "mean": 54.7671268383,
+            "q10": 0.0,
+            "durability": 0.7333333333
+          },
+          {
+            "name": "Ryan Flournoy",
+            "pos": "WR",
+            "adp": 156.8,
+            "mean": 81.3305710889,
+            "q10": 0.0,
+            "durability": 0.6
+          },
+          {
+            "name": "Malik Washington",
+            "pos": "WR",
+            "adp": 155.8,
+            "mean": 96.473383105,
+            "q10": 0.0,
+            "durability": 0.5483870968
+          },
+          {
+            "name": "Isaac TeSlaa",
+            "pos": "WR",
+            "adp": 167.3,
+            "mean": 74.8630578592,
+            "q10": 0.0,
+            "durability": 0.5238095238
+          },
+          {
+            "name": "Tyler Allgeier",
+            "pos": "RB",
+            "adp": 167.0,
+            "mean": 75.9271690954,
+            "q10": 0.0,
+            "durability": 0.5
+          },
+          {
+            "name": "Darius Slayton",
+            "pos": "WR",
+            "adp": 175.7,
+            "mean": 81.7170599961,
+            "q10": 0.0,
+            "durability": 0.4
+          },
+          {
+            "name": "Kyle Monangai",
+            "pos": "RB",
+            "adp": 105.6,
+            "mean": 103.6075114929,
+            "q10": 0.0,
+            "durability": 0.3793103448
+          },
+          {
+            "name": "Oronde Gadsden",
+            "pos": "TE",
+            "adp": 162.4,
+            "mean": 88.6481234091,
+            "q10": 0.0,
+            "durability": 0.375
+          },
+          {
+            "name": "Tetairoa McMillan",
+            "pos": "WR",
+            "adp": 33.3,
+            "mean": 187.0658203486,
+            "q10": 94.039753593,
+            "durability": 0.3611111111
+          },
+          {
+            "name": "Jayden Higgins",
+            "pos": "WR",
+            "adp": 122.5,
+            "mean": 116.4922733962,
+            "q10": 0.0,
+            "durability": 0.358974359
+          }
+        ],
+        "pass": false
+      }
+    }
+  },
+  "oppositions": {
+    "linear": {
+      "QB": {
+        "upside~floor": -0.111,
+        "floor~mean": -0.0,
+        "upside~mean": 0.0,
+        "tail_risk~floor": -0.639
+      },
+      "RB": {
+        "upside~floor": -0.649,
+        "floor~mean": 0.0,
+        "upside~mean": -0.0,
+        "tail_risk~floor": -0.887
+      },
+      "WR": {
+        "upside~floor": -0.346,
+        "floor~mean": -0.0,
+        "upside~mean": 0.0,
+        "tail_risk~floor": -0.926
+      },
+      "TE": {
+        "upside~floor": -0.662,
+        "floor~mean": -0.0,
+        "upside~mean": 0.0,
+        "tail_risk~floor": -0.953
+      }
+    },
+    "tobit": {
+      "QB": {
+        "upside~floor": -0.38,
+        "floor~mean": -0.0,
+        "upside~mean": 0.0,
+        "tail_risk~floor": -0.807
+      },
+      "RB": {
+        "upside~floor": -0.692,
+        "floor~mean": -0.0,
+        "upside~mean": -0.0,
+        "tail_risk~floor": -0.885
+      },
+      "WR": {
+        "upside~floor": -0.394,
+        "floor~mean": -0.0,
+        "upside~mean": 0.0,
+        "tail_risk~floor": -0.923
+      },
+      "TE": {
+        "upside~floor": -0.682,
+        "floor~mean": 0.0,
+        "upside~mean": 0.0,
+        "tail_risk~floor": -0.947
+      }
+    },
+    "rank": {
+      "QB": {
+        "upside~floor": -0.855,
+        "floor~mean": 0.759,
+        "upside~mean": -0.834,
+        "tail_risk~floor": -0.959
+      },
+      "RB": {
+        "upside~floor": -0.594,
+        "floor~mean": 0.365,
+        "upside~mean": -0.523,
+        "tail_risk~floor": -0.641
+      },
+      "WR": {
+        "upside~floor": -0.489,
+        "floor~mean": 0.338,
+        "upside~mean": -0.611,
+        "tail_risk~floor": -0.847
+      },
+      "TE": {
+        "upside~floor": -0.701,
+        "floor~mean": 0.466,
+        "upside~mean": -0.578,
+        "tail_risk~floor": -0.83
+      }
+    },
+    "rank_delta": {
+      "QB": {
+        "upside~floor": 0.149,
+        "floor~mean": -0.192,
+        "upside~mean": -0.858,
+        "tail_risk~floor": 0.112
+      },
+      "RB": {
+        "upside~floor": 0.375,
+        "floor~mean": -0.322,
+        "upside~mean": -0.631,
+        "tail_risk~floor": 0.339
+      },
+      "WR": {
+        "upside~floor": 0.461,
+        "floor~mean": -0.327,
+        "upside~mean": -0.686,
+        "tail_risk~floor": 0.182
+      },
+      "TE": {
+        "upside~floor": 0.44,
+        "floor~mean": -0.243,
+        "upside~mean": -0.634,
+        "tail_risk~floor": 0.322
+      }
+    }
+  },
+  "opposition_max": -0.3,
+  "uncensored_agreement_with_linear": {
+    "linear": 1.0,
+    "tobit": 0.9591,
+    "rank": 0.4627,
+    "rank_delta": 0.7323
+  },
+  "selected": "rank",
+  "inert_weights": {
+    "boom_prob_zero_share": 0.6522,
+    "bust_prob_zero_share": 0.5652,
+    "relative_downside_zero_share": 0.0054,
+    "relative_downside_defined": 0.9946,
+    "tail_risk_corr_by_pos": {
+      "QB": 0.1511,
+      "RB": 0.2361,
+      "WR": 0.1903,
+      "TE": 0.06
+    }
+  },
+  "verdict": {
+    "bar1_corr_le_0": true,
+    "bar2_top10_not_deep": true,
+    "selected_method": "rank"
+  }
+}

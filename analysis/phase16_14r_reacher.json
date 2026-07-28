@@ -1,0 +1,388 @@
+{
+  "generated": "2026-07-28T04:46:39.252137+00:00",
+  "season": 2026,
+  "board_source": "ffc",
+  "config": {
+    "seeds": 20,
+    "rounds": 15
+  },
+  "direction": {
+    "reacher (shipped)": {
+      "rookie": -0.0391269096,
+      "cos": -0.0629020145,
+      "upside": -0.0264147978,
+      "tail_risk": 0.000344004,
+      "floor": -0.0386060349,
+      "mean": 0.2181363893
+    },
+    "reacher (pre-16.14R: width only)": {
+      "rookie": -0.0260379679,
+      "cos": -0.0800982631,
+      "upside": -0.0446503172,
+      "tail_risk": -0.0269091008,
+      "floor": -0.0055924628,
+      "mean": 0.1456581388
+    },
+    "balanced": {
+      "rookie": -0.0438926185,
+      "cos": -0.1029348502,
+      "upside": -0.0638603663,
+      "tail_risk": -0.0381702305,
+      "floor": 0.0126450899,
+      "mean": 0.2554905666
+    }
+  },
+  "direction_moves": {
+    "rookie": true,
+    "cos": true,
+    "upside": true,
+    "tail_risk": true,
+    "floor": true,
+    "mean": true
+  },
+  "per_round": [
+    {
+      "round": 1,
+      "n_reach": 18,
+      "mean_reach": 3.8388888889,
+      "p95_reach": 7.035,
+      "mx_reach": 7.8,
+      "n_bal": 47,
+      "mean_bal": 3.9872340426,
+      "p95_bal": 11.32,
+      "mx_bal": 16.4,
+      "corpus_p95": 14.5833333333,
+      "ratio_max": 0.4756097561,
+      "over_ceiling": false
+    },
+    {
+      "round": 2,
+      "n_reach": 15,
+      "mean_reach": 5.52,
+      "p95_reach": 7.4,
+      "mx_reach": 7.4,
+      "n_bal": 41,
+      "mean_bal": 7.2365853659,
+      "p95_bal": 17.2,
+      "mx_bal": 23.1,
+      "corpus_p95": 24.121875,
+      "ratio_max": 0.3203463203,
+      "over_ceiling": false
+    },
+    {
+      "round": 3,
+      "n_reach": 15,
+      "mean_reach": 2.9933333333,
+      "p95_reach": 6.05,
+      "mx_reach": 7.8,
+      "n_bal": 41,
+      "mean_bal": 12.3463414634,
+      "p95_bal": 30.2,
+      "mx_bal": 39.2,
+      "corpus_p95": 33.8682539683,
+      "ratio_max": 0.1989795918,
+      "over_ceiling": false
+    },
+    {
+      "round": 4,
+      "n_reach": 12,
+      "mean_reach": 12.85,
+      "p95_reach": 21.865,
+      "mx_reach": 23.9,
+      "n_bal": 41,
+      "mean_bal": 13.2682926829,
+      "p95_bal": 37.2,
+      "mx_bal": 47.1,
+      "corpus_p95": 43.4583333333,
+      "ratio_max": 0.5074309979,
+      "over_ceiling": false
+    },
+    {
+      "round": 5,
+      "n_reach": 18,
+      "mean_reach": 14.9722222222,
+      "p95_reach": 30.315,
+      "mx_reach": 44.0,
+      "n_bal": 32,
+      "mean_bal": 15.096875,
+      "p95_bal": 36.385,
+      "mx_bal": 41.6,
+      "corpus_p95": 50.05,
+      "ratio_max": 1.0576923077,
+      "over_ceiling": false
+    },
+    {
+      "round": 6,
+      "n_reach": 17,
+      "mean_reach": 20.4588235294,
+      "p95_reach": 38.4,
+      "mx_reach": 38.4,
+      "n_bal": 39,
+      "mean_bal": 12.8461538462,
+      "p95_bal": 40.52,
+      "mx_bal": 51.6,
+      "corpus_p95": 46.5941666667,
+      "ratio_max": 0.7441860465,
+      "over_ceiling": false
+    },
+    {
+      "round": 7,
+      "n_reach": 15,
+      "mean_reach": 23.2333333333,
+      "p95_reach": 37.85,
+      "mx_reach": 39.6,
+      "n_bal": 43,
+      "mean_bal": 16.2372093023,
+      "p95_bal": 49.25,
+      "mx_bal": 61.9,
+      "corpus_p95": 46.75,
+      "ratio_max": 0.6397415186,
+      "over_ceiling": false
+    },
+    {
+      "round": 8,
+      "n_reach": 16,
+      "mean_reach": 19.59375,
+      "p95_reach": 45.025,
+      "mx_reach": 46.9,
+      "n_bal": 37,
+      "mean_bal": 17.6324324324,
+      "p95_bal": 50.6,
+      "mx_bal": 59.1,
+      "corpus_p95": 47.7553571429,
+      "ratio_max": 0.79357022,
+      "over_ceiling": false
+    },
+    {
+      "round": 9,
+      "n_reach": 10,
+      "mean_reach": 19.25,
+      "p95_reach": 31.56,
+      "mx_reach": 33.0,
+      "n_bal": 45,
+      "mean_bal": 27.8466666667,
+      "p95_bal": 65.64,
+      "mx_bal": 69.6,
+      "corpus_p95": 44.0991666667,
+      "ratio_max": 0.474137931,
+      "over_ceiling": false
+    },
+    {
+      "round": 10,
+      "n_reach": 14,
+      "mean_reach": 21.3571428571,
+      "p95_reach": 35.48,
+      "mx_reach": 37.3,
+      "n_bal": 39,
+      "mean_bal": 22.1948717949,
+      "p95_bal": 62.78,
+      "mx_bal": 66.8,
+      "corpus_p95": 39.1,
+      "ratio_max": 0.5583832335,
+      "over_ceiling": false
+    },
+    {
+      "round": 11,
+      "n_reach": 11,
+      "mean_reach": 16.9909090909,
+      "p95_reach": 31.05,
+      "mx_reach": 31.9,
+      "n_bal": 44,
+      "mean_bal": 25.9795454545,
+      "p95_bal": 57.27,
+      "mx_bal": 64.8,
+      "corpus_p95": 33.7138888889,
+      "ratio_max": 0.4922839506,
+      "over_ceiling": false
+    },
+    {
+      "round": 12,
+      "n_reach": 14,
+      "mean_reach": 13.7571428571,
+      "p95_reach": 22.2,
+      "mx_reach": 22.2,
+      "n_bal": 48,
+      "mean_bal": 27.16875,
+      "p95_bal": 53.185,
+      "mx_bal": 58.1,
+      "corpus_p95": 30.7544444444,
+      "ratio_max": 0.3820998279,
+      "over_ceiling": false
+    },
+    {
+      "round": 13,
+      "n_reach": 14,
+      "mean_reach": 13.6285714286,
+      "p95_reach": 28.945,
+      "mx_reach": 29.4,
+      "n_bal": 49,
+      "mean_bal": 21.7632653061,
+      "p95_bal": 39.46,
+      "mx_bal": 52.3,
+      "corpus_p95": 30.035,
+      "ratio_max": 0.5621414914,
+      "over_ceiling": false
+    }
+  ],
+  "bar1": {
+    "worst_ratio": 1.058,
+    "limit": 2.0,
+    "pass": true
+  },
+  "bar2": {
+    "rounds_over_ceiling": 0,
+    "rounds_scored": 13,
+    "pass": true
+  },
+  "budget_ablation": [
+    {
+      "round": 1,
+      "n_on": 18,
+      "mean_on": 3.8388888889,
+      "p95_on": 7.035,
+      "mx_on": 7.8,
+      "n_off": 19,
+      "mean_off": 13.0157894737,
+      "p95_off": 24.45,
+      "mx_off": 35.7
+    },
+    {
+      "round": 2,
+      "n_on": 15,
+      "mean_on": 5.52,
+      "p95_on": 7.4,
+      "mx_on": 7.4,
+      "n_off": 19,
+      "mean_off": 22.4842105263,
+      "p95_off": 40.55,
+      "mx_off": 43.7
+    },
+    {
+      "round": 3,
+      "n_on": 15,
+      "mean_on": 2.9933333333,
+      "p95_on": 6.05,
+      "mx_on": 7.8,
+      "n_off": 18,
+      "mean_off": 18.7722222222,
+      "p95_off": 36.64,
+      "mx_off": 46.5
+    },
+    {
+      "round": 4,
+      "n_on": 12,
+      "mean_on": 12.85,
+      "p95_on": 21.865,
+      "mx_on": 23.9,
+      "n_off": 12,
+      "mean_off": 26.25,
+      "p95_off": 42.71,
+      "mx_off": 49.2
+    },
+    {
+      "round": 5,
+      "n_on": 18,
+      "mean_on": 14.9722222222,
+      "p95_on": 30.315,
+      "mx_on": 44.0,
+      "n_off": 17,
+      "mean_off": 16.6882352941,
+      "p95_off": 36.84,
+      "mx_off": 49.4
+    },
+    {
+      "round": 6,
+      "n_on": 17,
+      "mean_on": 20.4588235294,
+      "p95_on": 38.4,
+      "mx_on": 38.4,
+      "n_off": 17,
+      "mean_off": 25.7352941176,
+      "p95_off": 48.8,
+      "mx_off": 49.6
+    },
+    {
+      "round": 7,
+      "n_on": 15,
+      "mean_on": 23.2333333333,
+      "p95_on": 37.85,
+      "mx_on": 39.6,
+      "n_off": 17,
+      "mean_off": 32.1235294118,
+      "p95_off": 64.78,
+      "mx_off": 65.5
+    },
+    {
+      "round": 8,
+      "n_on": 16,
+      "mean_on": 19.59375,
+      "p95_on": 45.025,
+      "mx_on": 46.9,
+      "n_off": 16,
+      "mean_off": 38.325,
+      "p95_off": 79.375,
+      "mx_off": 84.4
+    },
+    {
+      "round": 9,
+      "n_on": 10,
+      "mean_on": 19.25,
+      "p95_on": 31.56,
+      "mx_on": 33.0,
+      "n_off": 12,
+      "mean_off": 42.2583333333,
+      "p95_off": 66.925,
+      "mx_off": 67.2
+    },
+    {
+      "round": 10,
+      "n_on": 14,
+      "mean_on": 21.3571428571,
+      "p95_on": 35.48,
+      "mx_on": 37.3,
+      "n_off": 17,
+      "mean_off": 47.6882352941,
+      "p95_off": 75.22,
+      "mx_off": 79.7
+    },
+    {
+      "round": 11,
+      "n_on": 11,
+      "mean_on": 16.9909090909,
+      "p95_on": 31.05,
+      "mx_on": 31.9,
+      "n_off": 17,
+      "mean_off": 39.1588235294,
+      "p95_off": 63.06,
+      "mx_off": 66.1
+    },
+    {
+      "round": 12,
+      "n_on": 14,
+      "mean_on": 13.7571428571,
+      "p95_on": 22.2,
+      "mx_on": 22.2,
+      "n_off": 16,
+      "mean_off": 36.9625,
+      "p95_off": 52.55,
+      "mx_off": 55.1
+    },
+    {
+      "round": 13,
+      "n_on": 14,
+      "mean_on": 13.6285714286,
+      "p95_on": 28.945,
+      "mx_on": 29.4,
+      "n_off": 16,
+      "mean_off": 27.3,
+      "p95_off": 46.55,
+      "mx_off": 47.9
+    }
+  ],
+  "verdict": {
+    "bar1_max_vs_balanced": true,
+    "bar2_under_corpus_p95": true,
+    "direction_moves_signals": true,
+    "budget_binds": true
+  }
+}
