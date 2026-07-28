@@ -55,6 +55,7 @@ def simulate_survival(cand: pd.DataFrame, avail0: np.ndarray, seat_plan: list[di
                       model, *, n_sims: int, rng: np.random.Generator,
                       recent0: list | None = None,
                       top_k: int | None = CHOICE_TOP_K,
+                      band=None, pick0: int | None = None, n_teams: int = 10,
                       run_w: float = 0.0) -> np.ndarray:
     """MC survival of each ``cand`` row over a window of opponent picks.
 
@@ -69,6 +70,11 @@ def simulate_survival(cand: pd.DataFrame, avail0: np.ndarray, seat_plan: list[di
     logit's β is only interpretable relative to its choice set, so simulating over the whole board
     is applying the model outside its contract; ``top_k=None`` restores that (pre-Session-G)
     behaviour and is kept only for the comparison that measured the difference.
+
+    **T15.** ``band`` (a :class:`~fantasy_quant.draft.opponent_model.BandSpec`) supersedes ``top_k``
+    when given, and needs ``pick0`` — the overall pick number of the first simulated pick — because
+    a widening band's size depends on where in the draft it is being applied. The same object must
+    drive the fit; that is the Session-G contract, now with a depth-varying set.
 
     ``run_w`` switches on the Phase-16.16 reactive run adjustment: each simulated pick re-reads the
     room's positional run intensity (:func:`~fantasy_quant.draft.opponent_model.detect_run`) and
@@ -101,15 +107,22 @@ def simulate_survival(cand: pd.DataFrame, avail0: np.ndarray, seat_plan: list[di
     # trailing slot stays 0 so an unfactorized position (code -1) contributes no run count
     counts = np.zeros(len(pos_levels) + 1)
 
+    # per-pick candidate-set size, resolved once: the band is a pure function of the pick number
+    if band is not None and pick0 is not None:
+        k_at = [band.top_k(int(pick0) + j, int(n_teams)) for j in range(len(mats))]
+    else:
+        k_at = [top_k] * len(mats)
+
     for _ in range(n_sims):
         avail = avail0.copy()
         recent = list(recent0 or [])
-        for X in mats:
+        for j, X in enumerate(mats):
             ai = idx_all[avail]
             if ai.size == 0:
                 break
-            if top_k is not None and ai.size > top_k:
-                ai = ai[np.argsort(adp_rank[ai], kind="stable")[:top_k]]
+            k_here = k_at[j]
+            if k_here is not None and ai.size > k_here:
+                ai = ai[np.argsort(adp_rank[ai], kind="stable")[:k_here]]
             if run_col is not None:
                 counts[:] = 0.0
                 for p in recent[-3:]:
@@ -223,6 +236,7 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
     for di, draft_id in enumerate(chosen_drafts):
         dpicks = picks[picks["draft_id"] == draft_id].sort_values("pick_no")
         season = int(dpicks["season"].iloc[0])
+        teams = int(board_key_of[str(draft_id)][2]) or 10   # for a depth-varying band (T15)
         bd = board_cache[board_key_of[str(draft_id)]].copy()
         bd["rookie"] = [1.0 if (season, g) in rookie_set else 0.0 for g in bd["gsis_id"]]
         gsis_to_row = {g: i for i, g in enumerate(bd["gsis_id"])}
@@ -284,7 +298,8 @@ def availability_brier(con, model, *, seasons=None, allow_ecr: bool = True,
                 # behavioral survival (only need it for the contested rows)
                 surv_full = simulate_survival(
                     bd, avail0, seat_plan, model, n_sims=n_sims, rng=rng, recent0=recent0,
-                    top_k=top_k, run_w=run_w)
+                    top_k=top_k, band=getattr(model, "band", None), pick0=t1 + 1,
+                    n_teams=int(teams), run_w=run_w)
                 p_beh = surv_full[contested]
                 cadp = bd["adp"].to_numpy()[contested]
                 beh_br.append(float(np.mean((p_beh - realized) ** 2)))

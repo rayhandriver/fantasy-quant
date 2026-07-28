@@ -147,6 +147,7 @@ def availability_readout(board: pd.DataFrame, model, *, window_picks: int,
                          cfg: DriftConfig | None = None, season: int | None = None, con=None,
                          velocity: pd.DataFrame | None = None, available: np.ndarray | None = None,
                          n_sims: int = 200, seed: int = 0, top_k: int | None = None,
+                         pick0: int | None = None, n_teams: int = 10,
                          key: str = "player_key") -> pd.DataFrame:
     """``P(available at your next pick)`` per board row, with and without drift.
 
@@ -165,7 +166,12 @@ def availability_readout(board: pd.DataFrame, model, *, window_picks: int,
 
     cfg = NO_DRIFT if cfg is None else cfg
 
-    top_k = CHOICE_TOP_K if top_k is None else top_k
+    # T15: take the candidate set from the fitted model's own band. Pinning CHOICE_TOP_K here
+    # regardless of what the model was fit on is the Session-G fit/use mismatch — it was harmless
+    # only while every band was the same fixed 40. An explicit `top_k` still overrides.
+    band = getattr(model, "band", None) if top_k is None else None
+    if top_k is None and band is None:
+        top_k = CHOICE_TOP_K
     cand = board[[c for c in ("adp", "pos", "team", "rookie") if c in board.columns]].copy()
     if available is None:
         available = np.ones(len(board), bool)
@@ -175,7 +181,8 @@ def availability_readout(board: pd.DataFrame, model, *, window_picks: int,
         if not seat_plan:
             return np.ones(len(c))          # no intervening picks -> everyone survives
         return simulate_survival(c, available.copy(), seat_plan, model, n_sims=n_sims,
-                                 rng=np.random.default_rng(seed), top_k=top_k)
+                                 rng=np.random.default_rng(seed), top_k=top_k, band=band,
+                                 pick0=pick0, n_teams=n_teams)
 
     base = _survive(cand)
     picks = drift_picks(board, cfg=cfg, season=season, con=con, velocity=velocity, key=key)

@@ -62,7 +62,144 @@ _ADP_SCALE = 50.0        # adp is divided by this so β is O(1)
 #: still-available players by consensus ADP. Session G found the simulator (11.3) and the
 #: availability sim (11.2) both drawing from the *whole* board instead, which inflated simulated
 #: draft-slot dispersion by ~59 %. Fit and simulation now read this one constant.
+#:
+#: **T15 (2026-07-27):** this is now the *base* of :class:`BandSpec`, not the whole contract. The
+#: contract itself is unchanged and is if anything stricter — fit and every simulator must share one
+#: :class:`BandSpec`, and the tests that pinned them to this integer now pin them to that object.
 CHOICE_TOP_K = 40
+
+
+# =============================================================================================
+# T15 — how ADP enters utility, and how wide the candidate set is
+# =============================================================================================
+@dataclass(frozen=True)
+class AdpSpec:
+    """How raw consensus ADP becomes the ``adp_s`` utility feature.
+
+    ★ **Why this exists as an object rather than a division.** ``adp_s = adp / 50`` was constructed
+    in two places — :func:`build_choice_frame` (fit) and
+    :meth:`OpponentModel.candidate_matrix` (simulate) — and a third and fourth place inverted it to
+    convert *picks* into *utility*
+    (:func:`~fantasy_quant.adp.hype_board.apply_hype`,
+    :meth:`~fantasy_quant.draft.personalities.Personality.reach_cap`). Four copies of one modelling
+    choice, none of which could see the others. This is the single owner.
+
+    ★ **The width law that motivates ``kind="power"`` (T15, derived; see `PLAN.md` 2026-07-27
+    session 3).** For a candidate set spanning board ranks ``r`` with ADP ``a(r)`` and utility
+    ``u = β·f(a)``, the softmax's width in *rank* is ``w_r ∝ 1/(|β|·f'(a)·a'(r))``, so its width in
+    **ADP picks** is ``w_a = w_r·a'(r) ∝ 1/f'(a)`` — **the board's local density cancels**. Hence:
+
+    * ``f`` linear ⇒ ``w_a`` constant in depth. The flat simulated reach profile is *derived*, not
+      merely observed, and no amount of extra corpus can move it.
+    * ``f = (a/s)^p`` ⇒ ``w_a ∝ a^(1-p)``. The corpus's measured ``pick^0.5…0.6`` ⇒ **p ≈ 0.4–0.5**.
+    * ``f = log a`` ⇒ ``w_a ∝ a^1.0`` — over-corrects, which is why T15's first guess was withdrawn.
+
+    The default is ``linear``/``1.0``, which reproduces ``adp / 50`` **exactly**, so nothing moves
+    until a caller ships a fitted spec.
+    """
+
+    kind: str = "linear"
+    exponent: float = 1.0
+    scale: float = _ADP_SCALE
+
+    def __post_init__(self) -> None:
+        if self.kind not in ("linear", "power"):
+            raise ValueError(f"unknown AdpSpec kind {self.kind!r}")
+        if self.scale <= 0:
+            raise ValueError("AdpSpec.scale must be positive")
+        if self.kind == "power" and not 0.0 < self.exponent <= 2.0:
+            raise ValueError(f"implausible AdpSpec exponent {self.exponent}")
+
+    def feature(self, adp) -> np.ndarray:
+        """Raw ADP -> the ``adp_s`` column. ``(adp/scale)**p``, so p=1 is the historical ``adp/50``
+        and every spec agrees at ``adp == scale`` (β stays O(1) and roughly comparable across p)."""
+        a = np.clip(np.asarray(adp, float), 1e-6, None) / float(self.scale)
+        return a if self.kind == "linear" else a ** float(self.exponent)
+
+    def utility_per_pick(self, adp) -> np.ndarray:
+        """``|d feature / d adp|`` — the local exchange rate between ADP picks and utility.
+
+        ★ **Depth-dependent for every spec but the linear one, and that is the point.** Callers
+        converting a claim stated in *picks* (a hype board's ``pick_delta``, a personality's
+        ``max_reach_picks``) into a utility offset used to hardcode ``1/_ADP_SCALE``, i.e. the
+        linear derivative. Under curvature that is wrong by ``(adp/scale)^(p-1)`` — at the top of
+        the board, where every T15 complaint lives, it understates the offset by ~3x.
+        """
+        a = np.clip(np.asarray(adp, float), 1e-6, None)
+        if self.kind == "linear":
+            return np.full(a.shape, 1.0 / float(self.scale))
+        p = float(self.exponent)
+        return (p / float(self.scale)) * (a / float(self.scale)) ** (p - 1.0)
+
+    def to_dict(self) -> dict:
+        return {"kind": self.kind, "exponent": float(self.exponent), "scale": float(self.scale)}
+
+    @classmethod
+    def from_dict(cls, d: dict | None) -> AdpSpec:
+        if not d:
+            return AdpSpec()
+        return cls(kind=str(d.get("kind", "linear")), exponent=float(d.get("exponent", 1.0)),
+                   scale=float(d.get("scale", _ADP_SCALE)))
+
+
+@dataclass(frozen=True)
+class BandSpec:
+    """How many still-available players are in contention at a given point in the draft.
+
+    ``kind="fixed"`` is the Session-G contract exactly: the top ``k0`` available by ADP, at every
+    pick. ``kind="widening"`` grows the set with board depth,
+    ``k = clip(k0 + growth*(round-1), k0, k_max)``.
+
+    ★ **Why widening is in-family for T15 and dissolves T16.** A hard top-40 rank filter is applied
+    *before* utility, so no additive term can pull a deeper player into contention — that is why the
+    16.9 narrative shock measured as a null (a shock cannot reach a non-candidate) and why a
+    board-rank-171 player is uncontested in a 15-round league (T16). The two mechanisms act on
+    different halves of the same defect: **curvature fixes how far inside the set the room strays,
+    the band fixes who is in the set at all.**
+
+    ⚠ **The comparability trap this creates.** A conditional logit's log-loss depends on how many
+    alternatives it chooses between, so raw log-loss is **not comparable across bands** — a wider
+    band scores worse by construction. Band selection is therefore made on *gain over an ADP-only
+    baseline fit and scored on that same band*, never on the level. See
+    ``steps/t15_1_respecify.py``.
+    """
+
+    kind: str = "fixed"
+    k0: int = CHOICE_TOP_K
+    growth: float = 0.0
+    k_max: int = 200
+
+    def __post_init__(self) -> None:
+        if self.kind not in ("fixed", "widening"):
+            raise ValueError(f"unknown BandSpec kind {self.kind!r}")
+        if self.k0 < 1 or self.k_max < self.k0:
+            raise ValueError("BandSpec needs 1 <= k0 <= k_max")
+
+    def top_k(self, overall_pick: int, n_teams: int) -> int:
+        """Candidate-set size at ``overall_pick`` (1-based) in an ``n_teams`` room."""
+        if self.kind == "fixed":
+            return int(self.k0)
+        rnd0 = max(0, (int(overall_pick) - 1) // max(int(n_teams), 1))
+        return int(min(self.k_max, self.k0 + self.growth * rnd0))
+
+    def to_dict(self) -> dict:
+        return {"kind": self.kind, "k0": int(self.k0), "growth": float(self.growth),
+                "k_max": int(self.k_max)}
+
+    @classmethod
+    def from_dict(cls, d: dict | None) -> BandSpec:
+        if not d:
+            return BandSpec()
+        return cls(kind=str(d.get("kind", "fixed")), k0=int(d.get("k0", CHOICE_TOP_K)),
+                   growth=float(d.get("growth", 0.0)), k_max=int(d.get("k_max", 200)))
+
+
+#: The shipped specs. **Changed only by a fitted artifact**, never edited by hand: the fit writes
+#: them into ``analysis/phase11_opponent_model.json`` and every consumer reads them back with the β
+#: they were estimated with (*a coefficient is not transportable without its controls* — the
+#: fourth instance of that lesson in this project, and the one it was easiest to walk into).
+ADP_SPEC = AdpSpec()
+BAND_SPEC = BandSpec()
 
 
 # =============================================================================================
@@ -158,9 +295,10 @@ def _load_profiles(con) -> pd.DataFrame:
     return prof
 
 
-def build_choice_frame(con, *, top_k: int = CHOICE_TOP_K, skill_only: bool = True,
+def build_choice_frame(con, *, top_k: int | None = None, skill_only: bool = True,
                        seasons: Iterable[int] | None = None, allow_ecr: bool = True,
                        max_drafts_per_season: int | None = None,
+                       band: BandSpec | None = None, adp_spec: AdpSpec | None = None,
                        seed: int = 0) -> tuple[pd.DataFrame, list[str]]:
     """Turn the human-draft corpus into conditional-logit **choice rows**.
 
@@ -177,11 +315,24 @@ def build_choice_frame(con, *, top_k: int = CHOICE_TOP_K, skill_only: bool = Tru
     and a 2QB room's pick order is not evidence about redraft PPR behaviour. This is the same
     format-contamination bug F.5 fixed on the ADP board path, in its second home; see
     :mod:`fantasy_quant.adp.boards` for why a board key is (season, scoring, teams).
+
+    **T15.** The candidate set is now a :class:`BandSpec` (``band``), which may widen with board
+    depth, and the ``adp_s`` column is built by an :class:`AdpSpec` (``adp_spec``). Both default to
+    the shipped module specs. ``top_k`` is kept as a back-compatible override meaning "a fixed band
+    of this size". The frame also carries **``adp``, the raw un-transformed column**, so an exponent
+    grid can be refit from one expensive build instead of rebuilding the corpus per candidate — the
+    band is what changes which rows exist, the transform is not.
     """
+    if top_k is not None and band is not None:
+        raise ValueError("pass either top_k (a fixed band) or band, not both")
+    band = band if band is not None else (BandSpec(k0=int(top_k)) if top_k is not None
+                                          else BAND_SPEC)
+    adp_spec = adp_spec if adp_spec is not None else ADP_SPEC
     drafts = eligible_drafts(con, seasons)
     if drafts.empty:
         return pd.DataFrame(columns=["group", "season", "draft_id", "board_source", "chosen",
-                                     *ALL_FEATURES]), list(ALL_FEATURES)
+                                     *ALL_FEATURES, "adp", "chosen_outside_band"]), \
+            list(ALL_FEATURES)
     if max_drafts_per_season is not None:
         # An explicit, reported sampling budget — not a silent cap. Sampling is per season so the
         # walk-forward keeps every held-out season; `seed` makes the draw reproducible.
@@ -279,16 +430,26 @@ def build_choice_frame(con, *, top_k: int = CHOICE_TOP_K, skill_only: bool = Tru
         mgr_counts: dict[str, dict[str, int]] = {}
         recent_pos: list[str] = []
         dpicks = dpicks.sort_values("pick_no")
+        board_teams = int(board_key_of.get(str(draft_id), (0, "", 10))[2]) or 10
         for _, pk in dpicks.iterrows():
             chosen_id = pk["gsis_id"]
             mgr = pk["picked_by"]
-            # candidate universe: top_k still-available by ADP (must include the realized pick)
+            # candidate universe: the band's still-available top-k by ADP at THIS pick (which may
+            # widen with depth), and it must include the realized pick
+            k_here = band.top_k(int(pk["pick_no"]), board_teams)
             avail_mask = ~np.isin(board_ids, list(taken))
             av_ids = board_ids[avail_mask]
             av_adp = board_adp[avail_mask]
             order = np.argsort(av_adp)
-            cand_ids = av_ids[order][:top_k]
-            if chosen_id in adp_map and chosen_id not in cand_ids:
+            cand_ids = av_ids[order][:k_here]
+            # ★ Did the band actually contain the pick a human made? This is the one
+            # **judgement-free** way to compare bands: a candidate set that routinely excludes the
+            # realized choice is a set the model is being applied outside of, and no amount of
+            # log-loss bookkeeping fixes that. The row is kept either way (dropping deep reaches
+            # would bias the corpus toward chalk), but the exclusion is now counted rather than
+            # silently repaired.
+            outside = int(chosen_id in adp_map and chosen_id not in cand_ids)
+            if outside:
                 cand_ids = np.append(cand_ids, chosen_id)   # keep a rare deep reach in-set
             if chosen_id not in adp_map:
                 # picked player not on the consensus board — can't score; still advance state
@@ -309,7 +470,7 @@ def build_choice_frame(con, *, top_k: int = CHOICE_TOP_K, skill_only: bool = Tru
                 capp = adp_map[cid]
                 rows.append((
                     gid, season, int(cid == chosen_id),
-                    capp / _ADP_SCALE,                                     # adp_s
+                    float(adp_spec.feature(capp)),                         # adp_s
                     1.0 if cpos == "RB" else 0.0,
                     1.0 if cpos == "WR" else 0.0,
                     1.0 if cpos == "TE" else 0.0,
@@ -319,6 +480,8 @@ def build_choice_frame(con, *, top_k: int = CHOICE_TOP_K, skill_only: bool = Tru
                     1.0 if (season, cid) in rookie_set else 0.0,            # rookie
                     1.0 if team_map.get(cid) in favset else 0.0,           # fandom
                     max(0.0, _NEED_TARGET.get(cpos, 0) - mc.get(cpos, 0)), # need (unmet demand)
+                    capp,                          # raw ADP, so an exponent grid needs one build
+                    outside,                       # was the realized pick outside this band?
                 ))
             gid += 1
             taken.add(chosen_id)
@@ -334,10 +497,11 @@ def build_choice_frame(con, *, top_k: int = CHOICE_TOP_K, skill_only: bool = Tru
             src_codes.append(np.full(len(blk), src_index[board_src], dtype=np.int8))
             draft_levels.append(str(draft_id))
 
-    num_cols = ["group", "season", "chosen", *ALL_FEATURES]
+    num_cols = ["group", "season", "chosen", *ALL_FEATURES, "adp", "chosen_outside_band"]
     if not blocks:
         return (pd.DataFrame(columns=["group", "season", "draft_id", "board_source", "chosen",
-                                      *ALL_FEATURES]), list(ALL_FEATURES))
+                                      *ALL_FEATURES, "adp", "chosen_outside_band"]),
+                list(ALL_FEATURES))
     arr = np.concatenate(blocks)
     del blocks
     frame = pd.DataFrame(arr, columns=num_cols)
@@ -346,8 +510,23 @@ def build_choice_frame(con, *, top_k: int = CHOICE_TOP_K, skill_only: bool = Tru
     frame["chosen"] = frame["chosen"].astype(np.int8)
     frame["draft_id"] = pd.Categorical.from_codes(np.concatenate(draft_codes), draft_levels)
     frame["board_source"] = pd.Categorical.from_codes(np.concatenate(src_codes), src_levels)
-    cols = ["group", "season", "draft_id", "board_source", "chosen", *ALL_FEATURES]
+    cols = ["group", "season", "draft_id", "board_source", "chosen", *ALL_FEATURES, "adp",
+            "chosen_outside_band"]
     return frame[cols], list(ALL_FEATURES)
+
+
+def respec_adp(frame: pd.DataFrame, adp_spec: AdpSpec) -> pd.DataFrame:
+    """Rebuild ``adp_s`` on an existing choice frame under a different :class:`AdpSpec`.
+
+    The band decides which rows exist and is expensive to change; the transform is a column and is
+    free. Selecting an exponent therefore costs one corpus build, not one per grid point — the whole
+    reason :func:`build_choice_frame` keeps raw ``adp``.
+    """
+    if "adp" not in frame.columns:
+        raise KeyError("choice frame has no raw `adp` column — rebuild it with build_choice_frame")
+    out = frame.copy()
+    out["adp_s"] = adp_spec.feature(out["adp"].to_numpy(float)).astype(np.float32)
+    return out
 
 
 def corpus_funnel(con, seasons: Iterable[int] | None = None,
@@ -398,11 +577,20 @@ def _softmax_by_group(u: np.ndarray, ptr: np.ndarray):
 
 @dataclass
 class OpponentModel:
-    """A fitted conditional-logit opponent model. ``beta`` aligns with ``feature_cols``."""
+    """A fitted conditional-logit opponent model. ``beta`` aligns with ``feature_cols``.
+
+    ★ **``adp_spec`` and ``band`` travel with β and are part of the fit, not settings.** β is
+    estimated relative to (a) the transform that produced ``adp_s`` and (b) the candidate set it
+    chose from; pairing a fitted β with either one changed silently produces a plausible, wrong
+    room. Both are persisted next to the coefficients and read back together.
+    """
+
     feature_cols: list[str]
     beta: np.ndarray | None = None
     l2: float = 1.0
     meta: dict = field(default_factory=dict)
+    adp_spec: AdpSpec = field(default_factory=lambda: ADP_SPEC)
+    band: BandSpec = field(default_factory=lambda: BAND_SPEC)
 
     # -- fit ----------------------------------------------------------------------------------
     def fit(self, frame: pd.DataFrame) -> OpponentModel:
@@ -457,7 +645,7 @@ class OpponentModel:
         team = cand["team"].to_numpy() if "team" in cand.columns else np.array([None] * len(cand))
         rk = cand["rookie"].to_numpy(float) if "rookie" in cand.columns else np.zeros(len(cand))
         cols = {
-            "adp_s": cand["adp"].to_numpy(float) / _ADP_SCALE,
+            "adp_s": self.adp_spec.feature(cand["adp"].to_numpy(float)),
             "is_RB": (pos == "RB").astype(float), "is_WR": (pos == "WR").astype(float),
             "is_TE": (pos == "TE").astype(float), "is_QB": (pos == "QB").astype(float),
             "pos_run3": np.array([recent_pos.get(p, 0) for p in pos], float),
@@ -565,3 +753,95 @@ def walk_forward(frame: pd.DataFrame, feature_cols: list[str], *, l2: float = 1.
     }
     pooled["beats_adp"] = bool(pooled["logloss_gain_ci"][0] > 0)
     return {"per_season": per_season, "pooled": pooled}
+
+
+def band_coverage(con, bands, *, seasons=None, allow_ecr: bool = True,
+                  max_drafts_per_season: int | None = None, skill_only: bool = True,
+                  seed: int = 0) -> pd.DataFrame:
+    """How often each :class:`BandSpec` **fails to contain the pick a human actually made**.
+
+    ★ **The judgement-free way to compare candidate sets, and the reason it is needed.** The obvious
+    alternative — "gain over an ADP-only baseline" — is unsound, and the T15 grid showed it
+    directly: inside one fixed band, held-out log-loss is minimized at exponent 0.45 while *gain*
+    is maximized at 1.0. Gain rises when the **baseline** gets worse, so a criterion built on it
+    rewards a specification that cripples ADP-only more than it helps the behavioural model. It
+    duly prefers the widest band and the flattest ADP term — both of them the T15 defect.
+
+    Coverage has none of that: it is a property of the **set**, not of any likelihood's
+    normalization, so it is directly comparable across bands. A conditional logit applied to a
+    candidate set that does not contain the realized choice is being used outside its contract,
+    which is the Session-G lesson stated as a measurable quantity.
+
+    Deliberately cheap — it walks the corpus counting ranks and never materializes candidate rows,
+    so it costs a small fraction of :func:`build_choice_frame` and can be run over many bands.
+    """
+    bands = list(bands)
+    drafts = eligible_drafts(con, seasons)
+    if drafts.empty:
+        return pd.DataFrame(columns=["band", "n_picks", "miss_rate", "mean_k"])
+    if max_drafts_per_season is not None:
+        keep = [g.sample(min(len(g), max_drafts_per_season), random_state=seed)
+                for _s, g in drafts.groupby("season", sort=True)]
+        drafts = pd.concat(keep, ignore_index=True)
+
+    keys = list(zip(drafts["season"], drafts["ffc_scoring"], drafts["board_teams"], strict=False))
+    resolved = resolve_boards(con, keys, allow_ecr=allow_ecr)
+    board_cache = {}
+    for key, (bd, _src) in resolved.items():
+        if bd.empty:
+            continue
+        bd = bd.copy()
+        bd["pos"] = bd["position"].map(canon_pos)
+        bd["adp"] = pd.to_numeric(bd["adp"], errors="coerce")
+        bd = bd.dropna(subset=["pos", "adp"])
+        if skill_only:
+            bd = bd[bd["pos"].isin(("QB", "RB", "WR", "TE"))]
+        board_cache[key] = bd.sort_values("adp").reset_index(drop=True)
+    board_key_of = {
+        str(d): (int(s), str(sc), int(t))
+        for d, s, sc, t in zip(drafts["draft_id"], drafts["season"], drafts["ffc_scoring"],
+                               drafts["board_teams"], strict=False)
+    }
+
+    ids = drafts["draft_id"].astype(str).tolist()
+    ph = ",".join("?" * len(ids))
+    picks = con.execute(
+        f"""SELECT p.draft_id, p.pick_no, p.gsis_id, p.position
+            FROM sleeper_draft_picks p
+            WHERE p.draft_id IN ({ph}) AND p.picked_by IS NOT NULL AND p.gsis_id IS NOT NULL
+            ORDER BY p.draft_id, p.pick_no""", ids).df()
+    picks["pos"] = picks["position"].map(canon_pos)
+    if skill_only:
+        picks = picks[picks["pos"].isin(("QB", "RB", "WR", "TE"))]
+
+    miss = {id(b): 0 for b in bands}
+    ksum = {id(b): 0 for b in bands}
+    n = 0
+    for draft_id, dp in picks.groupby("draft_id", sort=False):
+        key = board_key_of.get(str(draft_id))
+        bd = board_cache.get(key)
+        if bd is None:
+            continue
+        teams = int(key[2]) or 10
+        rank_of = {g: i for i, g in enumerate(bd["gsis_id"])}   # board rank, 0-based, by ADP
+        taken_ranks: list[int] = []
+        for _, pk in dp.iterrows():
+            r = rank_of.get(pk["gsis_id"])
+            if r is None:
+                continue
+            # rank among STILL-AVAILABLE players = board rank minus those already gone above it
+            avail_rank = r - sum(1 for t in taken_ranks if t < r)
+            for b in bands:
+                k = b.top_k(int(pk["pick_no"]), teams)
+                ksum[id(b)] += k
+                if avail_rank >= k:
+                    miss[id(b)] += 1
+            taken_ranks.append(r)
+            n += 1
+
+    return pd.DataFrame([{
+        "band": f"fixed{b.k0}" if b.kind == "fixed" else f"widen+{b.growth:g}",
+        "band_spec": b.to_dict(), "n_picks": n,
+        "miss_rate": (miss[id(b)] / n) if n else float("nan"),
+        "mean_k": (ksum[id(b)] / n) if n else float("nan"),
+    } for b in bands])

@@ -400,15 +400,44 @@ def test_homer_chases_changed_situations_when_no_team_is_set():
 def test_a_story_chaser_with_no_story_available_drafts_normally():
     """The requested fallback: no hype, no changed situation, no favourite team on the board ⇒
     take the best value rather than manufacture a reach. Note this is an *exact* equality on the
-    whole pick log, not a tendency — with nothing to chase the tilt is identically zero."""
+    whole pick log, not a tendency — with nothing to chase the tilt is identically zero.
+
+    ⚠ **T15 split this into two properties and the test now pins the right one.** ``width_mult`` is
+    a standing property of the seat, not a reaction to a story, so a homer at his shipped width
+    (1.2) legitimately drafts differently from ``balanced`` even with nothing to chase. The claim
+    being tested is that *the discretionary tilt* is zero, so the comparison holds width fixed.
+    Left as an equality against ``balanced`` it would have failed for a correct reason, which is the
+    least useful kind of red.
+    """
     board = _enriched_board(240, seed=5)
     board["cos"] = 0.0                                   # nothing has changed for anybody
     kw = dict(n_teams=10, rounds=8, seed=8)
+    flat_homer = replace(personalities()["homer"], width_mult=1.0)
     homer = simulate_draft(board, opponent_pick_fn=make_opponent_pick_fn(
-        _model(), personalities()["homer"]), **kw)
+        _model(), flat_homer), **kw)
     bal = simulate_draft(board, opponent_pick_fn=make_opponent_pick_fn(
         _model(), personalities()["balanced"]), **kw)
     assert list(homer.pick_log()["player_key"]) == list(bal.pick_log()["player_key"])
+
+
+def test_width_mult_is_the_only_thing_separating_that_homer_from_balanced():
+    """The other half of the split above: at his shipped width the homer *does* stray further.
+
+    Stated as an opposition (the 16.14 lesson), because "differs from balanced" would also pass on a
+    seat that merely drafts a different legal draft.
+    """
+    board = _enriched_board(240, seed=5)
+    board["cos"] = 0.0
+    kw = dict(n_teams=10, rounds=10, seed=8)
+
+    def mean_abs_reach(pers):
+        st = simulate_draft(board, opponent_pick_fn=make_opponent_pick_fn(_model(), pers), **kw)
+        log = st.pick_log()
+        return float((log["adp"] - log["overall_pick"]).abs().mean())
+
+    wide = mean_abs_reach(replace(personalities()["homer"], width_mult=2.0))
+    narrow = mean_abs_reach(replace(personalities()["homer"], width_mult=0.5))
+    assert wide > narrow
 
 
 def test_hype_gain_scales_the_shared_shock_per_seat():

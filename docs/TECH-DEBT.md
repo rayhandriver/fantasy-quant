@@ -26,7 +26,7 @@ At a glance:
 | **T13** | 🟠 | Phase-5 distribution cloud is **not reproducible across processes** — per-player q10/q90 vary run to run; dress coverage wobbles 75.5↔76.5 % | before any per-player distribution number is published in the app | ☐ 2026-07-26 |
 | **T14** | ✅ | 11.2 does not scale. **Diagnosis corrected 2026-07-26**: the bootstrap was 0.79 s (0.008 %); the cost was pandas in `simulate_survival` (99.3 %). Fixed both → **396 s → 12.7 s, bit-identical** | when 11.2 is next re-run at scale | ☑ 2026-07-26 |
 | **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☑ 2026-07-25 |
-| **T15** | 🟡 | simulated draft-slot dispersion is **flat in board depth** (+0.08 vs realized +0.68) — `adp_s` is linear in raw ADP + a hard rank band, so deep sleepers look more reliably gettable than they are | before Phase 14 surfaces availability to a user; an 11.1 respecification | ☐ 2026-07-26 |
+| **T15** | 🟠 | simulated draft-slot dispersion is **the wrong shape in board depth** — **escalated + measured 2026-07-27** against 1,420 realized human drafts: round-1 mean reach **11.4 picks vs a realized 3.3** (p90 27.7 vs 6.6) and round-15 **15.0 vs 27.1**, i.e. ~3.5× too wide early and ~1.8× too narrow late. Elite players fall past the corpus's 95th percentile every draft, and the `autopilot` seats harvest the spill (they won this mock). Cause is arithmetic: ADP is worth **0.034 utility/pick** vs `is_TE` +0.57 and `need` +0.47, softmaxed over a fixed top-40 | **the user-facing blocker on mock realism**; an 11.1 respecification (measured exponent ~0.5–0.6, *not* log) | ☐ 2026-07-27 |
 | **T17** | ✅ | **the live season has no per-player availability at all** — `availability_projection(con, 2026)` returned **0 rows**, collapsing the live Phase-5 `mean` to **37 % of the consensus projection**. Fixed by rolling the covariates forward (`projected_availability_frame`) + a **level-band guard** that now runs on the live season, where it breaks | before Phase 14 shows a user any distribution number for the season they are drafting | ☑ 2026-07-27 |
 | **T18** | 🟡 | `sleeper_manager_profiles.avg_reach` is measured against a **pooled** ADP board, so it reports a **+91.9-pick** mean QB reach — a board mismatch, not a behaviour. Anything keying on it (a future 11.3 fit, a manager-facing "you reach" readout) inherits the error; 16.15 works around it by computing position share from picks alone | before `avg_reach` is consumed by a model or shown to a user | ☐ 2026-07-27 |
 
@@ -604,10 +604,230 @@ would not match. Speed on a 0.79 s component was not worth breaking comparabilit
 committed scale for ~5 min, so the "reduced sample" compromise it was scoped under is no longer
 needed for the confirmation run.
 
-## 🟡 T15 — simulated draft-slot dispersion is flat in board depth
-*(opened 2026-07-26, Session G, by the 16.9 done-bar)*
+## 🟠 T15 — simulated draft-slot dispersion is flat in board depth
+*(opened 2026-07-26, Session G, by the 16.9 done-bar · **escalated 🟡→🟠 and re-scoped 2026-07-27**
+by a live human-in-the-loop mock draft — see `findings.md` §"Live mock draft (2026-07-27)")*
 
-**Symptom.** Realized cross-draft dispersion rises steeply with board depth — Spearman(`sd_drift`,
+### ★ 2026-07-27 — measured from both sides, in the units a user sees, and it is worse than "flat"
+
+A full 10-team mock was drafted by the user against `DEFAULT_ROOM`. Every reach he flagged as
+impossible was real, and measuring the corpus proved him right on the number he guessed. Mean
+|drift| in **10-team ADP picks**, simulator vs **1,420 realized human drafts / 197,227 boarded
+picks (2017–2025)** via `adp/drift_panel.build_drift_panel`:
+
+| round | corpus mean | **sim mean** | corpus p90 | **sim p90** |
+|---|---|---|---|---|
+| 1 | **3.3** | **11.4** | **6.6** | **27.7** |
+| 2 | 5.7 | 15.2 | 12.4 | 30.8 |
+| 3 | 7.8 | 9.4 | 16.5 | 15.2 |
+| 5 | 11.6 | 12.8 | 25.2 | 19.5 |
+| 8 | 15.1 | 10.3 | 35.6 | 20.3 |
+| 12 | 18.0 | 21.4 | 35.8 | 33.4 |
+| 15 | 27.1 | 15.0 | 51.7 | 23.6 |
+
+**The corpus grows monotonically 3.3 → 27.1 picks; the simulator is flat at ~10–21 with no trend.**
+So the defect is not "too wide" — it is **the wrong shape**: ~3.5× too wide in round 1 and ~1.8×
+too *narrow* by round 15. A fix that only shrinks the softmax everywhere would make the late rounds
+worse. (The user's own estimate before seeing any data — "5–8 picks is reasonable early" — matches
+the corpus round-1 p90 of **6.6** almost exactly.)
+
+**★ The fall side is the same defect and is the more visible failure.** Corpus players with ADP ≤ 12:
+mean actual slot **pick 8.4**, only **23.7 %** fall past pick 10, **p95 = pick 17**. In the simulated
+draft, Nacua (ADP 2.7) fell to **14**, CMC (5.1) to **19**, JSN (5.9) to **20**, J.Taylor (7.7) to
+**21**, Achane (9.5) to **22** — five top-12 players past the corpus's 95th percentile *in one draft*
+— and Rashee Rice (27.3) to **59**.
+
+**★ The value leaks to the seats with no opinion.** Per-seat mean drift, in picks (+ = reached):
+`autopilot` **−19.8** · `balanced` +4.3 · `safe_floor` +5.3 · `homer` +6.9 · `upside_chaser` +8.7 ·
+`reacher` **+14.5** (max +52.2). The two autopilot seats finished **1st and 2nd** on top-9 consensus
+projection. Everything the reaching seats spill is harvested by the ADP-followers, so "draft pure
+chalk" is a free lunch this room serves and no real room does. **That is a cheap objective
+regression test that needs no face-validity judgement: the autopilot seats must not systematically
+out-value the room.**
+
+### ★ Why the 7,699-draft corpus did not fix it — the arithmetic
+
+`_ADP_SCALE = 50` and the fitted `adp_s = −1.683`, so **one ADP pick is worth 0.0337 utility**. In
+those same units the other fitted coefficients are enormous: `is_TE` **+16.8 picks**, `need` **+14.1**,
+`is_RB` **−12.1**, `fandom` **+35.5** (×2.5 for `homer` ⇒ **89**). The choice is then a softmax over
+`CHOICE_TOP_K = 40` candidates spanning ~45 ADP picks in round 1, i.e. a **1.35 utility** spread end
+to end: the 40th-best available is still **26 %** as likely as the best. Analytically that gives
+`P(take the best available) = 4.8 %`, `P(20th-or-worse) = 33.8 %`, **expected reach 16.8 picks** —
+before any personality tilt. Every observed reach (18, 26, 33, 42, 52) is that distribution.
+
+**The fit is not wrong for the data it saw; the specification cannot represent the data.** `adp_s`
+is linear in raw ADP pooled over every round, so one coefficient must simultaneously fit round 12
+(top-40 spans ADP ~100–200) and round 1 (spans ADP 1–45). It compromises, and the compromise is
+absurd exactly at the top of the board. **More data estimates a misspecified coefficient more
+precisely.** That is why the F.5 corpus expansion could not have helped here.
+
+### ★ The functional form is measured, not guessed — and it is NOT log
+
+Fitting the corpus width against pick number: mean|reach| ∝ `pick^0.5…0.6`. A **log-ADP** utility
+implies width ∝ `pick^1.0` (too tight in round 1, too wide at depth); the current **linear** term
+implies `pick^0.0`. So the honest candidate is a **fractional power** (`adp^~0.45` in utility, or a
+free exponent fit jointly), *not* the log transform an earlier read of T15 suggested. Rank-in-pool
+transforms are also in-family. **Choose among them by refit log-loss, not by curve-fitting to this
+table** — the table is the acceptance bar, not the estimator.
+
+### ★ Acceptance bars (state before running — T5 habit)
+
+1. Mean and p90 |reach| by round track the corpus curve above (esp. round 1: mean ≈ 3, p90 ≈ 7).
+2. At most ~1 of the consensus top-6 survives past pick 10; no top-12 player past ~pick 17.
+3. ~~**The `autopilot` seats stop systematically out-valuing the room.**~~ **REWRITTEN 2026-07-27**
+   (user design review, *before* the session runs — a pre-registered bar must not change mid-flight):
+   **the surplus an ADP-following seat harvests must match what the corpus's most ADP-faithful
+   managers harvest** in the 1,420 real drafts. The standings half of the old bar is **withdrawn** —
+   the user's objection is correct and decisive: a seat taking the best available *should* finish
+   well, and "don't fight the sharp market" (Phase 2) says so. Autopilot's mock win was not skill,
+   it was the **−19.8 picks of spill** the reaching seats handed it. Surplus is the defect; ranking
+   never was. **Measure the corpus side of this in step 0** — same drift panel, one extra groupby.
+4. 11.1 log-loss gain (+0.1738) and 11.2 availability Brier (+0.0708 banded) do not degrade.
+5. The 16.9 depth profile is re-checked — its shock was calibrated under the old dispersion, so
+   `NarrativeShock.intercept` is not transportable across this change (*a coefficient is not
+   transportable without its controls*, again).
+
+### ☑ Step 0 done (2026-07-27) — the harness exists and the baseline is frozen
+
+`draft/mock.py` + `steps/t15_0_baseline.py` + `steps/mock_draft.py` + `tests/test_mock.py`; frozen at
+`analysis/t15_baseline.json` over **900 seeded drafts** (8 FFC seasons × 100, plus 100 on 2026). No
+model changed. Full writeup: `findings.md` §"T15 step 0". **Three things the register said that the
+900-draft measurement corrects or sharpens:**
+
+1. **"The simulator is flat" is superseded** — that was one draft. Spearman(round, mean|drift|) is
+   **+0.646** (corpus +1.000): the sim curve *rises* to round 9 and then **turns over**. State the
+   defect as the **ratio column**: **4.24× at round 1 → 0.57× at round 15**, crossing 1.0 at ~round 11.
+2. **Bars 1 and 2 tighten** on the FFC-only corpus (1,144 drafts, ECR-boarded 2025 excluded per
+   `adp/boards.py`): round-1 mean **2.87** / p90 **5.23** (was 3.3 / 6.6). Bar 2 measured at scale is
+   worse than the anecdote: **57.9 %** of consensus top-12 fall past pick 10 vs the corpus's **18.9 %**;
+   sim p95 **30.0** vs **17.5**. The live mock's five falling elites were the *median* draft.
+3. **Bar 3 is already roughly passing, and the quantile form of it was wrong.** At *fixed* `pool_rank`
+   edges the simulated chalk seat harvests **+20.5** against a human chalk seat's **+17.6** (corpus sd
+   **17.0**) — inside the spread. The quantile form reports +20.4 vs +8.5, an artifact of comparing
+   `pool_rank` 1.28 to 4.28. **Bar 3 should be read on the fixed-edge harvest curve only.**
+
+**★ What step 0 found that the bars did not ask for — the missing middle.** Corpus seats: median
+`pool_rank` **7.62**, **54.3 %** in the 2–8 band, **0.2 %** chalk (<2). Simulated seats: median 12.27,
+**2.2 %** moderate, **19.6 %** chalk. The room is bimodal and has **no moderate drafters**, so T15's
+target is the *distribution* of deviation, not its scale. Separately, `autopilot` at 2-of-10 seats
+over-represents a behaviour that is 0.2 % of real seats by ~100× — **a 16.15 composition question, not
+a T15 model change** (it does not reopen 16.14R's "autopilot: no change", which was about its *win*).
+Also unasked-for and invisible in any mean: simulated within-bin harvest sd is **2.1–3.7** picks
+against the corpus's **8.7–17.0** — the seats are far too homogeneous even where the means match.
+
+### ☑ Step 1 done (2026-07-27) — respecified, and two selection criteria thrown out
+
+`AdpSpec` + `BandSpec` in `draft/opponent_model.py` are now the single owner of a choice that had
+**four** uncoordinated copies (fit, simulator, and two picks→utility inversions in `apply_hype` and
+`reach_cap`). Both persist **next to β** and are read back with it. Grid: 4 bands × 11 exponents,
+walk-forward on 23,934 real choice groups; every exponent inside a band refits from one built frame
+(`build_choice_frame` keeps raw `adp`; `respec_adp` re-derives the column).
+
+**The exponent is an estimate, and the two criteria agreed on it.** `fixed40`'s held-out log-loss has
+an **interior** minimum at **p = 0.45** (3.2453 vs 3.2687 for the incumbent linear spec) — and the
+width law independently derives p ≈ 0.4–0.5 from the corpus's measured `pick^0.5…0.6`. ⚠ A
+4-draft/season smoke run had put the minimum at the grid *boundary* (reading as "the data want
+log-ADP"); that was a budget artifact. **An optimum at your grid's edge is usually a statement about
+your sample size.**
+
+**★ Two selection criteria failed and were replaced — both would have shipped the defect:**
+
+1. **"Gain over the ADP-only baseline" is not a selection criterion.** Inside `fixed40`, log-loss is
+   minimized at p=0.45 while gain is maximized at **p=1.00, the incumbent linear spec**. Gain rises
+   when the *baseline* gets worse, and a linear ADP term cripples ADP-only far more than a model
+   that also has position dummies and `need`. Replaced by **`band_coverage`** — how often the
+   candidate set fails to contain the pick a human actually made. A property of the set, not of a
+   likelihood's normalization, hence comparable across bands and ungameable.
+2. **A uniform width metric traded away the defect it was built to fix.** Averaged over all 15
+   rounds it selected p=0.60, whose round-1 mean is 8.9 picks (realized 2.9) and which **fails the
+   elite-fall gate** (p95 24.0 vs a 20.0 ceiling). Objective restricted to rounds 1–6, and **the
+   gate made a hard constraint rather than a term** — a gate a metric can out-vote is not a gate.
+
+**★ The shipped `fixed40` band was violating the Session-G contract and nobody had measured it.**
+Coverage says it excludes the realized human pick **3.95 %** of the time — 1 in 25 real picks sat
+outside the candidate set the fitted β was being applied to. `widen+5` (k = 40 + 5/round, cap 160)
+cuts that to **0.78 %** and is the narrowest band inside the stated 1 % tolerance. This is the
+judgement-free justification for widening; it also dissolves **T16** as a side effect.
+
+**★ Structural limitation, recorded rather than closed.** Realized round-15 mean |drift| is **27.1
+picks** and no exponent gets the room past ~13. At pick 150 ~30 boarded players remain and the room
+takes near-best-available; a realized late pick often lands 40 picks off consensus because *that
+room's managers held different boards*. That is board **heterogeneity between managers**, which this
+simulator cannot express — all ten seats share one board by construction. **Bar #1's late half stays
+open**; the fix is per-seat board perturbation, which belongs with 16.14R (direction), not T15
+(width).
+
+**Also shipped: `Personality.width_mult`** — 16.14R's *width* half only, pulled forward on the user's
+instruction (`signal_weights`, the direction half, is untouched). `β_adp_s / width_mult`, because
+width `∝ 1/|β_adp_s|`; depth-correct by construction, which is why it replaces `max_reach_picks` as
+the primary reach control. autopilot 0 · chalk 0.55 · safe 0.8 · balanced 1.0 · homer 1.2 · upside
+1.35 · reacher 2.0. Early effect: the missing middle largely closes — `moderate_share` 2.2 % →
+**52–62 %** against a corpus 54.3 %.
+
+### ☑ Steps 2–4 done (2026-07-27) — shipped, with one bar re-opened and re-closed on the way
+
+**Shipped configuration:** `AdpSpec(power, p=0.15)` · `BandSpec(widening, k0=40, +5/round, cap 160)`
+· `WidthCurve(γ=0.8)`, β refit under all three, specs persisted beside the coefficients. Pre-T15 β
+preserved at `analysis/phase11_opponent_model.pre_t15.json`.
+
+**★ Step 2 shipped a spec that step 3 caught trading one defect for another.** At `p=0.15, γ=0` the
+elite-fall gate passed and 11.2's Brier *improved* (+0.0708 → **+0.0890**), but the room went
+**uniformly too narrow** (rounds 2–15 at 0.94 → 0.26× the corpus width) and bar #5, the 16.9
+dispersion match, broke: **+8.8 % → −53.6 %**. The register predicted this failure mode in advance
+and it still landed — what caught it was measuring the bars **together in one run**, plus reporting
+the full-profile distance next to the round-1 gate. **Bar #1's implementation was itself a lesson:**
+a round-1-only pass criterion reported PASS while the curve it summarized had gone 0.388 → 0.791,
+i.e. worse than before the fix. *Do not summarize a curve by one of its points.*
+
+**★ Cause: the width derivation ignores pool exhaustion, so one knob cannot set both ends.**
+`w_a ∝ a^(1-p)` assumes an unbounded local pool; by round 15 ~30 boarded players remain, so a seat
+cannot deviate 27 picks from a board with less depth than that. Predicted late growth at p=0.15 was
+~18×, measured **1.8×**. Curvature therefore buys little late width while costing full price at the
+top — an **identification** problem, not a tuning one. Resolved with the round function T15 already
+owed §16.14R: `personalities.WidthCurve`, giving **`width(round) × multiplier`**.
+
+**★ The joint sweep: 16 (exponent × γ) configurations, both gates as hard constraints, one
+survivor** — `p=0.15, γ=0.8`, which is *also* the best profile match in the grid (**distance 0.190
+vs the pre-T15 baseline's 0.388**). The constrained optimum being the unconstrained one is the only
+reason this reads as a fit rather than a threshold picked to admit a winner.
+
+**☐ Still open, and deliberately not closed: the seat-faithfulness population.** Median `pool_rank`
+**10.27 vs a corpus 7.62**; moderate band **14.3 % vs 54.3 %**. It trades directly against the reach
+profile (the γ=0 configuration hits 65.9 % moderate but fails dispersion), it was never one of T15's
+five bars, and closing it requires giving seats genuinely **different boards** — per-seat board
+perturbation, which is 16.14R's *direction* half. Handed forward as a measured trade-off.
+
+**☐ 16.9's `NarrativeShock.intercept` is now formally stale.** A size in utility units calibrated
+under the old transform; β's scale changed, so it is meaningless. **Not re-fit** — 16.9 measured it
+as unidentified (a 50× sweep moved the target less than its own between-run noise), so inventing a
+value would manufacture precision. Instead `NarrativeShock.calibrated_under` + `assert_transportable`
+now **refuse** to apply it across a spec change. Fourth instance of *a coefficient is not
+transportable without its controls*, and the first caught before shipping.
+
+### ★ 2026-07-27 — scheduled: this is the NEXT session (user decision)
+
+The user chose **(a)**: a T15 respecification session runs **before Session I / Phase 17**, which
+slides one session. The ordered plan (harness → respecify + refit → two judgement-free gates →
+joint 11.1/11.2/16.9 re-verify + `NarrativeShock.intercept` re-fit → clip only if still needed)
+lives in `PLAN.md` §2026-07-27 and is summarised in the `CLAUDE.md` ★★★ pointer. Two implementation
+traps recorded there and repeated here because they are easy to miss: **(i)** `adp → adp_s` is built
+in **two** places that must not diverge — `build_choice_frame` (fit) and `candidate_matrix` (sim) —
+so extract one shared `adp_feature()` before changing either; **(ii)** the sim column in the table
+above is **one draft**, so build the seeded ≥50-draft batch harness *before* the model change or
+there is no usable before/after baseline.
+
+**Hard clips are an override, not the fix.** A per-seat `max_reach_rounds` candidate filter (drop
+candidates whose ADP exceeds `overall_pick + 1.5 × n_teams`) plus a top-25 fall cap would make the
+room look right immediately, which matters for Phase 14. But they sit **outside** the fitted model
+and silently move 11.2's Brier and 16.9's calibration, so they must ship labelled, documented and
+separable from the estimated path — never confused with a modelling result. Note also that
+`Personality.max_reach_picks` does **not** already do this: it clips only a seat's *own opinion*
+(`signal_weights` + fandom excess), which is why `balanced` — no signal weights, no cap — produced
+the draft's 42-pick reach.
+
+---
+
+**Symptom (original, 2026-07-26).** Realized cross-draft dispersion rises steeply with board depth — Spearman(`sd_drift`,
 ADP rounds) = **+0.679** over 1,346 matched player-seasons. The simulator, with the choice-set band
 correctly applied, is **+0.077**: essentially flat. The pooled *level* is right (1.976 vs realized
 1.816, 8.8 %); the *shape* is not. Consensus top-of-board players are simulated as far more
@@ -628,11 +848,16 @@ sharp at the top and diffuse at depth.
 rank-based `adp_s`), then refit and re-verify against 11.1's log-loss gain (+0.1738), 11.2's
 availability Brier (+0.0708 banded) **and** the 16.9 dispersion profile together — a change that
 improves one of those and quietly degrades another is the failure mode to guard against.
+*(2026-07-27: the measurement above supersedes "log-ADP" specifically — the measured exponent is
+~0.5–0.6, so log over-corrects. Both mechanisms are still the right family.)*
 
 **Who is affected.** Mock-draft realism and the honest `P(available at your pick)` readout
 (16.12) — deep sleepers currently look more reliably gettable than they are. **Not** the frozen
-value stack, which is untouched by all of this. Worth doing before Phase 14 surfaces availability
-numbers to a user; not worth blocking Session H on.
+value stack, which is untouched by all of this. ~~Worth doing before Phase 14 surfaces availability
+numbers to a user; not worth blocking Session H on.~~ **Re-scoped 2026-07-27: this is now the
+user-facing blocker on mock-draft realism** — the first time a human sat in the room, it was the
+only thing he commented on, unprompted, four separate times. It is the strongest candidate for the
+next build session (user decision pending; the alternative in the queue is Session I / Phase 17).
 
 ---
 
@@ -670,6 +895,21 @@ users actually play. A hype board that visibly does nothing is worse than no hyp
 
 **Recommendation: (3) now, (2) with T15.** Do not do (1) alone — it trades a documented contract
 for a cosmetic effect.
+
+> **◐ 2026-07-27 — option (2) SHIPPED; T16 is very likely dissolved but is NOT yet re-measured.**
+> T15 shipped `BandSpec(widening, k0=40, +5/round, cap 160)`, so the candidate set is no longer a
+> hard top-40: by round 15 it admits **110** players (and the still-available pool is smaller than
+> that, i.e. **everything remaining is in contention**). A board-rank-171 player is therefore a
+> genuine candidate late in a 15-round draft, which is exactly the mechanism T16 said was missing.
+> Two supporting changes landed with it: the band was widened on **measured** grounds (`fixed40`
+> excludes the realized human pick **3.95 %** of the time), and `apply_hype` now converts a
+> `pick_delta` through the **exact** utility difference rather than the linear derivative, so a deep
+> claim gets the utility it actually implies instead of a top-of-board approximation.
+>
+> **What is still owed before this can be marked ✅:** re-run the 16.10 done-bar **at 15 rounds** and
+> confirm a deep curated claim now moves the room. T16's own evidence was a *bit-identical* 30-draft
+> result at 15 rounds; the closing evidence has to be the same test coming out different. Until that
+> is run, this is a mechanism that should work, not a measured fix.
 
 **Who is affected.** Mock-draft realism and the 16.12 readout for deep players only. **Not** the
 frozen value stack. Not a blocker for Session H.

@@ -21,16 +21,16 @@
   "n_seasons": 9,
   "chosen_in_candidate_set": 1.0,
   "coefficients": {
-    "adp_s": -13.16649208462122,
-    "is_RB": -0.46501457119120004,
-    "is_WR": -0.15030691084016984,
-    "is_TE": 0.5230926503282919,
-    "is_QB": 0.09222883170308153,
-    "pos_run3": 0.039358647177809056,
-    "mgr_lean": 0.05664203561912842,
-    "rookie": 0.019973340353162596,
-    "fandom": 1.2418989886323029,
-    "need": 0.4779922279285357
+    "adp_s": -1.6831104194233042,
+    "is_RB": -0.4080461395788736,
+    "is_WR": -0.13059752859195223,
+    "is_TE": 0.567010570826648,
+    "is_QB": -0.028366902655822708,
+    "pos_run3": 0.0498325126817967,
+    "mgr_lean": 0.05585694256566595,
+    "rookie": 0.11097756383787888,
+    "fandom": 1.196030467554059,
+    "need": 0.4743337857676754
   },
   "walk_forward": {
     "per_season": [
@@ -201,32 +201,5 @@
       "QB": 1,
       "TE": 3
     }
-  },
-  "adp_spec": {
-    "kind": "power",
-    "exponent": 0.15,
-    "scale": 50.0
-  },
-  "band": {
-    "kind": "widening",
-    "k0": 40,
-    "growth": 5.0,
-    "k_max": 160
-  },
-  "t15": {
-    "status": "exponent + depth-width curve chosen jointly, subject to BOTH judgement-free gates as constraints (steps/t15_4_width_curve.py)",
-    "estimated_exponent": 0.75,
-    "calibrated_exponent": 0.15,
-    "criteria_agree": false,
-    "logloss_cost_of_calibration": 0.06097344970000007,
-    "selection_rule": "exponent calibrated to the realized corpus reach profile because held-out log-loss preferred a width-implausible one",
-    "fit_drafts_per_season": 30,
-    "width_curve_gamma": 0.8,
-    "why_two_parameters": "ADP curvature alone sets top-of-board tightness and depth dispersion with one parameter and the corpus wants opposite values; pool exhaustion breaks the a^(1-p) width law at depth"
-  },
-  "width_curve": {
-    "kind": "power",
-    "gamma": 0.8,
-    "max_round": 15
   }
 }

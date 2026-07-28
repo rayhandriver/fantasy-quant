@@ -1286,6 +1286,41 @@ breaks**. The generalizable form: *assert the relationship between a derived qua
 not merely that the derivation ran* — T17 threw no exception, returned no empty frame and failed no
 test; it just quietly halved a board.
 
+## Live-mock-draft terms (2026-07-27) — reach width and the human-in-the-room bar
+
+**reach width** — the dispersion of `drift` (`adp_rounds − slot_rounds`, positive = drafted early)
+that a draft room generates, measured **by round**. The realized human corpus grows monotonically
+from **3.3 picks in round 1 to 27.1 in round 15** (p90 6.6 → 51.7); the simulator is **flat at
+~10–21 picks with no trend**. The distinction that matters: this is a **shape** error, not a scale
+error — the room is ~3.5× too wide early *and* ~1.8× too narrow late, so any global "make it
+chalkier" fix trades one end for the other. See `docs/TECH-DEBT.md` T15.
+
+**the width exponent** — the measured law behind reach width: mean|reach| ∝ `pick^0.5…0.6`. Useful
+because it *rules out* the two obvious specifications by inspection: the current linear ADP term
+implies `pick^0.0` and a log-ADP term implies `pick^1.0`. A fitted fractional power (`adp^~0.45` in
+utility) or a rank-in-pool transform sits in between. **The corpus curve is the acceptance bar, not
+the estimator** — choose the form by refit log-loss, never by curve-fitting to the target.
+
+**value leakage to the autopickers** — the objective symptom of an over-wide room, and the
+regression test that needs no human judgement: when the opinionated seats reach, the ADP-following
+seats harvest what they spill. Measured 2026-07-27 at `autopilot` mean drift **−19.8 picks** with
+both autopilot seats finishing **1st and 2nd** on top-9 projection. **A room in which drafting pure
+chalk wins is a room that is wrong**, independent of whether any individual pick "looks" plausible.
+
+**the human-in-the-room bar** — the class of defect an aggregate gate structurally cannot catch.
+11.1 log-loss (+0.174), 11.2 Brier (+0.086) and 16.9's dispersion match were all green while the
+room drafted a 42-pick reach and left three consensus top-6 players on the board at pick 14: those
+metrics score *better than a baseline*, never *possible*. Rule: **every subsystem needs at least
+one bar a domain expert could fail by eye, run in front of one before it ships.** Sibling of the
+16.14 lesson (*state your bars as oppositions*) and of *an inert thing still passes*.
+
+**specification error vs contamination** (the F.5/F.6 family, completed) — F.6: a contaminated
+corpus **invents** effects that a CI cannot see. 2026-07-27: a misspecified functional form
+**hides** a defect in plain sight while every aggregate stays green, and **more data makes it
+worse, not better** — a 52× corpus expansion (F.5) estimated the wrong coefficient more precisely.
+Diagnostic question when a fitted model behaves absurdly in a region: *can this specification
+represent the behaviour I want, anywhere in its parameter space?*
+
 **a fix that breaks a signal by improving it** (T17 → 16.13) — repairing the availability data
 turned `games_played_mean` from four cohort constants (`corr` with the level **+0.00**, documented
 as inert) into a real forecast **and thereby into a level proxy** (+0.46…+0.90 within position). So
@@ -1331,3 +1366,138 @@ room is hand-set and the corpus is used to *check* it rather than supply it: 3,3
 managers give median QB share 12.6 %, RB share 31 %, and only **1.7 % RB-light** — which is why no
 `zero_rb` seat is in a default room. The check computes position share **from picks alone, with no
 ADP reference**, because the stored `avg_reach` is a pooled-board mismatch (**T18**).
+
+## Personality-design terms (2026-07-27) — width vs direction
+
+**width vs direction** (16.14R, the personality contract) — the decomposition every seat is built
+from: **width** = `width(round) × personality_multiplier`, *how far* a seat deviates from ADP;
+**direction** = `signal_weights`, *which way*. T15 forced the split — realized reach width grows 3.3
+→ 27.1 picks across the draft, so a single absolute `max_reach_picks` ceiling is wrong at one end by
+construction. **The multiplier replaces the ceiling as the primary reach control** (autopilot 0 ·
+safe ~0.8 · balanced 1.0 · reacher ≤2.0). See `docs/BUILD_PLAN.md` §16.14R.
+
+**the level, not the residual** — why a signal can be real *and* measure as null: a drift/deviation
+model sees only what ADP has **not** already absorbed. Situation and coaching changes are priced into
+ADP, so a human drafting on them drafts **at** ADP and leaves no residual — hence 16.8's null
+(measured twice, 34 and 1,144 drafts) is fully consistent with situation driving human behaviour.
+Rule: **before calling a signal inert, check whether your target already contains it.** A
+residual-target null is much weaker evidence than a level-target null, and both print "not
+significant". Sibling of *the ablation rule*: there more data strengthened a leak, here the wrong
+target hides a real effect inside the baseline.
+
+**the anchor assumption** — `balanced` was specified as "the fitted average human" and was exactly
+that: raw β, no `signal_weights`, no `fav_teams`, no cap. It made the mock's 42-pick reach. **A seat
+whose spec is "the anchor" quietly acquires whatever qualities people assume anchors have** —
+holistic, sensible, high-quality — none of which were ever built. Keep the two repairs distinct: T15
+fixes how far it deviates, 16.14R fixes which way.
+
+**scoring the argmax** (the value-hawk trap) — a seat that optimizes our value board, evaluated on
+our value board, wins by construction and carries no information. The lockbox already found
+personalization noise-dominated on realized points. So room rankings on **projected** points are
+**descriptive**; any **evaluative** claim must run on **realized** points in a backtest season.
+Family: *an inert thing still passes*, and 16.14's two personalities that agreed with each other.
+
+**harvested spill** (retires T15 bar #3's standings half) — an ADP-following seat finishing first is
+**not** evidence it drafts well; "don't fight the sharp market" (Phase 2) predicts it should do fine.
+The defect is the **surplus**: autopilot's −19.8 mean drift, i.e. players taken ~20 picks below ADP
+because the room spilled them. **Measure surplus, not standings** — the rewritten bar is that an
+ADP-follower harvests what the corpus's most ADP-faithful managers harvest.
+
+**`pool_rank`** (T15 step 0) — how many better-ADP players a seat passed over on a pick; 1 = took the
+best available. The measure of **faithfulness**, and it exists because |drift| cannot be one: a chalk
+seat in a room of reachers records a huge |drift| *precisely because* it stayed faithful and harvested
+the fall. `pool_rank` separates *what the seat did* from *what was done to it*, and computes
+identically on a simulated and a realized draft. Corpus median **7.62**; simulated `autopilot` **1.28**.
+
+**the harvest curve** (T15 bar #3, fixed-edge form) — harvest in 10-team picks against `pool_rank`, on
+**absolute** bin edges rather than per-population quantiles. Quantile-matching compares "the most
+faithful quintile" of a robot room (`pool_rank` 1.28) with that of a human corpus (4.28), i.e. two
+different behaviours, and reports the difference as an effect (+20.4 vs +8.5, an artifact). On fixed
+edges the simulated harvest is *right* (+20.5 vs +17.6 at [1,2), corpus sd 17.0). Rule: **when two
+populations have different distributions of the conditioning variable, condition on its value, never
+on its quantile.**
+
+**the missing middle** (T15 step 0, the finding) — the simulated room is **bimodal**: 19.6 % of seats
+are chalk (`pool_rank` < 2) and the rest sit past 11, while **54.3 %** of real seats fall in the 2–8
+band the sim leaves at **2.2 %**. So T15's target is the **distribution** of deviation, not its scale —
+a uniform shrink moves the extremists and leaves the middle empty. Corollary: `autopilot` is ~100×
+over-represented relative to the 0.2 % of human seats that draft that faithfully (a 16.15 composition
+question, not a model one).
+
+**the ratio column** (T15 bar #1's honest scalar) — sim ÷ corpus mean|drift| by round: **4.24 at round
+1 → 0.57 at round 15**, crossing 1.0 near round 11. Supersedes "the simulator is flat", which was read
+off one draft; at 800 drafts the sim curve does rise (Spearman +0.646 vs the corpus's +1.000) and then
+**turns over** after round 9. A scale fix moves the whole column and makes the right-hand end worse.
+
+**`AdpSpec` / `BandSpec`** (T15 step 1) — the two objects that own how ADP enters the opponent
+model: the **transform** (`adp_s = (adp/50)^p`) and the **candidate set** (top-k, optionally widening
+with depth). They exist because `adp_s = adp/50` had **four** independent copies — the fit
+(`build_choice_frame`), the simulator (`candidate_matrix`), and two places that *inverted* it to turn
+picks into utility (`apply_hype`, `Personality.reach_cap`) — none of which could see the others. Both
+specs are **persisted next to β** and read back with it: they are estimation conditions, not
+settings, and a β paired with the wrong one produces a plausible, wrong room.
+
+**the width law** — `w_a ∝ 1/f'(a)`: with utility `u = β·f(adp)`, the softmax's deviation width **in
+ADP picks** depends only on the transform's derivative, because the board's local density cancels
+between rank-width and pick-width. Consequences: linear `f` ⇒ width flat in depth (**the T15 defect,
+derived rather than observed** — no amount of extra corpus can move it); `f = (a/s)^p` ⇒ width
+`∝ a^(1-p)`, so the corpus's measured `pick^0.5…0.6` implies **p ≈ 0.4–0.5**; `f = log a` ⇒ width
+`∝ a^1.0`, over-correcting. **Rank-in-pool** ⇒ width `∝` board density, which grows ~2.3× where the
+corpus grows 5.5× — it under-corrects, and against a fixed top-k it is nearly a no-op, since
+linear-in-ADP inside a fixed set already *is* rank-in-pool up to a level that cancels in the softmax.
+
+**★ gain is not a selection criterion** (T15 step 1, measured) — *a difference-of-two-models metric
+can be improved by damaging the weaker model.* Inside one fixed band, held-out log-loss is minimized
+at exponent **0.45** while gain over the ADP-only baseline is maximized at **1.00**, the incumbent
+spec T15 exists to replace: a linear ADP term cripples an ADP-only model more than one that also has
+position dummies and `need` to lean on, so the *gap* is widest where the absolute fit is worst.
+Selecting on gain would have chosen the widest band and the flattest ADP term — the defect itself —
+while printing a rising headline. Twin of the F.6 **ablation rule**: there a leak made a headline
+rise with more data, here a bad specification makes one rise by hurting its own baseline. **Rank
+specifications only against a fixed comparator.**
+
+**band coverage** (`opponent_model.band_coverage`) — the judgement-free replacement: *how often does
+the candidate set fail to contain the pick a human actually made?* A property of the set, not of a
+likelihood's normalization, so it is comparable across bands and has no degree of freedom to game.
+It restates the Session-G choice-set contract as a measurable quantity. Selection rule: the
+**narrowest** band inside a stated 1 % miss tolerance, then the exponent by log-loss **within** it —
+sequential, because the log-loss-optimal exponent moves with the band (0.45 at fixed-40, 0.75 at
+widen+5/10) and no criterion is comparable across bands.
+
+**`width_mult`** (16.14R's width half, pulled into T15) — a seat's deviation width as a multiple of
+the fitted average manager's, implemented as `β_adp_s / width_mult` because width `∝ 1/|β_adp_s|`.
+Depth-correct by construction once the ADP term carries curvature, which is why it **replaces the
+absolute `max_reach_picks` ceiling** as the primary reach control: T15 showed a single pick-count cap
+is wrong at one end by construction. `max_reach_picks` survives, still bounding a seat's own
+*opinion* — a different quantity. Shipped: autopilot 0 · chalk 0.55 · safe 0.8 · balanced 1.0 ·
+homer 1.2 · upside 1.35 · reacher 2.0.
+
+**an optimum at the grid's edge is a statement about your budget** (T15) — a 4-draft/season smoke run
+put the log-loss minimum at the bottom of the exponent grid, reading as "the choice data want
+log-ADP". At 20 drafts/season the minimum is **interior at 0.45**. The cheap run's version was the
+more quotable one, and it was wrong.
+
+**`WidthCurve` / the depth-width law** (T15 step 4) — the room's deviation width as a function of
+**round**, `round^γ`, applied to `β_adp_s` and composing with each seat's `width_mult`. Together they
+are 16.14R's **`width(round) × multiplier`** contract, with T15 owning the round function. It exists
+because a single ADP exponent could not set both ends: the exponent flat enough to stop elites
+falling (p=0.15) left the room uniformly too narrow and broke the 16.9 dispersion match (+8.8 % →
+**−53.6 %**). **Two requirements, two parameters — an identification fix, not a richer model.**
+
+**pool exhaustion** (why the width law over-promises at depth) — `w_a ∝ a^(1-p)` assumes an
+unbounded local candidate pool. By round 15 roughly **thirty** boarded players remain, so a seat
+cannot deviate 27 picks from a board with less than 27 picks of depth beneath it. Predicted late
+growth at p=0.15 was ~18×; measured **1.8×**. So **curvature buys far less late width than the
+algebra promises while costing full price at the top** — the reason the exponent alone is not an
+identified fix, and a standing caution that a derivation's boundary assumptions are where it breaks.
+
+**a scalar gate over a curve** (T15 step 3, a caution) — bar #1 was implemented as a round-1-only
+pass criterion and duly reported **PASS** on a configuration whose full-profile distance had gone
+**0.388 → 0.791**, i.e. worse than before the fix. Summarizing a curve by one of its points hides
+movement everywhere else. Report the curve next to the gate.
+
+**the joint re-verify** — running 11.1, 11.2 and 16.9 in **one** script rather than three sessions,
+because T15's own register warned that "a change which improves one and quietly degrades another is
+the failure mode". It duly caught exactly that: the step-2 spec improved the elite-fall gate and
+11.2's Brier (+0.0708 → +0.0890) while breaking bar #5. **Each metric checked by the person who
+cares about it is the same thing as no check.**

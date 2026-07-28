@@ -1,0 +1,266 @@
+{
+  "generated": "2026-07-27T22:21:07.667660+00:00",
+  "config": {
+    "sweep": [
+      0.1,
+      0.15,
+      0.2,
+      0.25,
+      0.3,
+      0.35,
+      0.4,
+      0.45,
+      0.5,
+      0.6,
+      0.75
+    ],
+    "cal_max_round": 6,
+    "seasons": [
+      2019,
+      2022,
+      2024
+    ],
+    "seeds": 40,
+    "drafts_per_season": 30,
+    "band": {
+      "kind": "widening",
+      "k0": 40,
+      "growth": 5.0,
+      "k_max": 160
+    }
+  },
+  "band_miss_rate": 0.007798306174357827,
+  "band_coverage": [
+    {
+      "band": "fixed40",
+      "band_spec": {
+        "kind": "fixed",
+        "k0": 40,
+        "growth": 0.0,
+        "k_max": 200
+      },
+      "n_picks": 35777,
+      "miss_rate": 0.0395225983,
+      "mean_k": 40.0
+    },
+    {
+      "band": "widen+5",
+      "band_spec": {
+        "kind": "widening",
+        "k0": 40,
+        "growth": 5.0,
+        "k_max": 160
+      },
+      "n_picks": 35777,
+      "miss_rate": 0.0077983062,
+      "mean_k": 71.1016854404
+    },
+    {
+      "band": "widen+10",
+      "band_spec": {
+        "kind": "widening",
+        "k0": 40,
+        "growth": 10.0,
+        "k_max": 160
+      },
+      "n_picks": 35777,
+      "miss_rate": 0.0034938648,
+      "mean_k": 100.4089219331
+    },
+    {
+      "band": "widen+20",
+      "band_spec": {
+        "kind": "widening",
+        "k0": 40,
+        "growth": 20.0,
+        "k_max": 160
+      },
+      "n_picks": 35777,
+      "miss_rate": 0.0020963189,
+      "mean_k": 126.9323867289
+    }
+  ],
+  "sweep": [
+    {
+      "exponent": 0.1,
+      "profile_distance": 0.7049968212,
+      "profile_distance_all_rounds": 1.0093165931,
+      "trend": 0.8178571429,
+      "elite_gate_pass": true,
+      "round1_mean": 3.1504166667,
+      "round15_mean": 6.2467213115,
+      "elite_p95": 15.0,
+      "elite_past10": 0.2430555556,
+      "moderate_share": 0.63,
+      "median_pool_rank": 2.6,
+      "beh_logloss": 3.4210657427
+    },
+    {
+      "exponent": 0.15,
+      "profile_distance": 0.5151668803,
+      "profile_distance_all_rounds": 0.8034668202,
+      "trend": 0.8142857143,
+      "elite_gate_pass": true,
+      "round1_mean": 4.0970833333,
+      "round15_mean": 7.3044811321,
+      "elite_p95": 16.0,
+      "elite_past10": 0.2819444444,
+      "moderate_share": 0.6558333333,
+      "median_pool_rank": 3.3452380952,
+      "beh_logloss": 3.4092179145
+    },
+    {
+      "exponent": 0.2,
+      "profile_distance": 0.3796289162,
+      "profile_distance_all_rounds": 0.6577009335,
+      "trend": 0.725,
+      "elite_gate_pass": false,
+      "round1_mean": 4.8649166667,
+      "round15_mean": 7.8356659142,
+      "elite_p95": 17.0,
+      "elite_past10": 0.3152777778,
+      "moderate_share": 0.6416666667,
+      "median_pool_rank": 4.0,
+      "beh_logloss": 3.3982716252
+    },
+    {
+      "exponent": 0.25,
+      "profile_distance": 0.3299964155,
+      "profile_distance_all_rounds": 0.5688639374,
+      "trend": 0.6321428571,
+      "elite_gate_pass": false,
+      "round1_mean": 5.5843333333,
+      "round15_mean": 8.2584841629,
+      "elite_p95": 17.0,
+      "elite_past10": 0.3520833333,
+      "moderate_share": 0.6158333333,
+      "median_pool_rank": 4.7333333333,
+      "beh_logloss": null
+    },
+    {
+      "exponent": 0.3,
+      "profile_distance": 0.3124287634,
+      "profile_distance_all_rounds": 0.4978848663,
+      "trend": 0.5785714286,
+      "elite_gate_pass": false,
+      "round1_mean": 6.1855833333,
+      "round15_mean": 9.0159682899,
+      "elite_p95": 18.0,
+      "elite_past10": 0.3680555556,
+      "moderate_share": 0.5741666667,
+      "median_pool_rank": 5.2857142857,
+      "beh_logloss": 3.3796534559
+    },
+    {
+      "exponent": 0.35,
+      "profile_distance": 0.3075658936,
+      "profile_distance_all_rounds": 0.4485667153,
+      "trend": 0.5571428571,
+      "elite_gate_pass": false,
+      "round1_mean": 6.742,
+      "round15_mean": 9.5078498294,
+      "elite_p95": 20.1,
+      "elite_past10": 0.3833333333,
+      "moderate_share": 0.5258333333,
+      "median_pool_rank": 6.0,
+      "beh_logloss": null
+    },
+    {
+      "exponent": 0.4,
+      "profile_distance": 0.3009017005,
+      "profile_distance_all_rounds": 0.4003839236,
+      "trend": 0.45,
+      "elite_gate_pass": false,
+      "round1_mean": 7.2150833333,
+      "round15_mean": 10.0706270627,
+      "elite_p95": 23.0,
+      "elite_past10": 0.4034722222,
+      "moderate_share": 0.47,
+      "median_pool_rank": 6.6,
+      "beh_logloss": 3.365629464
+    },
+    {
+      "exponent": 0.45,
+      "profile_distance": 0.315367236,
+      "profile_distance_all_rounds": 0.368914237,
+      "trend": 0.3357142857,
+      "elite_gate_pass": false,
+      "round1_mean": 7.6530833333,
+      "round15_mean": 10.1673672566,
+      "elite_p95": 24.0,
+      "elite_past10": 0.4229166667,
+      "moderate_share": 0.3991666667,
+      "median_pool_rank": 7.2,
+      "beh_logloss": 3.3603107542
+    },
+    {
+      "exponent": 0.5,
+      "profile_distance": 0.3477837611,
+      "profile_distance_all_rounds": 0.3400147327,
+      "trend": 0.3714285714,
+      "elite_gate_pass": false,
+      "round1_mean": 8.1023333333,
+      "round15_mean": 11.1244808743,
+      "elite_p95": 24.0,
+      "elite_past10": 0.4458333333,
+      "moderate_share": 0.3158333333,
+      "median_pool_rank": 7.8285714286,
+      "beh_logloss": 3.3560543618
+    },
+    {
+      "exponent": 0.6,
+      "profile_distance": 0.4266022138,
+      "profile_distance_all_rounds": 0.329274064,
+      "trend": 0.3571428571,
+      "elite_gate_pass": false,
+      "round1_mean": 8.8729166667,
+      "round15_mean": 12.1450537634,
+      "elite_p95": 24.0,
+      "elite_past10": 0.4680555556,
+      "moderate_share": 0.2291666667,
+      "median_pool_rank": 9.0333333333,
+      "beh_logloss": 3.35046428
+    },
+    {
+      "exponent": 0.75,
+      "profile_distance": 0.5510778876,
+      "profile_distance_all_rounds": 0.3623977862,
+      "trend": 0.3571428571,
+      "elite_gate_pass": false,
+      "round1_mean": 9.8228333333,
+      "round15_mean": 13.650672182,
+      "elite_p95": 29.0,
+      "elite_past10": 0.5069444444,
+      "moderate_share": 0.1391666667,
+      "median_pool_rank": 10.6214285714,
+      "beh_logloss": 3.3482444648
+    }
+  ],
+  "estimated": {
+    "kind": "power",
+    "exponent": 0.75,
+    "scale": 50.0
+  },
+  "calibrated": {
+    "kind": "power",
+    "exponent": 0.15,
+    "scale": 50.0
+  },
+  "criteria_agree": false,
+  "logloss_cost_of_calibration": 0.06097344970000007,
+  "shipped": {
+    "coefficients": {
+      "adp_s": -13.16649208462122,
+      "is_RB": -0.46501457119120004,
+      "is_WR": -0.15030691084016984,
+      "is_TE": 0.5230926503282919,
+      "is_QB": 0.09222883170308153,
+      "pos_run3": 0.039358647177809056,
+      "mgr_lean": 0.05664203561912842,
+      "rookie": 0.019973340353162596,
+      "fandom": 1.2418989886323029,
+      "need": 0.4779922279285357
+    },
+    "path": "analysis/phase11_opponent_model.json"
+  }
+}

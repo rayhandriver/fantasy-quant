@@ -54,7 +54,13 @@ from dataclasses import dataclass, field, replace
 import numpy as np
 import pandas as pd
 
-from fantasy_quant.draft.opponent_model import _ADP_SCALE, CHOICE_TOP_K, OpponentModel
+from fantasy_quant.draft.opponent_model import (
+    _ADP_SCALE,
+    OpponentModel,
+)
+from fantasy_quant.draft.opponent_model import (
+    AdpSpec as _AdpSpec,
+)
 
 _NEED_TARGET = {"QB": 1, "RB": 4, "WR": 4, "TE": 1}
 
@@ -93,6 +99,84 @@ MIN_Z_GROUP: int = 3
 REACH_UPSIDE: float = 18.0
 REACH_SAFE: float = 15.0
 REACH_HOMER: float = 24.0
+
+#: **The width half of the 16.14R contract, pulled forward into T15** (user decision 2026-07-27).
+#: Multiples of the fitted average manager's deviation width; see ``Personality.width_mult``. Only
+#: the *width* half is built here — ``signal_weights`` (the **direction** half) is untouched and
+#: stays with the 16.14R session, whose three open questions are unsettled.
+#:
+#: ★ **These exist because step 0 measured a room with no moderate drafters**: 54.3 % of realized
+#: human seats sit at ``pool_rank`` 2–8 and the simulated room put **2.2 %** there, being bimodal
+#: between two ``autopilot`` seats at 1.28 and everything else past 11. Curvature alone fixes the
+#: *depth profile* of deviation without spreading the *population* across it; that is what these do.
+#:
+#: The contract fixes autopilot 0 · safe ~0.8 · balanced 1.0 · reacher <=2.0. ``upside_chaser``,
+#: ``homer`` and ``chalk`` are **declared judgments**, not fitted, placed to fill the 2–8 band
+#: rather than to express a new belief about those seats: an upside chaser strays somewhat more than
+#: the average manager, a homer slightly more, and ``chalk`` (an 11.3 library seat, not a headliner)
+#: sits between ``autopilot`` and ``safe_floor`` where its cooled softmax already put it.
+WIDTH_SAFE: float = 0.8
+WIDTH_UPSIDE: float = 1.35
+WIDTH_HOMER: float = 1.2
+WIDTH_REACHER: float = 2.0
+
+
+@dataclass(frozen=True)
+class WidthCurve:
+    """How far the room strays from the board **as a function of draft round** — T15's width law.
+
+    ★ **Why this exists, measured.** Realized human reach width grows monotonically with depth:
+    **2.87 ADP picks in round 1 to 27.1 in round 15** (1,144 FFC-boarded drafts). T15 first tried to
+    produce that shape with curvature in ``adp_s`` alone, on the derivation that width in picks goes
+    as ``a^(1-p)``. It does not work, and the measurement says why: the exponent that tightens the
+    top of the board enough to pass the elite-fall gate (p=0.15) leaves the room **uniformly
+    too narrow** — every round from 2 on lands at 0.94 -> 0.26x the corpus width, and the 16.9
+    dispersion match goes from +8.8 % to **-53.6 %**. One knob, two ends, opposite requirements.
+
+    The reason the derivation over-promises is **pool exhaustion**, which it ignores: ``a^(1-p)``
+    assumes an unbounded local candidate pool, but by round 15 only ~30 boarded players remain and a
+    seat physically cannot deviate 27 picks from a board that no longer has 27 picks of depth below
+    it. Curvature therefore buys far less late width than the algebra implies, while costing full
+    price at the top.
+
+    So width by **depth** is separated from width by **seat** — the 16.14R contract stated
+    exactly: ``width(round) x multiplier``. This class is the first factor and
+    ``Personality.width_mult`` the second. Both act on ``β_adp_s`` (width ``∝ 1/|β_adp_s|``), so
+    they compose multiplicatively and each means what it says in picks.
+
+    ``gamma=0`` is a flat curve — the pre-T15 behaviour exactly, so nothing moves until a caller
+    ships a fitted curve.
+    """
+
+    kind: str = "power"
+    gamma: float = 0.0
+    max_round: int = 15
+
+    def __post_init__(self) -> None:
+        if self.kind != "power":
+            raise ValueError(f"unknown WidthCurve kind {self.kind!r}")
+        if not 0.0 <= self.gamma <= 3.0:
+            raise ValueError(f"implausible WidthCurve gamma {self.gamma}")
+
+    def width(self, rnd: int) -> float:
+        """Width multiplier at ``rnd`` (1-based). ``round^gamma``, clamped past ``max_round``."""
+        r = min(max(int(rnd), 1), int(self.max_round))
+        return float(r) ** float(self.gamma)
+
+    def to_dict(self) -> dict:
+        return {"kind": self.kind, "gamma": float(self.gamma), "max_round": int(self.max_round)}
+
+    @classmethod
+    def from_dict(cls, d: dict | None) -> WidthCurve:
+        if not d:
+            return WidthCurve()
+        return cls(kind=str(d.get("kind", "power")), gamma=float(d.get("gamma", 0.0)),
+                   max_round=int(d.get("max_round", 15)))
+
+
+#: The shipped depth-width curve. Fitted by ``steps/t15_4_width_curve.py`` and, like `AdpSpec`, it
+#: travels with the model rather than being edited by hand.
+WIDTH_CURVE = WidthCurve()
 
 
 def pos_z(values, pos) -> np.ndarray:
@@ -163,6 +247,22 @@ class Personality:
     ``sample``           ``False`` makes this personality deterministic (argmax) wherever it is
                          used, so a seat carries its own determinism instead of the caller having to
                          remember. ``None`` defers to the caller.
+
+    **T15 / 16.14R — the width half of the contract:**
+
+    ``width_mult``       how far this seat strays from the board, as a multiple of the fitted
+                         average manager. Implemented as ``β_adp_s / width_mult``, because the
+                         derived width law says deviation width in ADP picks is ``∝ 1/|β_adp_s|`` —
+                         so a multiplier here means exactly what it says in picks, **at every board
+                         depth**, once the ADP term carries curvature. ``1.0`` = the fitted average
+                         (``balanced``, unchanged); ``0`` = deterministic best-available.
+
+    ★ **Why this replaces ``max_reach_picks`` as the primary reach control** (T15, measured): a
+    single pick-count ceiling is wrong at one end by construction, because realized human reach
+    width *grows* with depth (2.9 picks in round 1 to 27.1 in round 15). A multiplier on the width
+    *law* is depth-correct by construction. ``max_reach_picks`` is kept — it still bounds a seat's
+    own **opinion** (signals + fandom excess), which is a different quantity — but it is no longer
+    the thing that decides how far a seat strays from ADP.
     """
     name: str
     scale: dict = field(default_factory=dict)
@@ -175,6 +275,7 @@ class Personality:
     fav_teams: tuple[str, ...] = ()
     max_reach_picks: float | None = None
     sample: bool | None = None
+    width_mult: float = 1.0
 
     def __post_init__(self) -> None:
         unknown = set(self.signal_weights) - set(SIGNAL_COLS)
@@ -184,15 +285,27 @@ class Personality:
                              f"Known signals: {list(SIGNAL_COLS)}")
 
     def adjusted_beta(self, feature_cols, base_beta) -> np.ndarray:
+        """This seat's β: ``scale``/``override`` per feature, then the ``width_mult`` on ``adp_s``.
+
+        ``width_mult`` divides the ADP coefficient (flatter ADP term = strays further). It is
+        applied *after* ``scale``/``override`` so a personality that explicitly overrides ``adp_s``
+        still gets its width honoured. ``width_mult <= 0`` means "no width at all" — the β would be
+        infinite, so it is left untouched and the seat is expected to carry ``sample=False``
+        (``autopilot`` does); an asserting guard would fire on a legal, meaningful configuration.
+        """
         b = np.asarray(base_beta, float).copy()
         for i, c in enumerate(feature_cols):
             if c in self.scale:
                 b[i] *= self.scale[c]
             if c in self.override:
                 b[i] = self.override[c]
+        m = float(self.width_mult)
+        if m > 0 and m != 1.0 and "adp_s" in feature_cols:
+            b[list(feature_cols).index("adp_s")] /= m
         return b
 
-    def reach_cap(self, beta_adp_s: float) -> float | None:
+    def reach_cap(self, beta_adp_s: float, *, adp_spec=None, at_adp: float = _ADP_SCALE
+                  ) -> float | None:
         """``max_reach_picks`` in utility units, via the model's own ADP coefficient.
 
         The same conversion :func:`~fantasy_quant.adp.hype_board.apply_hype` uses, and for the same
@@ -201,10 +314,19 @@ class Personality:
 
         Bounds the seat's own opinion only. A shared story can still carry a seat past this ceiling,
         which is the point of a story — see :func:`make_opponent_pick_fn`.
+
+        ⚠ **T15: picks -> utility is depth-dependent once ``adp_s`` carries curvature**, so the
+        conversion needs the board position it is being applied at. ``at_adp`` is where the ceiling
+        is evaluated; the default reproduces the historical constant exactly under a linear spec.
+        This is a scalar cap on a whole candidate pool, so one representative depth is the honest
+        approximation — a per-candidate cap would make the ceiling mean different things to the two
+        ends of the same pool.
         """
         if self.max_reach_picks is None:
             return None
-        return abs(float(beta_adp_s)) * float(self.max_reach_picks) / _ADP_SCALE
+        spec = adp_spec if adp_spec is not None else _AdpSpec()
+        per_pick = float(np.asarray(spec.utility_per_pick(at_adp)).reshape(-1)[0])
+        return abs(float(beta_adp_s)) * float(self.max_reach_picks) * per_pick
 
 
 # the five headliners, plus the 11.3 library extras -------------------------------------------
@@ -221,7 +343,7 @@ def personalities() -> dict[str, Personality]:
         # Sleeper's autopick: no opinions, no story, no noise — the best remaining name on the list.
         # Roster legality still comes from `draftable_pool`, which is what the real autopicker does.
         "autopilot": Personality("autopilot", override=zero_out, hype_gain=0.0, sample=False,
-                                 max_reach_picks=0.0),
+                                 max_reach_picks=0.0, width_mult=0.0),
         # the fitted average human — the anchor everything else is a deviation from.
         "balanced": Personality("balanced"),
         # ceiling over floor: wants the top end of the cone and the players with a story attached,
@@ -232,7 +354,8 @@ def personalities() -> dict[str, Personality]:
             "upside_chaser",
             scale={"rookie": 2.0},
             signal_weights={"upside": 0.45, "boom_prob": 0.35, "cos": 0.20},
-            temperature=1.3, hype_gain=1.5, max_reach_picks=REACH_UPSIDE),
+            temperature=1.3, hype_gain=1.5, max_reach_picks=REACH_UPSIDE,
+            width_mult=WIDTH_UPSIDE),
         # floor over ceiling: buys the tenth percentile, actively avoids the bust tail, and drafts
         # chalkier than the room (a cooled softmax) because certainty is the whole point.
         #
@@ -255,7 +378,8 @@ def personalities() -> dict[str, Personality]:
         "safe_floor": Personality(
             "safe_floor",
             signal_weights={"floor": 0.45, "durability": 0.30, "bust_prob": -0.35},
-            temperature=0.8, hype_gain=0.5, max_reach_picks=REACH_SAFE),
+            temperature=0.8, hype_gain=0.5, max_reach_picks=REACH_SAFE,
+            width_mult=WIDTH_SAFE),
         # the narrative seat, and the channel 16.15 routes the 16.9 shock through. `fav_teams` is
         # empty by default: set it and he reaches for his team, leave it and he is a pure
         # story-chaser (hype board + changed situations). The ceiling holds on everything he thinks
@@ -264,18 +388,26 @@ def personalities() -> dict[str, Personality]:
         # him the seat the 16.9 shock is worth routing through at all (see `make_opponent_pick_fn`).
         "homer": Personality("homer", scale={"fandom": 2.5},
                              signal_weights={"cos": 0.35}, hype_gain=2.5,
-                             max_reach_picks=REACH_HOMER),
+                             max_reach_picks=REACH_HOMER, width_mult=WIDTH_HOMER),
         # -- 11.3 library extras (unchanged) ----------------------------------------------------
-        "chalk": Personality("chalk", override=zero_out, temperature=0.6),
+        "chalk": Personality("chalk", override=zero_out, temperature=0.6, width_mult=0.55),
         "zero_rb": Personality("zero_rb", early_pos_penalty={"RB": 2.5}),
-        "reacher": Personality("reacher", temperature=2.2),
+        "reacher": Personality("reacher", temperature=2.2, width_mult=WIDTH_REACHER),
         "rookie_hawk": Personality("rookie_hawk", scale={"rookie": 3.0}),
     }
 
 
+#: Sentinel for "take the candidate set from the fitted model's own :class:`BandSpec`" — the T15
+#: default. An explicit ``top_k=<int>`` still pins a fixed set and ``top_k=None`` still means the
+#: whole board (kept only for the Session-G comparison that measured what ignoring the band costs).
+USE_MODEL_BAND = "model-band"
+
+
 def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None = None, *,
                           rng: np.random.Generator | None = None, sample: bool | None = None,
-                          top_k: int | None = CHOICE_TOP_K, hype: np.ndarray | None = None):
+                          top_k: int | None | str = USE_MODEL_BAND,
+                          hype: np.ndarray | None = None,
+                          width_curve: WidthCurve | None = None):
     """Build an ``opponent_pick_fn(state, team) -> board_label`` from a fitted model + personality.
 
     Draws from the model's choice softmax over the team's cap-respecting available pool (so rosters
@@ -326,13 +458,26 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
     # team), so it is lifted out of the β utility and into the capped tilt below.
     j_fandom = cols.index("fandom") if (fav and "fandom" in cols) else None
     d_fandom = float(beta[j_fandom] - base_beta[j_fandom]) if j_fandom is not None else 0.0
-    cap = pers.reach_cap(base_beta[cols.index("adp_s")]) if "adp_s" in cols else None
+    spec = getattr(model, "adp_spec", None)
+    cap = (pers.reach_cap(base_beta[cols.index("adp_s")], adp_spec=spec)
+           if "adp_s" in cols else None)
     draw = sample if sample is not None else (True if pers.sample is None else pers.sample)
+    # T15: the candidate set is the fitted model's own band, which may widen with board depth.
+    # `top_k` still overrides it (a caller asking for a fixed set gets one) and `top_k=None` still
+    # means "the whole board", the pre-Session-G behaviour kept only for the comparison.
+    band = getattr(model, "band", None) if top_k is USE_MODEL_BAND else None
+    fixed_k = None if top_k is USE_MODEL_BAND else top_k
+    # T15's depth-width law. Applied to `adp_s` alone and re-derived per pick, so it widens the room
+    # at depth without touching what any seat thinks about a player. `gamma=0` is a no-op.
+    curve = width_curve if width_curve is not None else getattr(model, "width_curve", WIDTH_CURVE)
+    j_adp = cols.index("adp_s") if "adp_s" in cols else None
+    b_adp = float(beta[j_adp]) if j_adp is not None else 0.0
 
     def pick(state, team) -> int:
         pool = state.draftable_pool(team)
-        if top_k is not None and len(pool) > top_k:
-            pool = pool.nsmallest(top_k, "adp")
+        k = (band.top_k(state.overall_pick, state.n_teams) if band is not None else fixed_k)
+        if k is not None and len(pool) > k:
+            pool = pool.nsmallest(k, "adp")
         cand = pool.rename(columns={})[["adp", "pos"]].copy()
         if "team" in pool.columns:
             cand["team"] = pool["team"]
@@ -348,6 +493,12 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
                 for pp in ("QB", "RB", "WR", "TE")}
         X = adj.candidate_matrix(cand, recent_pos=rp, need=need, fav=fav)
         u = X @ adj.beta
+        # widen with depth: beta_adp_s / width(round). Added as a correction to the already-computed
+        # utility rather than by rebuilding beta, so the hot path stays one matmul.
+        if j_adp is not None and curve.gamma:
+            w = curve.width(state.round())
+            if w != 1.0:
+                u = u + X[:, j_adp] * b_adp * (1.0 / w - 1.0)
 
         # -- the discretionary tilt: this seat's OWN opinion (signals + fandom excess), capped ---
         tilt = np.zeros(len(pool), float)

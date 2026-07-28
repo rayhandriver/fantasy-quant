@@ -1326,6 +1326,87 @@ strategy). Full scoping + the 4 answered decisions: `PLAN.md`, 2026-07-23 (perso
     standardization (a uniform multiplier cancels); `games_played_mean` is the one casualty and is
     now inert on a live board.
 
+### ★ 16.14R — the personality contract, REVISED *(2026-07-27, user design review after the live mock)*
+
+**Status: spec agreed, NOT built. Runs as its own session AFTER the T15 respecification** (it depends
+on T15's round-varying width function — see `PLAN.md` §2026-07-27). Supersedes the seat definitions in
+16.14 above where they conflict; 16.14's *mechanisms* (`signal_weights`, `hype_gain`, the
+level-residualized `upside`/`floor`) all stand.
+
+**★ The organizing idea: separate WIDTH from DIRECTION.** Every seat is `width(round) ×
+personality_multiplier` for *how far* it deviates from ADP, and `signal_weights` for *which way*. The
+old absolute `max_reach_picks` ceiling cannot express this — T15 proved width must vary by round (3.3
+picks in R1 → 27.1 in R15), so any single pick-count ceiling is wrong at one end by construction.
+**The multiplier replaces the ceiling as the primary reach control.**
+
+| seat | width mult | direction | notes |
+|---|---|---|---|
+| **autopilot** | 0 | pure ADP | **unchanged** — user confirmed no change needed |
+| **balanced** | 1.0 (= corpus) | ablation survivors + enriched tie-break | situation channel opt-in, default OFF |
+| **reacher** | **≤2.0** | rookies, hype board, media narrative | inherits 16.9 shock + 16.10 from the retired homer |
+| **safe** | ~0.8 | `q10`/`bust_prob`, durability **net of level** | |
+| **value hawk** | bounded window (open) | best available board value | **replaces homer**; `fandom` falls out of use |
+
+- **Autopilot — no change.** ★ The user's diagnosis of its mock win, and it is the right one: *it was
+  not drafting well, it was harvesting what the reaching seats spilled* (mean drift −19.8 picks). It
+  needs no fix; **T15 fixes it by fixing everyone else.** This retires the standings half of T15's
+  acceptance bar #3 — see the rewritten bar in `docs/TECH-DEBT.md`.
+- **Balanced — the intent was never implemented.** Today `balanced` is the raw fitted β with *every*
+  tilt off: no `signal_weights`, no `fav_teams`, `max_reach_picks=None`. It is not misbehaving against
+  its spec; the holistic spec never existed. It produced the draft's 42-pick reach. Build it as:
+  1. **width** = the T15-respecified β, corpus-matched by round;
+  2. **direction** = the **16.8 ablation survivors** — `rookie` (+0.94 rounds), `adp_stdev` (+0.27/SD),
+     `vbd_gap` (+0.26/SD), `pos_WR`, `pos_TE`. `adp_stdev` is the most valuable of these for the
+     "makes sense" character: *where the crowd disagrees with itself, someone jumps* — and it is
+     fitted-supported, not declared;
+  3. **tie-break inside the reach window** = the 16.13-enriched board (`upside`/`floor`, injury,
+     bust_prob). This is where "holistic / high-quality / makes sense" actually lives — among
+     near-equivalent candidates prefer the healthier, higher-floor one. Behaviourally plausible and
+     **claims no alpha**;
+  4. **situation/coach (16.4/16.5)** = a **labelled opt-in channel, default OFF** — the 16.10 hype-board
+     pattern. See the §"level, not the residual" note below for why it is not a deviation driver.
+- **Reacher — reaches most, capped at 2× balanced.** Rookies, beneficial situation changes, media
+  attention. ★ **It absorbs the narrative channel from the retired homer**: the 16.9 per-draft shock and
+  the 16.10 hype board both route here. Arguably a better home than homer was — the user's reacher
+  description *is* the narrative chaser.
+- **Safe — reach slightly under balanced (~0.8×), prefer proven/durable/low-regression, still finish
+  with a medium-high quality team.** ⚠ **T17 trap:** the availability fix turned `games_played_mean`
+  from four inert cohort constants into a real forecast **and thereby into a level proxy** (+0.46…+0.90
+  within position), so weighting durability *and* projection level double-counts. Durability must enter
+  **net of level** — residualize it the way 16.13 residualized `upside`/`floor`.
+- **★ Value Hawk — replaces Homer; the user calls it "the brainchild of the project".** Reverses the
+  2026-07-23 decision that cut it ("BPA = ADP autopilot only"). It is the *smartest researched human*:
+  it uses the full accumulated stack to build the best **projected** team, and reaches decisively but
+  rarely for a player inside a bounded window who is better than anything ahead of him. Mechanically
+  that is **bounded-window argmax on the value board = the Phase-9 greedy with a reach constraint**,
+  which we already have. Two consequences worth stating:
+  - **Benefit:** it is our own optimizer sitting in a seat — the best dogfood in the project.
+  - ⚠ **Cost:** deleting homer retires the `fandom` coefficient (+35.5 picks, ×2.5 ⇒ **89** — the
+    single largest coefficient in the model and a major reach driver). Removing that seat removes a
+    real pathology, but `fandom` stays fitted-and-unused; do not delete the feature.
+
+**★★ THE EVALUATION TRAP — state this before the seat is built.** If value hawk optimizes our value
+board and the room is scored by our value board, **it wins by construction and proves nothing.** The
+lockbox already reported personalization as noise-dominated on realized points (all archetype-cost CIs
+∋ 0). So: projected-points ranking of the room is **descriptive** (does the room behave sensibly?);
+any **evaluative** claim must run on realized points in a backtest season. Same family as *an inert
+thing still passes* and the 16.14 "two personalities that agree with each other" lesson.
+
+**☐ THREE OPEN DECISIONS — settle before this session starts:**
+1. **Value hawk's objective — VBD or portfolio CE?** Recommendation: **portfolio CE** (correlation-aware,
+   what the Phase-9 greedy maximizes) since "best possible team" is a roster-level claim. Cost: it is
+   our most opinionated object, and it sharpens the evaluation trap above.
+2. **Value hawk's reach window**, in the same width units as everyone else. Suggested start
+   **~1.0–1.25× balanced** — a sharp drafter reaches *decisively but rarely*, not far.
+3. **How much of the enriched board balanced sees.** 16.4 scheme fingerprints and 16.5 situation events
+   are **not on the 16.13 board today** (only Phase-5 distributions + value_board fields). If the
+   situation channel ships default-OFF we can defer the plumbing; making it live is real scope.
+
+**Done-when (16.14R):** the width multipliers reproduce the corpus reach curve per seat; balanced's
+drafted pool shows the survivor tilts + the enriched tie-break without breaking its corpus match;
+value hawk beats the room on the *descriptive* projection metric **and that is reported as descriptive**;
+reacher's max reach ≤ 2× balanced's at every round; safe's durability tilt is level-residualized.
+
 ### 16.15 — Mock-room composition + hype coupling + app → `draft/simulator.py`, `app/`
 - **Do:** (a) a **configurable opponent seat-assignment** — a default *realistic mix* over the 9 opponents
   (e.g. a couple Autopilot/Balanced, one each Upside/Safe/Homer/Reacher), user-overridable; (b) **couple the

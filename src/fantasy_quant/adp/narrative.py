@@ -41,6 +41,8 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
+from fantasy_quant.draft.personalities import USE_MODEL_BAND as _USE_MODEL_BAND
+
 #: Depth plus the 16.8 ablation survivors. `adp_stdev` is the crowd disagreeing with itself, which
 #: is the most direct observable of "this player is argued about"; `rookie` was the single largest
 #: survivor (+0.73 rounds); the position dummies carry the TE/WR asymmetry 16.7 measured.
@@ -95,10 +97,43 @@ class NarrativeShock:
     **calibrated by simulation**, not read off the realized panel: the panel's dispersion is in
     draft *rounds* while the shock lives in *utility*, and part of realized dispersion is already
     produced by the model's own softmax. Only the *shape* transfers from the panel.
+
+    ⚠ **T15 (2026-07-27): ``intercept`` is NOT transportable across an ``AdpSpec``/``BandSpec``
+    change, and that is enforced rather than noted.** It is a size in *utility* units, calibrated
+    by simulation against realized dispersion under one particular ADP transform. T15 replaced that
+    transform (linear -> ``(adp/50)^0.15``) and refit β, so utility is no longer the same scale: the
+    old intercept applied to the new room is a differently-sized shock wearing a calibrated label.
+    ``calibrated_under`` records the specs a calibration was performed with, and
+    :meth:`assert_transportable` refuses a mismatch. **The shipped shock is default-OFF and 16.9
+    measured its intercept as unidentified** (a 50x sweep moved the target metric less than its own
+    between-run noise), so nothing is re-fit here — inventing a number for a parameter that was
+    already a noise draw would be worse than declaring it stale.
     """
     coef: dict[str, float] = field(default_factory=dict)
     intercept: float = -3.0
     features: tuple[str, ...] = NARRATIVE_FEATURES
+    #: ``{"adp_spec": {...}, "band": {...}}`` of the model this intercept was calibrated against.
+    #: ``None`` = never calibrated (the default shock is a placeholder, not a fit).
+    calibrated_under: dict | None = None
+
+    def assert_transportable(self, model) -> None:
+        """Fail loudly if this shock's size was calibrated against a different model contract.
+
+        Cheap, structural, and placed here because the failure it prevents is silent: a shock of the
+        wrong size still produces a legal draft and a plausible-looking room. *A coefficient is not
+        transportable without its controls* — the fourth instance in this project, and the first one
+        caught before it shipped rather than afterwards.
+        """
+        if self.calibrated_under is None:
+            return                     # never calibrated; the caller owns an uncalibrated default
+        now = {"adp_spec": getattr(model, "adp_spec", None), "band": getattr(model, "band", None)}
+        now = {k: (v.to_dict() if v is not None else None) for k, v in now.items()}
+        if now != self.calibrated_under:
+            raise ValueError(
+                "NarrativeShock.intercept was calibrated under "
+                f"{self.calibrated_under} but is applied to {now}. The intercept is a size in "
+                "utility units and does not survive an AdpSpec/BandSpec change — re-calibrate "
+                "(steps/phase16_9_narrative.py) or pass calibrated_under=None to opt out.")
 
     def tau(self, feats: pd.DataFrame) -> np.ndarray:
         """Per-player shock scale (utility units), strictly positive."""
@@ -168,7 +203,7 @@ def calibrate_intercept(simulate_fn, target_slope: float, *,
 # the measurement instrument: a simulated drift panel, comparable to the realized 16.7 one
 # ------------------------------------------------------------------------------------------------
 def simulate_drift_panel(con, drafts: pd.DataFrame, model, *, shock: NarrativeShock | None = None,
-                         top_k: int | None = None, seed: int = 0,
+                         top_k: int | None | str = _USE_MODEL_BAND, seed: int = 0,
                          extras: pd.DataFrame | None = None) -> pd.DataFrame:
     """Replay each row of ``drafts`` as a simulated draft and return a **16.7-shaped** panel.
 

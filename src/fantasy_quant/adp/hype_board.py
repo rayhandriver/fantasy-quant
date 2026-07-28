@@ -40,7 +40,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from fantasy_quant.draft.opponent_model import _ADP_SCALE
+from fantasy_quant.draft.opponent_model import ADP_SPEC as _ADP_SPEC
 
 HYPE_CSV = Path("reference/hype_board.csv")
 
@@ -352,7 +352,7 @@ def hype_deltas(board: pd.DataFrame, hype: pd.DataFrame, *,
 
 
 def apply_hype(board: pd.DataFrame, hype: pd.DataFrame, *, beta_adp_s: float,
-               key: str = "player_key") -> np.ndarray:
+               key: str = "player_key", adp_spec=None, adp_col: str = "adp") -> np.ndarray:
     """Convert the curated pick-space board into the **utility offset** the 16.9 channel takes.
 
     The conversion runs through the opponent model's own ADP coefficient rather than a tuning
@@ -361,13 +361,27 @@ def apply_hype(board: pd.DataFrame, hype: pd.DataFrame, *, beta_adp_s: float,
     simulator as it does to the human who wrote it, and it inherits the model's units automatically
     if 11.1 is ever refit.
 
-        u_offset = -beta_adp_s * pick_delta / _ADP_SCALE
+        u_offset = -beta_adp_s * (f(adp) - f(adp - pick_delta))
+
+    ★ **T15 made this exact rather than linear.** It used to read ``pick_delta / _ADP_SCALE``, the
+    derivative of a linear ``adp_s``. Under curvature the utility a claim is worth depends on *where
+    on the board the player sits* — the same "+6 picks" is worth far more at ADP 8 than at ADP 150,
+    which is precisely the asymmetry T16 ran into (a deep claim that moved nothing). Taking the
+    exact difference rather than a local derivative keeps a large ``pick_delta`` honest, since the
+    board's curvature over 24 picks is not negligible at the top.
 
     Feed the result to :func:`~fantasy_quant.draft.personalities.make_opponent_pick_fn` as ``hype``.
     Note the sign: ``beta_adp_s`` is negative (a later ADP is less attractive), so a positive
     ``pick_delta`` yields a positive utility bump.
     """
-    return -float(beta_adp_s) * hype_deltas(board, hype, key=key) / _ADP_SCALE
+    deltas = hype_deltas(board, hype, key=key)
+    spec = adp_spec if adp_spec is not None else _ADP_SPEC
+    if spec.kind == "linear":
+        return -float(beta_adp_s) * deltas / float(spec.scale)
+    adp = pd.to_numeric(board[adp_col], errors="coerce").to_numpy(float)
+    adp = np.where(np.isfinite(adp), adp, float(spec.scale))
+    shifted = np.clip(adp - deltas, 0.5, None)     # a claim cannot push a player before pick 0.5
+    return -float(beta_adp_s) * (spec.feature(adp) - spec.feature(shifted))
 
 
 def hyped_adp(board: pd.DataFrame, hype: pd.DataFrame, *, adp_col: str = "adp",

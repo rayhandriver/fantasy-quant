@@ -7,11 +7,15 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from fantasy_quant.draft.availability import _draft_blocks, _softmax, simulate_survival
 from fantasy_quant.draft.opponent_model import (
     ALL_FEATURES,
+    BAND_SPEC,
     CHOICE_TOP_K,
+    AdpSpec,
+    BandSpec,
     OpponentModel,
     _group_ptr,
     _softmax_by_group,
@@ -186,14 +190,64 @@ def test_choice_band_restricts_to_top_k_by_adp():
 
 
 def test_choice_band_default_is_the_fit_contract():
-    """The band default must track `build_choice_frame`'s, or fit and simulation silently diverge
-    again — the defect Session G found in both 11.2 and 11.3."""
+    """Fit and every simulator must take their candidate set from the SAME object.
+
+    Session G found 11.2 and 11.3 both simulating over the whole board against a top-40-estimated β.
+    T15 turned the shared integer into a shared :class:`BandSpec` (it may now widen with depth), so
+    this pins the object rather than the number — a band that can vary is exactly the kind of thing
+    that drifts apart between fit and use.
+    """
     import inspect
 
     from fantasy_quant.draft import availability
+    from fantasy_quant.draft.personalities import USE_MODEL_BAND
     assert availability.CHOICE_TOP_K == CHOICE_TOP_K
-    assert inspect.signature(build_choice_frame).parameters["top_k"].default == CHOICE_TOP_K
-    assert inspect.signature(simulate_survival).parameters["top_k"].default == CHOICE_TOP_K
+    # the fit takes the module band by default ...
+    assert inspect.signature(build_choice_frame).parameters["band"].default is None
+    frame_band = inspect.signature(build_choice_frame).parameters["top_k"].default
+    assert frame_band is None, "top_k must not shadow the band by default"
+    # ... and the simulator reads the fitted model's own band rather than a constant of its own
+    assert inspect.signature(make_opponent_pick_fn).parameters["top_k"].default is USE_MODEL_BAND
+    assert BAND_SPEC.top_k(1, 10) == CHOICE_TOP_K, "shipped default is still the top-40"
+
+
+def test_widening_band_grows_with_depth_and_clamps():
+    """A widening band is a pure function of the pick number, identical for fit and simulation."""
+    b = BandSpec(kind="widening", k0=40, growth=10, k_max=100)
+    assert b.top_k(1, 10) == 40 and b.top_k(10, 10) == 40      # round 1
+    assert b.top_k(11, 10) == 50                                # round 2
+    assert b.top_k(141, 10) == 100                              # round 15, clamped at k_max
+    assert BandSpec().top_k(1, 10) == BandSpec().top_k(141, 10) == CHOICE_TOP_K
+
+
+def test_adp_spec_linear_reproduces_the_historical_feature_exactly():
+    """The default spec must be a bit-identical no-op, or every pre-T15 number silently moves."""
+    adp = np.array([1.0, 12.0, 50.0, 200.0])
+    assert np.allclose(AdpSpec().feature(adp), adp / 50.0)
+    assert np.allclose(AdpSpec().utility_per_pick(adp), 1.0 / 50.0)
+
+
+def test_power_spec_width_law_matches_the_derivation():
+    """``w_a ∝ 1/f'(a)``: a p=0.5 spec must make deviation width grow like ``a^0.5``.
+
+    The arithmetic T15's fix rests on, so it is pinned rather than trusted — if the exponent
+    convention were ever flipped the room would get *narrower* with depth, and every acceptance
+    bar would move the wrong way while still looking like a modelling result.
+    """
+    spec = AdpSpec(kind="power", exponent=0.5)
+    width = 1.0 / spec.utility_per_pick(np.array([25.0, 100.0]))
+    assert width[1] / width[0] == pytest.approx((100.0 / 25.0) ** 0.5, rel=1e-9)
+    # and the linear spec is flat in depth, which is the defect being fixed
+    flat = 1.0 / AdpSpec().utility_per_pick(np.array([25.0, 100.0]))
+    assert flat[0] == pytest.approx(flat[1])
+
+
+def test_specs_round_trip_through_their_artifact_form():
+    """Specs travel with β in the fitted JSON; a lossy round-trip silently restores defaults."""
+    a, b = AdpSpec(kind="power", exponent=0.45), BandSpec(kind="widening", k0=40, growth=7.5)
+    assert AdpSpec.from_dict(a.to_dict()) == a
+    assert BandSpec.from_dict(b.to_dict()) == b
+    assert AdpSpec.from_dict(None) == AdpSpec() and BandSpec.from_dict(None) == BandSpec()
 
 
 def test_draft_blocks_match_scan():
