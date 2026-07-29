@@ -88,6 +88,34 @@ CORPUS_REACH_P95: tuple[float, ...] = (14.6, 24.1, 33.9, 43.5, 50.0, 46.6, 46.7,
                                        44.1, 39.1, 33.7, 30.8, 30.0, 27.1, 19.0)
 
 
+def ceiling_only(window_mult: float = 1.0) -> ReachBudget:
+    """A budget that is **only** the per-round corpus ceiling: no count tiers, no early clamp.
+
+    ``window_mult`` scales it — 1.0 means "reaches as far as the 95th-percentile real manager and
+    no further". This is the shape :data:`ROOM_CEILING` uses for every seat and the shape the value
+    hawk's window uses; the count tiers are relaxed away because a *how far* control and a *how
+    often* control are different objects and neither implies the other.
+    """
+    return ReachBudget(
+        large_max=10 ** 6, large_from_round=1, medium_max=10 ** 6, medium_from_round=1,
+        early_rounds=0, early_max_picks=np.inf,
+        round_ceiling=tuple(float(window_mult) * x for x in CORPUS_REACH_P95),
+    )
+
+
+def unbounded_budget() -> ReachBudget:
+    """No discipline at all — the pre-T25 behaviour of a seat with ``reach_budget=None``.
+
+    ⚠ **Only for A/B controls.** ``reach_budget=None`` now means *inherit* :data:`ROOM_CEILING`, so
+    a step that wants a genuinely unconstrained seat (``steps/phase16_14r_5_reacher.py`` measures
+    the reacher against one) has to ask for it explicitly. Silently re-pointing those controls at
+    the room ceiling would change what an already-run done-bar measured.
+    """
+    return ReachBudget(large_max=10 ** 6, large_from_round=1, medium_max=10 ** 6,
+                       medium_from_round=1, early_rounds=0, early_max_picks=np.inf,
+                       round_ceiling=None)
+
+
 def value_hawk_budget(window_mult: float) -> ReachBudget:
     """The value hawk's reach window: ``window_mult`` x the realized human p95, per round.
 
@@ -101,11 +129,7 @@ def value_hawk_budget(window_mult: float) -> ReachBudget:
     The count tiers are relaxed away: a value argmax does not "take three swings a draft", it takes
     the best available player inside its window at every pick, so the window *is* the whole control.
     """
-    return ReachBudget(
-        large_max=10 ** 6, large_from_round=1, medium_max=10 ** 6, medium_from_round=1,
-        early_rounds=0, early_max_picks=np.inf,
-        round_ceiling=tuple(float(window_mult) * x for x in CORPUS_REACH_P95),
-    )
+    return ceiling_only(window_mult)
 
 
 @dataclass(frozen=True)
@@ -181,6 +205,27 @@ class ReachBudget:
             # and without this the third permitted swing was a 78-pick reach (see CORPUS_REACH_P95).
             allowed = min(allowed, float(self.round_ceiling[min(rnd, len(self.round_ceiling)) - 1]))
         return float(allowed)
+
+
+#: **T25 — the floor of discipline every seat inherits.** A seat whose ``reach_budget`` is ``None``
+#: drafts under this: the corpus's own per-round p95 reach and nothing else.
+#:
+#: ★ **The asymmetry was the bug, not the budget.** Until 2026-07-28 a budget was attached to
+#: ``reacher`` and ``value_hawk`` alone, so ``CORPUS_REACH_P95[0]`` = 14.6 picks bound the two seats
+#: that had been *given* discipline and nothing bound ``balanced`` — which is **4 of 10** seats in
+#: :data:`REALISTIC_ROOM`. The seat asked to be disciplined looked tamer than the seat representing
+#: the average human, and the R1-3 ``pool_rank`` ordering inverted (reacher 4.94, balanced 6.36).
+#:
+#: ⚠ It is a **ceiling only** — no count tiers and no early clamp. The reacher's quiet opening
+#: (``early_rounds=3``, ``early_max_picks=8.0``) is a deliberate spec, not a default to spread
+#: around, and imposing it room-wide would flatten every seat into the same opening.
+ROOM_CEILING: ReachBudget = ceiling_only()
+
+
+def effective_budget(pers: Personality) -> ReachBudget:
+    """This seat's budget: its own if it has one, else the room-wide :data:`ROOM_CEILING`."""
+    return pers.reach_budget if pers.reach_budget is not None else ROOM_CEILING
+
 
 #: Enriched board columns (16.13) a personality may weight in ``signal_weights``. Note
 #: ``overall_rank`` is a **rank** — lower is better — so wanting good players means a *negative*
@@ -273,37 +318,106 @@ class WidthCurve:
 
     ``gamma=0`` is a flat curve — the pre-T15 behaviour exactly, so nothing moves until a caller
     ships a fitted curve.
+
+    ★ **``base`` (T24) is the third factor, and it exists because the curve is a *shape*.**
+    ``width(1) == base``: the curve says how width grows with depth, ``base`` says how wide round 1
+    is. They were one number while the only lever was depth; T24 needs to narrow the whole room and
+    hand the deviation back **per player** through :func:`private_adp`, which is a different
+    statement from "flatten the depth profile". ``base=1.0`` reproduces the committed curve exactly.
     """
 
     kind: str = "power"
     gamma: float = 0.0
     max_round: int = 15
+    base: float = 1.0
 
     def __post_init__(self) -> None:
         if self.kind != "power":
             raise ValueError(f"unknown WidthCurve kind {self.kind!r}")
         if not 0.0 <= self.gamma <= 3.0:
             raise ValueError(f"implausible WidthCurve gamma {self.gamma}")
+        if not 0.0 < self.base <= 5.0:
+            raise ValueError(f"implausible WidthCurve base {self.base}")
 
     def width(self, rnd: int) -> float:
-        """Width multiplier at ``rnd`` (1-based). ``round^gamma``, clamped past ``max_round``."""
+        """Width multiplier at ``rnd`` (1-based): ``base·round^gamma``, clamped past ``max_round``.
+        """
         r = min(max(int(rnd), 1), int(self.max_round))
-        return float(r) ** float(self.gamma)
+        return float(self.base) * float(r) ** float(self.gamma)
 
     def to_dict(self) -> dict:
-        return {"kind": self.kind, "gamma": float(self.gamma), "max_round": int(self.max_round)}
+        return {"kind": self.kind, "gamma": float(self.gamma), "max_round": int(self.max_round),
+                "base": float(self.base)}
 
     @classmethod
     def from_dict(cls, d: dict | None) -> WidthCurve:
         if not d:
             return WidthCurve()
         return cls(kind=str(d.get("kind", "power")), gamma=float(d.get("gamma", 0.0)),
-                   max_round=int(d.get("max_round", 15)))
+                   max_round=int(d.get("max_round", 15)), base=float(d.get("base", 1.0)))
 
 
 #: The shipped depth-width curve. Fitted by ``steps/t15_4_width_curve.py`` and, like `AdpSpec`, it
 #: travels with the model rather than being edited by hand.
 WIDTH_CURVE = WidthCurve()
+
+
+# ==================================================================================================
+# T24 — the per-seat private board: width per **player**, not only per round
+# ==================================================================================================
+#: How many of a player's own ``adp_stdev`` a seat's private opinion is worth, before the seat's
+#: ``width_mult``. **Room-level, one scalar**, calibrated against the corpus law below rather than
+#: set by eye; ``0.0`` reproduces the pre-T24 room bit-for-bit.
+#:
+#: ★ **The law it is calibrated against** (1,144 FFC-boarded human drafts / 157,349 picks):
+#: **|drift| ≈ 2 × adp_stdev**, near-constant from stdev 1 to 12 (2.57 / 2.13 / 2.04 / 1.98 / 1.88
+#: by band) and decaying above that only because the pool runs out — T15's pool-exhaustion finding
+#: arriving from the other direction. Spearman(``adp_stdev``, |drift|) is **0.484** against
+#: Spearman(round, |drift|) **0.535**, so board disagreement is nearly as strong as depth *and*
+#: carries what depth cannot: **within rounds 1–3 the stdev terciles drift 2.11 / 3.33 / 8.91**, a
+#: 4.2× spread no round-indexed curve can express.
+#:
+#: ★ **Why a private board and not another width knob.** A softmax has one width for every candidate
+#: on the clock, so the only way a *flat* room reproduces late-round spread is to be too wide at the
+#: top — which is exactly the objection: with the top few ADPs separated by less than the softmax's
+#: own width, the consensus #1 and #6 are near-interchangeable and an elite lands past pick 4 21 %
+#: of the time against a realized 12 %. Moving the dispersion into a per-player draw makes the room
+#: narrow where the crowd agrees (Bijan, stdev 0.7) and wide where it does not (Jeanty, 2.5) without
+#: hard-coding a tier.
+PRIVATE_KAPPA: float = 0.0
+
+#: Draws are clipped to ±this many sd. T24's own warning: the corpus far tail (p99 = pick 33 for an
+#: ADP 1–2.5 player) is a **data question first** — a post-snapshot injury or a keeper/dynasty room,
+#: not a manager's opinion — so the body is fitted and the tail is left alone rather than chased.
+PRIVATE_CLIP: float = 3.0
+
+
+def private_adp(board: pd.DataFrame, kappa: float, rng: np.random.Generator, *,
+                clip: float = PRIVATE_CLIP) -> np.ndarray | None:
+    """One seat's private view of the board: ``adp + κ·adp_stdev·ε``, ``ε ~ N(0,1)``.
+
+    Drawn **once per seat per draft** (a manager holds one opinion for a whole draft, not a fresh
+    one every pick) and **independently across seats** — the shared component of a draft's mood is
+    16.9's narrative shock, which is a different object and already fitted; drawing a common
+    component here would double-count it.
+
+    Returns ``None`` when there is nothing to model — ``κ = 0``, or a board with no ``stdev``
+    column (an ADP-only board carries no disagreement, so the seat simply reads the public one).
+    Missing per-player values are median-filled, following ``adp/drift_model.py``: an unknown stdev
+    is an *unknown*, and filling it with 0 would fabricate a consensus this board never expressed.
+
+    ⚠ **Aligned positionally to ``board`` rows**, matching the ``level_z`` convention in
+    :func:`make_opponent_pick_fn` — the simulator's boards carry a 0..n-1 index, so a pool's index
+    labels are row positions.
+    """
+    if not kappa or "stdev" not in board.columns:
+        return None
+    adp = pd.to_numeric(board["adp"], errors="coerce").to_numpy(float)
+    sd = pd.to_numeric(board["stdev"], errors="coerce")
+    med = float(sd.median()) if np.isfinite(sd.median()) else 0.0
+    sd = sd.fillna(med).to_numpy(float)
+    eps = np.clip(rng.standard_normal(len(board)), -abs(clip), abs(clip))
+    return adp + float(kappa) * sd * eps
 
 
 def pos_z(values, pos) -> np.ndarray:
@@ -415,6 +529,9 @@ class Personality:
     width_mult: float = 1.0
     level_floor: float | None = None
     level_floor_penalty: float = 1.0
+    #: This seat's *how far / how often* budget. ``None`` means **inherit** :data:`ROOM_CEILING`
+    #: (T25) — it does **not** mean unconstrained; ask for :func:`unbounded_budget` if you want
+    #: that, which only an A/B control should.
     reach_budget: ReachBudget | None = None
     objective: str = "behavioral"
     context_weights: dict = field(default_factory=dict)
@@ -609,7 +726,8 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
                           rng: np.random.Generator | None = None, sample: bool | None = None,
                           top_k: int | None | str = USE_MODEL_BAND,
                           hype: np.ndarray | None = None,
-                          width_curve: WidthCurve | None = None):
+                          width_curve: WidthCurve | None = None,
+                          kappa: float | None = None):
     """Build an ``opponent_pick_fn(state, team) -> board_label`` from a fitted model + personality.
 
     Draws from the model's choice softmax over the team's cap-respecting available pool (so rosters
@@ -671,18 +789,34 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
     fixed_k = None if top_k is USE_MODEL_BAND else top_k
     # T15's depth-width law. Applied to `adp_s` alone and re-derived per pick, so it widens the room
     # at depth without touching what any seat thinks about a player. `gamma=0` is a no-op.
+    budget = effective_budget(pers)
     curve = width_curve if width_curve is not None else getattr(model, "width_curve", WIDTH_CURVE)
     j_adp = cols.index("adp_s") if "adp_s" in cols else None
     b_adp = float(beta[j_adp]) if j_adp is not None else 0.0
+    # T24 — this seat's private board, MEASURED HARMFUL and shipped OFF (κ=0); see `private_adp`.
+    # `width_mult` is the seat's whole width character (autopilot 0, chalk 0.55, balanced 1.0,
+    # reacher 2.0), so scaling by it makes κ one **room-level** number and gives autopilot κ=0 for
+    # free. κ travels on the model beside the width curve; an explicit `kappa=` still wins, which is
+    # what the sweep and the A/B controls use.
+    kappa_room = (float(getattr(model, "private_kappa", PRIVATE_KAPPA)) if kappa is None
+                  else float(kappa))
+    kappa_seat = kappa_room * float(pers.width_mult)
     #: board-wide within-position level z for `level_floor`, computed once (see the note at use).
     level_z: np.ndarray | None = None
+    #: this seat's private ADP, and the state it was drawn for — held by identity so a *new* draft
+    #: (or a 9.5 rollout `clone`) redraws, while every pick inside one draft sees the same opinion.
+    priv: np.ndarray | None = None
+    priv_state = None
 
     def pick(state, team) -> int:
-        nonlocal level_z
+        nonlocal level_z, priv, priv_state
         if level_z is None and pers.level_floor is not None and "mean" in state.board.columns:
             # once per draft, over the whole board — see the note where it is applied
             level_z = np.zeros(len(state.board), float)
             level_z[:] = pos_z(state.board["mean"], state.board["pos"].to_numpy())
+        if kappa_seat and priv_state is not state:
+            priv_state = state
+            priv = private_adp(state.board, kappa_seat, rng or state.rng)
         pool = state.draftable_pool(team)
         # T21 — the choice-set contract's *position* half. β was fit under `skill_only=True`, so
         # the simulation must offer the same four positions. Applied AFTER `draftable_pool` and
@@ -695,16 +829,23 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
         # 16.14R step 5b — the reach budget, a hard filter before utility (see `ReachBudget`).
         # Kept ahead of the band so the budget bounds the *candidate set* rather than fighting the
         # softmax, and always leaves the least-reachy candidate so a draft can never stall.
-        if pers.reach_budget is not None:
-            allowed = pers.reach_budget.cap(state, team)
-            if np.isfinite(allowed):
-                dev = pool["adp"].to_numpy(float) - float(state.overall_pick)
-                within = pool[dev <= allowed]
-                pool = within if not within.empty else pool.nsmallest(1, "adp")
+        # T25: every seat has one — a seat without its own inherits `ROOM_CEILING`.
+        allowed = budget.cap(state, team)
+        if np.isfinite(allowed):
+            dev = pool["adp"].to_numpy(float) - float(state.overall_pick)
+            within = pool[dev <= allowed]
+            pool = within if not within.empty else pool.nsmallest(1, "adp")
         k = (band.top_k(state.overall_pick, state.n_teams) if band is not None else fixed_k)
         if k is not None and len(pool) > k:
             pool = pool.nsmallest(k, "adp")
         cand = pool.rename(columns={})[["adp", "pos"]].copy()
+        # T24 — from here down the seat reads its **own** board. Deliberately after the band and the
+        # reach budget, which stay on the public ADP: the budget is T25's room-wide discipline and
+        # `CORPUS_REACH_P95` is measured in *public* picks, so a private opinion must not be a way
+        # around it, and the band is an estimation condition β was fit under. A private board
+        # reorders the seat's preferences **inside** the candidate set it was always allowed.
+        if priv is not None:
+            cand["adp"] = priv[pool.index.to_numpy()]
         if "team" in pool.columns:
             cand["team"] = pool["team"]
         if "rookie" in pool.columns:
@@ -853,12 +994,11 @@ def make_value_hawk_pick_fn(personality: Personality, risk, *, n_teams: int = 10
         skill = pool[pool["pos"].isin(SKILL_POSITIONS)]
         if not skill.empty:
             pool = skill
-        if personality.reach_budget is not None:
-            allowed = personality.reach_budget.cap(state, team)
-            if np.isfinite(allowed):
-                dev = pool["adp"].to_numpy(float) - float(state.overall_pick)
-                within = pool[dev <= allowed]
-                pool = within if not within.empty else pool.nsmallest(1, "adp")
+        allowed = effective_budget(personality).cap(state, team)
+        if np.isfinite(allowed):
+            dev = pool["adp"].to_numpy(float) - float(state.overall_pick)
+            within = pool[dev <= allowed]
+            pool = within if not within.empty else pool.nsmallest(1, "adp")
         if len(pool) == 1:
             return int(pool.index[0])
 

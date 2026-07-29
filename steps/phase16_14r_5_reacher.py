@@ -35,7 +35,12 @@ import pandas as pd
 from fantasy_quant.adp import boards
 from fantasy_quant.adp.drift_panel import build_drift_panel
 from fantasy_quant.draft import mock
-from fantasy_quant.draft.personalities import make_opponent_pick_fn, personalities, pos_z
+from fantasy_quant.draft.personalities import (
+    make_opponent_pick_fn,
+    personalities,
+    pos_z,
+    unbounded_budget,
+)
 from fantasy_quant.draft.simulator import board_player_key, simulate_draft
 
 DB = Path("data/fantasy_quant.duckdb")
@@ -115,8 +120,10 @@ def main() -> None:
     # -- the direction half -----------------------------------------------------------------------
     print("\n=== drafted pool, mean within-position z — DIRECTION ===")
     directed = _drafted_z(board, pers["reacher"], seeds=seeds, rounds=args.rounds, model=model)
+    # ⚠ T25: `reach_budget=None` now means *inherit* the room ceiling, so the pre-16.14R control
+    # has to name `unbounded_budget()` explicitly or this ablation quietly stops being one.
     undirected = _drafted_z(board, replace(pers["reacher"], signal_weights={}, override={},
-                                           hype_gain=0.0, reach_budget=None),
+                                           hype_gain=0.0, reach_budget=unbounded_budget()),
                             seeds=seeds, rounds=args.rounds, model=model)
     bal = _drafted_z(board, pers["balanced"], seeds=seeds, rounds=args.rounds, model=model)
     dirtab = pd.DataFrame({"reacher (shipped)": directed, "reacher (pre-16.14R: width only)":
@@ -158,7 +165,8 @@ def main() -> None:
 
     # -- what the budget itself costs, measured separately ---------------------------------------
     # same room, same seed, one seat swapped for its budget-free twin
-    room_nb = tuple(replace(p, reach_budget=None) if p.name == "reacher" else p for p in room)
+    room_nb = tuple(replace(p, reach_budget=unbounded_budget()) if p.name == "reacher" else p
+                    for p in room)
     sim_nb = mock.batch_drift_panel(board, room_nb, model, season=args.season, seeds=seeds,
                                     n_teams=10, rounds=args.rounds, board_source=src)
     no_budget = reach_ceiling(sim_nb[sim_nb["seat_personality"] == "reacher"])

@@ -33,6 +33,7 @@ _COUNTING_STATS = ["targets", "receptions", "carries", "attempts", "offense_snap
 ADP_MAX_AGE_DAYS = 6            # live-season FFC snapshot must be at most this stale (the §2 chore)
 FP_BOARD_ROW_BAND = (400, 700)  # a full FantasyPros consensus board sits here (2026 = 528)
 GSIS_MATCH_FLOOR = 0.95         # consensus-board identity match floor (2026 ran ~0.99)
+MANAGER_REACH_MAX_ROUNDS = 2.0  # T18: a profile reach past this is a join defect, not a manager
 
 
 # --------------------------------------------------------------------------------------------
@@ -108,6 +109,21 @@ def sleeper_no_dup_picks_gate(name: str, n_drafts_with_dup: int, *, n_incomplete
     reported). A duplicate pick_no means a parse/ingest bug."""
     return _gate(name, n_drafts_with_dup == 0, drafts_with_dup=n_drafts_with_dup,
                  incomplete_drafts=n_incomplete, total_drafts=n_total)
+
+
+def manager_reach_gate(name: str, mean_abs_reach_rounds, n_managers: int,
+                       max_rounds: float = MANAGER_REACH_MAX_ROUNDS) -> dict:
+    """Gate: the manager profiles' mean |reach| is inside a couple of rounds (T18).
+
+    The gate the register asked for by name, and it exists because the failure it catches does not
+    look like a bug from the inside — the pooled-board table reported a **+91.9-pick** mean QB reach
+    and every individual step of the computation was correct. *A mean reach outside roughly ±2
+    rounds is a join defect, not a manager.* Pure: pass the aggregate in from the DB wrapper.
+    """
+    ok = mean_abs_reach_rounds is not None and abs(float(mean_abs_reach_rounds)) <= max_rounds
+    return _gate(name, ok, n_managers=int(n_managers), max_rounds=max_rounds,
+                 mean_abs_reach_rounds=(None if mean_abs_reach_rounds is None
+                                        else round(float(mean_abs_reach_rounds), 3)))
 
 
 def sleeper_human_slot_gate(name: str, n_mocks: int, n_with_human_slot: int) -> dict:
@@ -303,6 +319,18 @@ def _sleeper_gates(con) -> list[dict]:
     ).fetchone()
     gates.append(sleeper_human_slot_gate("sleeper: human slot resolved per mock",
                                          int(n_mocks), int(n_slot)))
+
+    # T18 — the profiles' reach column, in the units it is now stored in (rounds, own board)
+    if db.table_exists(con, "sleeper_manager_profiles"):
+        cols = [r[0] for r in con.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'sleeper_manager_profiles'").fetchall()]
+        if "avg_reach_rounds" in cols:
+            mean_abs, n_mgr = con.execute(
+                "SELECT AVG(ABS(avg_reach_rounds)), COUNT(avg_reach_rounds) "
+                "FROM sleeper_manager_profiles").fetchone()
+            gates.append(manager_reach_gate("sleeper: manager reach is a behaviour, not a join",
+                                            mean_abs, int(n_mgr or 0)))
     return gates
 
 

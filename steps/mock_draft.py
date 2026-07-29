@@ -1,6 +1,8 @@
 """Interactive mock draft — you at one seat, the fantasy-quant personalities at the other nine.
 
     uv run python steps/mock_draft.py start --seat 7 [--room a,b,..] [--teams 10] [--seed 7]
+                                 # --room defaults to the SHIPPED room (REALISTIC_ROOM, minus one
+                                 # `balanced` seat, which is the one you take)
     uv run python steps/mock_draft.py board [--pos RB] [--n 20]
     uv run python steps/mock_draft.py pick "Bijan"
     uv run python steps/mock_draft.py roster [--team 3]
@@ -42,6 +44,7 @@ import pandas as pd
 from fantasy_quant.draft import mock
 from fantasy_quant.draft.personalities import (
     DEFAULT_ROOM,
+    REALISTIC_ROOM,
     make_room,
     make_room_pick_fn,
     personalities,
@@ -94,6 +97,23 @@ def load() -> tuple[DraftState, dict]:
     return d["state"], d["meta"]
 
 
+#: The nine opponents a human faces, from the ten-seat shipped room. One ``balanced`` seat is the
+#: one dropped, because **you** are taking a seat and ``balanced`` is the modal manager — removing
+#: any character seat instead would change the composition 16.14R step 7 validated.
+REALISTIC_NINE: tuple[str, ...] = tuple(
+    [n for i, n in enumerate(REALISTIC_ROOM) if not (n == "balanced" and i == REALISTIC_ROOM.index(
+        "balanced"))])
+
+
+def room_mix(arg: str | None) -> tuple[str, ...]:
+    """``--room`` -> a nine-name mix. Default is the **shipped** room, not the pre-16.14R one."""
+    if arg in (None, "", "realistic"):
+        return REALISTIC_NINE
+    if arg == "default":
+        return tuple(DEFAULT_ROOM)
+    return tuple(x.strip() for x in arg.split(","))
+
+
 def room_from(meta: dict):
     lib = personalities()
     return tuple(replace(lib[n], fav_teams=tuple(meta.get("fav", ())))
@@ -120,16 +140,22 @@ def show_available(st: DraftState, n: int = 18, pos: str | None = None) -> None:
     pool = st.draftable_pool(st.your_team)
     if pos:
         pool = pool[pool["pos"].isin([p.strip().upper() for p in pos.split(",")])]
+    # BOOM/BUST are the **live** pair (T22): the frozen Phase-5 columns are
+    # `weekly_volatility(max(train_seasons))`, which on a live board is 2022, and a player who was
+    # not in the league that season reads 0.00 — i.e. *never busts*. `boom_prob_live`/
+    # `bust_prob_live` are the same rates on season − 1, and a player we have never seen play
+    # prints "-" rather than a fabricated zero. TAIL is `tail_risk`, the relative q90−q10 spread —
+    # the column 16.14R shipped as the honest boom-or-bust read.
     print(f"  {'#':<5}{'PLAYER':<24}{'POS':<5}{'ADP':>6}{'PROJ':>7}{'VBD':>7}{'RK':>5}"
-          f"{'UPSIDE':>8}{'FLOOR':>7}{'BOOM':>6}{'BUST':>6}")
+          f"{'UPSIDE':>8}{'FLOOR':>7}{'TAIL':>7}{'BOOM':>6}{'BUST':>6}")
     for idx, r in pool.head(n).iterrows():
         def g(c, fmt=".2f", row=r):
             v = row.get(c, np.nan)
             return format(v, fmt) if pd.notna(v) else "-"
         print(f"  {idx:<5}{r['player_name'][:23]:<24}{r['pos']:<5}{r['adp']:>6.1f}"
               f"{g('proj_points', '.0f'):>7}{g('vbd', '.0f'):>7}{g('overall_rank', '.0f'):>5}"
-              f"{g('upside', '+.2f'):>8}{g('floor', '+.2f'):>7}"
-              f"{g('boom_prob', '.2f'):>6}{g('bust_prob', '.2f'):>6}")
+              f"{g('upside', '+.2f'):>8}{g('floor', '+.2f'):>7}{g('tail_risk', '+.2f'):>7}"
+              f"{g('boom_prob_live', '.2f'):>6}{g('bust_prob_live', '.2f'):>6}")
 
 
 def show_roster(st: DraftState, team: int) -> None:
@@ -211,8 +237,7 @@ def cmd_start(a) -> None:
     proj = pd.Series(board["proj_points"].to_numpy(float),
                      index=board_player_key(board).astype(str)).groupby(level=0).first()
     b["proj_points"] = b["player_key"].astype(str).map(proj).to_numpy()
-    mix = tuple(DEFAULT_ROOM) if a.room in (None, "default") else tuple(
-        x.strip() for x in a.room.split(","))
+    mix = room_mix(a.room)
     fav = tuple(x.strip().upper() for x in (a.fav or "").split(",") if x.strip())
     resolved = [p.name for p in make_room(mix, n_opponents=a.teams - 1, seed=a.room_seed,
                                           fav_teams=fav)]
@@ -320,7 +345,9 @@ def main() -> None:
     s.add_argument("--season", type=int, default=2026)
     s.add_argument("--seed", type=int, default=7)
     s.add_argument("--room-seed", type=int, default=None)
-    s.add_argument("--room", default="default")
+    s.add_argument("--room", default="realistic",
+                   help="'realistic' (the shipped room, default) | 'default' (pre-16.14R) | "
+                        "a comma-separated list of nine personality names")
     s.add_argument("--fav", default="")
     s.add_argument("--n", type=int, default=18)
     s.add_argument("--pos", default=None)

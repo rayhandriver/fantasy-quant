@@ -7,10 +7,12 @@ that inflated season means ~17x)."""
 
 from __future__ import annotations
 
+import duckdb
 import numpy as np
 import pandas as pd
 import pytest
 
+from fantasy_quant.data import db
 from fantasy_quant.projections import conformal, distribution, injury, quantile, variance
 from fantasy_quant.valuation import utility
 
@@ -340,3 +342,41 @@ def test_level_ratio_raises_on_a_disjoint_board():
     dist, proj = _level_frames(0.7)
     with pytest.raises(ValueError, match="share no players"):
         distribution.level_ratio(dist, proj.assign(player_key="other"))
+
+
+# --------------------------------------------------------------------------------------------
+# T13 — the cloud is reproducible across processes (the determinism pin)
+# --------------------------------------------------------------------------------------------
+def test_deterministic_reads_pins_one_thread_and_restores_the_setting():
+    """The mechanism, asserted rather than assumed.
+
+    T13's actual cause was DuckDB's *parallel float aggregation* — partitions summed in whatever
+    order the threads finished, so the training frames (and with them the fitted quantile/hazard
+    coefficients, and with them every per-player draw) differed in the last bits between processes.
+    Restoring the previous value matters as much as setting it: this wraps one assembler, not the
+    caller's whole session.
+    """
+    con = duckdb.connect(":memory:")
+    con.execute("SET threads TO 4")
+    with db.deterministic_reads(con) as c:
+        assert int(c.execute("SELECT current_setting('threads')").fetchone()[0]) == 1
+    assert int(con.execute("SELECT current_setting('threads')").fetchone()[0]) == 4
+
+
+def test_deterministic_reads_restores_the_setting_after_a_failed_block():
+    con = duckdb.connect(":memory:")
+    con.execute("SET threads TO 3")
+    with pytest.raises(RuntimeError), db.deterministic_reads(con):
+        raise RuntimeError("boom")
+    assert int(con.execute("SELECT current_setting('threads')").fetchone()[0]) == 3
+
+
+def test_deterministic_reads_leaves_a_non_duckdb_connection_alone():
+    """A determinism guarantee where DuckDB is real — never a hard dependency on it being real."""
+    class _Stub:
+        def execute(self, *a, **k):
+            raise AssertionError("not a DuckDB connection")
+
+    stub = _Stub()
+    with db.deterministic_reads(stub) as c:
+        assert c is stub

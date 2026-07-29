@@ -1,0 +1,56 @@
+{
+  "generated": "2026-07-28T18:18:18.089872+00:00",
+  "config": {
+    "seeds": 20,
+    "rounds": 15,
+    "seasons": [
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "room_seed": 17,
+    "room": [
+      "balanced",
+      "autopilot",
+      "balanced",
+      "reacher",
+      "upside_chaser",
+      "safe_floor",
+      "balanced",
+      "chalk",
+      "value_hawk",
+      "balanced"
+    ],
+    "shuffle_room": true
+  },
+  "corpus": {
+    "past_4": 0.13135946622185155,
+    "past_6": 0.06755629691409508,
+    "median_slot": 1.6666666666666665,
+    "r1_rise": 1.5405423549596875
+  },
+  "grid": [
+    {
+      "past4": 0.146875,
+      "past6": 0.0125,
+      "median_slot": 2.0,
+      "landing_pass": true,
+      "r1_mean": 2.734375,
+      "r1_rise": 1.209261223047013,
+      "disp_error": -0.11363921512250612,
+      "elite_p95": 15.0,
+      "elite_past10": 0.24421052631578946,
+      "elite_pass": true,
+      "profile_distance": 0.08253941906813776,
+      "ceiling_saturation": 0.019410085632730733,
+      "base": 0.6,
+      "gamma": 1.0,
+      "kappa": 0.0
+    }
+  ]
+}

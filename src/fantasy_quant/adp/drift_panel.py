@@ -213,6 +213,34 @@ def build_drift_panel(con, seasons: Iterable[int] | None = None,
     return out[PANEL_COLS].sort_values(["season", "draft_id", "pick_no"]).reset_index(drop=True)
 
 
+def manager_panel(con, seasons: Iterable[int] | None = None,
+                  *, allow_ecr: bool = True) -> pd.DataFrame:
+    """:func:`build_drift_panel` **plus the manager who made each pick** (``picked_by``).
+
+    A separate function rather than a column on :data:`PANEL_COLS`, deliberately: those columns are
+    the contract the *simulated* panel also fills (:func:`~fantasy_quant.draft.mock.sim_drift_panel`
+    substitutes a seat personality for a manager id), and a corpus-only column would break the
+    "a function reading PANEL_COLS cannot tell the two apart" property that whole harness rests on.
+
+    This is the frame T18 needed: per-pick drift measured against **each draft's own board**, over
+    the redraft-eligible corpus only, with an identity attached — so a per-manager reach means
+    "how early this manager took players *relative to the board his room was drafting against*".
+    """
+    panel = build_drift_panel(con, seasons, allow_ecr=allow_ecr)
+    if panel.empty:
+        return panel.assign(picked_by=pd.Series(dtype=str))
+    ids = panel["draft_id"].astype(str).unique().tolist()
+    ph = ",".join("?" * len(ids))
+    who = con.execute(
+        f"SELECT draft_id, pick_no, picked_by FROM sleeper_draft_picks WHERE draft_id IN ({ph})",
+        ids,
+    ).df()
+    who["draft_id"] = who["draft_id"].astype(str)
+    out = panel.assign(draft_id=panel["draft_id"].astype(str)).merge(
+        who, on=["draft_id", "pick_no"], how="left")
+    return out
+
+
 def aggregate_player_season(panel: pd.DataFrame) -> pd.DataFrame:
     """Per (season, player): mean/sd drift and how many drafts it rests on.
 

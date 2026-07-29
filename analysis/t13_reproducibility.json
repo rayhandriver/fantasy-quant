@@ -1,0 +1,45 @@
+{
+ "season": 2025,
+ "seed": 0,
+ "runs": [
+  {
+   "n": 673,
+   "keys": "c757f03136fc9ab9d51fdf3760e703ea",
+   "q10": "371f65b9de47475b04b58d6805eb516c",
+   "q90": "4250124e9fa85b4d9ce9a6af2179e5e7",
+   "samples": "96f7b96e3a1d7476fad83314a7c67d10",
+   "q10_sum": 7863.333507358422,
+   "mean_sum": 55755.93992672825
+  },
+  {
+   "n": 673,
+   "keys": "c757f03136fc9ab9d51fdf3760e703ea",
+   "q10": "371f65b9de47475b04b58d6805eb516c",
+   "q90": "4250124e9fa85b4d9ce9a6af2179e5e7",
+   "samples": "96f7b96e3a1d7476fad83314a7c67d10",
+   "q10_sum": 7863.333507358422,
+   "mean_sum": 55755.93992672825
+  },
+  {
+   "n": 673,
+   "keys": "c757f03136fc9ab9d51fdf3760e703ea",
+   "q10": "371f65b9de47475b04b58d6805eb516c",
+   "q90": "4250124e9fa85b4d9ce9a6af2179e5e7",
+   "samples": "96f7b96e3a1d7476fad83314a7c67d10",
+   "q10_sum": 7863.333507358422,
+   "mean_sum": 55755.93992672825
+  }
+ ],
+ "agree": {
+  "n": true,
+  "keys": true,
+  "q10": true,
+  "q90": true,
+  "samples": true
+ },
+ "spread": {
+  "q10_sum": 0.0,
+  "mean_sum": 0.0
+ },
+ "pass": true
+}

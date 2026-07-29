@@ -403,6 +403,18 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
     proxy, so 16.13 gained a residualized `durability` column and `safe_floor` weights that. **New
     T18** (🟡): `avg_reach` in the manager profiles is a pooled-board mismatch (+91.9-pick mean QB
     reach), unconsumed today.
+- **Mock-drafter completion audit (2026-07-29) ☑ — the arc is closed and re-measured.** T15 steps
+  0–4 · 16.14R · T23/T25/T24 were already done (the register's index row for T15 was stale, now
+  corrected); the shipped room re-measures **unchanged to the digit** on all five bars plus the
+  landing and legality gates (`analysis/mock_room_bars_verify_20260729.json`). The three entries
+  *behind* it are now ☑: **T22** (boom/bust were four seasons stale **and being printed to the
+  human** → `boom_prob_live`/`bust_prob_live` in the 16.13 enrichment, exact-zero bust 56 % → 8 %),
+  **T13** (cross-process reproducibility — the cause was **DuckDB's parallel float aggregation**,
+  not the Iman–Conover coupling → `db.deterministic_reads`, bit-identical over three processes),
+  **T18** (per-manager reach against each draft's **own** board — 35.8 picks → 0.776 rounds, and the
+  QB sign reverses). **New T26** (🟡): `pos_share_*` is pooled across formats while the fit is
+  redraft-only and `mgr_lean` reads it — measured (0.83 pp) and deferred to the next 11.1 refit,
+  because fixing it refits β and moves every T15/T24 width bar.
 - **Session I — Phase 17 League-Format Fidelity 17.1–17.4.** 17.1 roster+lineup generalization (superflex/
   multi-flex; the `season.py` solver + format-aware VBD replacement — the meaty bit), 17.2 custom scoring, 17.3
   generic settings contract (engine/parser; form UI → 14), 17.4 keeper. **~full-phase (1,000–1,800L).**

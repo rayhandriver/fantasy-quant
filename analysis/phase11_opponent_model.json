@@ -226,7 +226,15 @@
   },
   "width_curve": {
     "kind": "power",
-    "gamma": 0.8,
-    "max_round": 15
+    "gamma": 1.0,
+    "max_round": 15,
+    "base": 0.6
+  },
+  "private_board": {
+    "kappa": 0.0,
+    "clip": 3.0,
+    "source": "steps/mock_t24_sweep.py (T24, 2026-07-28)",
+    "verdict": "REJECTED \u2014 the adp_stdev-scaled private board is monotonically HARMFUL on the objection it was built for: seating-marginalized elite-past-pick-4 runs 18.8 / 19.7 / 26.6 % at kappa 0 / 1 / 2 (base 0.7), and 11.2 % -> 23.4 % at base 0.5. At the top of the board adp_stdev (0.7-2.5) is the same size as the ADP gaps it perturbs, so it destroys ordering instead of creating tier structure. Mechanism kept in code, off.",
+    "what_worked_instead": "WidthCurve.base \u2014 round 1 was simply too wide. base 1.0 -> 0.6 with gamma 0.8 -> 1.0 (which keeps 90% of the round-15 width) takes elite-past-pick-4 from 26.6% to 14.7% against a realized 13.1%, at a dispersion cost of -7.0% -> -11.4%. Chosen by the pre-registered rule (gate-passing, then min profile distance): 0.0825 vs 0.1544 for base=0.5, which overshoots to tighter-than-human and costs -17.4% dispersion."
   }
 }

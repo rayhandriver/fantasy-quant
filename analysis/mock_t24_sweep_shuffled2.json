@@ -1,0 +1,90 @@
+{
+  "generated": "2026-07-28T18:02:13.911994+00:00",
+  "config": {
+    "seeds": 20,
+    "rounds": 15,
+    "seasons": [
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "room_seed": 17,
+    "room": [
+      "balanced",
+      "autopilot",
+      "balanced",
+      "reacher",
+      "upside_chaser",
+      "safe_floor",
+      "balanced",
+      "chalk",
+      "value_hawk",
+      "balanced"
+    ],
+    "shuffle_room": true
+  },
+  "corpus": {
+    "past_4": 0.13135946622185155,
+    "past_6": 0.06755629691409508,
+    "median_slot": 1.6666666666666665,
+    "r1_rise": 1.5405423549596875
+  },
+  "grid": [
+    {
+      "past4": 0.265625,
+      "past6": 0.065625,
+      "median_slot": 3.0,
+      "landing_pass": false,
+      "r1_mean": 3.3723125,
+      "r1_rise": 1.1058855670907815,
+      "disp_error": -0.06964256170473526,
+      "elite_p95": 17.0,
+      "elite_past10": 0.28526315789473683,
+      "elite_pass": true,
+      "profile_distance": 0.12007076500673135,
+      "ceiling_saturation": 0.02021883920076118,
+      "base": 1.0,
+      "gamma": 0.8,
+      "kappa": 0.0
+    },
+    {
+      "past4": 0.196875,
+      "past6": 0.0375,
+      "median_slot": 3.0,
+      "landing_pass": false,
+      "r1_mean": 2.9778125,
+      "r1_rise": 1.2075244405319003,
+      "disp_error": -0.17522254055329567,
+      "elite_p95": 16.0,
+      "elite_past10": 0.2615789473684211,
+      "elite_pass": true,
+      "profile_distance": 0.1420999388330971,
+      "ceiling_saturation": 0.016793529971455758,
+      "base": 0.7,
+      "gamma": 0.8,
+      "kappa": 1.0
+    },
+    {
+      "past4": 0.234375,
+      "past6": 0.06875,
+      "median_slot": 3.0,
+      "landing_pass": false,
+      "r1_mean": 3.31175,
+      "r1_rise": 1.28564033990424,
+      "disp_error": -0.08870904660770025,
+      "elite_p95": 17.0,
+      "elite_past10": 0.2805263157894737,
+      "elite_pass": true,
+      "profile_distance": 0.06648515642428256,
+      "ceiling_saturation": 0.022930542340627972,
+      "base": 0.5,
+      "gamma": 1.0,
+      "kappa": 2.0
+    }
+  ]
+}

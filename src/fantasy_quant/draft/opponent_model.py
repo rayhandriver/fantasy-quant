@@ -303,8 +303,10 @@ def _load_profiles(con) -> pd.DataFrame:
         "SELECT count(*) FROM information_schema.tables WHERE table_name='sleeper_manager_profiles'"
     ).fetchone()[0]:
         return pd.DataFrame()
+    # `avg_reach` was dropped by T18 (a pooled-board join artifact, never read here); the model
+    # uses position shares and fandom, both counted from picks with no ADP reference.
     prof = con.execute(
-        "SELECT manager, avg_reach, pos_share_QB, pos_share_RB, pos_share_WR, pos_share_TE, "
+        "SELECT manager, pos_share_QB, pos_share_RB, pos_share_WR, pos_share_TE, "
         "fav_teams FROM sleeper_manager_profiles"
     ).df()
     return prof

@@ -38,6 +38,7 @@ import pandas as pd
 
 from fantasy_quant.backtest.scoring import RuleSet
 from fantasy_quant.config import DEV_SEASONS
+from fantasy_quant.data import db
 from fantasy_quant.projections import conformal, injury, quantile, variance
 
 DIST_CONTRACT = ["player_key", "pos", "mean", "sd", "q10", "q50", "q90",
@@ -147,18 +148,35 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
     ``(n_players, n_draws)`` array aligned to ``summary_df`` rows. With ``return_games=True``
     returns ``(summary_df, samples, games)`` — the per-draw games-played counts aligned to
     ``samples`` (identical draws; the Phase-10 weekly layer consumes ``games``).
+
+    ★ **Every read below runs under** :func:`~fantasy_quant.data.db.deterministic_reads` **(T13).**
+    DuckDB's parallel float aggregation is order-dependent, so without the pin the training frames
+    — and therefore the fitted quantile/hazard coefficients, and therefore every per-player draw —
+    differ in the last bits from process to process. Same seed now means the same cloud tomorrow,
+    which is what lets an app publish a player's q10 and a mock board be rebuilt from a seed. The
+    *model* is unchanged: this picks one of the runs the old code was already alternating between
+    (dress-rehearsal coverage 75.5 ↔ 76.5 %), it does not re-specify anything.
     """
     ruleset = ruleset or RuleSet()
     if train_seasons is None:
         train_seasons = [s for s in DEV_SEASONS if s < season] or list(DEV_SEASONS)
     taus = quantile.QUANTILE_TAUS
-    correction = quantile.dev_correction(con, ruleset)
+    with db.deterministic_reads(con):
+        correction = quantile.dev_correction(con, ruleset)
 
-    qdf = quantile.quantile_projection(con, season, ruleset, taus, train_seasons, correction)
-    adj = _conformal_adjustment(con, train_seasons, ruleset, correction, taus)
-    g_ref = conditional_avail_ref(con, train_seasons)
-    avail = injury.availability_projection(con, season, train_seasons)
-    vol = variance.weekly_volatility(con, [max(train_seasons)], ruleset)  # prior-season boom/bust
+        qdf = quantile.quantile_projection(con, season, ruleset, taus, train_seasons, correction)
+        adj = _conformal_adjustment(con, train_seasons, ruleset, correction, taus)
+        g_ref = conditional_avail_ref(con, train_seasons)
+        avail = injury.availability_projection(con, season, train_seasons)
+        # ⚠ T22: `max(train_seasons)` is the newest DEV season, which for any live board is 2022.
+        # The frozen contract keeps this column as it is; `draft/enrichment.live_volatility` is the
+        # honest read for a board a human looks at.
+        vol = variance.weekly_volatility(con, [max(train_seasons)], ruleset)
+        # The three T3 lookups are read here rather than at their point of use for one reason: they
+        # are DuckDB aggregates, so they belong inside the determinism pin with every other read.
+        cohort = injury.cohort_availability_prior(con, train_seasons)
+        tiers = injury.player_tiers(con, [season])[["player_key", "capital_tier"]]
+        retention = injury.role_retention(con, train_seasons)
 
     qcols = [f"q{int(t * 100)}" for t in taus]
     df = qdf.merge(avail[["player_key", "avail_p", "team_games", "rho"]],
@@ -170,8 +188,6 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
     # availability prior (keyed on pos × draft-capital tier) instead of one shared median. Their
     # downside lives in a low avail_p + fat rho; established contributors keep the hazard estimate.
     is_cohort = df["avail_p"].isna().to_numpy()
-    cohort = injury.cohort_availability_prior(con, train_seasons)
-    tiers = injury.player_tiers(con, [season])[["player_key", "capital_tier"]]
     df = df.merge(tiers, on="player_key", how="left")
     df["capital_tier"] = df["capital_tier"].fillna("lo")
     for i in np.flatnonzero(is_cohort):
@@ -188,7 +204,6 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
     # calibrated projection rank within position vs the startable (replacement) rank.
     from fantasy_quant.backtest.metrics import replacement_ranks
     from fantasy_quant.draft.simulator import RosterSlots
-    retention = injury.role_retention(con, train_seasons)
     startable = replacement_ranks(RosterSlots(), n_teams=10)
     df["proj_rank"] = df.groupby("pos")["calibrated_mean"].rank(ascending=False, method="first")
     p_crater = np.zeros(len(df))

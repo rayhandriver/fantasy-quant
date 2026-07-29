@@ -1678,3 +1678,303 @@ column as specified, and the fix was to change **what is being estimated** (rati
 level) rather than the estimator. The step is met — `floor` is repaired against its own bar — but by
 a route the plan did not name. Written up in `findings.md` because the general form is reusable:
 *before choosing an estimator, check the variable is on a scale the estimator can be right about.*
+
+## 2026-07-28 (session 6) — the 2×5 mock re-run; three objections, three tickets, nothing built
+
+**Status: DOCS-ONLY. No code changed.** Rule 7 gate — all three fixes are written up and costed,
+none executed, awaiting the user's go-ahead on ordering. Full write-up in `findings.md` §"The 2×5
+mock re-run (2026-07-28)"; tickets **T23 / T24 / T25**; durable lessons in `glossary.md`.
+
+**What was run.** The 2×5 room again — 2 seats each of `autopilot` / `balanced` / `safe_floor` /
+`reacher` / `value_hawk` — this time with the **shipped** `value_hawk` (16.14R step 6) instead of
+the run-local approximation. One showcased 15-round draft (room seed 20260728, draft seed 728) on
+the live 2026 FFC board, then **40 seeded drafts with the room reshuffled per seed**. Everything on
+the shipped path; DEV-only, nothing written to `analysis/`. Driver `steps/mock_2x5_diag.py`.
+
+**The user reviewed the picks by eye again and raised three objections. All three hold.**
+
+### The three tickets
+
+| | ticket | what it is | cost |
+|---|---|---|---|
+| 1 | **🔴 T23** | `mandatory_needs` drops TE because TE is in `flex_positions` → **12.2 % of seats finish with no TE**, 46 % of `autopilot` seats. A bug against a stated contract. | ~5 lines |
+| 2 | **🟡 T25** | `ReachBudget` is attached to 2 of 10 seat types, so the round ceiling binds `reacher`/`value_hawk` and not `balanced` (4 of 10 seats in `REALISTIC_ROOM`). | small |
+| 3 | **🟠 T24** | Width is per-**round** and never per-**player**; the board's `adp_stdev` is unread in the pick path. Consensus #2 lands at a **median pick of 4**. | a full sub-step |
+
+**Recommended order is 1 → 2 → 3.** T23 and T25 are contained and re-measurable in one pass; T24
+moves T15 bars 1/2/5 and the seat-faithfulness population and needs its own gated sub-step with a
+before/after on the shipped measurement path.
+
+### ★ The two findings worth carrying past this session
+
+1. **An aggregate that pools reaches and falls cannot see a one-sided defect.** Round-1 mean
+   |reach| is **2.91 sim vs 2.87 corpus** — the bar passes — while Gibbs (ADP 1.8) lands at a median
+   pick of **4** and clears pick 4 **42 %** of the time against a realized **12 %**. A reach and a
+   fall have the same absolute value and cancel. T15's *"an aggregate metric cannot see an impossible
+   event"* one level down: there it was aggregation over **drafts**, here over **direction**, inside
+   a metric that already passes. **Bars over |drift| need a signed companion.**
+2. **A bar written from the symptom passes the general defect.** T20's done-bar was *"≥1 K and ≥1
+   DST"* — the positions the ticket was about. It passed while the same filter left TE unguarded.
+   Sibling of 16.14's *"state your bars as oppositions"*.
+
+### ★ The mechanism T24 proposes, and why it is one object for three problems
+
+A **per-seat private board**, `adp_seat = adp + κ_seat · adp_stdev · ε`, `ε ~ N(0,1)`, drawn once
+per seat per draft. Measured basis: **`|drift| ≈ 2 × adp_stdev`** across the corpus, stable through
+the usable range; Spearman(`adp_stdev`, |drift|) **0.484** against Spearman(round, |drift|)
+**0.535**; and within rounds 1–3 the stdev terciles drift **2.11 / 3.33 / 8.91** — a 4.2× spread the
+round curve cannot express. It addresses (a) round-1 tier structure without hard-coding a tier,
+(b) **the T15 carry-forward verbatim** (*"needs per-seat board perturbation, not another width
+parameter"*) — plausible, untested, (c) the only channel that is live in round 1 for `reacher`.
+
+### Decisions taken this session
+
+- **The `reacher`'s rounds-1–3 quiet is NOT a defect and is not to be "fixed".** It is the user's own
+  2026-07-27 spec (`early_rounds=3`, `early_max_picks=8.0`, `large_from_round=5`). The defect is
+  that `balanced` has no equivalent constraint. → T25.
+- **The per-personality summary reports `pool_rank`, split R1–13 / R14–15** — not a 15-round mean
+  reach, which is dominated by late-board ADP noise and by *when* a seat takes K/DST.
+- **The corpus far tail is a data question first**, not behaviour to reproduce (p99 = pick 33 for an
+  ADP 1–2.5 player; check `days_to_board` and keeper/dynasty leakage before fitting it).
+
+### Dead ends / do not re-propose
+
+- **Do not fix the reacher's early-round quiet with `temperature` or `width_mult`.** Its direction
+  channels (`cos`, `rookie`, `upside`, hype) are structurally dead at the top of the board — every
+  consensus elite is an established veteran with compressed within-position z-scores — so width with
+  nothing steering it is exactly the *"width with no direction"* 16.14R step 5 deleted.
+- **Do not narrow round 1 with another global width parameter.** T15 already established one knob
+  cannot set both ends; the round-1 problem is *within-round* heterogeneity, which no round-indexed
+  curve can express.
+- **Do not read a behavioural ordering off one draft** — 30 picks per personality. This recurred
+  because the *presentation* was a 15-round per-personality mean-reach table. Report the batch.
+
+## 2026-07-28 (session 7) — T23 + T25 + T24: the room's width was too wide, not the wrong shape
+
+**Status: BUILT.** The three tickets the 2×5 re-run opened, in that entry's own recommended order —
+1 → 2 in one pass, then **3 as its own gated sub-step with a before/after on the shipped measurement
+path**. Write-up in `findings.md` §"T23 / T25 / T24 (2026-07-28, session 7)"; register entries
+`docs/TECH-DEBT.md` T23/T24/T25 all ☑; durable lessons in `glossary.md`.
+
+### What shipped
+
+| | change | where |
+|---|---|---|
+| T23 | `mandatory_needs` = `base_demand()`; nothing exempt | `draft/simulator.py` |
+| T25 | `ROOM_CEILING` — `reach_budget=None` means *inherit*, not *unconstrained*; `unbounded_budget()` for the A/B controls | `draft/personalities.py` |
+| T24 | `WidthCurve.base` (width **level** split from **shape**) — **the fix**. Plus the rejected-but-kept private board: `stdev` → `PASSTHROUGH_COLS`, `private_adp()`, κ on the model artifact | `draft/{simulator,personalities,mock}.py` |
+
+New/changed steps: `steps/mock_room_bars.py` (bar sheet + `--kappa`/`--width-base`/`--shuffle-room`),
+`steps/mock_t24_sweep.py` (the calibration grid, `--write` ships the choice).
+
+### ★ The T24 verdict — the proposed mechanism is REJECTED and its by-product is the fix
+
+T24 pre-registered a **per-seat private board**, `adp_seat = adp + κ · adp_stdev · ε`, as *one
+mechanism for three problems*. Built, calibrated, and measured on the seating-marginalized harness,
+it is **monotonically harmful on the objection it was designed to fix**:
+
+| seating-marginalized, 8 seasons, 20 seeds | κ = 0 | κ = 1 | κ = 2 |
+|---|---|---|---|
+| elite past pick 4, `base` 0.70 | **18.8 %** | 19.7 % | 26.6 % |
+| elite past pick 4, `base` 0.50 / γ 1.0 | **11.2 %** | — | 23.4 % |
+
+**Why, in one line: at the top of the board `adp_stdev` is the same size as the gaps it perturbs.**
+Bijan 0.7 · Gibbs 0.8 · Chase 1.0 sit 0.2 picks apart, so a draw of ±κ·0.8 does not *create* tier
+structure, it **destroys the ordering that was already there** — which is precisely the mechanism
+that makes an elite fall. The ticket's premise (*width is flat inside round 1, so make it
+per-player*) diagnosed the right symptom and the wrong cause.
+
+**What actually fixes it is the knob added to support it** — separating the width **level** from the
+width **shape** (`width(round) = base · round^gamma`). Round 1 was simply too wide:
+
+**Final measurement — the 40-seed seating-marginalized pair** (`analysis/mock_room_bars_
+{baseline_shuffled,t24_shuffled}.json`; the 20-seed sweep rows above are superseded):
+
+| | before | after | corpus |
+|---|---|---|---|
+| `WidthCurve` | `base 1.0 · γ 0.8` | **`base 0.6 · γ 1.0`** | — |
+| **elite past pick 4** | 25.8 % **FAIL** | **15.3 % PASS** | 13.1 % |
+| bar 2 · p95 / past-10 | 17.0 / 28.8 % | **16.0 / 25.2 %** | ≤ 20 / ≤ 30 % |
+| bar 3 harvest | 0.00 sd | 0.00 sd | ≤ 1.0 |
+| bar 5 dispersion | −7.1 % | **−11.4 %** | ±20 % |
+| bar 1 round-1 mean | 3.33 | **2.64** | 2.87 |
+| bar 1 profile distance | 0.107 | **0.089** | — |
+| median `pool_rank` | 8.69 | **8.04** | 7.62 |
+| moderate share | 33.7 % | **38.2 %** | 54.3 % |
+
+**The cost, stated:** dispersion −7.1 % → **−11.4 %** — narrowing the top takes spread out of the
+whole room and only `gamma` gives it back — comfortably inside bar 5. Everything else moves *toward*
+the corpus, including bar 1's profile distance (0.107 → **0.089**), which is what separates `base
+0.6` from the `0.5` that shipped an hour earlier: 0.5 overshoots to **tighter than real humans**
+(11.3 % past-4) and pays 0.154 distance and −17.4 % dispersion for it.
+
+The fixed-seating sheet (`t24`, comparable to `baseline`/`t23`/`t25`) agrees: past-4 **11.3 %**,
+bar 2 16.0 / 25.3 %, dispersion −12.2 %, median `pool_rank` 8.15. The 2026 live board reads p95
+**16.0** and 24.4 % past pick 10.
+
+### ★ Three things the calibration got wrong before it got it right
+
+1. **Calibrated on a 4-season subsample** (for speed) and shipped `base 0.7 / κ 2.0` on it. The full
+   8-season sweep failed that config's landing gate outright (20.4 % vs an 18.1 % ceiling). *Calibrate
+   on the same population the acceptance bar is measured on.*
+2. **Measured on a fixed seating**, which flattered every number by 5–7 pp — `0.5/1.0/2.0` reads
+   16.2 % fixed and **23.4 %** marginalized. See the seating confound below.
+3. **Never measured the two knobs separately.** Every sweep row moved `base` *and* κ together, so
+   the width narrowing wore the private board's credit for three runs. The isolating row
+   (`base 0.7, κ 0`) is what settled it, and it existed only because the verdict looked wrong.
+
+### Decisions taken this session
+
+- **The private board is applied to the *utility* only.** The candidate band is an estimation
+  condition β was fit under, and `CORPUS_REACH_P95` is measured in **public** picks — so a seat's
+  private opinion must not become a way around either. A test pins it (`test_a_private_board_cannot
+  _buy_a_way_past_the_public_reach_ceiling`).
+- **κ lives on the model artifact, beside the width curve**, because the two are read together;
+  `PRIVATE_KAPPA = 0.0` stays the module default, so a hand-built model is the pre-T24 room exactly.
+  The artifact now also carries the **rejection verdict** next to the parameter, so the next person
+  to reach for a private board reads the measurement before switching it on.
+- **`NarrativeShock.intercept` is NOT re-fit.** Its transportability guard keys on `adp_spec`/`band`,
+  neither of which T24 touches; the shock is default-OFF and 16.9 measured its intercept as
+  unidentified. Re-fitting an unidentified parameter to chase a width change would be worse than
+  leaving it declared stale — the same call T15 step 3 made, for the same reason.
+- **T25's done-bar ordering is not claimed** (see `findings.md`): the bar contradicts the ticket's
+  own analysis of the reacher's specified quiet opening.
+
+### Dead ends / do not re-propose
+
+- **Do not switch the private board back on** without re-running the seating-marginalized sweep. It
+  is not a null, it is **harmful**, monotonically, at every `base` measured. The idea reads well and
+  the corpus law behind it (`|drift| ≈ 2 × adp_stdev`) is real — but that law is about *realized*
+  drift, which is an outcome of the whole room, and feeding it back as a *per-seat perception* noise
+  term is a different thing entirely.
+- **Do not push `base` below ~0.5.** `(0.35, 1.1, κ=1)` reaches 9.4 % past pick 4 and **fails bar 5**
+  at −20.3 % dispersion. 0.5 is where the two bars meet.
+- **Do not read the round-1 half-split off a fixed-seating batch** — see the seating confound above.
+  It is also **not resolvable at this sample size** either way: the same room reads 0.54 / 0.82 /
+  1.11 / 1.22 across measurement configurations, because a handful of large first-half reaches
+  dominate a mean over ~1,600 picks. **Use the landing *share* (n ≈ 640) as the bar and keep the
+  rise as a diagnostic** until someone gives it a trimmed or median-based estimator.
+- **Do not calibrate on a subsample of the seasons the bar is measured on**, and **do not move two
+  knobs together** and attribute the result to the interesting one.
+
+### ★ What to try next on the elite-fall residual (for whoever picks T24 up)
+
+The room now lands at 15.3 % against a realized 13.1 %, so the objection is closed — but the
+*mechanism* behind it is worth stating because the next width question will hit it. At the top of
+the board the consensus gaps (0.2 picks) are far smaller than any softmax width the fitted β can
+express, so the top ~6 players are near-interchangeable to every seat. Narrowing `base` works by
+making the whole room follow those gaps more faithfully; the more surgical fix is a **steeper
+`AdpSpec.exponent`** (tightening only the top) **with `base`/`gamma` restoring depth width** — the
+three-knob version of the trade T15 could not make, because `base` did not exist then. ⚠ Changing
+the exponent means **refitting β** (it is an estimation condition), i.e. `steps/t15_1_respecify.py`,
+not an artifact edit.
+
+### ⭐ T24 acceptance, pre-registered (written 2026-07-28 **before** reading the shuffled sweep)
+
+The first calibration was run on a **fixed-seating** 4-season subsample and does not survive honest
+measurement, so the choice is re-made under a rule stated in advance rather than after the fact.
+On the **seating-marginalized** sweep (`--shuffle-room`, 8 seasons), ship the config that:
+
+1. passes the **landing gate** — top-band past-pick-4 ≤ corpus + 5 pp (**the objection itself**);
+2. passes **T15 bar 2** (elite p95 ≤ 20 picks, past-pick-10 ≤ 30 %);
+3. holds **bar 5** dispersion inside ±20 %;
+4. does not raise **`ceiling_saturation`** more than ~5 pp above the κ = 0 room;
+
+and among those, minimizes T15 bar 1's profile distance. **If nothing clears 1–4, ship κ = 0** — the
+mechanism stays in the code, default-off, and T24 is written up as a null rather than tuned until a
+noisy statistic agrees.
+
+**Why (4) is a gate and not a diagnostic.** `κ_seat = κ · width_mult` gives the `reacher` κ = 4.0,
+and mid-board `adp_stdev` is 8–12, so it perceives a deep player anywhere in a ±35-pick window while
+`CORPUS_REACH_P95[0]` allows **14.6**. Every pick then maxes out the budget, and the *budget* — not
+the belief — selects the player: the room still drafts, still passes a dispersion bar, and has
+quietly become *"take the maximum legal reach"*. **A constraint that binds on every pick is no
+longer a constraint, it is the policy.** Measured by `ceiling_saturation` in `steps/mock_t24_sweep.py`.
+
+**Bar 4 (11.2 availability Brier) is already answered: +0.088996997698074, CI [+0.0803, +0.0996] —
+bit-identical to the committed 16.14R value.** `draft/availability.py` imports nothing from
+`personalities`, so neither the private board nor the width curve can reach it; the run confirms the
+structural argument instead of resting on it.
+
+**The rule's verdict, applied** (all nine seating-marginalized configs, ranked by the rule):
+
+| base/γ/κ | past-4 | bar 2 past-10 | bar 5 disp | distance | verdict |
+|---|---|---|---|---|---|
+| **0.6 / 1.0 / 0** | **14.7 %** | 24.4 % | **−11.4 %** | **0.0825** | **← SHIPPED** |
+| 0.5 / 1.0 / 0 | 11.3 % | 23.2 % | −17.4 % | 0.1544 | passes, overshoots |
+| 0.35 / 1.1 / 1 | 9.4 % | 24.1 % | **−20.3 %** | 0.2152 | fails bar 5 |
+| 0.7 / 0.8 / 0 | 18.8 % | 25.6 % | −18.6 % | 0.1426 | fails landing gate |
+| 0.7 / 0.8 / 1 | 19.7 % | 26.2 % | −17.5 % | 0.1417 | fails landing gate |
+| 0.85 / 0.8 / 1 | 22.8 % | 27.7 % | −11.8 % | 0.0824 | fails landing gate |
+| 0.5 / 1.0 / 2 | 23.4 % | 28.1 % | −8.9 % | 0.0665 | fails landing gate |
+| 0.7 / 0.8 / 2 | 26.6 % | 29.4 % | −9.9 % | 0.0756 | fails landing gate |
+| 1.0 / 0.8 / 0 | 26.6 % | 28.5 % | −7.0 % | 0.1205 | today's room |
+
+Corpus past-4 **13.1 %**, gate ≤ 18.1 %. **Gate (4) never bound** — `ceiling_saturation` measured
+**1.5–2.3 % everywhere**, so the saturation story that motivated it was wrong: the reach budget is
+not what selects picks at any κ tested. Kept as a standing check; the failure it describes is real
+even though it did not occur here.
+
+**★ A fourth method failure, and the same one twice.** `base 0.5` shipped before `0.6` was measured,
+exactly as `0.7/κ2` had shipped before the 8-season grid existed. Both times the grid did not
+**bracket** the choice — it sampled points and the best one at the edge got shipped. `0.6` beats
+`0.5` on every secondary (round-1 mean **2.73** vs 2.51 against a corpus 2.87; dispersion −11.4 % vs
+−17.4 %; distance 0.0825 vs 0.1544) while passing the same gates, and it lands *on* the corpus's
+past-4 rather than 2 pp tighter than real humans. *Measure the dial before shipping a point on it —
+a sweep whose winner sits at the edge of the grid has not finished.*
+
+## 2026-07-29 — the mock-drafter completion audit: T13 + T18 + T22 closed, T26 opened
+
+**Status: BUILT.** A full audit of the mock drafter, then everything it found still open. Write-up
+in `findings.md` §"The mock-drafter completion audit (2026-07-29)"; register entries `docs/TECH-DEBT.md`
+T13/T18/T22 ☑ and **T26** (new, deliberately not fixed); durable lessons in `glossary.md`.
+**597 tests (was 587), ruff clean.** Lockbox, frozen value stack and fitted β untouched.
+
+### What the audit found
+
+The mock-draft arc itself is **complete**: T15 steps 0–4, then 16.14R's seven steps, then
+T23/T25/T24 — every one of the five T15 bars plus the landing gate passes on the shipped config, and
+the interactive drafter runs a legal 15-round 2026 draft end to end. The register's at-a-glance
+table still carried **T15 as open** while its own section was ☑ throughout; that row is corrected.
+
+What was *not* done was everything behind it: three open entries, all of which reach the board a
+human drafts from.
+
+| | ticket | what it turned out to be |
+|---|---|---|
+| 1 | **T22** 🟡 | not latent at all — the interactive drafter **prints** boom/bust, so the 2026 board told the user Bijan Robinson and Puka Nacua *never boom* |
+| 2 | **T13** 🟠 | not the coupling — **DuckDB's parallel float aggregation**, which is order-dependent |
+| 3 | **T18** 🟡 | not an exaggerated behaviour — a different quantity; fixing the reference **reverses its sign** |
+
+### Decisions taken this session
+
+- **Fix T22 in the enrichment, never in the frozen column.** `boom_prob_live`/`bust_prob_live` from
+  season − 1, read-only, `NaN` where unseen; the CLI shows those plus `tail_risk`. `ENRICH_VERSION`
+  → `v3-t22-live-vol` so every cached board rebuilds.
+- **Delete `avg_reach` rather than repair it.** New columns in stated units (`avg_reach_rounds`,
+  `n_reach_picks`) + a ±2-round health gate. A silently redefined column is how the F.5 and T19
+  defects both travelled.
+- **Do not fix T26 (`pos_share_*` pooled across formats) now.** It refits β, and β's scale is what
+  T15's and T24's width calibration was measured against. Measured (0.83 pp mean per-manager QB-share
+  difference) so the deferral is informed, and logged against the next 11.1 refit.
+- **T13's fix pins reads, not the sampler** — the frozen sampler is untouched and the pinned digest
+  equals one of the runs the unpinned code was already producing, so no model number moves.
+
+### Dead ends / do not re-derive
+
+- **The Iman–Conover permutation is not T13's cause.** Nor is row order, `PYTHONHASHSEED`, or BLAS
+  threading — all four ruled out by measurement before DuckDB threads fixed it completely. Do not
+  re-open the coupling on the strength of the "marginals invariant, assignment moves" fingerprint;
+  that fingerprint also describes an input wobbling below the noise floor of the aggregates.
+- **`build_tendencies`'s `avg_reach` still inherits the T18 defect** whenever its caller passes a
+  board that is not the drafts' own (which `opponent_tendencies` does). It stays the labelled POC it
+  always was; `redraft_reach` is the function for any reach that will be read or fitted on.
+- **`app/streamlit_app.py`'s season selector is `list(DEV_SEASONS)`**, so the Phase-14 MVP cannot
+  select the season anyone is drafting. Noted during the `max(train_seasons)` sweep; it is Phase-14
+  work, not a defect in the engine.
+
+### ★ Next
+
+Review + commit sessions 6, 7 and this one (one tree), then **Session I = Phase 17 formats**. The
+mock drafter has no open register entry against it. Stage-0 FFC chore last pulled **2026-07-24** —
+**due after 07-30**, i.e. next session.

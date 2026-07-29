@@ -15,6 +15,7 @@ import pytest
 
 from fantasy_quant.data.sources import sleeper
 from fantasy_quant.data.validate import (
+    manager_reach_gate,
     sleeper_human_slot_gate,
     sleeper_no_dup_picks_gate,
     sleeper_picks_gate,
@@ -171,23 +172,53 @@ def test_build_mock_adp_accepts_source_label():
     assert (board["source"] == "sleeper_human").all()
 
 
-def test_manager_profiles():
-    df = pd.DataFrame({
+def _profile_picks() -> pd.DataFrame:
+    return pd.DataFrame({
         "picked_by": ["A", "A", "A", "B", "B", None],
         "draft_id": ["d1", "d1", "d2", "d1", "d1", "d1"],
         "pick_no": [1, 21, 3, 2, 19, 5],
         "position": ["RB", "WR", "RB", "QB", "WR", "TE"],
         "nfl_team": ["ATL", "LAR", "ATL", "PHI", "LAR", "KC"],
         "gsis_id": [None, None, None, None, None, None],
-        "_adp": [3.0, 18.0, 4.0, 10.0, 22.0, 8.0],
     })
-    prof = sleeper.manager_profiles(df)
+
+
+def test_manager_profiles():
+    prof = sleeper.manager_profiles(_profile_picks())
     assert set(prof["manager"]) == {"A", "B"}            # the null (bot) row is excluded
     a = prof[prof["manager"] == "A"].iloc[0]
     assert a["n_drafts"] == 2 and a["n_picks"] == 3
     assert a["pos_share_RB"] == pytest.approx(66.7, abs=0.2)
     assert "ATL" in a["fav_teams"]
-    assert a["avg_reach"] == pytest.approx(((3 - 1) + (18 - 21) + (4 - 3)) / 3, abs=0.01)
+
+
+def test_manager_profiles_take_reach_from_the_own_board_frame_only():
+    """T18: reach arrives pre-computed against each draft's own board, or not at all.
+
+    The old column was computed here, inline, from a pooled ADP reference joined onto picks from
+    every format in the corpus — which is how the table came to claim a **+91.9-pick** mean QB
+    reach. There is now no code path that can produce a reach from a board this function chose.
+    """
+    picks = _profile_picks()
+    prof = sleeper.manager_profiles(picks)
+    assert "avg_reach" not in prof.columns, "the pooled-board column is gone, not renamed"
+    assert prof["avg_reach_rounds"].isna().all(), "no reach frame -> no reach claim"
+    assert (prof["n_reach_picks"] == 0).all()
+
+    reach = pd.DataFrame({"manager": ["A"], "avg_reach_rounds": [0.42], "n_reach_picks": [30]})
+    prof = sleeper.manager_profiles(picks, reach=reach)
+    a = prof[prof["manager"] == "A"].iloc[0]
+    b = prof[prof["manager"] == "B"].iloc[0]
+    assert a["avg_reach_rounds"] == pytest.approx(0.42) and a["n_reach_picks"] == 30
+    assert pd.isna(b["avg_reach_rounds"]), "a manager with no eligible drafts is NaN, not 0"
+
+
+def test_manager_reach_gate_catches_the_pooled_board_defect():
+    """±2 rounds is behaviour; the shipped table's +91.9 picks (~9 rounds) is a join."""
+    assert manager_reach_gate("t18", 0.7, 100)["passed"]
+    bad = manager_reach_gate("t18", 91.9 / 10, 100)
+    assert not bad["passed"] and bad["mean_abs_reach_rounds"] == pytest.approx(9.19)
+    assert not manager_reach_gate("t18", None, 0)["passed"], "no rows fails loudly"
 
 
 def test_load_seeds(tmp_path, monkeypatch):

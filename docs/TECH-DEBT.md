@@ -23,16 +23,20 @@ At a glance:
 | **T9** | 🟡 | Phase 13.3 FAAB bidder is the **pragmatic** heuristic; rigorous auction theory deferred | Phase 15.4 (auction support) | ☑ |
 | **T10** | ✅ | `validate_archetypes`/`spine_4_validate` sweep S6's `adaptive` archetype → crash (needs `adaptive_parent`) | opportunistic (post-lockbox) | ☑ 2026-07-24 |
 | **T11** | 🟡 | (a) Underdog ADP never ingested (no keyless endpoint). **(b) drift corpus thinness — CLOSED 2026-07-26**: re-asked 16.8 on 1,144 drafts, verdict held | (a) opportunistic; (b) done | ◐ 2026-07-26 |
-| **T13** | 🟠 | Phase-5 distribution cloud is **not reproducible across processes** — per-player q10/q90 vary run to run; dress coverage wobbles 75.5↔76.5 % | before any per-player distribution number is published in the app | ☐ 2026-07-26 |
+| **T13** | ✅ | Phase-5 distribution cloud was **not reproducible across processes** — per-player q10/q90 varied run to run; dress coverage wobbled 75.5↔76.5 %. **Cause found 2026-07-29 and it was NOT the coupling** the register suspected: DuckDB's *parallel float aggregation* is order-dependent, so the fits' training frames differed in their last bits between processes. Fixed with `db.deterministic_reads` around the assembler's reads (cost: none — 10.2 s → 9.1 s); 3 fresh processes now agree bit-for-bit (`steps/t13_reproducibility.py`) | before any per-player distribution number is published in the app | ☑ 2026-07-29 |
 | **T14** | ✅ | 11.2 does not scale. **Diagnosis corrected 2026-07-26**: the bootstrap was 0.79 s (0.008 %); the cost was pandas in `simulate_survival` (99.3 %). Fixed both → **396 s → 12.7 s, bit-identical** | when 11.2 is next re-run at scale | ☑ 2026-07-26 |
 | **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☑ 2026-07-25 |
-| **T15** | 🟠 | simulated draft-slot dispersion is **the wrong shape in board depth** — **escalated + measured 2026-07-27** against 1,420 realized human drafts: round-1 mean reach **11.4 picks vs a realized 3.3** (p90 27.7 vs 6.6) and round-15 **15.0 vs 27.1**, i.e. ~3.5× too wide early and ~1.8× too narrow late. Elite players fall past the corpus's 95th percentile every draft, and the `autopilot` seats harvest the spill (they won this mock). Cause is arithmetic: ADP is worth **0.034 utility/pick** vs `is_TE` +0.57 and `need` +0.47, softmaxed over a fixed top-40 | **the user-facing blocker on mock realism**; an 11.1 respecification (measured exponent ~0.5–0.6, *not* log) | ☐ 2026-07-27 |
+| **T15** | ✅ | simulated draft-slot dispersion is **the wrong shape in board depth** — **escalated + measured 2026-07-27** against 1,420 realized human drafts: round-1 mean reach **11.4 picks vs a realized 3.3** (p90 27.7 vs 6.6) and round-15 **15.0 vs 27.1**, i.e. ~3.5× too wide early and ~1.8× too narrow late. Elite players fall past the corpus's 95th percentile every draft, and the `autopilot` seats harvest the spill (they won this mock). Cause is arithmetic: ADP is worth **0.034 utility/pick** vs `is_TE` +0.57 and `need` +0.47, softmaxed over a fixed top-40 | **the user-facing blocker on mock realism**; an 11.1 respecification (measured exponent ~0.5–0.6, *not* log) | ☑ 2026-07-27 (**steps 0–4 all done**; row corrected 2026-07-29 — the section below was already ☑ while this line still read open. Residuals, both named and neither reopening it: the **late-round** half of bar 1 is structurally out of reach for a one-board simulator, and the seat-faithfulness population was closed the rest of the way by T24/T25) |
 | **T17** | ✅ | **the live season has no per-player availability at all** — `availability_projection(con, 2026)` returned **0 rows**, collapsing the live Phase-5 `mean` to **37 % of the consensus projection**. Fixed by rolling the covariates forward (`projected_availability_frame`) + a **level-band guard** that now runs on the live season, where it breaks | before Phase 14 shows a user any distribution number for the season they are drafting | ☑ 2026-07-27 |
-| **T18** | 🟡 | `sleeper_manager_profiles.avg_reach` is measured against a **pooled** ADP board, so it reports a **+91.9-pick** mean QB reach — a board mismatch, not a behaviour. Anything keying on it (a future 11.3 fit, a manager-facing "you reach" readout) inherits the error; 16.15 works around it by computing position share from picks alone | before `avg_reach` is consumed by a model or shown to a user | ☐ 2026-07-27 |
+| **T18** | ✅ | `sleeper_manager_profiles.avg_reach` was measured against a **pooled** ADP board, so it reported a **+91.9-pick** mean QB reach — a board mismatch, not a behaviour. **Fixed 2026-07-29:** the column is **gone** (not renamed), replaced by `avg_reach_rounds` from `sleeper.redraft_reach` → `drift_panel.manager_panel` — every pick scored against **its own draft's board** over the redraft-eligible corpus. Mean \|reach\| **35.8 picks → 0.776 rounds**; scored properly, QBs drift **later** (−0.58 rounds), the opposite sign to the artifact. Range gate `validate.manager_reach_gate` (±2 rounds) wired into the health report | before `avg_reach` is consumed by a model or shown to a user | ☑ 2026-07-29 |
 | **T19** | ✅ | **the `floor` signal is inverted at board depth** — `q10` is **censored at exactly 0 for 42.9 %** of offensive rows, so residualizing it on `mean` gives the biggest "floor" to players just above the censoring point: `corr(floor, adp)` = **+0.179 RB / +0.124 WR**. The safest RBs on the live board are Jonah Coleman (ADP 171) and Jaydon Blue (ADP 140). Also **`boom_prob`/`bust_prob` are exactly 0 for 64.7 % / 56.0 %** of rows, so `safe_floor`'s `bust_prob: −0.35` is inert over half the board | **before any personality consumes it** — 16.14R Step 2 | ☑ 2026-07-28 |
 | **T20** | ✅ | **no roster-legality guarantee, and no DST exists on any board** — every mock seat finishes with an unfillable DST slot and `autopilot` averages **0.16 kickers**. `adp_snapshots` *has* the defenses (60 DEF rows for 2026 FFC PPR 10-team); `_ffc_board`'s `gsis_id IS NOT NULL` drops them because they key on `ffc_player_id`. `draftable_pool` enforces soft caps only — nothing forces a legal lineup | **user-facing blocker on the Phase-14 mock** — 16.14R Step 1 | ☑ 2026-07-28 |
 | **T21** | ✅ | **K/DST are in the simulation candidate band but not the fit's** — `build_choice_frame(skill_only=True)` (the default the shipped β was fit under) restricts candidates to QB/RB/WR/TE, while `make_opponent_pick_fn` bands the whole board. The fitted β therefore nominates kickers it never saw (`value_hawk` took Brandon Aubrey at pick 119). **Session-G choice-set contract violation, second home** | with T20 (the fix is what makes putting DST on the board safe) — 16.14R Step 1c | ☑ 2026-07-28 |
-| **T22** | 🟡 | **`boom_prob`/`bust_prob` are four seasons stale on any live board.** They are `weekly_volatility(max(train_seasons))`, and `train_seasons` for a live season is `DEV_SEASONS`, which ends at **2022** — so the 2026 board carries the **2022** rates (verified: 100 % exact match on the 39 % that join) and **292 of the 306 zeros are `fillna(0.0)`**, i.e. a player absent in 2022 is recorded as *never busting*. Frozen Phase-5 contract, so it is logged rather than edited; 16.14R routed both seats that weighted it onto `tail_risk` | before any *new* consumer weights it, and before Phase 14 shows a boom/bust number to a user | ☐ 2026-07-28 |
+| **T22** | ✅ | **`boom_prob`/`bust_prob` are four seasons stale on any live board.** They are `weekly_volatility(max(train_seasons))`, and `train_seasons` for a live season is `DEV_SEASONS`, which ends at **2022** — so the 2026 board carries the **2022** rates (verified: 100 % exact match on the 39 % that join) and **292 of the 306 zeros are `fillna(0.0)`**, i.e. a player absent in 2022 is recorded as *never busting*. Frozen Phase-5 contract, so it is logged rather than edited; 16.14R routed both seats that weighted it onto `tail_risk`. **Fixed 2026-07-29, and it was already reaching a human:** `steps/mock_draft.py` printed BOOM/BUST at every turn, so the live 2026 board told the drafter that Bijan Robinson and Puka Nacua *never boom*. `enrichment.live_volatility` adds `boom_prob_live`/`bust_prob_live` from **season − 1** (read-only; the frozen column is untouched), guarded by `volatility_source`'s recency assertion; the CLI now shows those plus `tail_risk`. Exact-zero `bust_prob` **56.0 % → 8.2 %**; corr(frozen, live) **0.026** | before any *new* consumer weights it, and before Phase 14 shows a boom/bust number to a user | ☑ 2026-07-29 |
+| **T23** | ✅ | **the T20 roster-legality guarantee misses TE** — `mandatory_needs` dropped every position in `slots.flex_positions`, and TE is in that tuple because a TE may *fill* FLEX, not because anything may fill TE. **12.1 % of seats finished unable to field a lineup, 100 % of them missing a TE** (46 % of `autopilot`, 47 % of `chalk`) | **user-facing** — 2×5 mock objection 1 | ☑ 2026-07-28 |
+| **T24** | ✅ | **consensus elites fell past pick 4 26.6 % of the time against a realized 13.1 %** (seating-marginalized), and the aggregate \|drift\| bar could not see it. The ticket's prescription — a per-seat `adp_stdev`-scaled **private board** — was built and **REJECTED: it is monotonically harmful** (18.8 / 19.7 / 26.6 % at κ = 0/1/2), because at the top of the board `adp_stdev` is the same size as the gaps it perturbs. **The fix was the width *level*, split from the width *shape*:** `WidthCurve(base 1.0·γ0.8) → (base 0.6·γ1.0)` → **15.3 %**, every T15 bar still passing. Round 1 was too wide, not the wrong shape | **the user-facing blocker on mock realism** — 2×5 mock objection 3, T15's carry-forward | ☑ 2026-07-28 |
+| **T25** | ✅ | **the corpus reach ceiling was applied to 2 of 10 seat types**, so `CORPUS_REACH_P95` bound `reacher`/`value_hawk` — the seats that had been *given* discipline — and nothing bound `balanced`, which is 4 of 10 seats in `REALISTIC_ROOM`. The asymmetry was the bug, not the budget | with T24 (it is T24's cheap half) — 2×5 mock objection 2 | ☑ 2026-07-28 |
+| **T26** | 🟡 | **`pos_share_*` is pooled across formats while the fit that consumes it is redraft-only** — T18's sibling, found in the same audit and *not* fixed with it. The profiles are built over every complete human draft (dynasty, 2QB, IDP included); `mgr_lean` — a live Tier-B feature of the shipped β — is `share − mean(share)` over that table. Measured: mean \|Δ QB share\| **0.83 pp** across the 2,816 managers in both scopes (>5 pp for 3.3 %), and the pooled *baseline* is the bigger distortion (QB 13.65 % pooled vs 11.22 % redraft), though a constant per-position offset is largely absorbed by the position dummies | with the next 11.1 refit — **not before**: changing it refits β and moves every T15/T24 width bar, which is a whole session's calibration for a sub-1 pp feature shift | ☐ 2026-07-29 |
 
 ---
 
@@ -542,8 +546,40 @@ you show it still catches the thing it was built to catch.
     open pre-lockbox tech-debt item.** (Optional MCTS/RL research gate sits just before it.)
 
 
-## 🟠 T13 — the Phase-5 distribution cloud is not reproducible across processes
-*(found 2026-07-26, Session F.6, while reconciling two dress-rehearsal runs)*
+## ✅ T13 — the Phase-5 cloud is not reproducible across processes — **DONE 2026-07-29**
+*(found 2026-07-26, Session F.6, while reconciling two dress-rehearsal runs; fixed 2026-07-29)*
+
+**Status ☑ done.** `db.deterministic_reads` pins DuckDB to one thread around the assembler's reads;
+three fresh interpreters now return a bit-identical cloud (`steps/t13_reproducibility.py` →
+`analysis/t13_reproducibility.json`: `q10`, `q90`, `samples` and the key order all IDENTICAL, sum
+spread exactly 0). Cost **negative** — 10.2 s → 9.1 s. Three unit tests cover the pin, its
+restoration after an exception, and its no-op on a non-DuckDB stub.
+
+**★★ The register's prime suspect was wrong, and it was wrong in an instructive way.** The
+fingerprint on file — *"marginal sums near-invariant while the per-player assignment moves, which is
+the fingerprint of a coupling/permutation step"* — is a perfectly good piece of reasoning that
+happens to describe a second thing: an input that wobbles **below the noise floor of every aggregate
+you were watching**. Ruled out by measurement, cheapest first:
+
+| hypothesis | test | result |
+|---|---|---|
+| row order / a shuffle | md5 of the player-key sequence, 3 processes | **identical** — nothing is being reordered |
+| Python hash randomization | `PYTHONHASHSEED=0` in both processes | still differs |
+| BLAS/OpenMP thread non-determinism | `OMP/OPENBLAS/MKL_NUM_THREADS=1` | still differs |
+| **DuckDB parallel aggregation** | `SET threads TO 1` | **bit-identical**, everywhere |
+
+A parallel `SUM`/`AVG` over floats adds its partitions in whatever order the threads finish, and
+floating-point addition is not associative. So the *training frames* differed in their last bits
+run to run; the QuantReg and hazard coefficients differed at ~1e-11; and the sampler — whose rng
+stream was never the problem — turned that into a per-player draw you could see. **A
+reproducibility bug does not have to live in the random number generator**, and the noisy stage is
+not always the stochastic one.
+
+**It is not a model change.** The pin selects one of the values the old code was already
+alternating between (75.5 ↔ 76.5 % dress coverage was the same result twice, as T13 always said).
+Verified: the pinned digest equals one of the three unpinned runs measured before the fix.
+
+_(Original entry, kept because the diagnosis it records is the one that had to be overturned.)_
 
 **Symptom.** Identical inputs, fresh process, same seed: `cached_distribution(con, 2025, None)`
 returns per-player `q10`/`q90` that differ every run. Downstream, the dress rehearsal's 80 %-interval
@@ -565,6 +601,11 @@ and reading the difference as a T3 improvement would be wrong.
 Changing the sampler now would break comparability with the lockbox result for a defect that moves a
 reported number by ~1pp. **Fix when the app is built** (Phase 14), by threading an explicit seed
 through the coupling step and asserting cross-process reproducibility in a test.
+
+> *(2026-07-29 — the "fix when the app is built" instinct was right about the deadline and wrong
+> about the mechanism: no seed needed threading anywhere, because the sampler was innocent. The
+> half of this paragraph that held up is the constraint — the fix had to leave the frozen sampler
+> untouched, and pinning the **reads** does exactly that.)*
 
 ## ✅ T14 — 11.2 does not scale — **DONE 2026-07-26 (Session G), with the diagnosis corrected**
 *(found 2026-07-26, Session F.6; fixed 2026-07-26, Session G)*
@@ -608,7 +649,7 @@ would not match. Speed on a 0.79 s component was not worth breaking comparabilit
 committed scale for ~5 min, so the "reduced sample" compromise it was scoped under is no longer
 needed for the confirmation run.
 
-## 🟠 T15 — simulated draft-slot dispersion is flat in board depth
+## ✅ T15 — simulated draft-slot dispersion is flat in board depth — **DONE 2026-07-27 (steps 0–4)**
 
 > **★ RE-MEASURED 2026-07-28 by 16.14R step 7** (60 seeded drafts x 9 seasons, shipped room
 > `REALISTIC_ROOM`). **Four of the five bars improved on what T15 shipped** — profile distance
@@ -1035,8 +1076,36 @@ Session H or I; **is** a blocker for Phase 14 surfacing per-player distribution 
 
 ---
 
-## 🟡 T18 — `avg_reach` in the manager profiles is a board mismatch, not a behaviour
+## ✅ T18 — `avg_reach` in the manager profiles is a board mismatch — **DONE 2026-07-29**
 *(opened 2026-07-27, Session H2, found while sanity-checking 16.15's room composition)*
+
+**Status ☑ done.** The column is **gone rather than repaired in place**, because silently
+redefining a stored column's meaning is this repo's most-repeated failure mode (F.5's hardcoded
+`scoring="ppr"`, T19's changed `floor`). What replaces it says what it is:
+
+* `sleeper.redraft_reach(con)` → `drift_panel.manager_panel(con)` — `build_drift_panel` (eligible
+  human redraft snake drafts, **each scored against its own board**) joined back to `picked_by`.
+  A separate function, not a new `PANEL_COLS` entry: those columns are the contract the *simulated*
+  panel also fills, and a corpus-only column would break the "a function reading PANEL_COLS cannot
+  tell sim from corpus apart" property the whole T15 harness rests on.
+* `sleeper_manager_profiles` now carries **`avg_reach_rounds`** (mean drift, in rounds) and
+  **`n_reach_picks`**. A manager with no eligible redraft picks is `NaN`, not 0.
+* `validate.manager_reach_gate` (±2 rounds) is wired into `data_health_report` — the gate the
+  original entry asked for by name.
+
+**Measured on the rebuilt table (24,696 managers, 8,212 with an eligible reach):**
+
+| | old (pooled board, picks) | new (own board, rounds) |
+|---|---|---|
+| mean \|reach\| | **35.8** | **0.776** (p1 −3.33 / p99 +4.26) |
+| range | −532.8 … **+1411.7** | −10.8 … +10.5 |
+| mean | +24.8 | +0.008 |
+
+**★ The sign flips, which is the part that settles it.** Scored against each draft's own board, QBs
+go **later** than consensus (−0.576 rounds), not ninety picks earlier. The original number was not
+an exaggerated behaviour, it was a different quantity wearing a behaviour's name.
+
+_(Original entry below.)_
 
 **Symptom.** `sleeper_manager_profiles.avg_reach` reports a mean **QB reach of +91.9 picks**. No
 manager reaches ninety picks for a quarterback; the number is not describing drafting.
@@ -1206,6 +1275,11 @@ a bounded quantity. Shipped `residual_shape(method="rank")` on ratios — `corr(
 every position, top-10 deep share **70 % → 20 %**, `corr(upside, floor)` −0.49. `boom_prob`/
 `bust_prob` were not repaired but **re-diagnosed** (see **T22**) and replaced by `tail_risk`.
 
+**T20 ☑ — but see 🔴 T23, which partially reopens it (2026-07-28).** The deadline filter guards
+QB/K/DST and **skips TE**, so 12.2 % of seats still finish unable to field a legal lineup. The
+done-bar below asserted only the two positions the ticket was written about, and passed while the
+same mechanism was broken for a third. Read T23 before treating this as closed.
+
 **T20 ☑** — `include_dst` (default OFF, on only in `mock.room_board`) plus a **deadline filter**
 (`DraftState.mandatory_needs`): **60/60 seats finish with ≥1 K and ≥1 DST at 15 rounds, 0/60 at 8**.
 The register's own warning held — no T15 measurement moved (round-1 mean 4.36 → 4.36, elite-fall p95
@@ -1218,8 +1292,45 @@ CI[+0.0803,+0.0996]** against T15's shipped +0.0890, so aligning the candidate s
 
 ---
 
-## 🟡 T22 — `boom_prob`/`bust_prob` are stale by construction on a live board
-**Status ☐ · opened 2026-07-28 (found while fixing T19) · frozen layer, so logged not edited.**
+## ✅ T22 — `boom_prob`/`bust_prob` are stale by construction on a live board — **DONE 2026-07-29**
+**Status ☑ done · opened 2026-07-28 (found while fixing T19) · frozen layer, so read around, not
+edited.**
+
+**★ "Nobody is affected today" was wrong when it was written.** The original entry judged the
+column latent because no personality weights it. It was already being **printed to a human**:
+`steps/mock_draft.py`'s BEST AVAILABLE table shows BOOM and BUST at every turn, so on the live 2026
+board the interactive drafter was told that **Bijan Robinson, Jahmyr Gibbs, Puka Nacua, Jaxon
+Smith-Njigba and Ashton Jeanty never boom** (`boom_prob` exactly 0.000, because none of them played
+in 2022) — with a `.2f` that reads like a measurement. *A column's consumers are not only the models
+that weight it.*
+
+**Fix (read-only, the frozen contract untouched):**
+
+* `enrichment.live_volatility(con, season)` → `boom_prob_live` / `bust_prob_live`, the same
+  estimator (`variance.weekly_volatility`) measured on **season − 1**;
+* `enrichment.volatility_source` picks that season **from the `weekly` table, not from a constant**
+  — the whole defect was a constant that fell four years behind the data — and asserts the lag is
+  ≤ `VOL_MAX_LAG` (1). The guard T17 earned, stated where it can fire;
+* unseen players stay **NaN**, never 0.0. The CLI prints "-" for them, and gained a `TAIL` column
+  (`tail_risk`), which is what 16.14R shipped as the honest boom-or-bust read;
+* `ENRICH_VERSION` bumped to `v3-t22-live-vol` so every cached board rebuilds.
+
+**Measured on the 2026 offensive board:** `bust_prob` exactly zero **56.0 % → 8.2 %**, `boom_prob`
+**~65 % → 18.5 %**, and **corr(frozen, live) = 0.026** on the 165 players in both — the frozen
+column is not a stale version of the live one, it is unrelated to it. 50 players the frozen column
+calls "never busts" bust in >20 % of 2025 weeks, including Breece Hall, Ladd McConkey and Malik
+Nabers.
+
+**The `max(train_seasons)` sweep the entry asked for, done and recorded.** Exactly two instances of
+the pattern *"a live season reads a **covariate** from the newest training season"* ever existed:
+`injury.availability_projection` (**T17**, fixed) and `variance.weekly_volatility` here (**T22**).
+Every other `DEV_SEASONS`-defaulted `train_seasons` in `src/` is a **fit** — quantile, rookie,
+conformal, injury hazard, news multipliers — where training on strictly-prior DEV seasons is the PIT
+discipline working as designed, not a staleness bug. One forward-looking note, not a defect today:
+`app/streamlit_app.py`'s season selector is `list(DEV_SEASONS)`, so the Phase-14 MVP cannot yet
+select the season anyone is actually drafting.
+
+_(Original entry below.)_
 
 **Symptom.** On the 2026 board `boom_prob` is exactly 0 for **65.2 %** of offensive rows and
 `bust_prob` for **56.5 %**. T19 recorded this as *inert*. It is worse than inert.
@@ -1251,3 +1362,240 @@ earned: assert the volatility source season is within one year of the target.
 **Note for whoever does this.** The same `max(train_seasons)` idiom appears wherever a live season
 reads a "prior season" input. T17 was one instance, this is another; a sweep for the pattern is
 probably worth more than either fix alone.
+
+---
+
+## ✅ T23 — the T20 roster-legality guarantee misses TE
+**Status ☑ done 2026-07-28 · opened the same day (2×5 mock re-run, found by the user's eye) ·
+partially reopened T20.**
+
+> **As built.** `mandatory_needs` is now simply `slots.base_demand()` — FLEX is excluded from it by
+> construction, so nothing is exempt and a roster-shape change is picked up for free. The induction
+> argument in the docstring is the safety proof, and `tests/test_draft.py` executes it.
+>
+> **Measured over 40 seeded drafts × 10 seats × 9 seasons** (`analysis/mock_room_bars_{baseline,
+> t23}.json`, one harness both sides): seats that could not fill a *dedicated* slot **23.2 % → 12.3 %**,
+> and the half that was **avoidable** — a slot the season's board could actually have supplied —
+> **12.08 % → 0.03 %**. The residual is unavoidable: 2017-era FFC boards carry fewer than ten kickers
+> or defenses for ten seats, which no policy can fix, so `roster_legality` reports the two separately
+> rather than pretending the bar is 0 %.
+>
+> **No T15 bar moved, verified rather than assumed** (T20's own note): round-1 mean **3.5242 →
+> 3.5242**, profile distance 0.1074 → 0.1052, bar 2 identical at p95 19.0 / 29.74 %, bar 5 −5.99 % →
+> −5.72 %. The drift panel filters to `OFFENSE`, so K/DST/TE deadline picks are dropped on the
+> measurement side exactly as predicted.
+
+**Symptom.** Over 40 seeded 15-round drafts, **49 of 400 seats (12.2 %) finish unable to field a
+legal starting lineup**, and **100 % of the failures are a missing TE** — QB, RB, WR, K and DST are
+never short. By seat: `autopilot` **46.2 %**, `balanced` / `reacher` / `safe_floor` 5.0 % each,
+`value_hawk` 0 %.
+
+**Root cause — one line, and it reads a membership backwards.** `DraftState.mandatory_needs`
+(`src/fantasy_quant/draft/simulator.py:149`) computes unfilled starter demand and then drops every
+position in `slots.flex_positions`, which is `("RB", "WR", "TE")`:
+
+```python
+owed = {p: n - counts.get(p, 0) for p, n in self.slots.base_demand().items()
+        if p not in flex}          # <-- TE leaves here
+```
+
+The docstring's reasoning is correct for RB and WR and wrong for TE. A team short one RB still
+fields a legal lineup because the FLEX absorbs it. A team with **zero TE cannot fill the dedicated
+TE slot**, and nothing else can go there. **TE is in `flex_positions` because a TE may fill FLEX,
+not because anything may fill TE.** So T20's deadline filter guards QB/K/DST and silently skips the
+one position that actually goes unfilled.
+
+**Fix.** Mandatory need = the full `base_demand()` (1 QB / 2 RB / 2 WR / 1 TE / 1 K / 1 DST); FLEX
+stays the only substitutable slot, and it is excluded from `base_demand()` by construction, so the
+change is to delete the `if p not in flex` filter and the `flex` local.
+
+**Why that is safe, not over-constraining.** `draftable_pool` applies the filter only when
+`picks_remaining <= sum(need.values())`, and a position leaves `need` the moment its demand is met —
+so every pick taken from the forced pool decrements the sum by exactly one and the condition stays
+satisfiable by induction. Worst case it binds 8 picks from the end; in practice RB/WR demand is long
+since met and it binds at 3–4, exactly as today. Still gated on `rounds >= slots.starters`.
+
+**Done-bar.** 0 illegal rosters over ≥40 seeded drafts × 10 seats, asserted on the full lineup
+(`QB≥1, RB≥2, WR≥2, TE≥1, K≥1, DST≥1`) rather than on K/DST alone; plus the T20 checks unchanged,
+and confirm no T15 bar moves (the drift panel filters to `OFFENSE`, so it should not — **verify,
+do not assume**, per T20's own note).
+
+**★ The lesson, which is about the verification and not the code.** T20's done-bar was *"60/60 seats
+finish with ≥1 K and ≥1 DST"* — the two positions the ticket was written about. It passed, while the
+same mechanism was broken for a third position nobody thought to assert. *A guarantee stated as "no
+unfillable starting slot" must be tested against the whole lineup, not against the slots that
+motivated the ticket.* Sibling of the 16.14 "state your bars as oppositions" lesson: **a bar written
+from the symptom passes the general defect.**
+
+---
+
+## ✅ T24 — the room was too wide at the top of the board (the *private board* prescription was wrong)
+**Status ☑ done 2026-07-28 · opened the same day · the T15 carry-forward, closed by a different
+mechanism than the one it named.**
+
+> **The objection, measured honestly for the first time.** Consensus-elite players (ADP ≤ 2.5) clear
+> pick 4 in **26.6 %** of simulated drafts against a realized **13.1 %** — seating-marginalized, 8
+> seasons, `analysis/mock_t24_sweep_shuffled*.json`. Every earlier number understated it: a
+> fixed-seating batch reads 5–7 pp lower, and no number of extra seeds fixes that (see the seating
+> confound in `findings.md`).
+>
+> ### ★ The prescription was built and rejected
+>
+> This entry proposed `adp_seat = adp + κ · adp_stdev · ε` as *one mechanism for three problems*. It
+> is implemented (`personalities.private_adp`, `stdev` added to `PASSTHROUGH_COLS` — the column
+> genuinely was unread), and it is **monotonically harmful on the objection it was designed for**:
+>
+> | seating-marginalized elite past pick 4 | κ = 0 | κ = 1 | κ = 2 |
+> |---|---|---|---|
+> | `base` 0.70 | **18.8 %** | 19.7 % | 26.6 % |
+> | `base` 0.50 / γ 1.0 | **11.2 %** | — | 23.4 % |
+>
+> **Why: at the top of the board `adp_stdev` is the same size as the gaps it perturbs.** Bijan 0.7 ·
+> Gibbs 0.8 · Chase 1.0 sit ~0.2 picks apart, so a per-seat draw of ±κ·0.8 does not *create* tier
+> structure — it **destroys the ordering that was already there**, which is exactly how an elite
+> falls. The measured corpus law `|drift| ≈ 2 × adp_stdev` is real but is about **realized** drift,
+> an outcome of the whole room; re-injecting it as **per-seat perception noise** is a different
+> object. *A relationship measured on outcomes is not a specification for the mechanism.*
+>
+> Kept in the code, **default-off**, with the verdict written onto `analysis/phase11_opponent_model
+> .json` beside the parameter. **Nothing may switch it on without re-running the sweep.**
+>
+> ### ★ What fixed it: the width *level*, separated from the width *shape*
+>
+> `WidthCurve` became `width(round) = base · round^gamma`. `base` is how wide round 1 is, `gamma` how
+> fast width grows with depth — one number until now, which is why T15 concluded *one knob cannot set
+> both ends*. With two:
+>
+> Final measurement, the **40-seed seating-marginalized pair** (`analysis/mock_room_bars_
+> {baseline_shuffled,t24_shuffled}.json`):
+>
+> | | before | after | corpus |
+> |---|---|---|---|
+> | `WidthCurve` | `base 1.0 · γ 0.8` | **`base 0.6 · γ 1.0`** | — |
+> | **elite past pick 4** | 25.8 % **FAIL** | **15.3 % PASS** | 13.1 % |
+> | bar 2 · p95 / past-10 | 17.0 / 28.8 % | **16.0 / 25.2 %** | ≤ 20 / ≤ 30 % |
+> | bar 3 harvest | 0.00 sd | 0.00 sd | ≤ 1.0 |
+> | bar 5 dispersion | −7.1 % | **−11.4 %** | ±20 % |
+> | bar 1 round-1 mean | 3.33 | **2.64** | 2.87 |
+> | bar 1 profile distance | 0.107 | **0.089** | — |
+> | median `pool_rank` | 8.69 | **8.04** | 7.62 |
+> | moderate share | 33.7 % | **38.2 %** | 54.3 % |
+>
+> γ 0.8 → 1.0 keeps **90 %** of the old round-15 width while `base` narrows round 1 by 40 %.
+> **The cost, stated:** dispersion −7.1 % → **−11.4 %** — narrowing the top takes spread out of the
+> whole room and only `gamma` gives it back — comfortably inside bar 5. Everything else moves *toward*
+> the corpus, including bar 1's profile distance (0.107 → **0.089**), which is what separates `base
+> 0.6` from the `0.5` that shipped an hour earlier: 0.5 overshoots to **tighter than real humans**
+> (11.3 % past-4) and pays 0.154 distance and −17.4 % dispersion for it.
+> The fixed-seating sheet agrees (past-4 11.3 %, dispersion −12.2 %), and the 2026 live board reads
+> p95 **16.0** / 24.4 % past pick 10.
+>
+> ### ⚠ Two measurement notes that outlive this ticket
+>
+> 1. **`ceiling_saturation` never bound** (1.5–2.3 % at every κ), so the "the budget, not the belief,
+>    is picking" hypothesis that motivated the gate was **wrong**. Kept as a standing check anyway.
+> 2. **The round-1 half-split is not resolvable at this sample size** — the same room reads 0.54 /
+>    0.82 / 1.11 / 1.22 across measurement configurations, because a few large first-half reaches
+>    dominate a mean over ~1,600 picks. **The landing *share* (n ≈ 640) is the bar; the rise is a
+>    diagnostic** until it gets a trimmed estimator.
+>
+> ### Next, if the residual is ever worth more (15.3 % vs 13.1 % says it is not, today)
+>
+> The top-of-board gaps (0.2 picks) are smaller than any width the fitted β can express, so the top
+> ~6 are near-interchangeable to every seat; `base` works by making the whole room follow those gaps
+> more faithfully. The surgical version is a **steeper `AdpSpec.exponent`** with `base`/`gamma`
+> restoring depth width — the three-knob form of T15's trade. ⚠ That **refits β**
+> (`steps/t15_1_respecify.py`); it is not an artifact edit.
+
+---
+
+## ✅ T25 — the corpus reach ceiling is applied to 2 of 10 seat types, so the disciplined seats look tamer than the average one
+**Status ☑ done 2026-07-28 · opened the same day · shipped with T24, as its own entry said it should be.**
+
+> **As built.** `ROOM_CEILING = ceiling_only()` is the floor of discipline **every** seat inherits:
+> `reach_budget=None` now means *inherit the room ceiling*, not *unconstrained*. It is a ceiling
+> only — no count tiers, no early clamp — because the reacher's quiet opening is a deliberate spec
+> and imposing it room-wide would flatten every seat into the same round 1. `unbounded_budget()`
+> exists so the A/B controls that measured a genuinely unconstrained seat
+> (`steps/phase16_14r_5_reacher.py`) still measure that, instead of silently re-pointing at the new
+> default and changing what an already-run done-bar meant.
+>
+> **Measured (`analysis/mock_room_bars_{t23,t25}.json`).** `balanced` — the seat nothing bound — R1–3
+> `pool_rank` **6.36 → 5.98**, overall **10.19 → 9.32**; `upside_chaser` R1–3 **10.80 → 8.76**. The
+> room moved *toward* the corpus on every population statistic: median `pool_rank` 9.31 → **8.85**
+> (corpus 7.62), moderate share 28.8 % → **32.7 %** (corpus 54.3 %), profile distance 0.1052 →
+> **0.0894**, round-1 mean 3.52 → **3.35**, bar 2 past-10 29.7 % → **29.0 %**, bar 5 −5.7 % → −8.1 %.
+> Unlike T23 this **does** move the bars, which is expected: it constrains eight seat types that were
+> previously unconstrained.
+>
+> ⚠ **The done-bar's ordering was written wrong and is not claimed.** It asked for
+> `autopilot < chalk < safe_floor < value_hawk < balanced < reacher` in R1–3; what ships is
+> `autopilot 1.00 < chalk 2.05 < safe_floor 3.37 < reacher 4.91 < balanced 5.98 < upside 8.76 <
+> value_hawk 10.09`. Both deviations are the ticket's own analysis contradicting its own bar: the
+> reacher sitting below `balanced` in R1–3 **is the user's 2026-07-27 spec** (`early_rounds=3`), which
+> this entry states two paragraphs above the bar, and the value hawk is a bounded value argmax, which
+> is the most deviant thing in the room by construction wherever its window allows. *A done-bar
+> written from a symptom can contradict the fix it is attached to* — sibling of T23's lesson.
+
+**Symptom.** In rounds 1–3 the `reacher` is **more chalk than `balanced`** — mean `pool_rank`
+**4.99 vs 6.44**, mean reach **+1.89 vs +2.76** over 40 drafts. (Overall the ordering is correct —
+reacher 13.40 vs balanced 11.74 — so this is a *depth-localized* inversion, not a broken seat.)
+
+**Root cause.** `ReachBudget` is attached to **`reacher` and `value_hawk` only**; the other eight
+shipped personalities carry `reach_budget=None`. So `CORPUS_REACH_P95[0]` = **14.6 picks** binds the
+two seats that were given discipline and *nothing* binds `balanced` — which is **4 of 10 seats** in
+`REALISTIC_ROOM`. The reacher's rounds-1–3 quiet is itself correct and specified (`early_rounds=3`,
+`early_max_picks=8.0`, `medium_from_round=3`, `large_from_round=5`, user spec 2026-07-27, from *"a
+real reacher does not open with one"*). **The asymmetry is the bug, not the budget.**
+
+**Fix.** Apply `round_ceiling=CORPUS_REACH_P95` room-wide as a floor of discipline every seat
+inherits, with per-seat `ReachBudget` counts modulating on top. Note this is also **T24's cheap
+half** — it clamps the round-1 symptom without fixing the shape, so ship it *with* T24, not instead.
+
+**Second half — reporting.** The per-personality summary must lead with **`pool_rank`, split R1–13 /
+R14–15**, not a 15-round mean reach. Mean reach over all rounds is dominated by late-board ADP noise
+(`balanced`'s apparent edge came from R11–13 at +12.94: Tyler Allgeier at ADP 167 taken at pick 119
+scores **+48** and means nothing) and by *when* a seat takes K/DST. **This mis-reporting is what
+produced the objection in the first place** — see `findings.md` for both method errors.
+
+**Done-bar.** `pool_rank` in R1–3 orders `autopilot < chalk < safe_floor < value_hawk < balanced <
+reacher`; no seat exceeds `CORPUS_REACH_P95` by round; the reacher's R4+ behaviour is unchanged.
+
+⚠ **Do not fix this by raising the reacher's `temperature` or `width_mult` in the early rounds.** Its
+direction channels (`cos`, `rookie`, `upside`, hype) are structurally dead at the top of the board —
+every consensus elite is an established veteran with compressed within-position z-scores — so width
+with nothing to steer it is precisely the *"width with no direction"* that 16.14R step 5 deleted.
+The channel that is live in round 1 is **T24's private board**.
+
+---
+
+## 🟡 T26 — the profiles' position shares are pooled across formats, and `mgr_lean` reads them
+*(opened 2026-07-29, found in the same audit that closed T18 — it is the sibling defect)*
+
+**Symptom.** None visible. That is why it is worth writing down.
+
+**Root cause.** `build_and_store_profiles` counts position shares over **every** complete human
+draft in the corpus — measured 2026-07-29: 271k picks from `dynasty_2qb`, 212k from `2qb`, 202k from
+`ppr`, 167k `dynasty`, 101k `idp`. `build_choice_frame`, since Session F.6, fits on the
+**redraft-eligible** subset only. So a Tier-B feature of the shipped β — `mgr_lean`, defined as a
+manager's share minus the table-wide mean share — is estimated on one population and applied to
+another. Pooled QB share is **13.65 %** against the redraft corpus's **11.22 %** (and DEF 1.70 % vs
+4.61 %, the tell that the pooled rooms have different roster rules).
+
+**Why it is smaller than T18.** Two reasons, both measured rather than assumed. Per *manager*, the
+scopes mostly agree — mean \|Δ QB share\| **0.83 pp** over the 2,816 managers with ≥20 picks in
+both, median **0.00**, >5 pp for **3.3 %** — because a manager who shows up in the redraft corpus
+mostly drafts redraft. And the pooled *baseline* enters as a constant per position, which a
+conditional logit that already carries position dummies largely absorbs; what identifies `mgr_lean`
+is the **spread** across managers, not its level.
+
+**Fix.** Compute the shares on the eligible subset (the population the fit uses), or carry both and
+let the consumer choose. Either is a few lines.
+
+**When — and the reason to wait.** With the **next 11.1 refit**, never on its own. Changing
+`mgr_lean` refits β, and β's scale is what `WidthCurve`/`AdpSpec` were calibrated against across two
+full sessions (T15, then T24) — *a coefficient is not transportable without its controls*, the
+repo's most-repeated lesson, and it applies to the controls' own controls. Spending that
+re-verification on a sub-1 pp feature shift is the wrong trade until something else forces the refit.
+
+**Who is affected.** The mock room's opponents, faintly and unmeasurably. Nothing user-facing.

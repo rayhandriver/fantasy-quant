@@ -137,22 +137,36 @@ def _realistic_board(n_skill: int = 45) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def test_mandatory_needs_are_the_non_flexable_starter_slots():
-    """QB/K/DST have no substitute; RB/WR/TE demand is FLEX-coverable and so is never mandatory."""
+def test_mandatory_needs_are_every_dedicated_starter_slot():
+    """★ T23: FLEX is the only substitutable slot, so **every** other slot is mandatory.
+
+    The old contract exempted ``flex_positions`` = ``("RB", "WR", "TE")`` and so dropped TE, whose
+    dedicated slot nothing else can fill — TE is in that tuple because a TE may fill FLEX, not
+    because anything may fill TE. RB/WR are in the demand for the same reason: a FLEX absorbs a
+    surplus, never a deficit.
+    """
     res = simulate_draft(_realistic_board(), n_teams=10, rounds=1, seed=0)
-    need = res.mandatory_needs(3)
-    assert set(need) <= {"QB", "K", "DST"}
-    assert need.get("K") == 1 and need.get("DST") == 1
-    assert "RB" not in need and "WR" not in need and "TE" not in need
+    need = res.mandatory_needs(3)                        # one pick made, so one slot is filled
+    assert set(need) <= {"QB", "RB", "WR", "TE", "K", "DST"}
+    assert need.get("TE") == 1 and need.get("K") == 1 and need.get("DST") == 1
+    assert "FLEX" not in need
+    # a seat that has already filled a slot no longer owes it
+    res.rosters[3] = list(res.board[res.board["pos"] == "TE"].index[:1])
+    assert "TE" not in res.mandatory_needs(3)
 
 
 def test_every_seat_finishes_legal_when_the_draft_is_long_enough():
-    """T20's contract: >=1 K and >=1 DST for **every** seat once ``rounds >= slots.starters``."""
+    """T20's contract as T23 restates it: the **whole** starting lineup, not just K and DST.
+
+    ⚠ Stated over every dedicated slot deliberately. T20's own done-bar named only the two
+    positions its ticket was about; it passed while the same filter left TE unguarded on 12.1 % of
+    seats. *A bar written from the symptom passes the general defect.*
+    """
     res = simulate_draft(_realistic_board(), n_teams=10, rounds=15, seed=7)
     for t in range(10):
         counts = res.roster_counts(t)
-        assert counts.get("K", 0) >= 1, f"team {t} has no kicker: {counts}"
-        assert counts.get("DST", 0) >= 1, f"team {t} has no defense: {counts}"
+        for pos, n in res.slots.base_demand().items():
+            assert counts.get(pos, 0) >= n, f"team {t} cannot fill {pos}x{n}: {counts}"
 
 
 def test_without_the_rule_seats_would_finish_illegal():
@@ -180,13 +194,38 @@ def test_the_filter_only_bites_at_the_end():
     res.rosters = [[] for _ in range(res.n_teams)]       # rewind to a fresh roster, same board
     res.available = set(res.board.index)
 
-    pool = res.draftable_pool(0)                          # 15 picks left, 3 mandatory slots
+    pool = res.draftable_pool(0)                          # 15 picks left, 8 mandatory slots
     assert set(pool["pos"]) > {"K", "DST"}, "pool restricted while the team has spare picks"
 
-    # burn 12 picks on skill players -> 3 left, 3 mandatory (QB/K/DST) -> the deadline
-    skill = res.board[res.board["pos"].isin(("RB", "WR", "TE"))].index[:12]
+    # burn 12 picks on RB/WR/TE, covering that demand -> 3 left, 3 mandatory (QB/K/DST)
+    skill = [i for pos in ("RB", "WR", "TE")
+             for i in res.board[res.board["pos"] == pos].index[:4]]
     res.rosters[0] = list(skill)
     res.available -= set(skill)
     assert res.picks_remaining(0) == 3
     assert res.mandatory_needs(0) == {"QB": 1, "K": 1, "DST": 1}
     assert set(res.draftable_pool(0)["pos"]) == {"QB", "K", "DST"}
+
+
+def test_the_deadline_cannot_deadlock_when_the_need_set_widens():
+    """T23's safety argument, executed: forcing a needed pick preserves ``picks == sum(need)``.
+
+    The filter fires at ``picks_remaining <= sum(need)``. Each forced pick is at a needed position,
+    so both sides fall by exactly one — the invariant is preserved to the last pick and a seat can
+    always finish. Pinned because widening the need set from 3 slots to 8 is the change that would
+    break it if the argument were wrong.
+    """
+    res = simulate_draft(_realistic_board(), n_teams=10, rounds=15, seed=7)
+    res.rosters = [[] for _ in range(res.n_teams)]
+    res.available = set(res.board.index)
+    res.rosters[0] = list(res.board[res.board["pos"] == "WR"].index[:7])   # 8 picks left, 7 needed
+    res.available -= set(res.rosters[0])
+    for _ in range(8):
+        need = res.mandatory_needs(0)
+        assert res.picks_remaining(0) >= sum(need.values()), "the deadline overcommitted"
+        pool = res.draftable_pool(0)
+        assert not pool.empty
+        idx = pool.index[0]
+        res.rosters[0].append(idx)
+        res.available.discard(idx)
+    assert res.mandatory_needs(0) == {}

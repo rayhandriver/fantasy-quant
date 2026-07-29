@@ -1,0 +1,118 @@
+{
+  "generated": "2026-07-28T17:54:57.097989+00:00",
+  "config": {
+    "seeds": 15,
+    "rounds": 15,
+    "seasons": [
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "room_seed": 17,
+    "room": [
+      "balanced",
+      "autopilot",
+      "balanced",
+      "reacher",
+      "upside_chaser",
+      "safe_floor",
+      "balanced",
+      "chalk",
+      "value_hawk",
+      "balanced"
+    ]
+  },
+  "corpus": {
+    "past_4": 0.13135946622185155,
+    "past_6": 0.06755629691409508,
+    "median_slot": 1.6666666666666665,
+    "r1_rise": 1.5405423549596875
+  },
+  "grid": [
+    {
+      "past4": 0.26666666666666666,
+      "past6": 0.1,
+      "median_slot": 2.0,
+      "landing_pass": false,
+      "r1_mean": 3.638833333333334,
+      "r1_rise": 1.2168858201756614,
+      "disp_error": -0.06971012510657355,
+      "elite_p95": 19.0,
+      "elite_past10": 0.3031578947368421,
+      "elite_pass": false,
+      "profile_distance": 0.10042900198030986,
+      "base": 1.0,
+      "gamma": 0.8,
+      "kappa": 0.0
+    },
+    {
+      "past4": 0.19166666666666668,
+      "past6": 0.07916666666666666,
+      "median_slot": 2.0,
+      "landing_pass": false,
+      "r1_mean": 3.366916666666667,
+      "r1_rise": 1.3229460127637558,
+      "disp_error": -0.11580489831217704,
+      "elite_p95": 19.0,
+      "elite_past10": 0.2771929824561403,
+      "elite_pass": true,
+      "profile_distance": 0.08976190275296336,
+      "base": 0.85,
+      "gamma": 0.8,
+      "kappa": 1.0
+    },
+    {
+      "past4": 0.15416666666666667,
+      "past6": 0.058333333333333334,
+      "median_slot": 2.0,
+      "landing_pass": true,
+      "r1_mean": 3.1191666666666666,
+      "r1_rise": 1.3579438074839363,
+      "disp_error": -0.17170252177569548,
+      "elite_p95": 17.0,
+      "elite_past10": 0.263859649122807,
+      "elite_pass": true,
+      "profile_distance": 0.14397830556800126,
+      "base": 0.7,
+      "gamma": 0.8,
+      "kappa": 1.0
+    },
+    {
+      "past4": 0.20416666666666666,
+      "past6": 0.0875,
+      "median_slot": 2.0,
+      "landing_pass": false,
+      "r1_mean": 3.511916666666667,
+      "r1_rise": 1.2455906644642194,
+      "disp_error": -0.09775789016298166,
+      "elite_p95": 19.0,
+      "elite_past10": 0.28421052631578947,
+      "elite_pass": true,
+      "profile_distance": 0.08599833286999463,
+      "base": 0.7,
+      "gamma": 0.8,
+      "kappa": 2.0
+    },
+    {
+      "past4": 0.1625,
+      "past6": 0.05,
+      "median_slot": 2.0,
+      "landing_pass": true,
+      "r1_mean": 3.397166666666667,
+      "r1_rise": 1.3138835282097858,
+      "disp_error": -0.0842643118977385,
+      "elite_p95": 18.0,
+      "elite_past10": 0.28421052631578947,
+      "elite_pass": true,
+      "profile_distance": 0.07422575318222911,
+      "base": 0.5,
+      "gamma": 1.0,
+      "kappa": 2.0
+    }
+  ]
+}

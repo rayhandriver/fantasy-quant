@@ -55,6 +55,7 @@ from fantasy_quant.draft.opponent_model import (
 )
 from fantasy_quant.draft.personalities import (
     DEFAULT_ROOM,
+    PRIVATE_KAPPA,
     Personality,
     WidthCurve,
     make_opponent_pick_fn,
@@ -67,6 +68,7 @@ from fantasy_quant.draft.simulator import (
     RosterSlots,
     _prepare_board,
     board_player_key,
+    canon_pos,
     run_to_completion,
 )
 
@@ -106,6 +108,11 @@ def load_opponent_model(path: Path | str = COEF_JSON) -> OpponentModel:
                           adp_spec=AdpSpec.from_dict(art.get("adp_spec")),
                           band=BandSpec.from_dict(art.get("band")))
     model.width_curve = WidthCurve.from_dict(art.get("width_curve"))
+    # T24 — κ rides with the width curve for the same reason `adp_spec` rides with β: the two were
+    # chosen **jointly** (`steps/mock_t24_sweep.py`), because narrowing the flat softmax and handing
+    # the deviation back per player are one decision. An artifact written before T24 has neither key
+    # and falls back to `base=1.0` / `κ=0`, which is the room those numbers were measured in.
+    model.private_kappa = float((art.get("private_board") or {}).get("kappa", PRIVATE_KAPPA))
     return model
 
 
@@ -310,33 +317,53 @@ def sim_drift_panel(state: DraftState, *, season: int, draft_id: str,
     return out[[*PANEL_COLS, "seat_personality", "seed"]].reset_index(drop=True)
 
 
-def batch_drift_panel(board: pd.DataFrame, room: Sequence[Personality], model: OpponentModel, *,
-                      season: int, seeds: Iterable[int], n_teams: int = TEAMS_REF,
-                      rounds: int = 15, board_source: str = boards.FFC, scoring: str = "ppr",
-                      start_ts: pd.Timestamp | None = None, hype_fn=None,
-                      **kw) -> pd.DataFrame:
-    """``len(seeds)`` seeded drafts of one season's board, concatenated into one drift panel.
+def batch_drafts(board: pd.DataFrame, room: Sequence[Personality], model: OpponentModel, *,
+                 season: int, seeds: Iterable[int], n_teams: int = TEAMS_REF,
+                 rounds: int = 15, board_source: str = boards.FFC, scoring: str = "ppr",
+                 start_ts: pd.Timestamp | None = None, hype_fn=None,
+                 **kw) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """``len(seeds)`` seeded drafts, as ``(drift_panel, pick_log)`` from **one** pass.
 
     ``hype_fn(seed) -> np.ndarray | None`` supplies the per-draft 16.9 narrative draw; the default
     (``None``) runs the room with the hype channel closed, which is the right baseline because 16.15
     measured the shipped shock as a null and T15's defect is ~10x larger than it.
+
+    ★ **Two frames because the panel cannot answer a roster question.** The drift panel is
+    offense-only by construction — that is what makes it comparable to the human corpus — so it
+    drops every K and DST and cannot see whether a seat finished able to field a lineup. T23 was
+    invisible to every panel-based bar for exactly that reason. The log is every pick at every
+    position, and :func:`roster_legality` reads it.
     """
     stdev = None
     if "stdev" in board.columns:
         stdev = pd.Series(pd.to_numeric(board["stdev"], errors="coerce").to_numpy(),
                           index=board_player_key(board).astype(str)).groupby(level=0).first()
 
-    frames = []
+    seats = {i: p.name for i, p in enumerate(room)}
+    frames, logs = [], []
     for s in seeds:
         st = simulate_room_draft(board, room, model, n_teams=n_teams, rounds=rounds, seed=int(s),
                                  hype=hype_fn(int(s)) if hype_fn is not None else None, **kw)
+        draft_id = f"sim-{season}-{int(s):04d}"
         frames.append(sim_drift_panel(
-            st, season=season, draft_id=f"sim-{season}-{int(s):04d}", board_source=board_source,
+            st, season=season, draft_id=draft_id, board_source=board_source,
             scoring=scoring, board_teams=n_teams, start_ts=start_ts, stdev=stdev, seed=int(s),
             room=room))
+        log = st.pick_log()
+        if not log.empty:
+            log = log.assign(season=int(season), draft_id=draft_id, seed=int(s),
+                             seat_personality=log["team"].map(seats))
+            logs.append(log)
     if not frames:
-        return pd.DataFrame(columns=[*PANEL_COLS, "seat_personality", "seed"])
-    return pd.concat(frames, ignore_index=True)
+        return (pd.DataFrame(columns=[*PANEL_COLS, "seat_personality", "seed"]), pd.DataFrame())
+    return (pd.concat(frames, ignore_index=True),
+            pd.concat(logs, ignore_index=True) if logs else pd.DataFrame())
+
+
+def batch_drift_panel(board: pd.DataFrame, room: Sequence[Personality], model: OpponentModel, *,
+                      season: int, seeds: Iterable[int], **kw) -> pd.DataFrame:
+    """:func:`batch_drafts`' panel half — the signature every T15/16.14R step already calls."""
+    return batch_drafts(board, room, model, season=season, seeds=seeds, **kw)[0]
 
 
 # ------------------------------------------------------------------------------------------------
@@ -389,6 +416,234 @@ def elite_fall_profile(panel: pd.DataFrame, *, adp_cut: float = 12.0,
         "max_slot": float(slot.max()),
         f"share_past_{int(fall_past)}": float((slot > fall_past).mean()),
     }
+
+
+# ------------------------------------------------------------------------------------------------
+# T24 — the signed companion: WHERE the consensus elite land, not how far anyone strayed
+# ------------------------------------------------------------------------------------------------
+#: ADP bands the landing profile reports, in board picks. The first is "the consensus top two" —
+#: the band the 2026-07-28 objection was about, and the one a round-indexed width curve cannot
+#: distinguish from the rest of round 1.
+LANDING_BANDS: tuple[tuple[float, float], ...] = ((0.0, 2.5), (2.5, 4.5), (4.5, 6.5), (6.5, 10.5))
+
+#: Landing thresholds, in 10-team picks: what share of a band cleared pick 4 / 6 / 10.
+LANDING_PAST: tuple[float, ...] = (4.0, 6.0, 10.0)
+
+#: How far above the corpus's own share the simulated share of top-tier players falling past
+#: :data:`LANDING_GATE_PAST` may sit. Same construction as :data:`ELITE_PAST10_MAX` — a corpus
+#: quantile plus a stated margin, so the gate fails on a defect rather than on sampling noise.
+LANDING_GATE_PAST: float = 4.0
+LANDING_GATE_MARGIN: float = 0.05
+
+
+def landing_profile(panel: pd.DataFrame, *, bands: Sequence[tuple[float, float]] = LANDING_BANDS,
+                    past: Sequence[float] = LANDING_PAST) -> pd.DataFrame:
+    """Where players of a given ADP actually get taken, in 10-team picks — bar #1's signed half.
+
+    ★ **Why this exists at all.** Round-1 mean |reach| reads **2.91 simulated vs 2.87 corpus** — a
+    clean pass — while the consensus #2 lands at a median pick of 4 and clears pick 4 42 % of the
+    time against a realized 12 %. *A reach and a fall have the same absolute value and cancel inside
+    the mean*, so an |drift| bar is structurally blind to a one-sided defect. This is T15's *"an
+    aggregate metric cannot see an impossible event"* one level down: there the aggregation was over
+    drafts, here it is over **direction**, inside a metric that already passes.
+
+    Runs unchanged on a simulated panel and on the human corpus: ``slot_rounds`` is picks ÷ that
+    draft's own team count, so a 12-team room's pick 12 and a 10-team room's pick 10 are both "the
+    end of round 1" rather than being compared as raw pick numbers.
+    """
+    cols = ["band", "n", "mean_slot", "median_slot", "p90_slot", "p99_slot",
+            *[f"past_{int(p)}" for p in past]]
+    if panel.empty:
+        return pd.DataFrame(columns=cols)
+    adp = pd.to_numeric(panel["adp"], errors="coerce")
+    slot = _picks(panel["slot_rounds"])
+    rows = []
+    for lo, hi in bands:
+        s = slot[(adp > lo) & (adp <= hi)].dropna()
+        if s.empty:
+            continue
+        row = {"band": f"{lo:g}-{hi:g}", "n": int(len(s)), "mean_slot": float(s.mean()),
+               "median_slot": float(s.median()), "p90_slot": float(s.quantile(0.90)),
+               "p99_slot": float(s.quantile(0.99))}
+        row.update({f"past_{int(p)}": float((s > p).mean()) for p in past})
+        rows.append(row)
+    return pd.DataFrame(rows, columns=cols)
+
+
+def landing_by_player(panel: pd.DataFrame, *, top_n: int = 10,
+                      past: Sequence[float] = LANDING_PAST) -> pd.DataFrame:
+    """The same measurement per player, for the top ``top_n`` of the board — the eyeball readout.
+
+    The band table is the gate; this is what a human recognises. "Gibbs lands at a median pick of 4"
+    is the sentence that opened T24, and no aggregate says it.
+    """
+    cols = ["name", "adp", "n", "mean_slot", "median_slot", "p90_slot", "max_slot",
+            *[f"past_{int(p)}" for p in past]]
+    if panel.empty:
+        return pd.DataFrame(columns=cols)
+    p = panel.assign(_adp=pd.to_numeric(panel["adp"], errors="coerce"),
+                     _slot=_picks(panel["slot_rounds"])).dropna(subset=["_adp", "_slot"])
+    g = p.groupby(["gsis_id", "name"], sort=False)
+    out = pd.DataFrame({
+        "adp": g["_adp"].mean(), "n": g.size(), "mean_slot": g["_slot"].mean(),
+        "median_slot": g["_slot"].median(), "p90_slot": g["_slot"].quantile(0.90),
+        "max_slot": g["_slot"].max(),
+        **{f"past_{int(x)}": g["_slot"].apply(lambda s, x=x: float((s > x).mean())) for x in past},
+    }).reset_index().drop(columns="gsis_id")
+    return out.nsmallest(top_n, "adp")[cols].reset_index(drop=True)
+
+
+def round1_split(panel: pd.DataFrame, *, rnd: int = 1) -> pd.DataFrame:
+    """Mean |drift| in the first vs the second half of a round, in 10-team picks.
+
+    ⚠ **Split by position *within* the round, never by raw pick number.** The corpus runs 8- to
+    14-team rooms, so "pick ≤ 5" is the first half of a 10-team round and the first 42 % of a
+    12-team one; a raw-pick split silently compares different fractions of the round on the two
+    sides. The corpus rises across round 1 and a flat sim is the defect T24 names — that claim is
+    only readable once both sides are measured at the same point in the round.
+    """
+    cols = ["half", "n", "mean_abs", "p90_abs"]
+    if panel.empty:
+        return pd.DataFrame(columns=cols)
+    p = panel[panel["round"] == int(rnd)]
+    if p.empty:
+        return pd.DataFrame(columns=cols)
+    teams = pd.to_numeric(p["teams"], errors="coerce")
+    frac = (p["pick_no"] - (int(rnd) - 1) * teams) / teams      # (0, 1] through the round
+    d = _picks(p["drift"]).abs()
+    rows = []
+    for label, mask in (("first_half", frac <= 0.5), ("second_half", frac > 0.5)):
+        s = d[mask].dropna()
+        if s.empty:
+            continue
+        rows.append({"half": label, "n": int(len(s)), "mean_abs": float(s.mean()),
+                     "p90_abs": float(s.quantile(0.90))})
+    return pd.DataFrame(rows, columns=cols)
+
+
+def gate_elite_landing(sim: pd.DataFrame, corpus: pd.DataFrame, *,
+                       band: tuple[float, float] = LANDING_BANDS[0],
+                       past: float = LANDING_GATE_PAST,
+                       margin: float = LANDING_GATE_MARGIN) -> dict:
+    """**Bar #1's signed companion**: consensus-top-tier players must land where they really land.
+
+    Two components, both one-sided in the direction of the defect:
+
+    ``fall``   the share of the top band clearing ``past`` may exceed the corpus's own share by at
+               most ``margin``. Falling *less* than reality is not what T24 is about.
+    ``shape``  |drift| must **rise** across round 1, as it does in the corpus. A flat round 1 is the
+               within-round heterogeneity a round-indexed curve cannot express.
+
+    Stated against the corpus rather than a chosen number, so passing it is a claim about the human
+    corpus and not about anyone's taste — the same construction as :func:`gate_elite_fall`.
+    """
+    key = f"past_{int(past)}"
+    s = landing_profile(sim, bands=[band]).set_index("band")
+    c = landing_profile(corpus, bands=[band]).set_index("band")
+    if s.empty or c.empty:
+        return {"pass": False, "reason": "no picks in the top band on one side"}
+    b = s.index[0]
+    sim_share, corpus_share = float(s.loc[b, key]), float(c.loc[b, key])
+    fall_ok = sim_share <= corpus_share + margin
+
+    ss, cs = round1_split(sim), round1_split(corpus)
+    shape = {}
+    if len(ss) == 2 and len(cs) == 2:
+        ss, cs = ss.set_index("half"), cs.set_index("half")
+        sim_rise = float(ss.loc["second_half", "mean_abs"] - ss.loc["first_half", "mean_abs"])
+        corpus_rise = float(cs.loc["second_half", "mean_abs"] - cs.loc["first_half", "mean_abs"])
+        shape = {"sim_rise": sim_rise, "corpus_rise": corpus_rise,
+                 "shape_pass": bool(sim_rise > 0) if corpus_rise > 0 else True}
+    return {"pass": bool(fall_ok and shape.get("shape_pass", True)),
+            "band": str(b), "metric": key, "sim_share": sim_share,
+            "corpus_share": corpus_share, "margin": float(margin),
+            "sim_median_slot": float(s.loc[b, "median_slot"]),
+            "corpus_median_slot": float(c.loc[b, "median_slot"]),
+            "fall_pass": bool(fall_ok), "n_sim": int(s.loc[b, "n"]), "n_corpus": int(c.loc[b, "n"]),
+            **shape}
+
+
+# ------------------------------------------------------------------------------------------------
+# T23 — roster legality, stated over the WHOLE starting lineup
+# ------------------------------------------------------------------------------------------------
+def board_supply(board: pd.DataFrame) -> dict[str, int]:
+    """How many draftable players a board carries per canonical position."""
+    if board.empty:
+        return {}
+    col = "pos" if "pos" in board.columns else "position"
+    return board[col].map(canon_pos).value_counts().to_dict()
+
+
+def roster_legality(log: pd.DataFrame, *, slots: RosterSlots | None = None,
+                    supply: dict[int, dict[str, int]] | None = None,
+                    n_teams: int = TEAMS_REF) -> dict:
+    """Can every seat field its **whole** starting lineup? Reads the pick log, not the panel.
+
+    ★ **The bar is the contract, not the symptom.** T20 shipped a deadline filter whose done-bar
+    was *"60/60 seats finish with ≥1 K and ≥1 DST"* — the two positions that ticket was written
+    about. It passed while the same filter left **TE** unguarded and 12.2 % of seats finished
+    unable to fill the dedicated TE slot. A guarantee stated as *no unfillable starting slot* has
+    to be tested against every slot, so demand comes from :meth:`RosterSlots.base_demand` rather
+    than a hand-written list, and a roster change is picked up automatically.
+
+    FLEX is not counted because it is excluded from ``base_demand`` by construction — it is the one
+    slot a surplus can flow *into*. ⚠ It does not flow the other way: a seat holding one RB cannot
+    fill ``RB/RB``, so RB/WR belong in the demand too. The old exemption was unsound for them as
+    well; it was merely never binding, because RB/WR demand is met long before the deadline.
+
+    ★ **Pass ``supply`` or the bar asserts something no code can satisfy.** Historical FFC boards
+    are thin at the ends: 2022 carries **5** kickers and **6** defenses for a ten-seat room, 2017
+    carries 8 kickers. Half those seats *cannot* finish with a kicker, and no deadline filter can
+    conjure one. Measured over 2017–2024 + 2026 the raw illegal share is 23.2 %, of which K (7.8 %)
+    and DST (4.4 %) match the supply shortfall to three decimals — i.e. they are **not defects**.
+    ``supply`` maps season to :func:`board_supply`, and the ``avoidable`` figures are what a fix is
+    accountable for. *A bar that cannot be passed teaches a team to ignore it.*
+    """
+    need = dict((slots or RosterSlots()).base_demand())
+    if log.empty:
+        return {"n_seats": 0, "n_illegal": 0, "share_illegal": 0.0, "by_position": {},
+                "by_personality": {}, "starter_min": need}
+    keys = [k for k in ("season", "draft_id", "team") if k in log.columns]
+    # ⚠ `simulator.canon_pos`, NOT `panel._canon_pos` — the panel's canonicaliser is an *offense*
+    # one and maps K/DST to NaN, so using it here reports every seat as missing a kicker it
+    # actually drafted. A missing entity and a failed join look identical (the `LA`/`LAR` lesson);
+    # a legality bar is exactly where that mistake is invisible, because "0 kickers" is plausible.
+    counts = (log.assign(_pos=log["pos"].map(canon_pos))
+              .groupby(keys)["_pos"].value_counts().unstack(fill_value=0))
+    for p in need:
+        if p not in counts.columns:
+            counts[p] = 0
+    short = pd.DataFrame({p: counts[p] < n for p, n in need.items()}, index=counts.index)
+    bad = short.any(axis=1)
+    out = {"n_seats": int(len(counts)), "n_illegal": int(bad.sum()),
+           "share_illegal": float(bad.mean()),
+           "by_position": {p: float(short[p].mean()) for p in need},
+           "starter_min": need}
+
+    if supply is not None and "season" in log.columns:
+        # a season's board serves `floor(available / demand)` seats at that position; the rest are
+        # short for a reason no pick policy can fix, so they are excluded from the avoidable count
+        seasons = counts.index.get_level_values("season")
+        unavoidable = pd.DataFrame(
+            {p: [max(0, int(n_teams) - supply.get(int(s), {}).get(p, 0) // n)
+                 for s in seasons] for p, n in need.items()}, index=counts.index)
+        # within a season, the seats that go short ARE the ones the board could not serve, so a
+        # per-position count comparison is exact even though the identity of the seats is not
+        by_season = short.groupby(seasons).sum()
+        cap = unavoidable.groupby(seasons).max()
+        n_draft = counts.groupby(seasons).size() / int(n_teams)
+        avoidable = (by_season - cap.mul(n_draft, axis=0)).clip(lower=0)
+        out["unavoidable_by_position"] = {p: float(cap[p].mul(n_draft).sum() / len(counts))
+                                          for p in need}
+        out["avoidable_by_position"] = {p: float(avoidable[p].sum() / len(counts)) for p in need}
+        out["share_avoidable"] = float(sum(out["avoidable_by_position"].values()))
+    if "seat_personality" in log.columns:
+        seat = log.groupby(keys)["seat_personality"].first()
+        out["by_personality"] = {str(k): float(v) for k, v in
+                                 bad.groupby(seat).mean().sort_values(ascending=False).items()}
+    else:
+        out["by_personality"] = {}
+    return out
 
 
 def pool_rank(panel: pd.DataFrame) -> pd.Series:
@@ -565,6 +820,41 @@ def personality_table(panel: pd.DataFrame) -> pd.DataFrame:
         "mean_drift_picks": g["mean_drift_picks"].mean(),
         "harvest_picks": g["harvest_picks"].mean(),
     }).reset_index().sort_values("mean_drift_picks", ascending=False)
+
+
+#: Round buckets the per-personality readout is split on. The last one is separated because a seat's
+#: reported reach there is mostly *when it took its K and DST*, not how it drafts.
+ROUND_BUCKETS: tuple[tuple[int, int, str], ...] = (
+    (1, 3, "R1-3"), (4, 6, "R4-6"), (7, 10, "R7-10"), (11, 13, "R11-13"), (14, 15, "R14-15"))
+
+
+def personality_buckets(panel: pd.DataFrame, *, value: str = "pool_rank",
+                        buckets: Sequence[tuple[int, int, str]] = ROUND_BUCKETS) -> pd.DataFrame:
+    """Per-personality ``pool_rank`` by round bucket — **the reporting rule T25 adopted**.
+
+    ★ **Lead with this, not with a 15-round mean reach.** A mean reach over all 15 rounds is
+    dominated by late-board ADP noise — Tyler Allgeier at ADP 167 taken at pick 119 scores **+48**
+    and means nothing, because nobody else was taking Allgeier at 119 either — and by *when* a seat
+    takes its K/DST. Reporting it that way is what produced the 2026-07-28 "the reacher reaches less
+    than balanced" objection, which the batch then contradicted overall while revealing a **real**
+    inversion confined to rounds 1–3. The bucket split is what makes both facts visible at once.
+
+    ``value="drift_picks"`` gives the same table in reach units, for the cases where picks are the
+    question being asked.
+    """
+    if panel.empty or "seat_personality" not in panel.columns:
+        return pd.DataFrame()
+    p = panel[panel["seat_personality"].notna()].copy()
+    if p.empty:
+        return pd.DataFrame()
+    p["pool_rank"] = pool_rank(p)
+    p["drift_picks"] = _picks(p["drift"])
+    edges = [b[0] - 1 for b in buckets] + [buckets[-1][1]]
+    p["bucket"] = pd.cut(p["round"], edges, labels=[b[2] for b in buckets])
+    out = p.pivot_table(index="seat_personality", columns="bucket", values=value,
+                        aggfunc="mean", observed=True)
+    out["overall"] = p.groupby("seat_personality")[value].mean()
+    return out.sort_values("overall")
 
 
 def compare_profiles(sim: pd.DataFrame, corpus: pd.DataFrame, *,

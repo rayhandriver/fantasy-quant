@@ -12,7 +12,9 @@ cannot be the ADP coefficient wearing a disguise.
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
+import duckdb
 import numpy as np
 import pandas as pd
 import pytest
@@ -20,6 +22,7 @@ import pytest
 from fantasy_quant.draft.enrichment import (
     COS_WEIGHTS,
     DIST_COLS,
+    LIVE_VOL_COLS,
     SHAPE_COLS,
     SHAPE_METHODS,
     VALUE_COLS,
@@ -28,6 +31,8 @@ from fantasy_quant.draft.enrichment import (
     residual_shape,
     role_shares,
     shape_inputs,
+    volatility_source,
+    weekly_seasons,
 )
 from fantasy_quant.draft.opponent_model import _ADP_SCALE, ALL_FEATURES, OpponentModel
 from fantasy_quant.draft.personalities import (
@@ -196,6 +201,77 @@ def test_cos_weights_are_a_bounded_ordered_preference():
     assert all(0.0 <= v <= 1.0 for v in COS_WEIGHTS.values())
     assert (COS_WEIGHTS["team_change"] > COS_WEIGHTS["room_change"]
             > COS_WEIGHTS["context_only"])
+
+
+# ------------------------------------------------------------------------------------------------
+# T22 — the live boom/bust pair
+# ------------------------------------------------------------------------------------------------
+def _weekly_con(seasons):
+    """An in-memory ``weekly`` stub with just the columns :func:`weekly_seasons` reads."""
+    con = duckdb.connect(":memory:")
+    con.execute("CREATE TABLE weekly (season INTEGER, season_type VARCHAR)")
+    con.executemany("INSERT INTO weekly VALUES (?, 'REG')", [[int(s)] for s in seasons])
+    con.execute("INSERT INTO weekly VALUES (2099, 'POST')")   # never a source: not a REG season
+    return con
+
+
+def test_volatility_source_is_the_season_before_the_board_not_the_training_window():
+    """T22 in one assertion: the rates a 2026 board shows come from 2025, not from ``max(DEV)``."""
+    con = _weekly_con(range(2014, 2026))
+    assert volatility_source(con, 2026) == 2025
+    assert volatility_source(con, 2022) == 2021, "a backtest board reads its own prior season"
+    assert weekly_seasons(con)[-1] == 2025
+
+
+def test_volatility_source_refuses_a_stale_season_rather_than_reaching_back():
+    """The guard T17 earned and T22 repeats: a four-year-old rate is a defect, not a fallback."""
+    con = _weekly_con(range(2014, 2023))                      # data stops at 2022, board is 2026
+    with pytest.raises(ValueError, match="max_lag"):
+        volatility_source(con, 2026)
+    assert volatility_source(con, 2026, max_lag=4) == 2022, "still available if asked knowingly"
+    # a *different* exception for a legitimate absence — the earliest season in the store has no
+    # prior season, and `enrich_board` answers that by omitting the columns rather than failing.
+    with pytest.raises(LookupError, match="no realized weekly season"):
+        volatility_source(con, 2014)
+
+
+def test_live_volatility_columns_join_and_leave_unseen_players_nan():
+    """A player we have never seen play is ``NaN``, never 0.0 — the whole point of T22.
+
+    The frozen ``bust_prob`` fills those rows with 0.0, which reads as *never busts* and is worst
+    for exactly the rookies a floor-seeking manager should distrust most.
+    """
+    b = _raw_board(6)
+    live = pd.DataFrame({"player_key": ["00-0000000", "00-0000003"],
+                         "boom_prob_live": [0.45, 0.05], "bust_prob_live": [0.10, 0.60]})
+    out = attach_enrichment(b, live_vol=live)
+    assert out.loc[0, "bust_prob_live"] == 0.10
+    assert out["bust_prob_live"].isna().sum() == 4
+    assert (out["bust_prob_live"].fillna(-1) != 0.0).all(), "no fabricated zero"
+    for c in LIVE_VOL_COLS:
+        assert c not in attach_enrichment(b).columns, "absent source -> absent column"
+
+
+def test_the_live_pair_is_carried_onto_the_drafting_board():
+    """It has to survive ``_prepare_board`` or the human never sees it (the CLI reads it)."""
+    assert set(LIVE_VOL_COLS) <= set(PASSTHROUGH_COLS)
+    board = _enriched_board(60)
+    board["boom_prob_live"] = np.linspace(0.0, 0.5, len(board))
+    board["bust_prob_live"] = np.linspace(0.5, 0.0, len(board))
+    st = simulate_draft(board, n_teams=10, rounds=3, seed=1)
+    for c in LIVE_VOL_COLS:
+        assert c in st.board.columns
+
+
+def test_no_shipped_personality_weights_the_stale_pair_or_the_live_one():
+    """T22 stays latent by construction: the fix is a *display* column, not a new signal.
+
+    A live boom/bust would be a perfectly reasonable thing to weight one day — but weighting it is
+    a modelling decision with its own bar, and this asserts nobody slipped it in as a side effect.
+    """
+    for name, pers in personalities().items():
+        for c in ("boom_prob", "bust_prob", *LIVE_VOL_COLS):
+            assert c not in (pers.signal_weights or {}), f"{name} weights {c}"
 
 
 def test_enrichment_coverage_reports_fill_rate():
@@ -842,6 +918,39 @@ def test_context_columns_are_weightable_and_default_off():
 # ==================================================================================================
 # 16.14R steps 4-7 — the reworked seats
 # ==================================================================================================
+def test_every_seat_inherits_the_room_ceiling():
+    """★ T25: the ceiling is a floor of discipline, not a per-seat privilege.
+
+    Until 2026-07-28 only ``reacher`` and ``value_hawk`` carried a ``ReachBudget``, so
+    ``CORPUS_REACH_P95[0]`` = 14.6 picks bound the two seats that had been *given* discipline and
+    nothing bound ``balanced`` — 4 of 10 seats in ``REALISTIC_ROOM``. The asymmetry was the bug.
+    """
+    from fantasy_quant.draft.personalities import (
+        CORPUS_REACH_P95,
+        ROOM_CEILING,
+        effective_budget,
+        personalities,
+        unbounded_budget,
+    )
+
+    lib = personalities()
+    st = simulate_draft(_enriched_board(120, seed=1), n_teams=10, rounds=15, seed=0)
+    st.log = []
+
+    st.overall_pick = 5                                        # round 1
+    for name, p in lib.items():
+        cap = effective_budget(p).cap(st, 0)
+        assert cap <= CORPUS_REACH_P95[0] + 1e-9, f"{name} may reach past the corpus p95"
+    # a seat with no budget of its own gets the room's, not a licence
+    assert effective_budget(lib["balanced"]) is ROOM_CEILING
+    assert lib["reacher"].reach_budget.cap(st, 0) == 8.0       # its own early clamp, kept
+    # ...and the room ceiling is ALL an inheriting seat gets: no count tiers, no early clamp
+    st.overall_pick = 45                                       # round 5
+    assert ROOM_CEILING.cap(st, 0) == CORPUS_REACH_P95[4]
+    # an explicit opt-out still exists, for A/B controls only
+    assert np.isinf(unbounded_budget().cap(st, 0))
+
+
 def test_reach_budget_counts_from_the_draft_log_not_from_memory():
     """The budget is stateful per seat but re-derived every pick, so a clone cannot diverge."""
     from fantasy_quant.draft.personalities import ReachBudget
@@ -922,3 +1031,186 @@ def test_realistic_room_has_one_autopilot_and_ten_seats():
     assert REALISTIC_ROOM.count("autopilot") == 1, "two autopilot seats manufacture their own spill"
     assert "homer" not in REALISTIC_ROOM, "16.14R retired the homer in favour of the value hawk"
     assert "value_hawk" in REALISTIC_ROOM
+
+
+# --------------------------------------------------- T24: the per-seat private board (2026-07-28)
+def _stdev_board(n: int = 120, seed: int = 0) -> pd.DataFrame:
+    """A board whose ``stdev`` is deliberately **flat in ADP** — so a stdev effect cannot be depth
+    wearing a disguise, the same construction ``_enriched_board`` uses for the signal columns."""
+    rng = np.random.default_rng(seed)
+    b = _raw_board(n)
+    b["stdev"] = rng.uniform(1.0, 12.0, n)
+    return b
+
+
+def test_private_adp_is_off_by_default_and_without_a_stdev_column():
+    """``κ=0`` and an ADP-only board both mean *read the public board*, not *invent certainty*."""
+    from fantasy_quant.draft.personalities import PRIVATE_KAPPA, private_adp
+
+    g = np.random.default_rng(0)
+    assert private_adp(_stdev_board(20), 0.0, g) is None
+    assert private_adp(_raw_board(20), 1.0, g) is None, "no stdev column -> no private opinion"
+    assert PRIVATE_KAPPA >= 0.0
+
+
+def test_private_adp_scales_with_the_players_own_stdev():
+    """The mechanism T24 is: the *player's* disagreement sets the width, not the round.
+
+    Corpus law: |drift| ≈ 2 × ``adp_stdev``. So the draw has to be proportional to ``stdev``, and a
+    board-wide constant offset — the thing a round-indexed curve gives you — must **not** fit here.
+    """
+    from fantasy_quant.draft.personalities import private_adp
+
+    b = _stdev_board(4000, seed=3)
+    priv = private_adp(b, 1.5, np.random.default_rng(7))
+    dev = (priv - b["adp"].to_numpy(float)) / b["stdev"].to_numpy(float)
+    assert abs(float(dev.std()) - 1.5) < 0.08, "the draw is not κ sd of the player's own stdev"
+    assert abs(float(dev.mean())) < 0.08, "a private board is a disagreement, not a systematic tilt"
+    # low-stdev players move less than high-stdev ones: the within-round separation depth lacks
+    raw = np.abs(priv - b["adp"].to_numpy(float))
+    lo = raw[b["stdev"] < 3.0].mean()
+    hi = raw[b["stdev"] > 9.0].mean()
+    assert hi > 2.5 * lo, f"stdev terciles must separate ({lo:.2f} vs {hi:.2f})"
+
+
+def test_private_adp_clips_the_tail_it_was_told_not_to_chase():
+    """T24's own warning: the corpus far tail is a *data* question (post-snapshot injuries, keeper
+    rooms), so the body is fitted and the tail is bounded rather than reproduced."""
+    from fantasy_quant.draft.personalities import PRIVATE_CLIP, private_adp
+
+    b = _stdev_board(5000, seed=11)
+    priv = private_adp(b, 1.0, np.random.default_rng(1))
+    dev = (priv - b["adp"].to_numpy(float)) / b["stdev"].to_numpy(float)
+    assert np.abs(dev).max() <= PRIVATE_CLIP + 1e-9
+
+
+def test_kappa_zero_reproduces_the_pre_t24_room_pick_for_pick():
+    """The repo's *nothing moves until a caller ships a fitted parameter* rule, executed.
+
+    Not a style point: every committed 16.14R/T15/T23/T25 number was measured at κ=0, so a κ=0 run
+    that differed by one pick would silently invalidate the before column of every before/after.
+    """
+    b = _stdev_board(120, seed=2)
+    p = personalities()["balanced"]
+    off = simulate_draft(b, n_teams=10, rounds=6, seed=5,
+                         opponent_pick_fn=make_opponent_pick_fn(_model(), p, kappa=0.0))
+    on = simulate_draft(b, n_teams=10, rounds=6, seed=5,
+                        opponent_pick_fn=make_opponent_pick_fn(_model(), p, kappa=1.5))
+    base = [r["player_key"] for r in off.log]
+    assert base == [r["player_key"] for r in simulate_draft(
+        b, n_teams=10, rounds=6, seed=5,
+        opponent_pick_fn=make_opponent_pick_fn(_model(), p, kappa=0.0)).log]
+    assert base != [r["player_key"] for r in on.log], "κ>0 must actually reach the pick path"
+
+
+def test_a_seat_holds_one_opinion_for_a_whole_draft():
+    """Drawn once per seat per draft — a manager who re-rolls his board every pick is just noise.
+
+    Pinned by construction: two drafts from the same seed must agree pick-for-pick (the draw is
+    inside the seeded stream), and the same pick function re-used on a *new* draft must redraw.
+    """
+    b = _stdev_board(120, seed=6)
+    p = personalities()["balanced"]
+
+    def run(seed: int, fn=None):
+        return [r["player_key"] for r in simulate_draft(
+            b, n_teams=10, rounds=5, seed=seed,
+            opponent_pick_fn=fn or make_opponent_pick_fn(_model(), p, kappa=1.5)).log]
+
+    assert run(3) == run(3)
+    shared = make_opponent_pick_fn(_model(), p, kappa=1.5)
+    assert run(3, shared) == run(3, shared), "a reused pick fn must not leak the first draft's draw"
+    assert run(3) != run(4)
+
+
+def test_autopilot_gets_no_private_board_however_big_kappa_is():
+    """κ is scaled by ``width_mult``, so the seat with no opinions does not acquire one.
+
+    T24 states this as ``autopilot κ = 0``; expressing it through ``width_mult`` means it cannot
+    drift apart from the seat's other width settings later.
+    """
+    b = _stdev_board(120, seed=8)
+    auto = personalities()["autopilot"]
+    assert auto.width_mult == 0.0
+    picks = [[r["player_key"] for r in simulate_draft(
+        b, n_teams=10, rounds=5, seed=1,
+        opponent_pick_fn=make_opponent_pick_fn(_model(), auto, kappa=k)).log] for k in (0.0, 3.0)]
+    assert picks[0] == picks[1], "an autopilot with a private board is not an autopilot"
+
+
+def test_a_private_board_cannot_buy_a_way_past_the_public_reach_ceiling():
+    """T25's discipline is measured in **public** picks, so it is applied before the private view.
+
+    The failure this pins: reading the seat's own board into the budget would let a κ draw of −20
+    picks justify a 20-pick public reach, and the room-wide ceiling would quietly stop binding.
+    """
+    from fantasy_quant.draft.personalities import CORPUS_REACH_P95
+
+    b = _stdev_board(200, seed=9)
+    p = replace(personalities()["reacher"], width_mult=2.0)
+    st = simulate_draft(b, n_teams=10, rounds=8, seed=2,
+                        opponent_pick_fn=make_opponent_pick_fn(_model(), p, kappa=3.0))
+    log = st.pick_log()
+    log = log[log["team"] != st.your_team]
+    reach = log["adp"].to_numpy(float) - log["overall_pick"].to_numpy(float)
+    ceil = np.array([CORPUS_REACH_P95[min(int(r), 15) - 1] for r in log["round"]])
+    assert (reach <= ceil + 1e-6).all(), "the private board escaped the public ceiling"
+
+
+def test_width_curve_base_is_the_round_one_width_and_round_trips():
+    """``base`` is the level, ``gamma`` the shape — one knob could not set both ends (T15)."""
+    from fantasy_quant.draft.personalities import WidthCurve
+
+    c = WidthCurve(gamma=0.8, base=0.5)
+    assert c.width(1) == pytest.approx(0.5)
+    assert c.width(15) == pytest.approx(0.5 * 15 ** 0.8)
+    assert WidthCurve.from_dict(c.to_dict()) == c
+    assert WidthCurve.from_dict({"kind": "power", "gamma": 0.8}).base == 1.0, "pre-T24 artifacts"
+    with pytest.raises(ValueError, match="implausible WidthCurve base"):
+        WidthCurve(base=0.0)
+
+
+def test_the_boards_own_stdev_reaches_the_pick_path():
+    """T24's ticket in one assertion: the crowd's disagreement has to *arrive* to be usable.
+
+    ``stdev`` sat on every board this project has ever built and ``_prepare_board`` dropped it, so
+    the room's only notion of width was the round. A column that never reaches the pick path is a
+    measurement nobody can act on — 16.8 had already scored it at +0.35 rounds/SD.
+    """
+    assert "stdev" in PASSTHROUGH_COLS
+    b = _stdev_board(60)
+    st = simulate_draft(b, n_teams=10, rounds=5, seed=1)
+    assert "stdev" in st.board.columns
+    src = b.set_index("name")["stdev"]
+    for lbl in st.board.index[:10]:
+        assert st.board.loc[lbl, "stdev"] == pytest.approx(src[st.board.loc[lbl, "player_name"]])
+
+
+def test_the_shipped_artifact_carries_kappa_and_the_width_base(tmp_path):
+    """The T24 contract: both knobs travel **with β**, and a pre-T24 artifact is the old room.
+
+    ★ κ is written next to the coefficients rather than kept in code because it was chosen against
+    a particular width curve — and because the measurement that **rejected** it (the private board
+    is monotonically harmful: 18.8 / 19.7 / 26.6 % elite-past-4 at κ = 0/1/2) belongs beside the
+    parameter, where the next person to reach for it will read it.
+    """
+    import json
+
+    from fantasy_quant.draft import mock as mock_mod
+
+    art = json.loads(Path("analysis/phase11_opponent_model.json").read_text())
+    assert float(art["private_board"]["kappa"]) == 0.0, "the private board ships OFF (T24 verdict)"
+    assert "REJECTED" in art["private_board"]["verdict"]
+
+    shipped = mock_mod.load_opponent_model()
+    assert shipped.private_kappa == 0.0
+    assert shipped.width_curve.base == 0.6 and shipped.width_curve.gamma == 1.0
+
+    # a pre-T24 artifact has neither key and must reproduce the pre-T24 room exactly
+    old = dict(art)
+    old.pop("private_board")
+    old["width_curve"] = {"kind": "power", "gamma": 0.8, "max_round": 15}
+    p = tmp_path / "pre_t24.json"
+    p.write_text(json.dumps(old))
+    m = mock_mod.load_opponent_model(p)
+    assert m.private_kappa == 0.0 and m.width_curve.base == 1.0 and m.width_curve.gamma == 0.8

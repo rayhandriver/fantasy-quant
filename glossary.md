@@ -1635,3 +1635,151 @@ about players **sliding**.
 argmax is a noise draw. Rule adopted: *an unresolved choice does not buy itself a wider licence* —
 default to the tighter constraint and say the sweep failed to resolve. Sibling of T15's
 resolution-limited title objective and of 9.5's 60-sim finding.
+
+**signed companion (to an absolute-value bar)** — a second measurement that preserves direction,
+required wherever a bar is stated over |drift| or |reach|. Round-1 mean |reach| reads **2.91 sim vs
+2.87 corpus** — a clean pass — while the consensus #2 lands at a **median pick of 4** and clears
+pick 4 42 % of the time against a realized 12 %, because *a reach and a fall have the same absolute
+value and cancel inside the mean*. The companion here is a **landing-spot distribution for the
+consensus top tier**. T15's *"an aggregate metric cannot see an impossible event"* one level down:
+there the aggregation was over **drafts**, here it is over **direction**, inside a metric that
+already passes. (T24, 2026-07-28.)
+
+**consensus dispersion as a width scale (`adp_stdev`)** — the per-player standard deviation the ADP
+board already carries (Bijan 0.7 · Gibbs 0.8 · Lamb 2.1 · a round-11 flier ~11), as opposed to
+`WidthCurve`, which indexes width by **round** and therefore gives every round-1 pick the same
+width. Measured on 1,144 corpus drafts: **|drift| ≈ 2 × adp_stdev**, stable through the usable range
+(the decay above stdev 12 is **pool exhaustion**, T15's own finding arriving independently);
+Spearman with |drift| **0.484** against **0.535** for round. Decisive property: it separates *inside*
+a round — within rounds 1–3 the stdev terciles drift **2.11 / 3.33 / 8.91**, a 4.2× spread no
+round-indexed curve can express. ⚠ **That measurement is sound and the mechanism built on it still
+failed** — see *private board* below: the same column that separates drift terciles at *board scale*
+is, at the *top* of the board, the same size as the gaps it would perturb. `stdev` joined
+`simulator.PASSTHROUGH_COLS` in T24 and the pick path can now read it (κ = 0 by default). Until then
+**nothing in `draft/` read it** — it appeared only in `mock.py`, copied onto the *output* panel for
+reporting, while 16.8 had already scored it as a drift driver (+0.35/SD). *The finding existed in
+the repo for a phase and a half and was never fed back into the room; a column that never reaches
+the pick path is a measurement nobody can act on.*
+
+**private board (per-seat board perturbation)** — each seat drafting off its own draw
+`adp_seat = adp + κ_seat · adp_stdev · ε`, rather than all ten seats reading one board and deviating
+from it by noise. The object T15 handed forward (*"the late-round narrowness needs per-seat board
+perturbation, not another width parameter"*) and 16.14R deferred. **T24 built it and REJECTED it
+(2026-07-28): measured monotonically HARMFUL** on the objection it was designed for — seating-
+marginalized elite-past-pick-4 runs **18.8 / 19.7 / 26.6 %** at κ = 0 / 1 / 2. **★ The reason
+generalizes: at the top of the board `adp_stdev` (0.7–2.5) is the same size as the ADP gaps it
+perturbs (~0.2 picks), so the draw does not *create* tier structure, it destroys the ordering that
+was already there** — the exact mechanism that makes an elite fall. The corpus law behind the idea
+(`|drift| ≈ 2 × adp_stdev`) is real but describes **realized drift**, an outcome of ten seats
+interacting; re-injecting it as **per-seat perception** is a different object. *A relationship
+measured on outcomes is not a specification for the mechanism that produced them.* Implementation
+kept, **default-off** (`κ = 0`), verdict recorded on the model artifact beside the parameter; drawn
+once per seat per draft, `κ_seat = κ · width_mult`, applied to the **utility** only (the band is an
+estimation condition and the reach ceiling is stated in *public* picks). Distinguish from
+`width_mult` (how widely a seat strays from a *shared* board) and `ReachBudget` (how often).
+
+**a knob that sets the level and a knob that sets the shape (`WidthCurve.base` vs `gamma`)** — T15
+established that one parameter cannot set both ends of the depth profile; T24 needed the same split
+one level down. `width(round) = base · round^gamma`: `base` is how wide round 1 is, `gamma` how fast
+width grows with depth. They were one number while depth was the only lever. **This — not the
+private board it was added to support — is what closed T24**: `base 1.0·γ0.8 → 0.6·γ1.0` takes
+consensus elites past pick 4 from **25.8 % → 15.3 %** (realized 13.1 %) and bar 2 p95/past-10 from
+17.0 / 28.8 % → **16.0 / 25.2 %**, while γ keeps **90 %** of the old round-15 width. Cost, stated:
+room dispersion −7.1 % → **−11.4 %** (bar 5 allows ±20 %), because narrowing the top takes spread out
+of everywhere and only `gamma` gives any back; every other headline, profile distance included
+(0.107 → 0.089), moves toward the corpus. **The ticket diagnosed the right symptom and the wrong cause — round 1 was
+simply too wide, not the wrong shape.** (2026-07-28.)
+
+**a relationship measured on outcomes is not a specification for the mechanism** — the corpus's
+`|drift| ≈ 2 × adp_stdev` is a fact about *realized* draft slots, which ten interacting seats
+produce jointly. T24 fed it back as each seat's *private perception* noise and made the thing it was
+built to fix **worse at every setting**. Before turning a measured regularity into a model
+component, ask which level it lives at: an equilibrium outcome, or an individual's belief. Sibling
+of *"the level, not the residual"* (16.8) and of *"the problem was the SCALE, not the fit"* (T19).
+(T24, 2026-07-28.)
+
+**moving two knobs together credits the interesting one** — every T24 sweep row changed
+`WidthCurve.base` **and** κ, so the width narrowing wore the private board's credit for three runs
+and a wrong config shipped on it. The row that settled the ticket (`base 0.7, κ 0`) was never in any
+grid; it existed only because the verdict looked wrong. *If two changes ship together, the one you
+were excited about gets the credit — put the isolating row in the grid from the start.*
+(T24, 2026-07-28.)
+
+**seating confound (fixed-room batch)** — a batch of simulated drafts that holds **one** seat→slot
+arrangement across every seed measures *where the reachy seats happen to sit* as if it were a
+property of the model. Found while calibrating T24: with the same code, the round-1 half-split
+"rises" 1.26 at room seed 17 and **falls to 0.82** at room seed 18, and the top-band past-pick-4
+share reads 23.8 % vs 17.1 %. The human corpus averages over 1,144 independently-seated drafts, so
+the sim has to marginalize seating too or the two sides are not the same statistic —
+`steps/mock_room_bars.py --shuffle-room` re-seats every seed. Same family as *derived-vs-curated*
+and the F.5 hardcoded label: **the comparison measures whatever the two sides do not share.**
+(T24, 2026-07-28.)
+
+**a bar written from the symptom passes the general defect** — T20's done-bar was *"60/60 seats
+finish with ≥1 K and ≥1 DST"*, the two positions the ticket was written about. It passed while the
+same deadline filter left **TE** unguarded, so 12.2 % of seats finished with no legal lineup. State
+a guarantee's bar against the **whole contract** ("no unfillable starting slot"), not against the
+instances that motivated the ticket. Sibling of 16.14's *"state your bars as oppositions"* and of
+T15's scalar-gate-over-a-curve. (T23, 2026-07-28.)
+
+**`pool_rank` over mean reach (reporting rule)** — the per-personality summary leads with
+`pool_rank`, split **R1–13 / R14–15**. A 15-round mean reach is dominated by late-board ADP noise
+(Tyler Allgeier at ADP 167 taken at pick 119 scores **+48** and means nothing — nobody else was
+taking him at 119 either) and by *when* a seat takes K/DST. Reporting it that way is what produced
+the 2026-07-28 "the reacher reaches less than balanced" objection, which the batch then contradicted
+(reacher 13.40 vs balanced 11.74) while revealing a **real** depth-localized inversion in R1–3.
+
+**a sweep whose winner sits at the edge of the grid has not finished** — T24 shipped a config twice
+before the grid bracketed it: `base 0.7 · κ 2` (chosen on a 4-season subsample, then failed by the
+8-season one) and `base 0.5 · κ 0` (chosen because 0.5 and 0.7 were the only points measured). The
+un-sampled midpoint **0.6** passes the same gates while sitting closer to the corpus on *every*
+secondary — round-1 mean 2.73 vs 2.51 against a realized 2.87, dispersion −11.4 % vs −17.4 %,
+profile distance 0.0825 vs 0.1544. **A grid samples points; a dial needs bracketing.** If the best
+row is at an end of the range, the range was the answer's constraint, not the data.
+(T24, 2026-07-28.)
+
+**`db.deterministic_reads`** (T13's fix, 2026-07-29) — a context manager that pins DuckDB to one
+thread for a block of reads and restores the previous setting. Exists because a parallel `SUM`/`AVG`
+adds its partitions in whatever order the threads finish and floating-point addition is not
+associative, so the Phase-5 assembler's training frames differed in their last bits from process to
+process, the fits' coefficients differed at ~1e-11, and the sampler turned that into visibly
+different per-player draws. Wraps the assembler's reads wholesale rather than hunting the offending
+aggregate because the measured cost is **negative** (10.2 s → 9.1 s).
+
+**the noisy stage is not always the stochastic one** (T13, 2026-07-29) — every hypothesis on file
+for the non-reproducible cloud involved randomness (an Iman–Conover permutation, a seed, an rng);
+the cause was float arithmetic inside the database, and the sampler was innocent throughout. The
+register's fingerprint — *marginals invariant, per-player assignment moves* — reads as a reshuffle
+and reads equally well as **an input wobbling below the noise floor of every aggregate you were
+watching**. Corollary, and the reason this cost a diagnosis rather than a fix: the prescription on
+file (*thread a seed through the coupling*) would have been built, tested, and would not have worked.
+
+**a column's consumers are not only the models that weight it** (T22, 2026-07-29) — `boom_prob` /
+`bust_prob` were logged as latent because no personality's `signal_weights` names them. The
+interactive drafter **printed** them, so the live 2026 board told a human that Bijan Robinson and
+Puka Nacua never boom (exactly 0.000 — neither played in 2022, where `max(train_seasons)` lands).
+On a human-in-the-loop tool the display layer is the consumer that can be wrong at the user
+directly. Sibling of *state your bars as oppositions*: an audit that looks only where the model
+reads finds only what the model reads.
+
+**`boom_prob_live` / `bust_prob_live` · `volatility_source`** (T22, 2026-07-29) — the boom/bust pair
+re-measured on **season − 1** inside the 16.13 enrichment, read-only, leaving the frozen Phase-5
+column untouched. `volatility_source` picks that season **from the `weekly` table, never from a
+constant** — the defect being repaired *was* a constant that fell four years behind the data — and
+asserts the lag is ≤ 1 season. Unseen players stay `NaN`: on the frozen column they were
+`fillna(0.0)`, which does not read as "unknown", it reads as *never busts*, and it was worst exactly
+for the rookies a floor-seeking manager should most distrust.
+
+**`avg_reach_rounds` / `redraft_reach`** (T18's fix, 2026-07-29) — per-manager mean drift in
+**rounds**, every pick scored against **its own draft's board** over the redraft-eligible corpus,
+replacing a pooled-board `avg_reach` that reported a **+91.9-pick** mean QB reach. Deleted rather
+than repaired in place, in stated units, because a silently redefined column is how F.5's hardcoded
+`scoring="ppr"` and T19's changed `floor` both travelled.
+
+**when the sign flips, it was never a behaviour** (T18, 2026-07-29) — the test that settled the
+ticket was not that the magnitude fell (35.8 picks → 0.78 rounds) but that the **direction
+reversed**: scored against their own boards, quarterbacks go *later* than consensus (−0.58 rounds),
+not ninety picks earlier. A statistic that changes sign when you fix its reference was never a noisy
+estimate of the thing it is named after — it was a different quantity wearing that name. Cheap
+diagnostic wherever a derived per-entity number looks merely *large*: fix the reference and see
+whether it shrinks or turns around.

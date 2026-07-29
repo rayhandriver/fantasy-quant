@@ -337,6 +337,133 @@ def test_profile_distance_is_symmetric_in_log_space():
     assert mock.profile_distance(corpus, corpus) == pytest.approx(0.0, abs=1e-9)
 
 
+# ------------------------------------------- T23/T24/T25: the two measurements 2026-07-28 lacked
+def test_landing_profile_sees_the_defect_the_mean_absolute_bar_passes():
+    """★ The whole argument for the signed companion, as an executable claim.
+
+    Two rooms with **identical** mean |drift| in round 1: one is symmetric noise, the other drops
+    every consensus elite and reaches for the players behind them. The |drift| bar cannot tell them
+    apart — a reach and a fall have the same absolute value — and the landing profile can.
+    """
+    def room(swaps, tag):
+        """Ten picks; ``swaps`` exchange two players' landing spots, so every room has the same
+        multiset of |drift| — four picks displaced by exactly 4 — and they differ only in *who*."""
+        adp = {i: float(i) for i in range(1, 11)}
+        for a, b in swaps:
+            adp[a], adp[b] = adp[b], adp[a]
+        return _panel([{"draft_id": f"{tag}{d}", "draft_slot": i, "pick_no": i, "adp": adp[i]}
+                       for d in range(30) for i in range(1, 11)])
+
+    # symmetric: two mid-board pairs trade places, the elite land on their own picks
+    sym = room([(3, 7), (4, 8)], "s")
+    # one-sided: the consensus top two are the displaced ones
+    one_sided = room([(1, 5), (2, 6)], "o")
+
+    # the bar that passes: mean |drift| is identical by construction
+    assert (mock.reach_profile(sym).loc[0, "mean_abs"]
+            == pytest.approx(mock.reach_profile(one_sided).loc[0, "mean_abs"]))
+    # the measurement that separates them: where the top tier actually landed
+    top = mock.LANDING_BANDS[0]
+    assert (mock.landing_profile(one_sided, bands=[top]).loc[0, "past_4"]
+            > mock.landing_profile(sym, bands=[top]).loc[0, "past_4"])
+    assert mock.gate_elite_landing(sym, sym)["fall_pass"]
+    assert not mock.gate_elite_landing(one_sided, sym)["fall_pass"]
+
+
+def test_round1_split_is_measured_at_the_same_point_in_the_round():
+    """A 12-team room's pick 6 is the same *place* in round 1 as a 10-team room's pick 5.
+
+    Splitting on a raw pick number silently compares the first half of one round to the first 42 %
+    of another, which is how a corpus of 8-14-team rooms gets mis-measured against a 10-team sim.
+    """
+    ten = _panel([{"draft_id": "a", "draft_slot": i, "pick_no": i, "adp": float(i) + 5.0,
+                   "teams": 10} for i in range(1, 11)])
+    twelve = _panel([{"draft_id": "b", "draft_slot": i, "pick_no": i, "adp": float(i) + 6.0,
+                      "teams": 12} for i in range(1, 13)])
+    twelve["round"] = 1
+    assert list(mock.round1_split(ten)["n"]) == [5, 5]
+    assert list(mock.round1_split(twelve)["n"]) == [6, 6]
+
+
+def test_roster_legality_is_stated_over_the_whole_lineup():
+    """T23's bar: every dedicated slot, not just the ones a ticket was written about.
+
+    ⚠ **The FLEX absorbs a surplus, not a deficit.** A seat holding one RB and three WRs cannot
+    field ``RB/RB`` — nothing substitutes *into* a dedicated slot — so it is illegal here even
+    though T23's prose reads the other way. That is why the fix is "mandatory need = the whole
+    ``base_demand``" rather than "add TE to the exemption list": the exemption was never sound for
+    RB/WR either, it was merely never binding, because RB/WR demand is always met early.
+
+    Also pins the canonicaliser: ``panel._canon_pos`` maps K/DST to NaN, so using it here reports
+    every seat as missing a kicker it did draft — a failed join that looks exactly like a missing
+    entity, which is the one mistake a legality bar cannot survive.
+    """
+    def seat(team, positions):
+        return [{"draft_id": "d", "team": team, "pos": p, "seat_personality": f"p{team}"}
+                for p in positions]
+
+    full = ["QB", "RB", "RB", "WR", "WR", "TE", "K", "DST"]
+    log = pd.DataFrame([*seat(0, full),
+                        *seat(1, [p for p in full if p != "TE"] + ["WR"]),   # no TE  -> illegal
+                        *seat(2, [p for p in full if p != "RB"] + ["WR"]),   # one RB -> illegal
+                        *seat(3, [*full, "RB", "WR"])])                      # surplus -> legal
+    out = mock.roster_legality(log)
+    assert out["n_seats"] == 4 and out["n_illegal"] == 2
+    assert "share_avoidable" not in out            # no supply given -> no avoidability claim
+    assert out["by_position"]["TE"] == pytest.approx(1 / 4)
+    assert out["by_position"]["RB"] == pytest.approx(1 / 4)
+    assert out["by_position"]["K"] == 0.0 and out["by_position"]["DST"] == 0.0
+    assert out["by_personality"]["p1"] == 1.0 and out["by_personality"]["p3"] == 0.0
+
+
+def test_roster_legality_separates_a_defect_from_a_board_that_cannot_supply_one():
+    """★ 2022's board carries **5** kickers for a ten-seat room. Half the seats cannot finish with
+    one and no pick policy can change that, so the raw share is not a defect count.
+
+    Measured over 2017–2024 + 2026 the K/DST shortfalls (7.8 % / 4.4 %) match the supply shortfall
+    to three decimals — which is how we know they are supply and not the deadline filter.
+    """
+    rows = []
+    for team in range(10):
+        pos = ["QB", "RB", "RB", "WR", "WR", "TE", "DST"] + (["K"] if team < 5 else ["WR"])
+        rows += [{"season": 2022, "draft_id": "d", "team": team, "pos": p} for p in pos]
+    log = pd.DataFrame(rows)
+
+    thin = mock.roster_legality(log, supply={2022: {"K": 5, "DST": 10, "QB": 20, "RB": 40,
+                                                    "WR": 40, "TE": 15}})
+    assert thin["share_illegal"] == pytest.approx(0.5)         # five seats have no kicker
+    assert thin["avoidable_by_position"]["K"] == pytest.approx(0.0)     # ...none of it fixable
+    assert thin["share_avoidable"] == pytest.approx(0.0)
+    # the same rosters against a board that had kickers to spare *is* a defect
+    rich = mock.roster_legality(log, supply={2022: {"K": 30, "DST": 10, "QB": 20, "RB": 40,
+                                                    "WR": 40, "TE": 15}})
+    assert rich["avoidable_by_position"]["K"] == pytest.approx(0.5)
+
+
+def test_batch_drafts_returns_a_log_the_panel_cannot_replace(board, model):
+    """The panel is offense-only, so K/DST live only in the log — that is why T23 needed both."""
+    room = mock.full_room(seed=3)
+    panel, log = mock.batch_drafts(board, room, model, season=2026, seeds=range(3), rounds=8)
+    same = mock.batch_drift_panel(board, room, model, season=2026, seeds=range(3), rounds=8)
+    pd.testing.assert_frame_equal(panel, same)
+    assert set(log["draft_id"]) == set(panel["draft_id"])
+    assert log["seat_personality"].notna().all()
+    assert len(log) == 3 * 10 * 8                      # every pick, every position
+    assert not set(panel["pos"]) - set(mock.OFFENSE)   # the panel dropped the rest
+
+
+def test_personality_buckets_split_the_late_rounds_out():
+    """T25's reporting rule: R14-15 is *when a seat took its kicker*, not how it drafts."""
+    rows = [{"draft_id": "d", "draft_slot": s, "pick_no": 10 * (r - 1) + s, "adp": float(s)}
+            for r in range(1, 16) for s in range(1, 11)]
+    p = _panel(rows)
+    p["seat_personality"] = ["chalk" if s % 2 else "reacher"
+                             for s in p["draft_slot"]]
+    out = mock.personality_buckets(p)
+    assert list(out.index) == ["chalk", "reacher"] or list(out.index) == ["reacher", "chalk"]
+    assert {"R1-3", "R14-15", "overall"} <= set(out.columns)
+
+
 def test_narrative_shock_refuses_a_model_it_was_not_calibrated_against():
     """T15: the 16.9 intercept is a size in UTILITY units, so it dies when the ADP transform moves.
 

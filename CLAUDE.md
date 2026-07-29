@@ -61,8 +61,178 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★★ Next-session pointer (2026-07-28 — ★ 16.14R COMPLETE, all seven steps. T19/T20/T21 ☑,
-> T22 opened. NOT COMMITTED. READ THIS FIRST.)**
+> **★★★ Next-session pointer (2026-07-29 — THE MOCK DRAFTER IS COMPLETE. T13 + T18 + T22 ☑,
+> T26 opened. NOT COMMITTED — sessions 6, 7 and this one are one tree. READ THIS FIRST.)**
+>
+> **State:** **597 tests** (was 587), ruff clean. The lockbox, the frozen value stack and the fitted
+> β are untouched — nothing here refits anything. New artifacts:
+> `analysis/mock_room_bars_verify_20260729.json` (the shipped room re-measured) and
+> `analysis/t13_reproducibility.json`. New step `steps/t13_reproducibility.py`. Write-ups:
+> `findings.md` §"The mock-drafter completion audit (2026-07-29)", `docs/TECH-DEBT.md`
+> T13/T18/T22 ☑ + **T26**, `PLAN.md` §2026-07-29, `glossary.md`.
+>
+> **The mock-draft arc was already done** — T15 steps 0–4, 16.14R's seven steps, T23/T25/T24 — and
+> re-measuring it confirmed that: all five T15 bars, the landing gate and the legality report come
+> back **unchanged to the digit** (distance 0.0894, round-1 2.64, elite past-10 25.24 %, dispersion
+> −11.4 %, top-band past-pick-4 15.3 % vs a realized 13.1 %). ⚠ The register's at-a-glance table had
+> been carrying **T15 as open** while its own section was ☑ since 07-27; that row is corrected. What
+> was genuinely unfinished were the three entries *behind* the room, each of which reaches the board
+> a human drafts from:
+>
+> | | was on file as | what it actually was |
+> |---|---|---|
+> | **T22** | "latent — no personality weights it" | **already on screen**: `steps/mock_draft.py` prints BOOM/BUST, so the live 2026 board told the user Bijan Robinson and Puka Nacua *never boom* (0.000 — neither played in 2022, where `max(train_seasons)` lands). Fixed read-only in the enrichment: `boom_prob_live`/`bust_prob_live` from season − 1, `NaN` where unseen, `volatility_source` asserting ≤ 1 season of lag. Exact-zero `bust_prob` **56.0 % → 8.2 %**; **corr(frozen, live) = 0.026** |
+> | **T13** | "prime suspect: the Iman–Conover coupling" | **DuckDB's parallel float aggregation.** Row order, `PYTHONHASHSEED` and BLAS threads were all ruled out first; pinning DuckDB to one thread makes the cloud **bit-identical** across processes. `db.deterministic_reads`; cost **negative** (10.2 s → 9.1 s) |
+> | **T18** | "+91.9-pick mean QB reach — a board mismatch" | correct, and worse than stated: fixing the reference **reverses the sign** (QBs go −0.58 rounds *later*). Column deleted, not repaired: `avg_reach_rounds` + `n_reach_picks` from `redraft_reach`, mean \|reach\| **35.8 picks → 0.776 rounds**, ±2-round health gate |
+>
+> **★★ The three carry-forward lessons** (all in `glossary.md`): **(1) a column's consumers are not
+> only the models that weight it** — T22 was audited by grepping `signal_weights` and the display
+> layer was never looked at. **(2) The noisy stage is not always the stochastic one** — every T13
+> hypothesis on file involved randomness; the cause was arithmetic in a database, and the
+> prescription on file (*thread a seed through the coupling*) would have been built, tested, and
+> would not have worked. **(3) When the sign flips, it was never a behaviour** — T18's magnitude
+> falling was suggestive; its *direction reversing* is what proved the old number was a different
+> quantity wearing a behaviour's name.
+>
+> **⚠ Do not re-derive / do not "fix":** the coupling is **not** T13's cause, whatever the
+> "marginals invariant, assignment moves" fingerprint suggests · **T26** (`pos_share_*` pooled across
+> formats, read by `mgr_lean`) is **measured and deliberately deferred** — fixing it refits β and
+> moves every T15/T24 width bar for a 0.83 pp feature shift; do it with the next 11.1 refit ·
+> `build_tendencies`'s `avg_reach` keeps the T18 defect by design (labelled POC; use `redraft_reach`)
+> · `app/streamlit_app.py`'s season selector is DEV-only — Phase-14 work, noted not fixed.
+>
+> **★ NEXT: review + commit (sessions 6 + 7 + this one, one tree), then Session I = Phase 17
+> formats.** No register entry is open against the mock drafter. **Stage-0 FFC chore: last pulled
+> 2026-07-24, DUE after 07-30** — run `steps/stage0_adp_snapshot.py` then `steps/backup_db.py`.
+>
+> _(Prior pointer — session 7, T23/T25/T24 as they were built.)_
+>
+> **★★★ (2026-07-28 session 7 — T23 + T25 + T24 all ☑ BUILT. The mock room is
+> fixed; T24's own prescription was rejected on the way.)**
+>
+> **State:** 596 tests (was 577), ruff clean, **UNCOMMITTED** together with sessions 6's docs. DEV-only;
+> the spent lockbox and the frozen value stack are untouched (`draft/availability.py` imports nothing
+> from `personalities`, so the 11.2 Brier is **bit-identical**: +0.0890, CI [+0.0803, +0.0996]).
+> Artifacts: `analysis/mock_room_bars_{baseline,t23,t25,t24,baseline_shuffled,t24_shuffled}.json`
+> (+ the rejected `t24_kappa2{,_shuffled}`) and `analysis/mock_t24_sweep{,_rep,_full,_shuffled,
+> _shuffled2,_shuffled3}.json`. Write-ups: `findings.md` §"T23 / T25 / T24 (2026-07-28, session 7)",
+> `docs/TECH-DEBT.md` T23/T24/T25 (all ☑), `PLAN.md` §2026-07-28 (session 7), `glossary.md`.
+>
+> | | result |
+> |---|---|
+> | **T23** | `mandatory_needs` = `base_demand()`. Seats unable to fill a dedicated slot **23.2 % → 12.3 %**; the *avoidable* half **12.08 % → 0.03 %**. No T15 bar moved (verified). |
+> | **T25** | `ROOM_CEILING` — `reach_budget=None` now means *inherit*. `balanced` R1–3 `pool_rank` 6.36 → 5.98; median `pool_rank` 9.31 → **8.85** (corpus 7.62); moderate share 28.8 → **32.7 %**. |
+> | **T24** | Elite (ADP ≤ 2.5) past pick 4 **25.8 % → 15.3 %** (realized 13.1 %); bar 2 p95/past-10 17.0/28.8 % → **16.0/25.2 %**; bar 1 distance 0.107 → **0.089**; median `pool_rank` 8.69 → **8.04** (corpus 7.62); moderate share 33.7 → **38.2 %**. Cost: bar 5 dispersion −7.1 → **−11.4 %**. All five T15 bars + the new landing gate PASS. |
+>
+> **★★ THE FINDING — T24's prescription was built and REJECTED; the fix was the knob added to
+> support it.** The per-seat `adp_stdev`-scaled **private board** is *monotonically harmful* on the
+> objection it was designed for (18.8 / 19.7 / **26.6 %** at κ = 0/1/2). **At the top of the board
+> `adp_stdev` (0.7–2.5) is the same size as the gaps it perturbs (~0.2 picks), so the draw destroys
+> the ordering that was already there** — which is exactly how an elite falls. The corpus law behind
+> the idea (`|drift| ≈ 2 × adp_stdev`) is about **realized** drift, an outcome of ten seats
+> interacting; re-injecting it as a **per-seat perception** is a different object. *A relationship
+> measured on outcomes is not a specification for the mechanism that produced them.* Kept in code,
+> **default-off**, verdict written onto `analysis/phase11_opponent_model.json` next to κ. **What
+> worked: `WidthCurve` gained `base`**, splitting the width *level* from the *shape*
+> (`width = base·round^gamma`); `base 1.0·γ0.8 → 0.6·γ1.0` halves round 1 while keeping 86 % of the
+> round-15 width. **Round 1 was simply too wide — the ticket had the right symptom and the wrong cause.**
+>
+> **★ Three method failures, in the order they were caught — each by the next measurement:**
+> (1) **calibrated on a 4-season subsample** and shipped off it; the 8-season sweep failed that config
+> (20.4 % vs an 18.1 % ceiling). (2) **Measured on one fixed seating**, which flatters by 5–7 pp
+> (`0.5/1.0/2.0`: 16.2 % fixed vs **23.4 %** marginalized) — and ⚠ **more seeds do not fix it**, the
+> seating error is a *bias* until the seating is redrawn (`--shuffle-room`). (3) **Moved two knobs
+> together**, so the narrowing wore the private board's credit for three runs; the isolating row
+> (`base 0.7, κ 0`) was in no grid and is what decided the ticket.
+>
+> **⚠ Do not re-derive:** the private board is **not a null, it is harmful** — do not switch κ on
+> without re-running the seating-marginalized sweep · `ceiling_saturation` was a **wrong** hypothesis
+> (1.5–2.3 % at every κ; the diagnostic is kept as a standing check) · the **round-1 half-split is
+> unresolvable** at this n (0.54 / 0.82 / 1.11 / 1.22 for the same room) — use the landing **share**
+> (n ≈ 640) as the bar, the rise as a diagnostic · `base` below 0.5 fails bar 5 (`0.35/1.1`: 9.4 %
+> past-4 but **−20.3 %** dispersion) · **`base 0.5` was shipped and then withdrawn** — it passes the
+> same gates but overshoots to *tighter than real humans* (11.3 % past-4) at 0.154 distance and
+> −17.4 % dispersion; the un-sampled midpoint 0.6 beats it on every secondary. **A sweep whose winner
+> sits at the edge of the grid has not finished.** The residual cost at 0.6 is dispersion −7.1 % →
+> **−11.4 %** — that is the trade, do not tune it away without re-measuring.
+>
+> **★ NEXT: review + commit (sessions 6 + 7 in one tree), then Session I = Phase 17 formats.** The
+> residual elite-fall gap (15.3 % vs 13.1 %) is closed; if it is ever reopened, the surgical fix is a
+> steeper `AdpSpec.exponent` with `base`/`gamma` restoring depth width — which **refits β**
+> (`steps/t15_1_respecify.py`), not an artifact edit. Stage-0 FFC chore last pulled **2026-07-24**
+> (verified in-DB), next due after 07-30.
+>
+> _(Prior pointer — session 6, the three objections as they were opened.)_
+>
+> **★★★ (2026-07-28 session 6 — the 2×5 mock re-run. T23/T24/T25 opened,
+> NOTHING BUILT, at the rule-7 gate.)**
+>
+> **State:** **docs-only, no `src/` change.** One new read-only driver, `steps/mock_2x5_diag.py`
+> (ruff clean, untracked); five docs edited. **16.14R and everything before it is committed at
+> `7c13402`** — the prior pointer's "NOT COMMITTED" was stale, the tree was clean on arrival.
+> Writeups: `findings.md` §"The 2×5 mock re-run (2026-07-28)", `docs/TECH-DEBT.md` **T23/T24/T25**,
+> `PLAN.md` §2026-07-28 (session 6), `glossary.md`. DEV-only; nothing written to `analysis/`.
+>
+> **What happened.** The 2×5 room re-run with the *shipped* `value_hawk` — one showcased draft (room
+> seed 20260728, draft seed 728) plus **40 seeded drafts, room reshuffled per seed**. The user read
+> the picks by eye and raised **three** objections. All three hold.
+>
+> | | ticket | what it is | cost |
+> |---|---|---|---|
+> | 1 | **🔴 T23** | `mandatory_needs` drops TE because TE ∈ `flex_positions` → **12.2 % of seats finish with no TE** (46 % of `autopilot`). Bug against a stated contract. | ~5 lines |
+> | 2 | **🟡 T25** | `ReachBudget` is on 2 of 10 seat types, so the round ceiling binds `reacher`/`value_hawk` and **not `balanced`** (4 of 10 seats in `REALISTIC_ROOM`). | small |
+> | 3 | **🟠 T24** | Width is per-**round**, never per-**player**; the board's `adp_stdev` is **unread in the pick path**. Consensus #2 lands at a **median pick of 4**. | a full sub-step |
+>
+> **★ RESUME HERE: the user was asked to choose 1→2 first, or straight at 3. No answer yet.** T23 and
+> T25 are contained and re-measurable in one pass; T24 moves T15 bars 1/2/5 and the seat-faithfulness
+> population, so it needs its own gated sub-step with a before/after on the shipped measurement path.
+>
+> **★★ THE FINDING TO CARRY FORWARD — an aggregate that pools reaches and falls cannot see a
+> one-sided defect.** Round-1 mean |reach| is **2.91 sim vs 2.87 corpus** — the bar **passes** —
+> while Gibbs (ADP 1.8) lands at a **median pick of 4** and clears pick 4 **42 %** of the time against
+> a realized **12 %**. A reach and a fall have the same absolute value and cancel inside the mean.
+> This is T15's *"an aggregate metric cannot see an impossible event"* one level down: there the
+> aggregation was over **drafts**, here it is over **direction**, inside a metric that already passes.
+> **Bars over |drift| need a signed companion — here, a landing-spot distribution for the consensus
+> top tier.**
+>
+> **★ The mechanism T24 proposes, and why it is ONE object for THREE open problems.** A **per-seat
+> private board**, `adp_seat = adp + κ_seat · adp_stdev · ε`, drawn once per seat per draft. Measured
+> basis, on 1,144 corpus drafts: **|drift| ≈ 2 × adp_stdev** (stable through the usable range; the
+> decay above stdev 12 is pool exhaustion, T15's own finding arriving independently);
+> Spearman(`adp_stdev`, |drift|) **0.484** vs Spearman(round, |drift|) **0.535**; and **within rounds
+> 1–3 the stdev terciles drift 2.11 / 3.33 / 8.91** — a 4.2× spread no round-indexed curve can
+> express. It buys (a) round-1 tier structure without hard-coding a tier, (b) **the T15 carry-forward
+> verbatim** — *"needs per-seat board perturbation, not another width parameter"* (plausible,
+> **untested**), (c) the only direction channel that is **live in round 1** for `reacher`.
+> ⚠ **`adp_stdev` is on the board and nothing in `draft/` reads it** — `stdev` appears only at
+> `mock.py:301`, copied onto the *output* panel. 16.8 already measured it as a drift driver
+> (+0.35/SD). *The finding existed in this repo and was never fed back into the room.*
+>
+> **★ Second lesson — a bar written from the symptom passes the general defect.** T20's done-bar was
+> *"60/60 seats finish with ≥1 K and ≥1 DST"*, the two positions the ticket was about. It passed while
+> the same deadline filter left **TE** unguarded. State a guarantee's bar against the whole contract.
+>
+> **⚠ Do not re-derive these dead ends:** the `reacher`'s rounds-1–3 quiet is **the user's own
+> 2026-07-27 spec** (`early_rounds=3`, `early_max_picks=8.0`, `large_from_round=5`) and is **not** to
+> be "fixed" — the defect is that `balanced` has no equivalent constraint (T25) · do **not** raise the
+> reacher's `temperature`/`width_mult` early (its `cos`/`rookie`/`upside`/hype channels are
+> structurally dead at the top of the board — that is the *"width with no direction"* 16.14R step 5
+> deleted) · do **not** narrow round 1 with another global width parameter (one knob cannot set both
+> ends; the round-1 problem is *within-round* heterogeneity) · do **not** read a behavioural ordering
+> off one draft — over 40 drafts `reacher` **does** out-reach `balanced` (`pool_rank` 13.40 vs 11.74);
+> the inversion is real only in **R1–3** · the corpus far tail (p99 = pick 33 for an ADP 1–2.5 player)
+> is a **data question first** — check `days_to_board` and keeper/dynasty leakage before fitting it.
+>
+> **★ Reporting rule adopted:** the per-personality summary leads with **`pool_rank`, split R1–13 /
+> R14–15**, not a 15-round mean reach — which is dominated by late-board ADP noise (Tyler Allgeier at
+> ADP 167 taken at pick 119 scores **+48** and means nothing) and by *when* a seat takes K/DST.
+> **Mis-reporting it this way is what produced objection 3 in the first place.**
+>
+> _(Prior pointer — 16.14R's own closeout, still the authority on the seven steps and the T15 bars.)_
+>
+> **★★★ (2026-07-28 — ★ 16.14R COMPLETE, all seven steps. T19/T20/T21 ☑,
+> T22 opened. NOT COMMITTED.)**
 >
 > **State:** **569 tests** (was 549), ruff clean, **UNCOMMITTED** together with the prior docs-only
 > sessions. New steps `steps/phase16_14r_{2..7}_*.py` + `phase16_14r_signal_report.py`; artifacts

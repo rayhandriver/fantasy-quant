@@ -1,0 +1,82 @@
+{
+  "generated": "2026-07-28T17:36:51.885298+00:00",
+  "config": {
+    "seeds": 15,
+    "rounds": 15,
+    "seasons": [
+      2018,
+      2020,
+      2022,
+      2024
+    ],
+    "room_seed": 18,
+    "room": [
+      "balanced",
+      "upside_chaser",
+      "balanced",
+      "autopilot",
+      "value_hawk",
+      "safe_floor",
+      "balanced",
+      "reacher",
+      "chalk",
+      "balanced"
+    ]
+  },
+  "corpus": {
+    "past_4": 0.18553459119496854,
+    "past_6": 0.09224318658280922,
+    "median_slot": 1.6666666666666665,
+    "r1_rise": 1.5575806853168275
+  },
+  "grid": [
+    {
+      "past4": 0.17142857142857143,
+      "past6": 0.08571428571428572,
+      "median_slot": 4.0,
+      "landing_pass": false,
+      "r1_mean": 3.7130000000000005,
+      "r1_rise": 0.815056216392374,
+      "disp_error": -0.06016655137897665,
+      "elite_p95": 17.0,
+      "elite_past10": 0.2916666666666667,
+      "elite_pass": true,
+      "profile_distance": 0.08856036223792865,
+      "base": 1.0,
+      "gamma": 0.8,
+      "kappa": 0.0
+    },
+    {
+      "past4": 0.13333333333333333,
+      "past6": 0.10476190476190476,
+      "median_slot": 4.0,
+      "landing_pass": false,
+      "r1_mean": 3.4908333333333332,
+      "r1_rise": 0.8990842324780124,
+      "disp_error": -0.09054016101376518,
+      "elite_p95": 17.0,
+      "elite_past10": 0.2875,
+      "elite_pass": true,
+      "profile_distance": 0.09163877447121352,
+      "base": 0.7,
+      "gamma": 0.8,
+      "kappa": 2.0
+    },
+    {
+      "past4": 0.11428571428571428,
+      "past6": 0.06666666666666667,
+      "median_slot": 3.0,
+      "landing_pass": false,
+      "r1_mean": 3.283166666666667,
+      "r1_rise": 0.874845341201104,
+      "disp_error": -0.07970987121084219,
+      "elite_p95": 17.0,
+      "elite_past10": 0.2791666666666667,
+      "elite_pass": true,
+      "profile_distance": 0.0864567979659057,
+      "base": 0.5,
+      "gamma": 1.0,
+      "kappa": 2.0
+    }
+  ]
+}

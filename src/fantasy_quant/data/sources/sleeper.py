@@ -39,6 +39,7 @@ import time
 import httpx
 import pandas as pd
 
+from fantasy_quant.adp import drift_panel
 from fantasy_quant.config import PROJECT_ROOT, RAW_DIR
 from fantasy_quant.data import cache, db
 from fantasy_quant.data.sources.adp import dedupe_gsis_within_snapshot
@@ -353,7 +354,11 @@ def build_tendencies(picks: pd.DataFrame, adp_ref: pd.DataFrame | None = None) -
     ``picked_by`` for the human's picks *only* (bots are null), so a mock keys by slot — capturing
     all ten seats rather than collapsing the bots into one bucket. ``reach`` = board ADP − pick_no
     (positive = drafted earlier than value); with a bot-mock corpus the ADP reference is that same
-    corpus, so treat the numbers as a plumbing proof-of-concept, not a fit."""
+    corpus, so treat the numbers as a plumbing proof-of-concept, not a fit.
+
+    ⚠ Its ``avg_reach`` inherits T18's defect whenever the caller hands it a board that is not the
+    drafts' own — which ``opponent_tendencies`` does. It is kept as the POC it was labelled, and
+    :func:`redraft_reach` is the function to use for a reach anyone will read or fit on."""
     if picks.empty:
         return pd.DataFrame()
     df = picks.copy()
@@ -523,33 +528,74 @@ def refresh_adp_boards(con, *, season: int | None = None, min_drafts: int = 1) -
     return {HUMAN_SOURCE: int(len(human)), MOCK_SOURCE: int(len(mock))}
 
 
-def manager_profiles(picks: pd.DataFrame) -> pd.DataFrame:
+def manager_profiles(picks: pd.DataFrame, reach: pd.DataFrame | None = None) -> pd.DataFrame:
     """Per-manager behavioral seed (real ``picked_by`` only) — the Phase-11 opponent-model input.
 
-    For each manager across all their drafts: draft count, per-position pick share, mean draft
-    round, mean reach-vs-ADP (needs an ADP ref joined onto ``picks`` as ``_adp``), and their most
-    picked NFL teams (a crude fandom signal). Pure: pass ``picks`` (optionally with ``_adp``)."""
+    For each manager across all their drafts: draft count, per-position pick share, and their most
+    picked NFL teams (a crude fandom signal). Pure: pass ``picks``, plus an optional ``reach``
+    frame (``manager``/``avg_reach_rounds``/``n_reach_picks``) from :func:`redraft_reach`.
+
+    ★ **T18 — the old ``avg_reach`` column is gone, not repaired in place.** It was each pick's ADP
+    minus its slot, where the ADP came from **one pooled board** while the picks came from drafts of
+    every league size, scoring and format in the corpus (7,699 human drafts spanning redraft,
+    dynasty, 2QB and IDP). A superflex room takes quarterbacks dozens of picks before a 1-QB
+    consensus board says they should go, and the difference was booked as manager behaviour: the
+    stored table reported a mean **QB reach of +91.9 picks**. Nobody reaches ninety picks for a
+    quarterback.
+
+    The replacement is a *differently named* column in *different units*, because silently
+    redefining a column is how this repo's worst bugs have travelled: ``avg_reach_rounds`` is the
+    mean per-pick drift **in rounds**, scored against each draft's own board over the
+    redraft-eligible corpus (:func:`~fantasy_quant.adp.drift_panel.manager_panel`), and
+    ``n_reach_picks`` says how many picks it rests on. A manager with no eligible drafts gets
+    ``NaN`` — the honest answer for "we have never seen this person draft a format we can price".
+    """
     df = picks[picks["picked_by"].notna()].copy()
     if df.empty:
         return pd.DataFrame()
-    if "_adp" in df.columns:
-        df["reach"] = df["_adp"] - df["pick_no"]
     tot = df.groupby("picked_by")["pick_no"].size().rename("n_picks")
     ndrafts = df.groupby("picked_by")["draft_id"].nunique().rename("n_drafts")
+    r = (reach.set_index(reach["manager"].astype(str)) if reach is not None and not reach.empty
+         else pd.DataFrame())
     rows = []
     for mgr, sub in df.groupby("picked_by"):
         share = (sub["position"].value_counts(normalize=True) * 100).round(1).to_dict()
         fav = sub["nfl_team"].dropna().value_counts().head(3).index.tolist()
+        hit = r.loc[str(mgr)] if str(mgr) in r.index else None
         rows.append({
             "manager": str(mgr),
             "n_drafts": int(ndrafts[mgr]),
             "n_picks": int(tot[mgr]),
-            "avg_reach": round(float(sub["reach"].mean()), 2) if "reach" in sub else None,
+            "avg_reach_rounds": (round(float(hit["avg_reach_rounds"]), 3)
+                                 if hit is not None else None),
+            "n_reach_picks": int(hit["n_reach_picks"]) if hit is not None else 0,
             "pos_share_QB": share.get("QB", 0.0), "pos_share_RB": share.get("RB", 0.0),
             "pos_share_WR": share.get("WR", 0.0), "pos_share_TE": share.get("TE", 0.0),
             "fav_teams": ",".join(fav),
         })
     return pd.DataFrame(rows).sort_values("n_picks", ascending=False).reset_index(drop=True)
+
+
+def redraft_reach(con) -> pd.DataFrame:
+    """Per-manager mean drift **in rounds**, against each draft's own board (T18's repair).
+
+    Thin over :func:`~fantasy_quant.adp.drift_panel.manager_panel`, which is where the eligibility
+    filter (human · complete · snake · a redraft scoring with an FFC analog · preseason window) and
+    the per-draft board resolution already live. Reusing it rather than re-deriving a board here is
+    the point: the reason the stored column was wrong is that it had *its own* notion of the
+    reference board, and one of the two was bound to drift from the other.
+
+    Positive = took players **earlier** than that room's consensus board (a reach), in rounds.
+    """
+    panel = drift_panel.manager_panel(con)
+    if panel.empty or "picked_by" not in panel.columns:
+        return pd.DataFrame(columns=["manager", "avg_reach_rounds", "n_reach_picks"])
+    p = panel[panel["picked_by"].notna()]
+    if p.empty:
+        return pd.DataFrame(columns=["manager", "avg_reach_rounds", "n_reach_picks"])
+    g = p.groupby(p["picked_by"].astype(str))["drift"]
+    return pd.DataFrame({"avg_reach_rounds": g.mean(), "n_reach_picks": g.size()}) \
+        .rename_axis("manager").reset_index()
 
 
 # --------------------------------------------------------------------------------------------
@@ -897,23 +943,27 @@ def crawl_and_ingest(con, *, seed_usernames=None, seed_draft_ids=None, seed_leag
 
 
 def build_and_store_profiles(con) -> pd.DataFrame:
-    """Compute + persist ``sleeper_manager_profiles`` from human drafts (with the human ADP board as
-    the reach reference)."""
+    """Compute + persist ``sleeper_manager_profiles`` from human drafts.
+
+    ★ **T18: the reach half no longer reads a pooled board.** Position shares and fandom are
+    counted over every complete human draft — they are computed **from picks alone, with no ADP
+    reference**, which is exactly why 16.15's corpus check routed around ``avg_reach`` and used
+    them instead. Reach needs a board, so it comes from :func:`redraft_reach`, i.e. the
+    redraft-eligible corpus scored draft-by-draft against its own board.
+
+    ⚠ Position shares are still pooled **across formats** — a superflex manager's QB share is real
+    behaviour in a room this project does not price. Measured 2026-07-29, that costs less than the
+    reach defect did (mean |Δ QB share| **0.83 pp** over the 2,816 managers who appear in both
+    scopes, >5 pp for 3.3 %), and changing it would refit ``mgr_lean`` and with it every T15/T24
+    width bar — so it is **measured and logged (T26), not silently changed here**.
+    """
     picks = con.execute(
         "SELECT p.* FROM sleeper_draft_picks p JOIN sleeper_drafts d USING (draft_id) "
         f"WHERE d.is_human = TRUE AND {_QUALITY_FILTER}"
     ).df()
     if picks.empty:
         return pd.DataFrame()
-    if db.table_exists(con, "adp_snapshots"):
-        ref = con.execute(
-            f"SELECT gsis_id, season, adp FROM adp_snapshots WHERE source = '{HUMAN_SOURCE}'").df()
-        if not ref.empty:
-            ref = ref.dropna(subset=["gsis_id"])
-            on = ["gsis_id", "season"] if "season" in picks.columns else ["gsis_id"]
-            ref = ref.groupby(on, as_index=False)["adp"].mean().rename(columns={"adp": "_adp"})
-            picks = picks.merge(ref, on=on, how="left")
-    prof = manager_profiles(picks)
+    prof = manager_profiles(picks, reach=redraft_reach(con))
     if not prof.empty:
         db.write_df(con, "sleeper_manager_profiles", prof)
     return prof

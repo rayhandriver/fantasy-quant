@@ -1,0 +1,107 @@
+{
+  "generated": "2026-07-28T18:00:57.776715+00:00",
+  "config": {
+    "seeds": 20,
+    "rounds": 15,
+    "seasons": [
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "room_seed": 17,
+    "room": [
+      "balanced",
+      "autopilot",
+      "balanced",
+      "reacher",
+      "upside_chaser",
+      "safe_floor",
+      "balanced",
+      "chalk",
+      "value_hawk",
+      "balanced"
+    ],
+    "shuffle_room": true
+  },
+  "corpus": {
+    "past_4": 0.13135946622185155,
+    "past_6": 0.06755629691409508,
+    "median_slot": 1.6666666666666665,
+    "r1_rise": 1.5405423549596875
+  },
+  "grid": [
+    {
+      "past4": 0.265625,
+      "past6": 0.065625,
+      "median_slot": 3.0,
+      "landing_pass": false,
+      "r1_mean": 3.3723125,
+      "r1_rise": 1.1058855670907815,
+      "disp_error": -0.07016407817418903,
+      "elite_p95": 17.0,
+      "elite_past10": 0.28526315789473683,
+      "elite_pass": true,
+      "profile_distance": 0.12045926396262022,
+      "ceiling_saturation": 0.02012369172216936,
+      "base": 1.0,
+      "gamma": 0.8,
+      "kappa": 0.0
+    },
+    {
+      "past4": 0.228125,
+      "past6": 0.05,
+      "median_slot": 3.0,
+      "landing_pass": false,
+      "r1_mean": 3.20775,
+      "r1_rise": 1.2097649186256783,
+      "disp_error": -0.118295369167175,
+      "elite_p95": 17.0,
+      "elite_past10": 0.2768421052631579,
+      "elite_pass": true,
+      "profile_distance": 0.08243794585193531,
+      "ceiling_saturation": 0.019410085632730733,
+      "base": 0.85,
+      "gamma": 0.8,
+      "kappa": 1.0
+    },
+    {
+      "past4": 0.196875,
+      "past6": 0.0375,
+      "median_slot": 3.0,
+      "landing_pass": false,
+      "r1_mean": 2.9778125,
+      "r1_rise": 1.2075244405319003,
+      "disp_error": -0.17508754822573389,
+      "elite_p95": 16.0,
+      "elite_past10": 0.2615789473684211,
+      "elite_pass": true,
+      "profile_distance": 0.14173546205517762,
+      "ceiling_saturation": 0.016888677450047573,
+      "base": 0.7,
+      "gamma": 0.8,
+      "kappa": 1.0
+    },
+    {
+      "past4": 0.265625,
+      "past6": 0.0875,
+      "median_slot": 3.0,
+      "landing_pass": false,
+      "r1_mean": 3.5010624999999997,
+      "r1_rise": 1.2503113325031134,
+      "disp_error": -0.098617156493497,
+      "elite_p95": 18.0,
+      "elite_past10": 0.2942105263157895,
+      "elite_pass": true,
+      "profile_distance": 0.07559510042862812,
+      "ceiling_saturation": 0.023311132254995242,
+      "base": 0.7,
+      "gamma": 0.8,
+      "kappa": 2.0
+    }
+  ]
+}

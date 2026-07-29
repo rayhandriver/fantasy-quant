@@ -38,10 +38,16 @@ DRAFTABLE = ("QB", "RB", "WR", "TE", "K", "DST")
 #: passed through is silently skipped by ``signal_bonus`` and the weight becomes a no-op that still
 #: completes a legal draft. That has now happened three times (``fandom``, ``rookie``,
 #: ``durability``), so ``test_personalities`` asserts the containment.
-PASSTHROUGH_COLS = ("team", "rookie", "boom_prob", "q90", "bust_prob", "q10", "q50",
+#:
+#: ★ **``stdev`` joined this list for T24 (2026-07-28) and its absence is the whole ticket.** The
+#: board carried the crowd's own disagreement all along — 16.8 had even measured it as a drift
+#: driver, +0.35 rounds/SD — but ``_prepare_board`` dropped it, so nothing in ``draft/`` could read
+#: it and every width the room had was indexed on the **round**. A column that never reaches the
+#: pick path is a finding that was never fed back into the room. Fourth instance of the same shape.
+PASSTHROUGH_COLS = ("team", "rookie", "stdev", "boom_prob", "q90", "bust_prob", "q10", "q50",
                     "games_played_mean", "mean", "upside", "floor", "durability", "tail_risk",
                     "vbd", "overall_rank", "cos", "role_share", "role_delta",
-                    "td_regression")
+                    "td_regression", "boom_prob_live", "bust_prob_live")
 
 
 def canon_pos(pos) -> str | None:
@@ -147,16 +153,24 @@ class DraftState:
         return self.roster_counts(team).get(pos, 0) < self.slots.pos_caps.get(pos, 99)
 
     def mandatory_needs(self, team: int) -> dict[str, int]:
-        """Unfilled **non-flexable** starter demand — the slots nothing else can cover (QB/K/DST).
+        """Unfilled **dedicated** starter demand — every slot nothing else can cover.
 
-        A FLEX slot is satisfiable by any of ``slots.flex_positions``, so RB/WR/TE demand is never
-        *mandatory* in the sense that matters here: a team short at RB still fields a legal lineup.
-        QB, K and DST have no substitute. Returns only the positions still owed something.
+        ★ **T23 — this used to exempt ``slots.flex_positions`` and that read the membership
+        backwards.** The exemption said RB/WR/TE demand is never mandatory because a FLEX can
+        absorb it, and for **TE** that is simply false: the dedicated TE slot has no substitute, so
+        a seat with zero TEs cannot field a legal lineup. *TE is in ``flex_positions`` because a TE
+        may fill FLEX, not because anything may fill TE.* Measured over 40 seeded drafts x 10 seats
+        x 9 seasons, the exemption left **12.1 % of seats** unable to fill that slot — 46.9 % of
+        ``autopilot`` and 47.5 % of ``chalk``, the seats that follow ADP and never reach TE depth.
+
+        The same argument disposes of RB/WR: FLEX absorbs a *surplus*, never a *deficit*, and a
+        seat holding one RB cannot fill ``RB/RB`` either. That case was never observed only because
+        RB/WR demand is met long before the deadline — an unsound exemption that happened not to
+        bind. So demand is now simply :meth:`RosterSlots.base_demand`, which excludes FLEX by
+        construction; nothing is exempt and a roster-shape change is picked up for free.
         """
         counts = self.roster_counts(team)
-        flex = set(self.slots.flex_positions)
-        owed = {p: n - counts.get(p, 0) for p, n in self.slots.base_demand().items()
-                if p not in flex}
+        owed = {p: n - counts.get(p, 0) for p, n in self.slots.base_demand().items()}
         return {p: n for p, n in owed.items() if n > 0}
 
     def picks_remaining(self, team: int) -> int:
@@ -180,6 +194,15 @@ class DraftState:
         ``rounds >= slots.starters`` — in a short draft (a 5-round best-ball, an 8-round mock)
         there is no legal full lineup to protect and forcing a kicker in round 5 would be worse
         than the hole it fills.
+
+        ★ **Widening the need set (T23) cannot deadlock the draft, by induction.** The filter fires
+        only at ``picks_remaining <= sum(need)``; every pick it forces is at a needed position, so
+        it decrements both sides by exactly one and the invariant is preserved to the last pick.
+        The worst case moves from 3 slots to 8, but the extra five are RB/WR/TE demand that an
+        ADP-ordered board fills in the first few rounds, so in practice the deadline still binds at
+        3–4 picks out. It also stays honest when the board runs dry: ``forced.empty`` falls through
+        to the ordinary pool rather than raising, because a season whose board carries five kickers
+        for ten seats (2022) has an unfillable slot no policy can fill.
         """
         avail = self.available_board()
         if self.rounds >= self.slots.starters:

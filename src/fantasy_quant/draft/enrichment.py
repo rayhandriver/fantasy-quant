@@ -8,6 +8,8 @@ what those personalities need to see:
 
     boom_prob · q90 · bust_prob · q10 · games_played_mean · mean
                                                              (Phase 5, frozen distribution)
+    boom_prob_live · bust_prob_live                          (the same rates measured on the
+                                                              season before the board — T22)
     upside · floor                                           (those quantiles, level-controlled —
                                                               see :func:`residual_shape`)
     vbd · overall_rank                                       (Phase 4, frozen value board)
@@ -44,7 +46,7 @@ import pandas as pd
 from fantasy_quant.backtest.scoring import RuleSet
 from fantasy_quant.backtest.walkforward import draft_date
 from fantasy_quant.draft.simulator import board_player_key, canon_pos
-from fantasy_quant.projections import distribution
+from fantasy_quant.projections import distribution, variance
 from fantasy_quant.situation import events
 from fantasy_quant.valuation.value_board import value_board
 
@@ -54,6 +56,22 @@ from fantasy_quant.valuation.value_board import value_board
 #: weightable signal of its own.
 DIST_COLS: tuple[str, ...] = ("boom_prob", "q90", "bust_prob", "q10", "q50",
                               "games_played_mean", "mean")
+
+#: **T22 — the boom/bust pair, re-measured on the season the board is actually drafted after.**
+#: The frozen ``boom_prob``/``bust_prob`` above are ``weekly_volatility(max(train_seasons))``, and
+#: ``train_seasons`` for a live season is ``DEV_SEASONS``, which ends at **2022** — so a 2026 board
+#: carries the 2022 rates and a player absent in 2022 carries a ``fillna(0.0)`` that reads as
+#: *never busts*. These two columns answer the same question against ``season − 1``. Same read-only
+#: contract as everything else here: nothing is fitted, the frozen column is left exactly as it is,
+#: and a player with no prior season stays **NaN** — the honest value for "we have not seen him
+#: play", and the one thing the frozen column gets wrong by construction.
+LIVE_VOL_COLS: tuple[str, ...] = ("boom_prob_live", "bust_prob_live")
+
+#: Seasons of lag between the board and the realized weekly season the live rates are measured on
+#: that still count as "prior season". One, and the guard is the point: T17 and T22 are the same
+#: failure — a live season silently reading a covariate from four years ago — so this module states
+#: the recency it needs rather than trusting a default to be current.
+VOL_MAX_LAG: int = 1
 
 #: Derived *shape* columns: ``q90``/``q10``/``games_played_mean``/relative downside spread with the
 #: projected level controlled for, within position. See :func:`residual_shape` — these, not the raw
@@ -116,7 +134,7 @@ MIN_LEVEL: float = 1.0
 #: repo's most-repeated failure mode (F.5's hardcoded label, T13's cross-process cloud, the stale
 #: editor buffer) in its cheapest form. A version in the key turns a silent wrong answer into a
 #: cache miss.
-ENRICH_VERSION: str = "v2-t19-ratio-rank"
+ENRICH_VERSION: str = "v3-t22-live-vol"
 
 #: Frozen Phase-4 value-board columns the enrichment lifts onto the board. ``overall_rank`` is a
 #: rank — **lower is better** — so a personality that wants good players weights it *negative*.
@@ -403,6 +421,65 @@ def residual_shape(board: pd.DataFrame, *, level: str = "mean",
         index=board.index)
 
 
+def weekly_seasons(con) -> list[int]:
+    """Regular seasons that have realized player-weeks in ``weekly``, ascending.
+
+    Read from the table rather than from :data:`~fantasy_quant.config.DEV_SEASONS` on purpose:
+    the whole of T22 is a constant that fell four years behind the data, so the one thing this
+    must not do is ask a constant what the newest season is.
+    """
+    df = con.execute(
+        "SELECT DISTINCT season FROM weekly WHERE season_type = 'REG' ORDER BY season").df()
+    return [int(s) for s in df["season"].dropna()]
+
+
+def volatility_source(con, season: int, *, max_lag: int = VOL_MAX_LAG) -> int:
+    """The realized season the live boom/bust rates for a ``season`` board are measured on.
+
+    The most recent season **strictly before** ``season`` that actually has weekly rows, asserted
+    to be within ``max_lag`` of it. A live 2026 board resolves to 2025; a 2022 backtest board to
+    2021; and a board for a season we have no prior data for raises rather than quietly reaching
+    back to whatever the newest training season happens to be — which is T22's exact failure.
+
+    Two different failures, two different exceptions, because callers should treat them
+    differently: **no prior season at all** (:class:`LookupError`) is a legitimate absence — the
+    first season in the store — and :func:`enrich_board` responds by not creating the columns, per
+    this module's "a column whose source is absent is not created" contract. **A prior season that
+    is too old** (:class:`ValueError`) is the T22 defect itself and must stop the run.
+    """
+    have = [s for s in weekly_seasons(con) if s < int(season)]
+    if not have:
+        raise LookupError(f"volatility_source: no realized weekly season before {season}")
+    src = max(have)
+    lag = int(season) - src
+    if lag > int(max_lag):
+        raise ValueError(
+            f"volatility_source: newest realized season before {season} is {src} — a lag of {lag} "
+            f"seasons exceeds max_lag={max_lag}. Boom/bust measured that far back is the T22 "
+            f"defect, not a fallback; ingest the missing season or pass a wider max_lag knowingly.")
+    return src
+
+
+def live_volatility(con, season: int, *, ruleset: RuleSet | None = None,
+                    max_lag: int = VOL_MAX_LAG) -> pd.DataFrame:
+    """``boom_prob_live`` / ``bust_prob_live`` for a ``season`` board — T22's read.
+
+    Same estimator as the frozen column (:func:`~fantasy_quant.projections.variance.
+    weekly_volatility`, the per-player share of weeks over the boom line and under the bust line);
+    the only thing that changes is *which* season it is measured on. Returns one row per player
+    who actually played in that season — players it does not cover arrive as ``NaN`` at the join,
+    never 0. Raises exactly as :func:`volatility_source` does.
+    """
+    src = volatility_source(con, season, max_lag=max_lag)
+    vol = variance.weekly_volatility(con, [src], ruleset or RuleSet())
+    if vol.empty:
+        return pd.DataFrame(columns=["player_key", *LIVE_VOL_COLS])
+    out = vol[["player_key", "boom_prob", "bust_prob"]].rename(
+        columns={"boom_prob": "boom_prob_live", "bust_prob": "bust_prob_live"})
+    out.attrs["source_season"] = src
+    return out
+
+
 def rookie_flags(con, season: int) -> set[str]:
     """gsis ids Sleeper lists at ``years_exp == 0`` for ``season``.
 
@@ -546,6 +623,7 @@ def td_regression(con, season: int, board: pd.DataFrame) -> pd.Series:
 def attach_enrichment(board: pd.DataFrame, *, dist: pd.DataFrame | None = None,
                       value: pd.DataFrame | None = None, rookie: set[str] | None = None,
                       situation: pd.Series | None = None, context: pd.DataFrame | None = None,
+                      live_vol: pd.DataFrame | None = None,
                       shape_method: str = "rank") -> pd.DataFrame:
     """Attach the 16.13 columns to a raw ADP board, keyed by :func:`board_player_key`.
 
@@ -561,7 +639,7 @@ def attach_enrichment(board: pd.DataFrame, *, dist: pd.DataFrame | None = None,
     out = board.copy()
     key = board_player_key(out).astype(str)
 
-    for src, cols in ((dist, DIST_COLS), (value, VALUE_COLS)):
+    for src, cols in ((dist, DIST_COLS), (value, VALUE_COLS), (live_vol, LIVE_VOL_COLS)):
         if src is None or src.empty:
             continue
         idx = src.drop_duplicates("player_key").set_index(src["player_key"].astype(str))
@@ -589,7 +667,7 @@ def attach_enrichment(board: pd.DataFrame, *, dist: pd.DataFrame | None = None,
 
 def enrich_board(con, season: int, board: pd.DataFrame, *, as_of=None,
                  ruleset: RuleSet | None = None, seed: int = 0, slots=None, n_teams: int = 10,
-                 situation: bool = True, context: bool = True,
+                 situation: bool = True, context: bool = True, live_vol: bool = True,
                  shape_method: str = "rank") -> pd.DataFrame:
     """A raw ADP board + the frozen risk/value context, ready for :func:`simulate_draft`.
 
@@ -597,9 +675,15 @@ def enrich_board(con, season: int, board: pd.DataFrame, *, as_of=None,
     and the ceiling an opponent chases is the ceiling everything else scored. The distribution is
     memoized per process, so the first call costs ~12 s for a fresh season and later ones are free.
 
-    ⚠ **T13:** the Phase-5 cloud is not yet reproducible *across processes* — per-player ``q10``/
-    ``q90`` move between runs. Assert on the **shape** of what a personality drafts (skew, group
-    means), never on a named player, or the test is flaky by construction.
+    ``live_vol`` attaches :data:`LIVE_VOL_COLS` — the boom/bust pair re-measured on ``season − 1``
+    (T22). On by default: the frozen pair is four seasons stale on any live board, and this is the
+    board a human reads.
+
+    ⚠ **T13 (fixed 2026-07-29):** the Phase-5 cloud used to move between processes, so the tests
+    here assert on the **shape** of what a personality drafts (skew, group means) rather than on a
+    named player. That discipline is worth keeping — but the underlying draw is now reproducible
+    across processes (:func:`~fantasy_quant.data.db.deterministic_reads`), so a board built from the
+    same ``(season, ruleset, seed)`` is the same board tomorrow.
     """
     ruleset = ruleset or RuleSet()
     if as_of is None:
@@ -608,10 +692,19 @@ def enrich_board(con, season: int, board: pd.DataFrame, *, as_of=None,
     vb = value_board(con, season, as_of, ruleset=ruleset, slots=slots, n_teams=n_teams)
     # the step-3 context needs a `mean` to take shares of, so it is computed on the board *after*
     # the distribution join rather than from the raw frame.
+    vol = None
+    if live_vol:
+        try:
+            vol = live_volatility(con, season, ruleset=ruleset)
+        except LookupError:
+            # the earliest season in the store has no prior season to measure against; per this
+            # module's contract that means *no column*, not a fabricated one. A source that exists
+            # but is too old still raises — that is T22 itself.
+            vol = None
     with_level = attach_enrichment(board, dist=dist, value=vb,
                                    rookie=rookie_flags(con, season),
                                    situation=situation_scores(con, season) if situation else None,
-                                   shape_method=shape_method)
+                                   live_vol=vol, shape_method=shape_method)
     if not context:
         return with_level
     ctx = role_shares(con, season, with_level)
@@ -630,7 +723,8 @@ def enrichment_coverage(board: pd.DataFrame) -> dict:
     """
     n = len(board)
     out = {"n_rows": int(n)}
-    for c in (*DIST_COLS, *SHAPE_COLS, *VALUE_COLS, *CONTEXT_COLS, "rookie", "cos"):
+    for c in (*DIST_COLS, *SHAPE_COLS, *VALUE_COLS, *CONTEXT_COLS, *LIVE_VOL_COLS,
+              "rookie", "cos"):
         if c in board.columns:
             filled = int(pd.to_numeric(board[c], errors="coerce").notna().sum())
             out[c] = round(filled / n, 4) if n else 0.0
