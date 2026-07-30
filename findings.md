@@ -4700,3 +4700,136 @@ hardest **in-season**, when the chore runs weekly and consecutive boards diverge
 exactly when a user is drafting. Logged, **not fixed**: the fix invalidates all nine season caches,
 and Session H.5's central claim is bit-identity against caches built before it, so rebuilding them at
 the close would have made that claim unverifiable. It belongs with the next batch measurement.
+
+---
+
+## T31 — the live-board level correction, and a filed cause that was wrong three times running
+
+*(2026-07-30, its own session, per the user's ordering decision T31 → Session I → Session I.5. Bars
+pre-registered in `PLAN.md` §2026-07-30 (session 4) before the fix existed; results in
+`analysis/t31_level_cap.json`; done-bar `steps/t31_level_cap.py`.)*
+
+**All six bars pass.** Whole-board negative-haircut share **38.75 % → 0.00 %**; drafted-range
+`spearman(haircut, games_played_mean)` **RB −0.288 → −0.666** with QB/WR/TE at −0.906/−0.904/−0.889;
+full-board sign **QB +0.474 → −0.980**; max `sd/proj_points` **23.06 → 0.903**;
+2022/2023/2024/**2025** bit-identical; T17 band held with the top-60 moving **0.078 %**.
+
+### ★ The ticket's own cause line was wrong, and one line of code falsified it
+
+`docs/TECH-DEBT.md` T31 recorded the cause as "a live season has no realized prior-season basis to
+shrink the per-game level toward". **There is no such branch anywhere in the code.** `train_seasons` is
+`[s for s in DEV_SEASONS if s < season]`, which for a 2024 board and a 2026 board is the *same nine
+seasons*, 2014–2022. The fitted QuantReg models are **identical** between the board that fails the gate
+and the board that passes it. Five minutes of reading, before any code was written, moved the whole
+session off the prescription and onto the board.
+
+**That is now three in a row.** T13's filed prescription (thread a seed through the Iman–Conover
+coupling) would have been built and would not have worked — the cause was DuckDB's parallel float
+aggregation. T24's filed prescription (a per-seat `adp_stdev` private board) *was* built and was
+**monotonically harmful**. Now T31's. The pattern is structural, not carelessness: **a ticket's cause
+line is written at the moment the symptom is found, which is the moment you know least about it.** It
+should be read as a hypothesis with a decaying confidence, and re-derived before it is built. The
+cheapest possible first move is the one used here — *when a defect is claimed to be about A versus B,
+check whether A and B actually differ in the code before theorising about why they do.*
+
+### ★ The measured cause: a linear fit extrapolated far below its own support
+
+The level is `b0_tau + b1_tau · calibrated_mean`, one line per (position, τ), fit on the **conditional
+cohort** `weeks ≥ 0.85 · season_games` — necessarily starters. So the intercepts are large and positive
+(**QB q50 `b0` = 169.35**, RB 68.95, WR 43.70, TE 36.24), and the fitted level exceeds the projection it
+is built from for any `proj_points` below **272 (QB) / 187 (WR) / 170 (RB) / 150 (TE)**.
+
+Training support of `calibrated_mean` bottoms out at **QB 34.1 / TE 11.0 / WR 12.0 / RB 4.9**. The
+**2026 board's median QB `calibrated_mean` is 11.4** — below the *minimum* of the training data.
+**56.4 % of 2026 QBs sit below training support, against 2.3 % on 2024 and 6.7 % on 2022.** The defect
+is **board depth, not season liveness**: the live FantasyPros scrape runs 490 players deep to
+`proj_points` 1.8, while the historical proxy board only projects players with prior-season production
+and stops around 10. The two boards were never the same object, and nothing in the pipeline said so.
+
+**A second mechanism sits underneath, and it is why "just don't extrapolate" fails.** The training
+cohort is conditioned on availability, so a *low-projection* player who still played 85 % of a season is
+one who **won a job**. The fit's low tail is made of breakouts — it is selection-biased upward, not
+merely unsupported. Interpolating the fit to the origin (the textbook answer to out-of-support
+extrapolation) leaves an origin slope ~3.4× steeper than `1/correction`, so the violation survives with
+its sign intact. The repair has to reach for the consensus level.
+
+### ★ Capping at the projection was built first, and the tie mass is what rejected it
+
+The obvious repair — scale any row whose `mean` exceeds `proj_points` back to `proj_points` — shipped
+first and looked good: negative share **38.75 % → 8.1 %**, B4/B5/B6 all passing. It is wrong, and the
+gate said so in the one place a bar can still speak after the headline improves: **full-board QB
+spearman moved the *wrong way*, +0.474 → +0.523**, and drafted-range RB degraded −0.288 → −0.250.
+
+The reason is a **tie mass**. Capping at the boundary leaves every capped row at `haircut == 0` — a
+block of players with a *low* `games_played_mean` and *no* haircut at all, which is the availability
+identity failing in the opposite direction. The property under test was never "haircut ≥ 0"; it was
+"haircut **is** the availability discount". The shipped target is therefore
+
+    target = proj_points · avail_p / g_ref
+
+which is literally what `validate.value_scale_gate` measures (`haircut == 1 − avail_p/g_ref`, decreasing
+in games played). **Cap to the identity, not to the boundary.** This is T19's lesson recurring on a
+repair instead of a signal: *a one-sided fix is passed by the same defect pointing the other way.*
+
+### ★ It is a repair, not a replacement — and the gradient is the proof
+
+Share of rows whose level moved, by ADP band, with the median scale among those that moved:
+
+| ADP band | n | share moved | median scale |
+|---|---|---|---|
+| **1–24** | 24 | **0.0 %** | — |
+| 25–60 | 35 | 2.9 % | 0.988 |
+| 61–120 | 59 | 11.9 % | 0.971 |
+| 121–180 | 79 | 51.9 % | 0.883 |
+| undrafted | 282 | 96.5 % | 0.443 |
+
+The top of the board is *literally* untouched, and the effect ramps exactly where the fit runs out of
+support. Board-wide `sum(mean)` falls 41 155 → 33 998 (−17.4 %), essentially all of it below ADP 120.
+Worth stating plainly because two very different changes would have passed the six bars — a narrow
+repair and a wholesale replacement of the Phase-5 level with `proj × avail` — and only one of them is
+the ticket. **The bars constrain the outcome; the gradient is what identifies the mechanism.**
+
+### ★ The 2025 holdout was authorised and then not needed
+
+The user pre-authorised one further read of the 2025 calibration holdout to confirm the fix had not
+broken coverage (75.5 % uncond / 81.5 % cond). It turned out to be unnecessary: the structural gate is
+**`value_board.source`**, already in the frozen 4.2 contract, and **2025 is proxy-sourced** — so it is
+bit-identical, and B5 establishes that **by hash** without reading its calibration at all. The holdout
+is still unspent. *Check what a structural gate already buys you before spending a one-shot resource on
+the same question.*
+
+### ⚠ The method warning, which outlives the ticket: a control that cannot fail
+
+B5 is a before/after against a `git worktree` at the pre-T31 commit. **It silently ran post-fix code
+twice.** First: the project installs **editable**, so `uv run --project <main>` from inside a worktree
+resolves `fantasy_quant` to the *main* tree's `src` — the worktree's own source is never imported.
+Second, on the retry: a persistent `cd` in a chained shell command sent the *working-tree* run into the
+worktree, so both halves were now "before".
+
+Both failures produced **identical hashes across all five seasons** — which reads exactly like
+"bit-identical, nothing moved", the result the bar was hoping to see. A broken control and a passing
+control are the same output. It was caught only because 2026 was *expected* to move and didn't.
+
+**The rule: assert your control can produce a known difference before you trust it to show none.** Fix
+in place — `PYTHONPATH=<worktree>/src`, plus the warning in `steps/t31_level_cap.py`'s docstring and a
+`live_board_changed` field carried in the bar sheet so a control that stops discriminating is visible in
+the artifact rather than in someone's memory.
+
+**A third instance, same day, different disguise.** The T31 regression check against the shipped room
+bar sheet (`analysis/mock_room_bars_verify_20260729.json`) came back with **149 gate-side differences**
+— on `MATCHED_SEASONS` 2017–2024, which T31 leaves bit-identical by construction. It looked like the
+fix had leaked into the frozen room. It had not: the verify sheet was generated with
+**`shuffle_room: true`** and the re-run had defaulted to `false`, so the two sheets describe different
+seating populations — H.5's own finding that a fixed seating flatters by 5–7 pp, arriving as a false
+positive instead of a false negative. Confirmed independently first: the v3 and v4 board caches are
+**byte-identical for every historical season** and differ **only on 2026**.
+
+So in one session the same class of error produced *both* a spurious "nothing changed" (twice) and a
+spurious "everything changed" (once). The unifying rule is not about worktrees or flags: **a
+comparison is only evidence if you know the two sides differ in exactly one thing, and the cheapest
+way to know that is to check the run's own recorded config before reading its numbers.** Every one of
+these three was caught by a *second, independent* measurement — the expected-to-move season, and the
+cache digests — not by inspecting the harness.
+
+*(A fourth, harmless: a `cd analysis/cache` persisted across chained shell commands and a later
+relative path resolved into it. Same root cause, no analytical consequence.)*

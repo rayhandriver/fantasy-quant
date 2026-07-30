@@ -1,0 +1,125 @@
+{
+  "season": 2026,
+  "bars": [
+    {
+      "bar": 0.02,
+      "pass": true,
+      "share": 0.0,
+      "n_neg": 0,
+      "n": 480
+    },
+    {
+      "bar": -0.5,
+      "pass": true,
+      "by_pos": {
+        "QB": -0.9061,
+        "RB": -0.6663,
+        "WR": -0.9042,
+        "TE": -0.8887
+      }
+    },
+    {
+      "bar": 0.0,
+      "pass": true,
+      "by_pos": {
+        "QB": -0.9803,
+        "RB": -0.8785,
+        "WR": -0.936,
+        "TE": -0.9489
+      }
+    },
+    {
+      "bar": "B4 sd / proj_points",
+      "pass": true,
+      "median_by_pos": {
+        "QB": 0.3667,
+        "RB": 0.4598,
+        "TE": 0.4641,
+        "WR": 0.4903
+      },
+      "max_ratio": 0.9033,
+      "bar_median": 1.0,
+      "bar_max": 3.0
+    },
+    {
+      "bar": "B5 historical bit-identity (proxy boards)",
+      "pass": true,
+      "by_season": {
+        "2022": true,
+        "2023": true,
+        "2024": true,
+        "2025": true
+      },
+      "live_board_changed": true
+    },
+    {
+      "bar": "B6 top-of-board untouched (T17 band + drift)",
+      "pass": true,
+      "level_ratio": 0.7204,
+      "band": [
+        0.55,
+        0.85
+      ],
+      "top_sum_mean": 12166.89,
+      "drift": 0.000784,
+      "bar_drift": 0.005
+    }
+  ],
+  "all_pass": true,
+  "value_scale_stats": {
+    "drafted_range": {
+      "QB": {
+        "n": 28,
+        "rho": -0.9061264943413525,
+        "median_haircut": 0.22720549546679059,
+        "neg_haircut_share": 0.0
+      },
+      "RB": {
+        "n": 62,
+        "rho": -0.6663475501365846,
+        "median_haircut": 0.3022811734149553,
+        "neg_haircut_share": 0.0
+      },
+      "WR": {
+        "n": 83,
+        "rho": -0.9042093681037954,
+        "median_haircut": 0.2910915473993192,
+        "neg_haircut_share": 0.0
+      },
+      "TE": {
+        "n": 24,
+        "rho": -0.8886956521739129,
+        "median_haircut": 0.3090788457000887,
+        "neg_haircut_share": 0.0
+      }
+    },
+    "full_board": {
+      "QB": {
+        "n": 78,
+        "rho": -0.9803180809876576,
+        "median_haircut": 0.5293866628576741,
+        "neg_haircut_share": 0.0
+      },
+      "RB": {
+        "n": 121,
+        "rho": -0.8785349873001684,
+        "median_haircut": 0.34071078707901015,
+        "neg_haircut_share": 0.0
+      },
+      "WR": {
+        "n": 169,
+        "rho": -0.9360452181501199,
+        "median_haircut": 0.3012299510301587,
+        "neg_haircut_share": 0.0
+      },
+      "TE": {
+        "n": 112,
+        "rho": -0.9489383429814808,
+        "median_haircut": 0.3521202111309984,
+        "neg_haircut_share": 0.0
+      }
+    }
+  },
+  "n_rows": 480,
+  "n_below_consensus": 480
+}

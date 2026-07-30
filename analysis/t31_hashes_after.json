@@ -1,0 +1,37 @@
+{
+  "2022": {
+    "n": 702,
+    "samples_md5": "4732315de555418c3039cc73accf87b3",
+    "games_md5": "d202b37811c8dacc53e80588cab90c0e",
+    "summary_md5": "5b9d05e23e71a7a8f85d7423e91624f2",
+    "sum_mean": 57751.2764757142
+  },
+  "2023": {
+    "n": 678,
+    "samples_md5": "2abd400ed5eb75aa856729d2159c5474",
+    "games_md5": "c07fdba7713d86a01b2d0322d9b880d5",
+    "summary_md5": "f55142d41ea92032c6b63cb10983e5e9",
+    "sum_mean": 55498.34170418409
+  },
+  "2024": {
+    "n": 647,
+    "samples_md5": "fd1cb9b4bc3db1a69a5c8f30610f67e6",
+    "games_md5": "260996d1186ef55fa6c79ccfae22696e",
+    "summary_md5": "5a0f8210c82d87fe6cb6c45ede631517",
+    "sum_mean": 53888.74599183325
+  },
+  "2025": {
+    "n": 673,
+    "samples_md5": "5d21cb23b51c2f14368c18f3fc4ce481",
+    "games_md5": "395e1088e7499392093e5043306094f4",
+    "summary_md5": "28950b857b2a97e1f28a47d5727e608f",
+    "sum_mean": 55755.93992672825
+  },
+  "2026": {
+    "n": 480,
+    "samples_md5": "9d409f2a9acee188b2a4b40f9aa3d617",
+    "games_md5": "8bd17fb21b8ae00dd5d0bbf553bb0756",
+    "summary_md5": "6353743fccd45fdac25c7012c00530f6",
+    "sum_mean": 33998.087427805265
+  }
+}

@@ -134,7 +134,7 @@ MIN_LEVEL: float = 1.0
 #: repo's most-repeated failure mode (F.5's hardcoded label, T13's cross-process cloud, the stale
 #: editor buffer) in its cheapest form. A version in the key turns a silent wrong answer into a
 #: cache miss.
-ENRICH_VERSION: str = "v3-t22-live-vol"
+ENRICH_VERSION: str = "v4-t31-level-cap"
 
 #: Frozen Phase-4 value-board columns the enrichment lifts onto the board. ``overall_rank`` is a
 #: rank — **lower is better** — so a personality that wants good players weights it *negative*.

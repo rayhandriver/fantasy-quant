@@ -51,6 +51,56 @@ def test_predict_quantiles_unknown_position_is_nan():
 
 
 # --------------------------------------------------------------------------------------------
+# T31 — the consensus level cap. The first four are the property the ticket is about; the last two
+# are the bit-identity guarantee that keeps the spent lockbox and the unspent 2025 holdout valid.
+# --------------------------------------------------------------------------------------------
+def _cap(mean, proj, source, avail_p, g_ref=0.93):
+    return quantile.consensus_level_cap(mean, proj, source, avail_p, g_ref)
+
+
+def test_level_cap_is_exactly_one_off_a_live_board():
+    """A proxy-sourced (historical) board is never touched — and the multiplier is exactly 1.0, not
+    approximately, because that is what makes the historical hashes match bit-for-bit."""
+    s = _cap([500.0, 500.0], [20.0, 20.0], ["proxy", "rookie"], [0.9, 0.9])
+    assert (s == 1.0).all()
+    # and the identity holds through the multiply the assembler actually performs
+    samples = np.array([[1.0, 2.0], [3.0, 4.0]])
+    assert (samples * s[:, None] == samples).all()
+
+
+def test_level_cap_pulls_an_out_of_support_row_onto_the_availability_discount():
+    """The target is ``proj * avail_p / g_ref`` — the identity `value_scale_gate` tests — not a bare
+    cap at ``proj``. The register's fingerprint row: proj 22.3 -> mean 102.9."""
+    s = _cap([102.9], [22.3], ["consensus"], [0.66], g_ref=0.93)
+    capped = 102.9 * s[0]
+    assert capped == pytest.approx(22.3 * 0.66 / 0.93, rel=1e-9)
+    assert capped < 22.3                       # a level correction cannot raise the level
+    assert 0.0 < s[0] < 1.0
+
+
+def test_level_cap_never_inflates_a_row_already_below_target():
+    """It is one-sided by construction: a player the model already prices conservatively keeps his
+    own level, so the cap can only ever remove level information, never add it."""
+    s = _cap([50.0], [200.0], ["consensus"], [0.9])
+    assert s[0] == 1.0
+
+
+def test_level_cap_leaves_the_top_of_the_board_alone():
+    """An in-support starter (mean well under proj) is untouched, which is bar B6: the fix must be
+    invisible to the players the quantile fit actually has a basis for."""
+    s = _cap([265.0, 240.0], [370.0, 330.0], ["consensus"] * 2, [0.79, 0.80])
+    assert (s == 1.0).all()
+
+
+def test_level_cap_tolerates_missing_projections_and_availability():
+    """Rows with no usable projection or availability fall back to 1.0 rather than to a NaN scale —
+    a NaN here would silently poison a whole player's draw vector."""
+    s = _cap([100.0, 100.0, 100.0], [np.nan, 0.0, 50.0],
+             ["consensus"] * 3, [0.9, 0.9, np.nan])
+    assert (s == 1.0).all()
+
+
+# --------------------------------------------------------------------------------------------
 # 5.2 conformal (CQR) — widen when too tight, shrink when too loose; coverage counts
 # --------------------------------------------------------------------------------------------
 def test_cqr_widens_a_too_tight_band():

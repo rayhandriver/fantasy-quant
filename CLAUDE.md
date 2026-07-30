@@ -61,6 +61,49 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
+> **★★★ Next-session pointer (2026-07-30, session 4 — T31 ☑ DONE. READ THIS FIRST.)**
+>
+> **Running order agreed with the user for this stretch: T31 → Session I (Phase 17) → hard stop →
+> Session I.5 (16.17).** §3.7 gates waived *within* T31 and Session I; one commit per session, **not
+> pushed**. Ten scope decisions were taken up front and are recorded in `PLAN.md` §2026-07-30
+> (session 4) — 17.1 **nested-eligibility flex only** (non-nested refused at `LeagueSettings`),
+> bracket **4/6/8 with derived byes** and **odd `n_teams` rejected**, 17.2 **presets + a bounded knob
+> set** (not an open stat map), 17.4 **round-based keepers only**.
+>
+> **T31 ☑ — and the register's filed cause was WRONG, the third in a row after T13 and T24.** There
+> is no live-vs-historical branch in the level fit: `train_seasons` is 2014–2022 for a **2024** board
+> *and* a 2026 one, so the QuantReg models are **identical** and the defect was entirely in the
+> **board**. Measured cause = **linear extrapolation far below the support of the fit** (median 2026
+> QB `calibrated_mean` **11.4** vs a training *minimum* of 34.1; **56.4 %** of 2026 QBs below support
+> against **2.3 %** on 2024), with the low end *additionally* selection-biased upward because the fit
+> trains on `weeks >= 0.85*season`. Fixed by `quantile.consensus_level_cap` + four lines in
+> `distribution.assemble_distribution`, gated on **`value_board.source`** (already a frozen 4.2
+> contract column). **All six pre-registered bars PASS**: negative-haircut share **38.75 % → 0.00 %**,
+> drafted-range rho **RB −0.288 → −0.666**, full-board **QB +0.474 → −0.980**, max `sd/proj`
+> **23.06 → 0.90**, 2022/23/24/**25 bit-identical**, T17 band held (top-60 moved 0.078 %).
+>
+> **⚠ Do not re-derive / do not "fix":** the target is `proj_points * avail_p / g_ref`, **not** a bare
+> cap at `proj_points` — the bare cap was built first, moved B1 to 8.1 % and pushed **full-board QB
+> spearman the wrong way (+0.474 → +0.523)** by parking every capped row at `haircut == 0`. *Cap to
+> the identity, not to the boundary.* · The scale is applied to `samples`, not to the quantile band ·
+> `games` is deliberately unscaled · non-live rows multiply by **exactly 1.0**, which is what makes
+> the bit-identity bar hold by construction · **the 2025 calibration holdout was authorised for one
+> more read and then NOT spent** — the source gate leaves it bit-identical, verified by hash.
+>
+> **⚠ Method warning that outlives the ticket — a control that cannot fail.** The B5 before/after ran
+> **post-fix code twice**: `uv run --project <main>` from a `git worktree` resolves the **editable**
+> install to the *main* tree's `src`, and on the retry a persistent `cd` sent the working-tree run
+> into the worktree. Both produced *identical hashes* — indistinguishable from "nothing moved".
+> Use `PYTHONPATH=<worktree>/src`, and **assert the control can produce a known difference before
+> trusting it to show none**. See `steps/t31_level_cap.py`'s docstring.
+>
+> **`ENRICH_VERSION` → `v4-t31-level-cap`**, so all nine 16.13 board caches rebuild (~35 min).
+> Artifacts: `analysis/t31_level_cap.json`, `analysis/t31_hashes_{before,after}.json`. New steps:
+> `t31_level_cap.py`, `t31_hash_distributions.py`, `t31_dump_summary.py`. Write-ups: `findings.md`
+> §"T31", `docs/TECH-DEBT.md` T31 (☑), `PLAN.md`, `glossary.md`.
+>
+> **★ NEXT: Session I = Phase 17 formats**, then a hard stop, then Session I.5 = 16.17.
+
 > **★ Scoped 2026-07-30 (session 3, docs-only — no code, nothing run): 16.17 multi-seat human control.**
 > User asked for the finished mock drafter to let a user **drive as many seats as they like** (e.g. 6
 > personalities + 4 teams drafted by hand). **It was in none of the md files, and the gap is structural:**

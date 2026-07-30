@@ -2205,3 +2205,116 @@ precedent — the rule belongs where the number is made):
 
 **Not decided (left to the build):** whether `--seats` supersedes `--seat` or wraps it, and whether the
 per-seat pick-fn map is exposed on `simulate_draft` as well as `run_to_completion`.
+
+## 2026-07-30 (session 4) — T31: the live-board level correction
+
+**Order for this run (user decisions, 2026-07-30):** T31 → Session I (Phase 17) → hard stop → Session I.5
+(16.17). §3.7 gates waived within T31 and Session I; one commit per session, no push.
+
+### ★ The register's filed cause is WRONG — the third prescription in a row that was (T13, T24)
+
+`docs/TECH-DEBT.md` T31 says the break is that "a live season has no realized prior-season basis to
+shrink the per-game level toward". **There is no such branch.** `train_seasons` for a 2026 board is
+`[s for s in DEV_SEASONS if s < 2026]` = 2014–2022, and for a 2024 board it is
+`[s for s in DEV_SEASONS if s < 2024]` = **the same nine seasons**. The fitted QuantReg models are
+therefore *identical* between the board that fails and the board that passes. Whatever the defect is, it
+is not in the fit.
+
+**Measured cause: linear extrapolation of a per-position QuantReg far below the support of its training
+data, exposed by the live board being much deeper than any historical proxy board.**
+- The Phase-5 level is `H = b0_τ + b1_τ · calibrated_mean`, fit on the **conditional cohort**
+  (`weeks ≥ 0.85 · season_games`) — necessarily starters. Fitted intercepts are large and positive:
+  **QB q50 b0 = 169.35**, RB 68.95, WR 43.70, TE 36.24.
+- Breakeven, i.e. where the fitted level exceeds the projection it is built from: `proj_points` below
+  **272 (QB) / 187 (WR) / 170 (RB) / 150 (TE)**.
+- Training support of `calibrated_mean` bottoms out at **QB 34.1 / TE 11.0 / WR 12.0 / RB 4.9**
+  (QB 1st pctile 36.2). The **2026 board's median QB `calibrated_mean` is 11.4** — below the *minimum*
+  of the training data. **56.4 % of 2026 QBs sit below training support**, against **2.3 % on 2024** and
+  **6.7 % on 2022**. Board depth, not season liveness.
+- The low end is additionally **selection-biased upward**: a low-projection player who nonetheless played
+  85 % of a season is one who won a job, so the cohort's low tail is made of breakouts. This is why
+  interpolating the fit to the origin does **not** repair the sign (checked: the origin slope is still
+  ~3.4× steeper than `1/correction`), and why the repair has to reach for the consensus level.
+
+**Structural gate = `value_board.source`, already in the frozen contract.** 2022/2023/2024/**2025** are
+`proxy`+`rookie`; **2026 is `consensus`** (490/490). So a source-gated fix is bit-identical on every
+historical board **including 2025** — the lockbox stays valid and **the calibration holdout stays
+unspent**. The read of 2025 the user authorised turns out not to be needed; B5 below verifies 2025 by
+hash rather than by reading its calibration.
+
+### ⭐ T31 PRE-REGISTRATION (written before the fix exists; bars are not to be softened)
+
+Population = the 2026 live board. "Drafted range" = `adp ≤ VALUE_SCALE_ADP_MAX`, T27's population.
+
+| bar | property | BEFORE (measured 2026-07-30) | pass |
+|---|---|---|---|
+| **B1** | whole-board negative-haircut share (`mean > proj_points` is impossible for a level correction) | **38.75 %** (186/480) | **≤ 2.0 %** |
+| **B2** | drafted-range `spearman(haircut, games_played_mean)`, all four positions — T27's shipped bar, unchanged | QB −0.902 · **RB −0.288 FAIL** · WR −0.538 · TE −0.838 | **≤ −0.50 all four** |
+| **B3** | full-board `spearman` **sign** (off the drafted range the two prices genuinely differ, so no magnitude is demanded — only that it not be positive) | QB **+0.474** · RB **+0.225** · TE **+0.237** · WR −0.011 | **≤ 0 all four** |
+| **B4** | the `sd ≈ mean` fingerprint, measured against the projection rather than against our own mean: per-position median `sd / proj_points`, and the whole-board max | median QB **3.57** · RB 0.69 · TE 0.73 · WR 0.58; **max 23.06** | **median ≤ 1.0 all four; max ≤ 3.0** |
+| **B5** | historical bit-identity — `assemble_distribution` on **2022 / 2023 / 2024 / 2025** | — | **byte-identical** |
+| **B6** | do not touch what the model has a basis for — T17 `LEVEL_BAND` on 2026, and top-60 aggregate mean | ratio **0.7210** ∈ (0.55, 0.85); Σmean **12 176.44** | band holds; **Σ moves < 0.5 %** |
+
+Fail any bar → stop, record, and report rather than retune. (B1's *whole-board* denominator is 480 rows
+with both a projection and a cloud; the register's "22.8 %" was over a wider denominator that included
+rows with no distribution. Per-position shares are unchanged from the register: QB 59.0 / RB 42.1 /
+TE 33.0 / WR 30.8 %.)
+
+### The fix
+
+**`quantile.consensus_level_cap` — outside the support of our own fit, defer to consensus.** For a row on
+a live-consensus board whose assembled `mean` exceeds the consensus `proj_points` it was built from,
+scale that player's whole draw vector by `proj_points / mean`. Level corrected, uncertainty *shape*
+(CoV) preserved, absolute `sd` falls with the level. Applied to `samples` after the draw loop, where it
+is **exact**: `Y` is linear in the quantile band, so scaling draws == scaling the band, with none of the
+`max(0, q10 − adj)` clamp's non-linearity to reason about. Non-capped rows multiply by exactly `1.0`,
+which is exact in floating point — that is what makes B5 hold by construction rather than by tolerance.
+
+**Interpretation to carry:** *outside the support of the quantile fit we add no level information of our
+own.* That is the same posture the project already takes on value ("don't fight the sharp market"),
+applied one layer down.
+
+### ⭐ T31 RESULT — all six bars pass (2026-07-30)
+
+`analysis/t31_level_cap.json` · `steps/t31_level_cap.py` · `steps/t31_hash_distributions.py` ·
+`steps/t31_dump_summary.py`. Full write-up in `findings.md` §"T31"; register row + section in
+`docs/TECH-DEBT.md` T31 (☐ → ☑).
+
+| bar | before | after |
+|---|---|---|
+| B1 negative-haircut share | 38.75 % | **0.00 %** |
+| B2 drafted-range rho | RB **−0.288** (QB −0.902 / WR −0.538 / TE −0.838) | RB **−0.666** (QB −0.906 / WR −0.904 / TE −0.889) |
+| B3 full-board rho sign | QB **+0.474** / RB +0.225 / TE +0.237 | QB **−0.980** / RB −0.879 / TE −0.949 / WR −0.936 |
+| B4 `sd/proj` median QB · max | 3.57 · 23.06 | **0.367** · **0.903** |
+| B5 2022/23/24/25 | — | **byte-identical** |
+| B6 T17 band · top-60 drift | 0.7210 | 0.7204 · **0.078 %** |
+
+**Implementation as built** (differs from the sketch above in one way that mattered): the target is
+`proj_points * avail_p / g_ref`, **not** a bare cap at `proj_points`. The bare cap was built first,
+passed B4/B5/B6 and moved B1 to 8.1 %, but parked every capped row at `haircut == 0` — a tie mass with
+low projected games and no haircut — and pushed **full-board QB spearman the wrong way, +0.474 →
++0.523**. Cap to the identity the gate measures, not to the boundary.
+
+**Landing gradient** (share of rows whose level moved · median scale among them): ADP 1–24 **0.0 %** ·
+25–60 2.9 % (0.988) · 61–120 11.9 % (0.971) · 121–180 51.9 % (0.883) · undrafted 96.5 % (0.443). Board
+`sum(mean)` 41 155 → 33 998. A narrow repair, not a replacement — and both would have passed the bars,
+so the gradient is reported alongside them.
+
+**Not spent:** the authorised extra read of the 2025 calibration holdout. 2025 is proxy-sourced, so the
+source gate leaves it bit-identical and B5 verifies that by hash without reading its calibration.
+
+**Decided in-session, worth not re-litigating:** `LIVE_SOURCES = {"consensus"}` is the gate (a frozen
+4.2 contract column, not a new flag or a season comparison) · the scale is applied to `samples`, not to
+the quantile band, so the `max(0, q10 − adj)` clamp needs no reasoning about · `games` is deliberately
+unscaled (availability was never wrong) · non-live rows multiply by **exactly 1.0** so B5 holds by
+construction · `ENRICH_VERSION` → `v4-t31-level-cap`, which forces all nine 16.13 board caches to
+rebuild (~35 min, unavoidable — the enrichment reads the cloud).
+
+**Room-bar regression ☑ (added after the bars, 2026-07-30).** `steps/mock_room_bars.py --shuffle-room`
+reproduces `analysis/mock_room_bars_verify_20260729.json` with **0 gate-side differences** and all four
+bar flags `True`; only `readout_2026` moves (66 fields — the live board, explicitly "never a gate") plus
+two `config` keys H.5 added (`bench_weight`, `mix`). Independently corroborated: the v3 and v4 board
+caches are **byte-identical for every historical season** and differ only on 2026.
+⚠ The first attempt showed **149 gate-side diffs** and looked like a leak — it had defaulted to
+`shuffle_room: false` while the verify sheet used `true`. *Check the run's own recorded config before
+reading its numbers.* Artifact: `analysis/mock_room_bars_t31_shuffled.json`.

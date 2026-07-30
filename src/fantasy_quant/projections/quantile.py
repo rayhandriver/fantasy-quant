@@ -66,8 +66,79 @@ def calibrated_mean_board(con, season: int, ruleset: RuleSet | None = None,
         correction = dev_correction(con, ruleset)
     board = value_board(con, season, ruleset=ruleset, rookie_fn=rookie_projection)
     board = board[board["pos"].isin(SKILL)].copy()
+    board["proj_points"] = pd.to_numeric(board["proj_points"], errors="coerce")
     board["calibrated_mean"] = board["proj_points"] * board["pos"].map(correction).fillna(1.0)
-    return board[["player_key", "pos", "calibrated_mean"]].reset_index(drop=True)
+    # ``proj_points``/``source`` ride along for T31 (:func:`consensus_level_cap`): the cap needs the
+    # projection the level was built from, and the board's own provenance. Both are already columns
+    # of the frozen 4.2 contract, so this carries them rather than reconstructing anything.
+    return board[["player_key", "pos", "proj_points", "source",
+                  "calibrated_mean"]].reset_index(drop=True)
+
+
+#: ``value_board.source`` values that mean "this row came from a **live** consensus scrape". Every
+#: historical board is ``proxy``/``rookie``; only a season that has not been played is ``consensus``
+#: (verified 2026-07-30: 2022/2023/2024/**2025** are proxy+rookie, 2026 is 490/490
+#: consensus). Gating T31 on this is what keeps the spent lockbox — and the *unspent* 2025
+#: calibration holdout — bit-identical.
+LIVE_SOURCES: frozenset[str] = frozenset({"consensus"})
+
+
+def consensus_level_cap(mean, proj_points, source, avail_p, g_ref: float,
+                        live_sources=LIVE_SOURCES) -> np.ndarray:
+    """T31 — the per-row multiplier that pulls an out-of-support level back onto the consensus
+    projection it was built from, **discounted by that player's own projected availability**.
+    Returns an array of scale factors in ``(0, 1]``.
+
+    **The property being restored.** ``mean`` is a *level correction* of ``proj_points`` — the
+    projection times an expected-availability fraction — so ``mean > proj_points`` is structurally
+    impossible. On the 2026 live board it happened for **38.8 %** of rows (QB 59 %), against ~0 % on
+    every historical board.
+
+    **Why it happens, which is not what ``docs/TECH-DEBT.md`` T31 filed.** There is no live-vs-
+    historical branch in the fit: ``train_seasons`` is 2014–2022 for a 2024 board *and* a 2026
+    one, so the QuantReg models are identical and the defect is entirely in the **board**. It is
+    ``b0_tau + b1_tau * calibrated_mean`` fit on the conditional cohort (``weeks >= 0.85*season``),
+    which is necessarily starters — intercepts are large and positive (QB q50 ``b0 = 169.35``). The
+    live consensus board runs far deeper than any historical proxy board: its median QB
+    ``calibrated_mean`` is **11.4**, below the *minimum* of the training data (34.1), and
+    **56.4 %** of its QBs sit below training support against **2.3 %** on 2024. So the fitted line
+    is extrapolated a long way below its own support, and that low end is *additionally*
+    selection-biased upward — a low-projection player who still played 85 % of a season won a job.
+
+    **The repair, and its posture.** Outside the support of our own fit we add no level information
+    of our own: the row is pulled back to what consensus says, times the availability fraction the
+    assembler already computed for it —
+
+        target = proj_points * avail_p / g_ref
+
+    which is exactly the identity :func:`fantasy_quant.data.validate.value_scale_gate` tests
+    (``haircut == 1 - avail_p/g_ref``, a decreasing function of games played). The uncertainty
+    *shape* (CoV) is preserved and absolute ``sd`` falls with the level, which is the honest reading
+    of the ``sd ~= mean`` fingerprint (worst offender: ``proj 22.3 -> mean 102.9, sd 78.2``). It is
+    the same posture the project already takes on value — don't fight the sharp market — one layer
+    down.
+
+    ⚠ **A plain cap at ``proj_points`` is NOT enough, and measuring it is what showed why.** That
+    version shipped first and moved the whole-board negative share 38.8 % -> 8.1 % but left every
+    capped row at ``haircut == 0`` — a *tie mass* of players with a low ``games_played_mean`` and no
+    haircut at all, which is the identity's failure in the other direction. Full-board QB spearman
+    went the wrong way (+0.474 -> +0.523). The level has to land on the availability discount, not
+    merely underneath the projection.
+
+    Rows that are not live-sourced, are already at or below that target, or have no usable
+    projection get **exactly 1.0**, which is exact in floating point and is what makes the
+    historical bit-identity bar (B5) hold by construction rather than by tolerance.
+    """
+    mean = np.asarray(mean, dtype=float)
+    proj = np.asarray(pd.to_numeric(pd.Series(proj_points), errors="coerce"), dtype=float)
+    ap = np.asarray(pd.to_numeric(pd.Series(avail_p), errors="coerce"), dtype=float)
+    live = pd.Series(source).astype("string").isin(set(live_sources)).to_numpy()
+    target = proj * np.clip(ap, 0.0, 1.0) / float(g_ref)
+    scale = np.ones(len(mean))
+    over = (live & np.isfinite(proj) & (proj > 0) & np.isfinite(target) & (target > 0)
+            & np.isfinite(mean) & (mean > target))
+    scale[over] = target[over] / mean[over]
+    return scale
 
 
 def conditional_training_frame(con, seasons, ruleset: RuleSet | None = None,

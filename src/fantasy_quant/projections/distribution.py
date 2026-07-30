@@ -236,6 +236,15 @@ def assemble_distribution(con, season: int, ruleset: RuleSet | None = None, n_dr
         else:
             samples[i] = drawn
 
+    # T31 — the consensus level cap, applied to the DRAWS rather than to the quantile band. `Y` is
+    # linear in the band, so scaling every draw is exactly equivalent to scaling the band, and it
+    # sidesteps the `max(0, q10 - adj)` clamp's non-linearity entirely. `games` is deliberately
+    # untouched: availability was never the thing that was wrong. Non-live rows scale by exactly
+    # 1.0, so every historical board — including the unspent 2025 holdout — is bit-identical.
+    lvl_scale = quantile.consensus_level_cap(samples.mean(axis=1), df["proj_points"], df["source"],
+                                             df["avail_p"], g_ref)
+    samples *= lvl_scale[:, None]
+
     pcts = np.percentile(samples, [10, 50, 90], axis=1)
     out = pd.DataFrame({
         "player_key": df["player_key"], "pos": df["pos"],

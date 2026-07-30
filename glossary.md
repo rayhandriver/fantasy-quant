@@ -1923,3 +1923,43 @@ a sample is the same error as reading one draw of ten teams as a Spearman* (H.5'
 distance, dispersion, chalk share, elite-fall landing) were all measured on ten **modelled** seats. A
 room where four seats are human is not the population they describe, so the honest UI move is to
 label the scope rather than silently re-report the number or re-measure it per-mock on n=1.
+
+**out-of-support extrapolation** (T31) — the measured cause of the live-board level inversion. The
+Phase-5 level is a per-position linear `QuantReg` on `calibrated_mean`, fit on the *conditional*
+(available) cohort, i.e. starters; its intercepts are large and positive (QB q50 `b0`=169.35). A live
+consensus board runs hundreds of players deeper than any historical proxy board — median 2026 QB
+`calibrated_mean` **11.4** against a training **minimum** of 34.1 — so the fitted line is evaluated a
+long way below its own support and returns a starter's level for a projected backup. **Board depth,
+not season liveness:** `train_seasons` is the same nine seasons for a 2024 board and a 2026 one, so
+the models are identical and only the population differs.
+
+**selection-biased low tail** (T31) — the reason "just don't extrapolate" was not enough. The level
+fit trains on `weeks >= 0.85*season_games`, so a *low-projection* player who is in the training data
+is one who **won a job**. The fit's low end is made of breakouts, which is why interpolating it to the
+origin still leaves the violation's sign intact and the repair has to reach for the consensus level.
+
+**cap to the identity, not to the boundary** (T31) — a repair that restores the *sign* of a violated
+property can still fail the property. Capping a too-high level at `proj_points` moved the negative-
+haircut share 38.75 % → 8.1 % but parked every capped row at `haircut == 0`, a **tie mass** of players
+with low projected games and no haircut at all, and full-board QB spearman went the *wrong* way
+(+0.474 → +0.523). The bar was never "haircut >= 0"; it was "haircut **is** the availability discount"
+(`proj * avail_p / g_ref`). T19's lesson on a repair rather than a signal: *a one-sided fix is passed
+by the same defect pointing the other way.*
+
+**a ticket's cause line is a hypothesis** (T13 · T24 · T31) — three filed prescriptions in a row were
+wrong, one of them built and rejected. A register entry's cause is written the moment the symptom is
+found, which is the moment you know least about it, so re-derive it before building on it. Cheapest
+first move: *when a defect is claimed to be about A versus B, check whether A and B actually differ in
+the code* — one line ruled out T31's filed cause before anything was written.
+
+**a control that cannot fail** (T31 method warning) — a before/after harness that silently runs the
+same code twice returns "bit-identical", which is indistinguishable from the answer you wanted. It
+happened twice in one session: `uv run --project <main>` from a `git worktree` resolves the *editable*
+install to the main tree's `src`, and a persistent `cd` in a chained command later sent the working-
+tree run into the worktree. **Assert the control produces a known difference before trusting it to
+show none** — and carry that discriminator (`live_board_changed`) in the artifact, not in memory.
+
+**the bars constrain, the gradient identifies** (T31) — a narrow repair and a wholesale replacement of
+the Phase-5 level would both have passed all six pre-registered bars. What distinguishes them is where
+the change lands: 0.0 % of top-24-ADP rows moved, ramping to 96.5 % of undrafted ones. Report the
+distribution of the change, not just the metrics it satisfied.

@@ -38,8 +38,8 @@ At a glance:
 | **T24** | ✅ | **consensus elites fell past pick 4 26.6 % of the time against a realized 13.1 %** (seating-marginalized), and the aggregate \|drift\| bar could not see it. The ticket's prescription — a per-seat `adp_stdev`-scaled **private board** — was built and **REJECTED: it is monotonically harmful** (18.8 / 19.7 / 26.6 % at κ = 0/1/2), because at the top of the board `adp_stdev` is the same size as the gaps it perturbs. **The fix was the width *level*, split from the width *shape*:** `WidthCurve(base 1.0·γ0.8) → (base 0.6·γ1.0)` → **15.3 %**, every T15 bar still passing. Round 1 was too wide, not the wrong shape | **the user-facing blocker on mock realism** — 2×5 mock objection 3, T15's carry-forward | ☑ 2026-07-28 |
 | **T25** | ✅ | **the corpus reach ceiling was applied to 2 of 10 seat types**, so `CORPUS_REACH_P95` bound `reacher`/`value_hawk` — the seats that had been *given* discipline — and nothing bound `balanced`, which is 4 of 10 seats in `REALISTIC_ROOM`. The asymmetry was the bug, not the budget | with T24 (it is T24's cheap half) — 2×5 mock objection 2 | ☑ 2026-07-28 |
 | **T26** | 🟡 | **`pos_share_*` is pooled across formats while the fit that consumes it is redraft-only** — T18's sibling, found in the same audit and *not* fixed with it. The profiles are built over every complete human draft (dynasty, 2QB, IDP included); `mgr_lean` — a live Tier-B feature of the shipped β — is `share − mean(share)` over that table. Measured: mean \|Δ QB share\| **0.83 pp** across the 2,816 managers in both scopes (>5 pp for 3.3 %), and the pooled *baseline* is the bigger distortion (QB 13.65 % pooled vs 11.22 % redraft), though a constant per-position offset is largely absorbed by the position dummies | with the next 11.1 refit — **not before**: changing it refits β and moves every T15/T24 width bar, which is a whole session's calibration for a sub-1 pp feature shift | ☐ 2026-07-29 |
-| **T32** | 🟡 | **the enriched-board cache key omits the board vintage, so the mandated Stage-0 chore does not invalidate it.** `mock.room_board` caches on `(season, scoring, teams, include_dst, ENRICH_VERSION)` — nothing about *which snapshot* `resolve_board` answered with. Measured live on 2026-07-30, immediately after running the chore: `resolve_board` returns **244** rows and `room_board` serves the cached **223**, with **25 players on the fresh board invisible** to every caller and 4 stale ones still present. `ENRICH_VERSION` exists to force exactly this kind of rebuild and covers the enrichment but not its input. It bites hardest in-season, when the chore runs weekly and the boards diverge fastest | fix with the next batch measurement (the key change invalidates all 9 season caches → ~6 min/season cold). **Deliberately NOT fixed on 2026-07-30**: Session H.5's central claim is bit-identity against caches built before it, and invalidating them at the close would have made that claim unverifiable | ☐ 2026-07-30 |
-| **T31** | 🟠 | **on a LIVE board the Phase-5 level correction inverts for players consensus projects as backups — 22.8 % of the 2026 value index carries a *negative* haircut** (`mean` **above** `proj_points`, structurally impossible for a level correction) against **0.4 % on 2024**, and the per-position `spearman(haircut, games_played_mean)` flips sign (QB **+0.474** with 59 % negative, RB +0.225, TE +0.237). Inside the drafted range it is milder but still fails T27's pre-registered bar at **RB −0.288** (vs −0.50; QB −0.902, WR −0.538, TE −0.838 all pass, and every position passes on 2022/2024). **Cause: consensus prices ROLE, our level correction prices AVAILABILITY.** For a projected starter the two coincide; for a backup consensus says 22 points because he sits behind someone while the Phase-5 level — with no prior-season basis to shrink toward on a live season — hands him a starter-ish per-game rate times ~11 expected games (worst case `proj 22.3 → mean 102.9, sd 78.2`; sd ≈ mean is the fingerprint of a distribution built on nothing). Conditioning on `vbd ≥ 0` repairs it outright (RB −0.288 → **−0.599**, WR → −0.912), which is the confirmation. Rookies ruled out (non-rookie RB ρ −0.32) | **before Phase 14 shows a distribution number for a deep player**, and before anything downstream trusts `mean` off the drafted range. T27's `validate.value_scale_gate` ships **red** rather than softened | ☐ 2026-07-30 |
+| **T32** | 🟡 | **the enriched-board cache key omits the board vintage, so the mandated Stage-0 chore does not invalidate it.** `mock.room_board` caches on `(season, scoring, teams, include_dst, ENRICH_VERSION)` — nothing about *which snapshot* `resolve_board` answered with. Measured live on 2026-07-30, immediately after running the chore: `resolve_board` returns **244** rows and `room_board` serves the cached **223**, with **25 players on the fresh board invisible** to every caller and 4 stale ones still present. `ENRICH_VERSION` exists to force exactly this kind of rebuild and covers the enrichment but not its input. It bites hardest in-season, when the chore runs weekly and the boards diverge fastest | fix with the next batch measurement (the key change invalidates all 9 season caches → ~6 min/season cold). **Deliberately NOT fixed on 2026-07-30**: Session H.5's central claim is bit-identity against caches built before it, and invalidating them at the close would have made that claim unverifiable | ☐ 2026-07-30 — **still open, but its stated cost has already been paid.** T31 bumped `ENRICH_VERSION` to `v4-t31-level-cap` on 2026-07-30, so all nine caches were rebuilt anyway (~35 min) and the stale 07-24 2026 board is gone: the v3 and v4 parquets are **byte-identical for every historical season** and differ **only on 2026**, which is the vintage change this ticket is about. The deferral reason (H.5's bit-identity claim rested on the pre-existing caches) has also expired. Fixing the key now costs one more rebuild — worth folding into **Session I**, which touches `RosterSlots`/`LeagueFormat` and will invalidate the boards regardless |
+| **T31** | ✅ | **on a LIVE board the Phase-5 level correction inverts for players consensus projects as backups — 22.8 % of the 2026 value index carries a *negative* haircut** (`mean` **above** `proj_points`, structurally impossible for a level correction) against **0.4 % on 2024**, and the per-position `spearman(haircut, games_played_mean)` flips sign (QB **+0.474** with 59 % negative, RB +0.225, TE +0.237). Inside the drafted range it is milder but still fails T27's pre-registered bar at **RB −0.288** (vs −0.50; QB −0.902, WR −0.538, TE −0.838 all pass, and every position passes on 2022/2024). **Cause: consensus prices ROLE, our level correction prices AVAILABILITY.** For a projected starter the two coincide; for a backup consensus says 22 points because he sits behind someone while the Phase-5 level — with no prior-season basis to shrink toward on a live season — hands him a starter-ish per-game rate times ~11 expected games (worst case `proj 22.3 → mean 102.9, sd 78.2`; sd ≈ mean is the fingerprint of a distribution built on nothing). Conditioning on `vbd ≥ 0` repairs it outright (RB −0.288 → **−0.599**, WR → −0.912), which is the confirmation. Rookies ruled out (non-rookie RB ρ −0.32) | **before Phase 14 shows a distribution number for a deep player**, and before anything downstream trusts `mean` off the drafted range. T27's `validate.value_scale_gate` ships **red** rather than softened | ☑ 2026-07-30 — **fixed, and the register's filed cause was WRONG** (the third in a row after T13/T24). There is no live-vs-historical branch in the fit: `train_seasons` is 2014–2022 for a **2024** board *and* a 2026 one, so the QuantReg models are **identical** and the defect is entirely in the **board**. Real cause = **linear extrapolation far below the support of the fit**, exposed by the live board running much deeper than any proxy board — median 2026 QB `calibrated_mean` **11.4** against a training *minimum* of **34.1**, **56.4 %** of 2026 QBs below support vs **2.3 %** on 2024 — with the low end *additionally* selection-biased upward (the fit's cohort is `weeks >= 0.85*season`, so a low-projection player in it is one who won a job). Fixed by `quantile.consensus_level_cap`, gated on `value_board.source` (a column already in the frozen 4.2 contract): a live-board row whose assembled `mean` exceeds `proj_points * avail_p / g_ref` is scaled onto that target. All six pre-registered bars PASS — negative-haircut share **38.75 % → 0.00 %**, drafted-range rho **RB −0.288 → −0.667** (QB −0.906 / WR −0.904 / TE −0.889), full-board rho **QB +0.474 → −0.980**, max `sd/proj` **23.06 → 0.90**, and 2022/2023/2024/**2025** **bit-identical** so the spent lockbox stands and the calibration holdout is **never read**. Top-24 ADP **untouched (0 % of rows)**; the effect ramps 2.9 % (ADP 25–60) → 96.5 % (undrafted). |
 | **T27** | ✅ | **the board a human reads and the board every seat optimizes are different quantities, and they disagree by up to 179 points.** `steps/mock_draft.py` prints `PROJ` = `proj_points` (consensus, re-scored full-PPR); utility and the value hawk's objective run on `base_value` = `ce_vbd` = Phase-5 CE − positional replacement. On the live 2026 board **Drake Maye (proj 316.5) carries `base_value` +68.5 while Jayden Daniels (proj 313.4) carries −101.6** — 3 points apart on screen, 170 apart in the number that drives every pick. The mean haircut (0.28 QB / 0.33 RB / 0.28 WR / 0.30 TE) is the *intended* level correction; the **dispersion** (QB range 0.15–0.56, sd 0.12) is what makes the board unreadable. Nothing on screen explains which players get cut | **the user-facing blocker on the mock board** — Session H.5 step 1; display-layer only, the frozen stack does not move | ☑ 2026-07-30 — **shipped**; the value chain is on the board and `why` prints it. Also caught a divergence nobody was looking for: the *interactive* room ran `value_hawk` as `balanced`. Its gate **B2 FAILED at RB on the live board** and that failure is real → **T31** |
 | **T28** | ✅ | **`team_value`/`portfolio_value` are slot-blind, so a bench QB2 is priced as if he starts.** `team_value` sums `base_value` over all 15 roster rows and nothing in `draft/optimizer.py` references starters. On the 2026 walkthrough the second QB alone moves a team's headline value by **−101.6** (T1 Caleb Williams), **−92.1** (T4 Kyler Murray) and **+51.0** (T3 Hurts), against a room total of 1,938 — the QB2 line nets **−122**. Consequence, measured over the same ten teams: Spearman(portfolio CE, title) **+0.758** and Spearman(VBD, title) **+0.685** against Spearman(starting-nine Phase-5 mean, title) **+0.915**; T4 is **9th of 10 on VBD and 3rd on starting-lineup projection**. It is not only a reporting artifact — `value_hawk` *maximizes* this quantity, and took Jaxson Dart (`base_value` +33.1) as a second QB at 9.09 | Session H.5 step 2 — **a decision, not a patch**: the frozen cost-report headline must not move, so a starter-aware metric ships **beside** it | ☑ 2026-07-30 — **closed as a LABELLING FIX, as pre-registered.** `starter_value` ships beside `team_value` and every surface prints both. **B5 failed** (−0.0230, CI[−0.0407,−0.0055] over 200 drafts): the slot-blind sum predicts title probability *better*, because bench value alone scores +0.711 in a sim that draws injuries. `value_hawk` keeps `objective=portfolio_ce` |
 | **T29** | ✅ | **absolute probabilities are printed from a sim whose level bias is documented as −113 pts/team.** Any driver that calls `league_probabilities` prints `playoff_prob`/`title_prob` as bare percentages. The lockbox recorded title Brier **0.088** with reliability on-diagonal (ordering and championship calibration hold) but playoff Brier **0.240** as *marginal*, unconditional coverage **72–77 %**. So the weakest number in the stack is the one a user reads as fact | Session H.5 step 3 — labelling + a fair-share ratio | ☑ 2026-07-30 — `PROB_PROVENANCE` + `fair_share`/`playoff_fair_share` + `assert_probability_sums`; every driver leads with the multiple (0.170 → **1.70x**) |
@@ -1912,7 +1912,7 @@ composition**, nothing else.
 
 ---
 
-## 🟠 T31 — on a live board the level correction inverts for players consensus projects as backups
+## ✅ T31 — on a live board the level correction inverts for players consensus projects as backups — **DONE 2026-07-30**
 *(opened 2026-07-30 by T27's own pre-registered gate, Session H.5 step 1 — the bar was written to be
 falsifiable and it fired)*
 
@@ -1983,6 +1983,82 @@ fine" if the threshold had been chosen after looking. *A pre-registered bar earn
 it fails by a little.*
 
 ---
+
+### ✅ RESOLVED 2026-07-30 (its own session) — fixed, and **the filed cause above was wrong**
+
+**All six pre-registered bars PASS** (`PLAN.md` §2026-07-30 session 4, written before the fix existed;
+`analysis/t31_level_cap.json`, `steps/t31_level_cap.py`).
+
+| bar | before | after | pass |
+|---|---|---|---|
+| B1 whole-board negative-haircut share | 38.75 % (186/480) | **0.00 %** (0/480) | ≤ 2 % ☑ |
+| B2 drafted-range `spearman(haircut, games)` | QB −0.902 · **RB −0.288** · WR −0.538 · TE −0.838 | QB −0.906 · **RB −0.666** · WR −0.904 · TE −0.889 | ≤ −0.50 ☑ |
+| B3 full-board `spearman` sign | QB **+0.474** · RB **+0.225** · TE **+0.237** · WR −0.011 | QB −0.980 · RB −0.879 · TE −0.949 · WR −0.936 | ≤ 0 ☑ |
+| B4 `sd / proj_points` | median QB **3.57**; max **23.06** | median QB 0.367 (RB 0.460 · TE 0.464 · WR 0.490); max **0.903** | ≤ 1.0 / ≤ 3.0 ☑ |
+| B5 historical bit-identity 2022/23/24/**25** | — | **byte-identical** (samples, games *and* summary) | ☑ |
+| B6 T17 band + top-60 drift | 0.7210 | 0.7204, drift **0.078 %** | band + < 0.5 % ☑ |
+
+**★ The register's cause line was wrong — and one line of code falsified it.** The entry above says a
+live season "has no realized prior-season basis to shrink the per-game level toward". There is no such
+branch. `train_seasons` is `[s for s in DEV_SEASONS if s < season]`, which for a **2024** board and a
+**2026** board is the *same nine seasons* (2014–2022) — so the fitted QuantReg models are **identical**
+between the board that fails the gate and the board that passes it. Whatever the defect was, it could
+not be in the fit. **This is the third filed prescription in a row that would have been built and would
+not have worked (T13's coupling seed, T24's private board, now T31's live-season branch.)**
+
+**★ The measured cause: extrapolating a linear fit far below its own support.** The level is
+`b0_tau + b1_tau * calibrated_mean` per position, fit on the **conditional cohort**
+(`weeks >= 0.85 * season_games`) — necessarily starters. Intercepts are large and positive (**QB q50
+`b0` = 169.35**, RB 68.95, WR 43.70, TE 36.24), so the fitted level exceeds the projection it is built
+from for any `proj_points` under **272 (QB) / 187 (WR) / 170 (RB) / 150 (TE)**. Training support of
+`calibrated_mean` bottoms out at **QB 34.1 / TE 11.0 / WR 12.0 / RB 4.9**; the **2026 board's median QB
+`calibrated_mean` is 11.4**, below the training *minimum*. **56.4 % of 2026 QBs sit below training
+support against 2.3 % on 2024 and 6.7 % on 2022.** It is **board depth, not season liveness** — the live
+FantasyPros scrape carries 490 players down to `proj_points` 1.8, where the historical proxy board stops
+at ~10 and only projects players with prior-season production.
+
+**★ The low end is *additionally* selection-biased upward, which is why "don't extrapolate" was not
+enough on its own.** A low-projection player who nonetheless played 85 % of a season is one who **won a
+job**, so the training cohort's low tail is made of breakouts. Interpolating the fit to the origin was
+tried on paper and rejected: the origin slope is still ~3.4× steeper than `1/correction`, so the sign of
+the violation survives. The repair has to reach for the consensus level, not just refuse to extrapolate.
+
+**★ A plain cap at `proj_points` was BUILT FIRST and was not enough — the tie mass is the tell.** It
+moved the whole-board negative share **38.75 % → 8.1 %** and passed B4/B5/B6, but it left every capped
+row at `haircut == 0`: a mass of players with a *low* `games_played_mean` and *no* haircut at all, which
+is the identity failing in the other direction. **Full-board QB spearman went the wrong way,
++0.474 → +0.523**, and drafted-range RB got worse (−0.288 → −0.250). *Cap to the identity, not to the
+boundary* — the shipped target is `proj_points * avail_p / g_ref`, which is exactly what
+`value_scale_gate` tests (`haircut == 1 − avail_p/g_ref`, decreasing in games played). Same shape as
+T19's lesson: **a one-sided repair is passed by the same defect pointing the other way.**
+
+**The fix.** `quantile.consensus_level_cap` (pure) + four lines in `distribution.assemble_distribution`.
+Gated on **`value_board.source`**, a column already in the frozen 4.2 contract: 2022/2023/2024/**2025**
+are `proxy`+`rookie`, 2026 is 490/490 `consensus`. Applied to the **draws** rather than the quantile
+band — `Y` is linear in the band, so scaling every draw is exactly equivalent and sidesteps the
+`max(0, q10 − adj)` clamp's non-linearity. `games` is untouched: availability was never what was wrong.
+Non-live rows multiply by **exactly 1.0**, which is exact in IEEE-754, so B5 holds *by construction*
+rather than by tolerance. `ENRICH_VERSION` → `v4-t31-level-cap` (the 16.13 board caches read the cloud).
+
+**★ It is a repair, not a replacement — the gradient is the evidence.** Share of rows whose level moved,
+by ADP band: **1–24 → 0.0 %** · 25–60 → 2.9 % (median scale 0.988) · 61–120 → 11.9 % (0.971) ·
+121–180 → 51.9 % (0.883) · undrafted → 96.5 % (0.443). The top of the board is *literally* untouched and
+the effect ramps exactly where the fit runs out of support. Board-wide `sum(mean)` falls 41 155 → 33 998
+(−17.4 %), essentially all of it below ADP 120.
+
+**★ The 2025 calibration holdout was NOT spent.** The user pre-authorised one further read to check the
+fix had not broken coverage. The source gate made it unnecessary: 2025 is proxy-sourced, so it is
+bit-identical, and B5 verifies that **by hash** rather than by reading its calibration. The holdout is
+still unspent for whoever needs it next.
+
+**⚠ Method warning worth more than the ticket — a before/after harness that cannot fail is worse than
+none.** The B5 control was run twice from a `git worktree` at the pre-T31 commit and **twice silently
+executed post-fix code**: (1) the project installs **editable**, so `uv run --project <main>` from a
+worktree resolves `fantasy_quant` to the *main* tree's `src`; (2) on the retry a persistent `cd` in a
+chained command sent the *working-tree* run into the worktree instead. Both failures produced
+**identical hashes** — which reads as "bit-identical, great", the exact answer the bar was hoping for.
+Fix: `PYTHONPATH=<worktree>/src`, and assert the control produces a **known difference** before trusting
+it to show none. Recorded in `steps/t31_level_cap.py`'s docstring.
 
 ### ✅ T30 — RESOLVED 2026-07-30 (Session H.5 step 4): argued, measured, and deliberately not changed
 
