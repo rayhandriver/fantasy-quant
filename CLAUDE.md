@@ -61,6 +61,50 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
+> **★★★ Next-session pointer (2026-07-30, session 4 — T31 ☑ + SESSION I ☑. READ THIS FIRST.)**
+>
+> **State: 658 tests, ruff clean. Two commits this session, both LOCAL (not pushed).** T31 is
+> `496836f`; Session I sits on top. The spent lockbox and the frozen value stack are untouched: T31
+> changed only live-consensus boards (2022/23/24/**25** byte-identical) and Phase 17 is a config
+> generalization whose default path is asserted unmoved (gate G3).
+>
+> **★ SESSION I ☑ — Phase 17 League-Format Fidelity (17.1–17.4).** All five gates PASS
+> (`steps/phase17_formats.py`, `analysis/phase17_formats.json`); +41 tests in `tests/test_phase17.py`.
+> Write-up: `findings.md` §"Session I", `PLAN.md` §2026-07-30 (session 4, cont.), `glossary.md`.
+>
+> | | |
+> |---|---|
+> | **17.1** | `RosterSlots.flex_groups()` is now the **single** fill-order rule — three solvers had each re-derived it. Multi-flex/superflex stays vectorized via **the carry** (sort a group's pool, take its top *n*, pass the unused tail to the next wider group). **Non-nested eligibility is REFUSED** (`assert_nested`), not approximated. |
+> | **17.1 replacement** | **The superflex replacement level was quietly wrong**: the old proportional rule gave QB **1/6** of the slot. A superflex admits only QB beyond the base flex → **QB10 → QB20**; nothing else moves. Live 2026: best QB overall rank **15 → 3**. |
+> | **17.2** | `SCORING_PRESETS` + `ruleset_from_preset` + `te_rec_bonus` + yardage-milestone bonuses. |
+> | **17.3** | `LeagueSettings` (platform-agnostic; **not** Sleeper auto-import) + `lockbox_validated()`. Bracket now **4/6/8 with derived byes** — a 12-team/8-playoff league was previously unconstructible. Odd `n_teams` refused with a reason. |
+> | **17.4** | Round-based keepers. `apply_keepers` + `DraftState.skipped_picks`: 147 picks, not 150. |
+>
+> **⚠ Do not re-derive / do not "fix":**
+> - **Never add a third lineup solver, and never check one against another.** Both consume
+>   `flex_groups()`, so agreement between them tests the plumbing. The gate is an **exhaustive brute
+>   force** (worst abs error 0.0). *Two greedies that share a bug agree perfectly.*
+> - **Keepers have no "ADP adjustment" and must not gain one** — ADP is a rank on the remaining
+>   board, so removing the kept player *is* the re-inflation; a separate shift double-counts.
+> - `ruleset_from_preset("full_ppr")` returns `RuleSet()` **itself**, name included, because
+>   `RuleSet` is serialized into `cached_distribution`'s cache key — a cosmetic name difference
+>   would split the cache and force a silent nine-season rebuild.
+> - `OffenseRules` and friends are `extra="forbid"` (`_Rules`). That is the whole argument for a
+>   bounded field set over an open `{stat: value}` map; the first implementation lacked it and
+>   silently accepted `rec_typo=1.0`.
+> - `starter_marginal` **routes multi-flex to the exact solver** rather than approximating with its
+>   one-flex closed form. Leave it routing.
+> - **`lockbox_validated()` is an honesty method, not a feature flag.** Non-default formats are
+>   supported and correctness-tested and carry **no** out-of-sample claim. Phase 14 must render that.
+>
+> **★ NEXT: Session I.5 = 16.17 the seat map** (multi-seat human control), the scoping for which is
+> immediately below and unchanged. Its hard done-bar is **bit-identity** at k=1 and k=0 plus
+> `analysis/mock_room_bars_verify_20260729.json` to the digit — note that sheet must be reproduced
+> with **`--shuffle-room`**, which is how it was generated; without the flag it differs on 149
+> gate-side fields and looks like a regression that is not one.
+>
+> _(T31's entry, still the authority on the level cap, follows.)_
+>
 > **★★★ Next-session pointer (2026-07-30, session 4 — T31 ☑ DONE. READ THIS FIRST.)**
 >
 > **Running order agreed with the user for this stretch: T31 → Session I (Phase 17) → hard stop →

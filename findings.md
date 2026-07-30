@@ -4833,3 +4833,120 @@ cache digests — not by inspecting the harness.
 
 *(A fourth, harmless: a `cd analysis/cache` persisted across chained shell commands and a later
 relative path resolved into it. Same root cause, no analytical consequence.)*
+
+---
+
+## Session I — Phase 17 League-Format Fidelity (17.1–17.4)
+
+*(2026-07-30, run straight through from T31 per the user's ordering. Four scope decisions locked
+before the build: nested-eligibility flex only · 4/6/8 brackets with odd `n_teams` refused · presets
+plus a bounded knob set · round-based keepers only. Done-bar `steps/phase17_formats.py`,
+`analysis/phase17_formats.json` — **all five gates PASS**. 658 tests, +41; ruff clean.)*
+
+**The whole phase is a config generalization, so it has two obligations that pull against each
+other:** non-default formats must be *correct*, and the lockbox-validated default must not move by a
+digit. G1 and G3 are those two obligations as gates.
+
+### ★ 17.1 — the flex rule was written in three places, and that was the actual work
+
+`flex`/`flex_positions` had **nine** consumers, and the fill order was independently re-derived in
+three solvers: `season.lineup_points_matrix` (vectorized), `walkforward.optimal_lineup_points`
+(reference) and `inseason.lineup._slot_plan`. Generalizing meant giving them one rule to share —
+`RosterSlots.flex_groups()`, ordered **most-restrictive-first** — rather than editing three copies
+in parallel and hoping. Same shape as 16.17's `SeatMap` and T18's "delete, don't leave beside".
+
+**Nested eligibility is what makes greedy correct, so non-nested rosters are refused rather than
+mis-solved.** With nested groups (superflex ⊇ flex ⊇ dedicated), a player the narrow slot can use is
+also usable by the wide one, so committing the narrow slot first never strands a better assignment.
+For genuinely non-nested sets — a WR/TE flex beside an RB/WR flex — that argument fails and the
+correct solver is a per-cell assignment that does not vectorize over `(n_sims, n_weeks)`.
+`assert_nested` raises, and `LeagueSettings` calls it. Supporting a format we would answer *wrongly*
+is worse than not supporting it.
+
+**The vectorization trick is a carry.** Which roster row fills a flex differs per sim and per week,
+so "remove the used players" cannot be done by identity — the first implementation tried to match
+used rows by value and was wrong for exactly that reason. The fix: sort a group's eligible pool
+descending, take its top `n`, and **carry the unused tail forward** to the next, wider group. With
+nested eligibility that carry *is* the set still available to the wider slot, per cell, with no loop
+over cells.
+
+**★ The bar is brute force, not the other greedy.** G1 checks the vectorized solver against an
+exhaustive optimum over legal assignments (slots allowed to be empty) on all five shipped formats —
+worst absolute error **0.0**. Checking it against `optimal_lineup_points` would have proved only
+that the two agree, and they now share `flex_groups()`: *two greedies that share a bug agree
+perfectly.*
+
+### ★ 17.1 — the replacement-level line is the phase's headline, and it was quietly wrong
+
+`replacement_ranks` allocated the flex "in proportion to dedicated demand". For an RB/WR/TE flex
+that is fine. For a **superflex** it handed QB **1/6** of the slot, leaving replacement at ~QB12 in a
+10-team league — a format the engine claimed to support, priced as if it were 1-QB.
+
+The fix is a one-line reframing rather than a new model: groups are processed most-restrictive-first,
+and a superflex differs from the base flex **only** by admitting QB, since RB/WR/TE depth was already
+priced by the narrower group. So the marginal effect falls on quarterbacks and the slots go there.
+**QB replacement moves QB10 → QB20** — from "the last starter" to "the last *second* starter", which
+is where superflex scarcity actually lives. Nothing else moves (RB/WR/TE/K/DST ranks identical).
+
+**Measured on the live 2026 board (G2), that is worth: the best QB goes from overall rank 15 to
+rank 3**, QBs in the top 50 from 6 to 7. Measured on the value board rather than a simulated draft
+on purpose — the board is what a draft consumes, and it isolates the replacement change from every
+behavioural knob in the room.
+
+*Stated rather than hidden:* a superflex is occasionally filled by a third RB, not a second QB.
+Pricing that needs realized points, which would make `replacement_ranks` impure — it is called from
+`projections/distribution.py` with no DB in scope. The residual is small next to the QB10 → QB20 move.
+
+### ★ 17.2 — the bounded field set earned itself immediately
+
+17.2 chose presets + a bounded knob set over an open `{stat: value}` map, on the argument that a typo
+in an open map scores 0.0 silently for a whole season. **The first test of that claim failed:**
+pydantic allows extra fields by default, so `OffenseRules(rec_typo=1.0)` was accepted and ignored —
+the exact failure the design was chosen to prevent, present in the design itself. Fixed with a
+`_Rules` base carrying `extra="forbid"`.
+
+**A second one, cheap to have missed:** `ruleset_from_preset("full_ppr")` initially returned a
+ruleset with identical scoring but the name `"full_ppr"` instead of `"full_ppr_1qb"`. `RuleSet` is
+serialized into `cached_distribution`'s cache key, so a same-scoring-different-name preset would have
+**split the cache and forced a silent 9-season rebuild**. The preset now returns `RuleSet()` itself.
+*A field that is "only a label" is not, once something keys on it.*
+
+TE-premium needs the row's position, which some derived frames do not carry; the bonus is skipped
+there rather than mis-applied, keeping the `te_rec_bonus=0.0` default byte-identical.
+
+### ★ 17.3 — `LeagueFormat` refused ordinary leagues, and refuses different ones now
+
+The bracket was hard-coded to 4-or-6 playoff teams with byes fixed at 0/2, so **a 12-team league with
+an 8-team playoff — entirely ordinary — could not be constructed at all.** Now byes and rounds are
+*derived* (`bracket_size = next power of two`), one rule instead of a table, and 4/6/8 all work.
+
+Two limits are now refused **at the settings layer with a reason**, where before they raised deep
+inside a sim or not at all: **odd `n_teams`** (the round-robin circle method pairs every team each
+week, and 9.5's win-prob objective raises on odd sizes too) and non-nested flex. `LeagueSettings` is
+the platform-agnostic form contract — deliberately *not* Sleeper auto-import, because the user is on
+ESPN/Yahoo and gating the product on one vendor's API is the wrong dependency.
+
+**`lockbox_validated()` is the honesty method.** It returns True for exactly one configuration: the
+10-team full-PPR 1-QB league the lockbox was spent on. Everything else is supported, correctness-
+tested, and carries **no out-of-sample claim** — Phase 14 is expected to render that, not let a user
+assume the calibration transfers.
+
+### ★ 17.4 — keepers re-inflate ADP by removing supply, not by adjusting a number
+
+The obvious implementation is a keeper flag plus an "ADP adjustment". Both would be wrong together:
+ADP is a *rank on the remaining board*, so removing the kept player **is** the re-inflation, and
+adding a separate adjustment on top would double-count it. `apply_keepers` seats the player, drops
+him from the pool, and records `(team, round)` in `skipped_picks`, which `run_to_completion` skips.
+
+That second half is what stops keepers being free: a team keeping three studs **drafts three fewer
+times**. Verified — 147 picks made instead of 150, every roster still 15, kept players never
+re-drafted, and `keepers=()` bit-identical to the pre-17 path. A keeper not on the board still costs
+the pick, because the forfeit is the league's rule and not the board's.
+
+### What is deliberately not here
+
+Non-nested flex (refused, not approximated) · auction keepers and dynasty multi-year pricing (15.1,
+still deferred) · IDP (nflverse data too thin) · Sleeper settings auto-import (a future convenience
+on top of the manual form, never the primary path). `starter_marginal`'s closed form reasons about
+one flex slot and now **routes multi-flex to the exact solver** rather than approximating — the
+candidates ride the trailing axis `lineup_points_matrix` already vectorizes, so it stays one call.

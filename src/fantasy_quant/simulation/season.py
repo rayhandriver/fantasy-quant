@@ -22,6 +22,21 @@ import pandas as pd
 from fantasy_quant.draft.simulator import RosterSlots
 from fantasy_quant.simulation.playoffs import bracket_champion, playoff_seeds
 
+#: 17.3 — playoff-field sizes the bracket can play. 4 and 6 are the lockbox-validated ones; 8 is
+#: added because a 12-team league with an 8-team field is ordinary and was previously unexpressible.
+PLAYOFF_SIZES: tuple[int, ...] = (4, 6, 8)
+
+
+def derived_byes(playoff_teams: int) -> int:
+    """Seeds that skip round one = (next power of two) − field size. 4 → 0, 6 → 2, 8 → 0."""
+    size = 1 << (int(playoff_teams) - 1).bit_length()
+    return size - int(playoff_teams)
+
+
+def bracket_rounds(playoff_teams: int) -> int:
+    """Rounds (and therefore playoff weeks) a single-elimination field of this size needs."""
+    return int((int(playoff_teams) - 1).bit_length())
+
 
 @dataclass(frozen=True)
 class LeagueFormat:
@@ -34,15 +49,29 @@ class LeagueFormat:
     first_round_byes: int = 2
 
     def __post_init__(self) -> None:
-        if self.playoff_teams not in (4, 6):
-            raise ValueError("playoff_teams must be 4 or 6")
-        rounds = 2 if self.playoff_teams == 4 else 3
+        # 17.3 — 4/6/8 with byes derived from the bracket, instead of the old hard-coded 4-or-6.
+        # An 8-team playoff in a 12-team league is entirely ordinary and could not be expressed
+        # before. `bracket_size` is the next power of two, byes are the seeds that skip round one,
+        # and the number of rounds follows — so there is one rule rather than a table.
+        if self.playoff_teams not in PLAYOFF_SIZES:
+            raise ValueError(f"playoff_teams must be one of {sorted(PLAYOFF_SIZES)}")
+        if self.playoff_teams > self.n_teams:
+            raise ValueError("playoff_teams cannot exceed n_teams")
+        rounds = bracket_rounds(self.playoff_teams)
         if len(self.playoff_weeks) != rounds:
             raise ValueError(f"{self.playoff_teams}-team playoff needs {rounds} weeks")
-        if self.first_round_byes != (0 if self.playoff_teams == 4 else 2):
-            raise ValueError("byes: 4-team -> 0, 6-team -> 2")
+        if self.first_round_byes != derived_byes(self.playoff_teams):
+            raise ValueError(
+                f"byes for a {self.playoff_teams}-team bracket must be "
+                f"{derived_byes(self.playoff_teams)}, got {self.first_round_byes}")
         if self.playoff_weeks[0] != self.reg_weeks + 1:
             raise ValueError("playoffs must start the week after the regular season")
+        if self.n_teams % 2:
+            # `round_robin_schedule` needs an even league (the circle method pairs every team each
+            # week) and the 9.5 win-prob objective raises on odd sizes too. Refuse here, where the
+            # message can say why, rather than deep inside a sim.
+            raise ValueError("n_teams must be even (the round-robin schedule pairs every team "
+                             "each week); odd leagues are not supported")
 
     @property
     def n_weeks(self) -> int:
@@ -145,26 +174,50 @@ def lineup_points_matrix(points: np.ndarray, positions, slots: RosterSlots) -> n
     """Optimal-starting-lineup totals, vectorized: ``points`` is ``(n_roster, ...)`` and the
     result drops the roster axis (any trailing shape — ``(n_sims, n_weeks)`` in the sim).
 
-    Greedy = optimal for a single FLEX (the 1.3 argument): fill each dedicated slot with its
-    top scorers, then the FLEX takes the best *next-ranked* player across flex positions.
+    Greedy = optimal (the 1.3 argument): fill each dedicated slot with its top scorers, then let
+    each flex group take the best *remaining* players across its eligible positions.
     Regression-tested equal to ``walkforward.optimal_lineup_points`` per week.
+
+    **17.1 — generalized to any number of flex slots and to a superflex**, with the 1-FLEX default
+    reducing to the previous arithmetic. Groups are filled **most-restrictive first**
+    (:meth:`RosterSlots.flex_groups`), which is what makes greedy optimal: with *nested*
+    eligibility, a player the narrow flex can use is also usable by the wide one, so committing the
+    narrow slot first never strands a better assignment. Non-nested sets break that argument and are
+    refused at construction (:meth:`RosterSlots.assert_nested`).
+
+    Implementation note — **the carry**. Which roster row fills a flex differs from sim to sim and
+    week to week, so "remove the used players" cannot be done by identity. Nestedness gives a
+    vectorized equivalent instead: sort a group's eligible pool descending, add its top ``n``, and
+    **carry the unused tail forward** to the next (wider) group, which concatenates it with the
+    positions that only *it* can use. Because each group's eligibility contains the previous one's,
+    that carry is exactly the set of players still available to the wider slot — per cell, with no
+    loop over cells.
     """
-    if slots.flex > 1:
-        raise NotImplementedError("vectorized lineup assumes a single FLEX")
     pos = np.asarray(list(positions))
     pts = np.asarray(points, float)
     total = np.zeros(pts.shape[1:])
-    flex_next = []
+    leftovers: dict[str, np.ndarray] = {}
     for p, need in slots.base_demand().items():
         rows = pts[pos == p]
         if rows.shape[0] == 0:
             continue
         srt = np.sort(rows, axis=0)[::-1]                      # descending along the roster axis
         total += srt[:need].sum(axis=0)
-        if p in slots.flex_positions and srt.shape[0] > need:
-            flex_next.append(srt[need])                        # next-best after dedicated slots
-    if slots.flex and flex_next:
-        total += np.maximum.reduce(flex_next)
+        if srt.shape[0] > need:
+            leftovers[p] = srt[need:]                          # still descending
+
+    carry = np.empty((0, *pts.shape[1:]))
+    seen: set[str] = set()
+    for count, eligible in slots.flex_groups():
+        fresh = [leftovers[p] for p in eligible if p in leftovers and p not in seen]
+        seen |= set(eligible)
+        pool = np.concatenate([carry, *fresh], axis=0) if fresh else carry
+        if pool.shape[0] == 0:
+            continue
+        srt = np.sort(pool, axis=0)[::-1]
+        take = min(count, srt.shape[0])
+        total += srt[:take].sum(axis=0)
+        carry = srt[take:]
     return total
 
 

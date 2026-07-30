@@ -146,9 +146,12 @@ def _open_needs(counts: dict[str, int], slots: RosterSlots) -> set[str]:
     FLEX-aware)."""
     base = slots.base_demand()
     needs = {p for p, d in base.items() if counts.get(p, 0) < d}
-    flex_used = sum(max(0, counts.get(p, 0) - base.get(p, 0)) for p in slots.flex_positions)
-    if flex_used < slots.flex:
-        needs |= set(slots.flex_positions)
+    # 17.1: "flex-eligible" is the union over groups, and the budget is every flex slot — so a
+    # superflex league correctly reports QB as a still-fillable need after the QB1 slot is met.
+    eligible = slots.flex_eligible()
+    flex_used = sum(max(0, counts.get(p, 0) - base.get(p, 0)) for p in eligible)
+    if flex_used < slots.total_flex():
+        needs |= set(eligible)
     return needs
 
 

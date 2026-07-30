@@ -87,7 +87,20 @@ def board_player_key(board: pd.DataFrame) -> pd.Series:
 class RosterSlots:
     """The league roster: starter slots + bench, and per-position roster **caps** the ADP
     opponents respect so they build realistic rosters (no 8-QB teams). Baseline = 10-team,
-    9-starter QB/2RB/2WR/TE/FLEX(RB/WR/TE)+K+DST, 6 bench (15 total)."""
+    9-starter QB/2RB/2WR/TE/FLEX(RB/WR/TE)+K+DST, 6 bench (15 total).
+
+    **17.1 — generalized, with the default path bit-identical.** ``qb``/``flex`` take any count, and
+    a **superflex** (a flex whose eligibility includes QB) is expressed as a *second* flex group.
+    Every solver in the repo consumes :meth:`flex_groups` rather than reading ``flex``/
+    ``flex_positions`` directly, so the ordering rule lives in exactly one place.
+
+    ⚠ **Eligibility must be NESTED** (each group's positions a superset of the previous one's).
+    Greedy most-restrictive-first is provably optimal for nested slots and stays vectorized over
+    ``(n_sims, n_weeks)``; for *non-nested* sets (say a WR/TE flex beside an RB/WR flex) it is not,
+    and the correct solver is a per-cell assignment that no longer vectorizes. Non-nested rosters
+    are therefore **refused at construction** rather than silently mis-solved — see
+    :meth:`assert_nested`, which :class:`~fantasy_quant.draft.config.LeagueSettings` calls.
+    """
     qb: int = 1
     rb: int = 2
     wr: int = 2
@@ -97,13 +110,17 @@ class RosterSlots:
     dst: int = 1
     bench: int = 6
     flex_positions: tuple[str, ...] = ("RB", "WR", "TE")
+    #: A flex that may also take a QB (a.k.a. OP / superflex). 0 in the lockbox-validated default.
+    superflex: int = 0
+    superflex_positions: tuple[str, ...] = ("QB", "RB", "WR", "TE")
     pos_caps: dict[str, int] = field(
         default_factory=lambda: {"QB": 2, "RB": 6, "WR": 6, "TE": 2, "K": 1, "DST": 1}
     )
 
     @property
     def starters(self) -> int:
-        return self.qb + self.rb + self.wr + self.te + self.flex + self.k + self.dst
+        return (self.qb + self.rb + self.wr + self.te + self.flex + self.superflex
+                + self.k + self.dst)
 
     @property
     def total(self) -> int:
@@ -113,6 +130,42 @@ class RosterSlots:
         """Fixed (non-FLEX) starter demand per position."""
         return {"QB": self.qb, "RB": self.rb, "WR": self.wr, "TE": self.te,
                 "K": self.k, "DST": self.dst}
+
+    # -- 17.1 flex generalization: ONE ordering rule, consumed by every solver ----------------
+    def flex_groups(self) -> tuple[tuple[int, tuple[str, ...]], ...]:
+        """``((count, positions), ...)`` **most-restrictive first** — the fill order every lineup
+        solver uses. Empty groups are dropped, so the 1-QB default returns exactly one group and
+        every consumer reduces to its pre-17.1 behaviour."""
+        groups = [(self.flex, tuple(self.flex_positions)),
+                  (self.superflex, tuple(self.superflex_positions))]
+        out = [(n, p) for n, p in groups if n > 0 and p]
+        return tuple(sorted(out, key=lambda g: len(g[1])))
+
+    def total_flex(self) -> int:
+        """Total flex-family slots across all groups."""
+        return sum(n for n, _ in self.flex_groups())
+
+    def flex_eligible(self) -> frozenset[str]:
+        """Every position that can fill *some* flex slot — the union over groups. This is the right
+        set for "could this player ever start in a flex", which is what the optimizer, the auction
+        bidder and ``remaining_needs`` each want."""
+        return frozenset(p for _, positions in self.flex_groups() for p in positions)
+
+    def assert_nested(self) -> None:
+        """Raise unless the flex groups are nested (each a superset of the previous).
+
+        The greedy fill is optimal for nested eligibility and *not* in general; refusing here is a
+        deliberate scope choice (see the class docstring) so a league we cannot solve correctly
+        never reaches a solver that would answer anyway."""
+        prev: frozenset[str] = frozenset()
+        for _, positions in self.flex_groups():
+            cur = frozenset(positions)
+            if prev and not prev <= cur:
+                raise ValueError(
+                    f"flex eligibility must be nested, most-restrictive first; {sorted(cur)} "
+                    f"does not contain {sorted(prev)}. Non-nested flex slots need a per-cell "
+                    "assignment solver, which this engine deliberately does not implement.")
+            prev = cur
 
 
 @dataclass
@@ -130,6 +183,9 @@ class DraftState:
     rosters: list[list[int]] = field(default_factory=list)
     log: list[dict] = field(default_factory=list)
     overall_pick: int = 1
+    #: 17.4 — ``(team, round)`` slots forfeited to a keeper. ``run_to_completion`` skips them, so a
+    #: team that kept three players simply drafts three fewer times.
+    skipped_picks: set[tuple[int, int]] = field(default_factory=set)
 
     # -- draft geometry (snake order) --------------------------------------------------------
     def round(self) -> int:
@@ -256,6 +312,7 @@ class DraftState:
             your_team=self.your_team, rng=rng or np.random.default_rng(0), noise=self.noise,
             available=set(self.available), rosters=[list(r) for r in self.rosters],
             log=list(self.log), overall_pick=self.overall_pick,
+            skipped_picks=set(self.skipped_picks),      # 17.4: a rollout must forfeit them too
         )
 
 
@@ -329,7 +386,7 @@ def _prepare_board(board: pd.DataFrame) -> pd.DataFrame:
 
 def simulate_draft(board: pd.DataFrame, your_pick_fn=None, n_teams: int = 10, rounds: int = 15,
                    slots: RosterSlots | None = None, your_team: int = 0, noise: float = 5.0,
-                   seed: int | None = None, opponent_pick_fn=None) -> DraftState:
+                   seed: int | None = None, opponent_pick_fn=None, keepers=()) -> DraftState:
     """Simulate a full ``n_teams`` x ``rounds`` snake draft.
 
     ``your_pick_fn(state) -> board_label`` drives your seat (defaults to :func:`adp_pick_fn`);
@@ -344,7 +401,52 @@ def simulate_draft(board: pd.DataFrame, your_pick_fn=None, n_teams: int = 10, ro
         rng=np.random.default_rng(seed), noise=noise,
         available=set(b.index), rosters=[[] for _ in range(n_teams)],
     )
+    if keepers:
+        apply_keepers(state, keepers)
     return run_to_completion(state, your_pick_fn, opponent_pick_fn)
+
+
+def apply_keepers(state: DraftState, keepers) -> DraftState:
+    """17.4 — seat kept players and forfeit the picks they cost, **before** the draft runs.
+
+    Two things happen, and both are the point:
+
+    1. **The kept player leaves the pool** and lands on his owner's roster, so nobody else can draft
+       him and the board everyone else sees is genuinely shorter. Because ADP is a *rank* on the
+       remaining board, this is what re-inflates everyone's effective ADP — a stud kept at round 6
+       pulls every later player up. There is no separate "ADP adjustment": removing supply *is* the
+       adjustment, and doing it any other way would double-count.
+    2. **The owning team forfeits that round's pick**, recorded in ``skipped_picks``. That is the
+       price, and it is what stops keepers being free: a team keeping three studs drafts three fewer
+       times. ``run_to_completion`` skips those slots.
+
+    ``keepers`` is a sequence of :class:`~fantasy_quant.draft.config.Keeper` (``player_key``,
+    1-indexed ``team``, ``round``). A ``player_key`` not on the board is ignored — a keeper the
+    board never listed cannot be removed from it, and raising would make an ordinary stale-board
+    case fatal.
+    """
+    keys = board_player_key(state.board).astype(str)
+    by_key = {k: i for i, k in zip(state.board.index, keys, strict=True)}
+    for kp in keepers:
+        idx = by_key.get(str(kp.player_key))
+        team0 = int(kp.team) - 1
+        if not 0 <= team0 < state.n_teams:
+            raise ValueError(f"keeper team {kp.team} out of 1..{state.n_teams}")
+        if not 1 <= int(kp.round) <= state.rounds:
+            raise ValueError(f"keeper round {kp.round} out of 1..{state.rounds}")
+        state.skipped_picks.add((team0, int(kp.round)))
+        if idx is None:
+            continue
+        state.available.discard(idx)
+        state.rosters[team0].append(idx)
+        row = state.board.loc[idx]
+        state.log.append({
+            "overall_pick": 0, "round": int(kp.round), "team": team0,
+            "is_you": team0 == state.your_team, "player_key": str(kp.player_key),
+            "player_name": row.get("player_name"), "pos": row.get("pos"),
+            "adp": row.get("adp"), "keeper": True,
+        })
+    return state
 
 
 def run_to_completion(state: DraftState, your_pick_fn=None, opponent_pick_fn=None) -> DraftState:
@@ -358,6 +460,9 @@ def run_to_completion(state: DraftState, your_pick_fn=None, opponent_pick_fn=Non
     pick_fn = your_pick_fn or adp_pick_fn
     while not state.is_done() and state.available:
         team = state.team_on_clock()
+        if (team, state.round()) in state.skipped_picks:      # 17.4: forfeited to a keeper
+            state.overall_pick += 1
+            continue
         if team == state.your_team:
             idx = int(pick_fn(state))
             if idx not in state.available:

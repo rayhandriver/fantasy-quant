@@ -2318,3 +2318,34 @@ caches are **byte-identical for every historical season** and differ only on 202
 ⚠ The first attempt showed **149 gate-side diffs** and looked like a leak — it had defaulted to
 `shuffle_room: false` while the verify sheet used `true`. *Check the run's own recorded config before
 reading its numbers.* Artifact: `analysis/mock_room_bars_t31_shuffled.json`.
+
+## 2026-07-30 (session 4, cont.) — SESSION I: Phase 17 League-Format Fidelity
+
+Ran straight through from T31 (no stop, per the user's gate choice). Four scope decisions locked up
+front; all five done-bar gates PASS (`steps/phase17_formats.py`, `analysis/phase17_formats.json`).
+**658 tests (+41, `tests/test_phase17.py`), ruff clean.** Full write-up: `findings.md` §"Session I".
+
+**Decisions as built:**
+- **17.1 nested-eligibility flex only.** `RosterSlots.flex_groups()` is the single fill-order rule
+  (three solvers previously re-derived it); non-nested sets raise in `assert_nested`, which
+  `LeagueSettings` calls. Multi-flex stays vectorized via **the carry** — the first attempt removed
+  used rows by value and was wrong, because which row fills a flex differs per sim/week.
+- **17.1 replacement:** a superflex admits only QB beyond the base flex, so its slots go to QB —
+  **QB10 → QB20**; RB/WR/TE/K/DST unchanged. Live-2026 effect: best QB overall rank **15 → 3**.
+- **17.2 presets + bounded knobs** (`SCORING_PRESETS`, `ruleset_from_preset`, `te_rec_bonus`,
+  yardage-milestone bonuses). Two self-inflicted bugs found and fixed: pydantic ignored unknown
+  fields (→ `_Rules` with `extra="forbid"`), and the `full_ppr` preset returned a different
+  `RuleSet.name`, which would have split `cached_distribution`'s cache key.
+- **17.3** `LeagueSettings` + `lockbox_validated()`; bracket generalized to **4/6/8** with derived
+  byes (a 12-team/8-playoff league was previously unconstructible); **odd `n_teams` refused** with a
+  reason at the settings layer.
+- **17.4 round-based keepers only.** `apply_keepers` + `DraftState.skipped_picks`. No separate ADP
+  adjustment — removing supply *is* the re-inflation; the forfeited pick is the price (147 picks,
+  not 150).
+
+**Not decided / deliberately out:** non-nested flex, auction keepers, dynasty (15.1), IDP, Sleeper
+settings auto-import. `starter_marginal` routes multi-flex to the exact solver rather than
+approximating with its one-flex closed form.
+
+**★ NEXT: hard stop, then Session I.5 = 16.17 the seat map** (per the user's gate: straight through
+T31 + Session I, stop before I.5).

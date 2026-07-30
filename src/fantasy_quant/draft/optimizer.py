@@ -218,6 +218,29 @@ def starter_marginal(cand_values: np.ndarray, pos: str, roster_by_pos: dict[str,
     ``roster_by_pos`` maps position -> that position's current ``base_value``s (any order).
     """
     need = slots.base_demand()
+
+    # 17.1 — the closed form below reasons about **one** flex slot. Rather than approximate a
+    # multi-flex or superflex roster with it, route those formats to the exact solver: build the
+    # candidates along the trailing axis `lineup_points_matrix` already vectorizes over, so this
+    # stays one call, not a loop. (A silently-approximate fast path is how the repo's two lineup
+    # solvers would start disagreeing again — see `starter_value`'s docstring.)
+    if len(slots.flex_groups()) > 1 or slots.total_flex() > 1:
+        from fantasy_quant.simulation.season import lineup_points_matrix
+        cand = np.asarray(cand_values, float)
+        base_vals, base_pos = [], []
+        for q, arr in roster_by_pos.items():
+            a = np.asarray(arr, float)
+            base_vals.append(a)
+            base_pos += [q] * len(a)
+        stack = np.concatenate(base_vals) if base_vals else np.empty(0)
+        base_total = float(np.ravel(lineup_points_matrix(
+            stack[:, None], base_pos, slots))[0]) if len(stack) else 0.0
+        safe = np.where(np.isfinite(cand), cand, 0.0)
+        mat = np.vstack([np.repeat(stack[:, None], len(cand), axis=1), safe[None, :]]) \
+            if len(stack) else safe[None, :]
+        totals = np.asarray(lineup_points_matrix(mat, [*base_pos, pos], slots), float)
+        return np.where(np.isfinite(cand), totals - base_total, np.nan)
+
     flex_ok = bool(slots.flex) and pos in slots.flex_positions
     n_p = int(need.get(pos, 0))
 

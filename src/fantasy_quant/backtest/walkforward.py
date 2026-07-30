@@ -54,8 +54,14 @@ def rank_by_adp(board: pd.DataFrame, con=None, season=None, as_of=None) -> pd.Se
 def optimal_lineup_points(points, positions, slots: RosterSlots) -> float:
     """Max legal starting-lineup total for one week given a roster's ``points``/``positions``.
 
-    Greedy is optimal for a single FLEX: fill each dedicated slot with its top scorers, then the
-    FLEX with the best remaining RB/WR/TE. Missing/empty slots contribute 0.
+    Greedy is optimal for **nested** flex eligibility: fill each dedicated slot with its top
+    scorers, then each flex group most-restrictive-first with the best remaining eligible players.
+    Missing/empty slots contribute 0.
+
+    This is the **reference** implementation — slow, obvious, one row at a time — and
+    ``simulation.season.lineup_points_matrix`` is the vectorized one. They are regression-tested
+    equal, so both must consume :meth:`RosterSlots.flex_groups` rather than re-deriving the fill
+    order (17.1: the ordering rule lives in one place).
     """
     df = pd.DataFrame({"pos": list(positions), "pts": np.asarray(points, dtype=float)})
     used = pd.Series(False, index=df.index)
@@ -64,8 +70,10 @@ def optimal_lineup_points(points, positions, slots: RosterSlots) -> float:
         cand = df[(df["pos"] == pos) & ~used].nlargest(n, "pts")
         total += float(cand["pts"].sum())
         used.loc[cand.index] = True
-    flex = df[df["pos"].isin(slots.flex_positions) & ~used].nlargest(slots.flex, "pts")
-    total += float(flex["pts"].sum())
+    for count, eligible in slots.flex_groups():
+        cand = df[df["pos"].isin(eligible) & ~used].nlargest(count, "pts")
+        total += float(cand["pts"].sum())
+        used.loc[cand.index] = True
     return total
 
 

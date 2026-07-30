@@ -22,8 +22,18 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from fantasy_quant.backtest.scoring import RuleSet
+from fantasy_quant.backtest.scoring import (
+    SCORING_PRESETS,
+    RuleSet,
+    ruleset_from_preset,
+)
 from fantasy_quant.draft.simulator import DRAFTABLE, RosterSlots
+from fantasy_quant.simulation.season import (
+    PLAYOFF_SIZES,
+    LeagueFormat,
+    bracket_rounds,
+    derived_byes,
+)
 from fantasy_quant.valuation.utility import DEFAULT_LAMBDA
 
 # ------------------------------------------------------------------------------------------------
@@ -156,6 +166,20 @@ class LeagueSetup:
 
 
 @dataclass(frozen=True)
+class Keeper:
+    """17.4 — a player kept from last season, and the pick it costs.
+
+    ``round`` is the round whose pick the owning team forfeits (ESPN/Yahoo's "keep him at the round
+    you drafted him"). ``team`` is 1-indexed like ``LeagueSetup.draft_slot``. Kept players leave the
+    draftable pool entirely, and the forfeited picks are the price: a team that keeps three studs
+    drafts three fewer times, which is what makes the trade honest rather than free.
+    """
+    player_key: str
+    team: int
+    round: int
+
+
+@dataclass(frozen=True)
 class MustDraft:
     """A player you insist on rostering, with a **reach budget**: how many rounds early you'll reach
     to secure them. The optimizer waits as late as the budget and ADP allow (never overpays)."""
@@ -285,3 +309,155 @@ class DraftConfig:
 
 __all__ = ["ARCHETYPES", "ADAPTIVE_PARENTS", "DraftConfig", "LeagueSetup", "MustDraft",
            "archetype_tilt", "DRAFTABLE"]
+
+
+# ------------------------------------------------------------------------------------------------
+# 17.3 — the platform-agnostic league-settings contract (the Phase-14 form binds to THIS)
+# ------------------------------------------------------------------------------------------------
+@dataclass(frozen=True)
+class LeagueSettings:
+    """Everything a user can tell us about their league, in **their** vocabulary, plus the builders
+    that turn it into the engine's objects (:class:`RuleSet`, :class:`RosterSlots`,
+    :class:`~fantasy_quant.simulation.season.LeagueFormat`, :class:`LeagueSetup`).
+
+    **Platform-agnostic on purpose** (user decision, 2026-07-23): people are on ESPN/Yahoo/Sleeper/
+    NFL.com and we do not want to be gated on any one API. This is the manual form's shape; an
+    optional Sleeper auto-import that *pre-fills* it is a future convenience, never the only path.
+
+    ⚠ **Non-default formats are NOT lockbox-validated.** The lockbox was spent once, on a 10-team
+    full-PPR 1-QB league. Superflex, TE-premium, custom brackets and keepers are supported and
+    unit-tested for *correctness*, but no out-of-sample claim from `findings.md` §"LOCKBOX
+    EVALUATION" transfers to them. :meth:`lockbox_validated` says which case you are in, and the
+    Phase-14 surfacing is expected to label it rather than let a user assume the calibration
+    carries over.
+    """
+    # -- league shape ------------------------------------------------------------------------
+    n_teams: int = 10
+    draft_slot: int = 1
+    rounds: int = 15
+    draft_type: str = "snake"                 # snake | linear | auction (auction -> Phase 15.4)
+
+    # -- starting lineup ---------------------------------------------------------------------
+    qb: int = 1
+    rb: int = 2
+    wr: int = 2
+    te: int = 1
+    flex: int = 1
+    superflex: int = 0                        # a.k.a. OP; a flex that may take a QB
+    k: int = 1
+    dst: int = 1
+    bench: int = 6
+
+    # -- scoring -----------------------------------------------------------------------------
+    scoring_preset: str = "full_ppr"          # SCORING_PRESETS key
+    scoring_overrides: Mapping[str, float] = field(default_factory=dict)
+
+    # -- season / bracket --------------------------------------------------------------------
+    reg_weeks: int = 14
+    playoff_teams: int = 6
+    playoff_weeks: tuple[int, ...] = (15, 16, 17)
+
+    # -- keepers (17.4) ----------------------------------------------------------------------
+    keepers: tuple[Keeper, ...] = ()
+
+    #: The exact configuration the lockbox evaluated. Anything else is supported-but-unvalidated.
+    LOCKBOX_CASE = {"n_teams": 10, "qb": 1, "rb": 2, "wr": 2, "te": 1, "flex": 1, "superflex": 0,
+                    "k": 1, "dst": 1, "bench": 6, "scoring_preset": "full_ppr",
+                    "playoff_teams": 6, "reg_weeks": 14, "draft_type": "snake"}
+
+    # -- builders ----------------------------------------------------------------------------
+    def ruleset(self) -> RuleSet:
+        return ruleset_from_preset(self.scoring_preset, **dict(self.scoring_overrides))
+
+    def roster_slots(self) -> RosterSlots:
+        """Build :class:`RosterSlots`, with per-position caps scaled so a superflex league is
+        allowed to roster the second QB it is required to start. Leaving the 1-QB cap of 2 in place
+        would let a format be configured and then be undraftable, which is worse than either."""
+        caps = {"QB": max(2, self.qb + self.superflex + 1), "RB": 6, "WR": 6,
+                "TE": max(2, self.te + 1), "K": max(1, self.k), "DST": max(1, self.dst)}
+        slots = RosterSlots(qb=self.qb, rb=self.rb, wr=self.wr, te=self.te, flex=self.flex,
+                            superflex=self.superflex, k=self.k, dst=self.dst, bench=self.bench,
+                            pos_caps=caps)
+        slots.assert_nested()
+        return slots
+
+    def league_format(self) -> LeagueFormat:
+        return LeagueFormat(n_teams=self.n_teams, reg_weeks=self.reg_weeks,
+                            playoff_teams=self.playoff_teams,
+                            playoff_weeks=tuple(self.playoff_weeks),
+                            first_round_byes=derived_byes(self.playoff_teams))
+
+    def league_setup(self) -> LeagueSetup:
+        return LeagueSetup(n_teams=self.n_teams, draft_slot=self.draft_slot, rounds=self.rounds,
+                           slots=self.roster_slots(), ruleset=self.ruleset(),
+                           scoring=_ADP_SCORING_KEY.get(self.scoring_preset, "ppr"),
+                           fmt=self.draft_type)
+
+    def lockbox_validated(self) -> bool:
+        """True only for the exact league the lockbox was spent on. Everything else is honest
+        engineering with no out-of-sample claim attached."""
+        return all(getattr(self, k) == v for k, v in self.LOCKBOX_CASE.items()) and \
+            not self.scoring_overrides and not self.keepers
+
+    def validate(self) -> None:
+        """Reject anything the engine cannot actually play, with a message that says why.
+
+        Deliberately strict: the alternative is a league that configures cleanly and then produces
+        a silently wrong board, which is the failure mode this whole phase exists to avoid.
+        """
+        problems: list[str] = []
+        if self.draft_type not in ("snake", "linear", "auction"):
+            problems.append(f"draft_type {self.draft_type!r} must be snake, linear or auction")
+        if self.n_teams < 2:
+            problems.append("n_teams must be at least 2")
+        if self.n_teams % 2:
+            problems.append("n_teams must be even (the round-robin schedule pairs every team)")
+        if not 1 <= self.draft_slot <= max(self.n_teams, 1):
+            problems.append(f"draft_slot {self.draft_slot} out of 1..{self.n_teams}")
+        for name in ("qb", "rb", "wr", "te", "flex", "superflex", "k", "dst", "bench"):
+            if getattr(self, name) < 0:
+                problems.append(f"{name} cannot be negative")
+        if self.playoff_teams not in PLAYOFF_SIZES:
+            problems.append(f"playoff_teams must be one of {sorted(PLAYOFF_SIZES)}")
+        elif self.playoff_teams > self.n_teams:
+            problems.append("playoff_teams cannot exceed n_teams")
+        elif len(self.playoff_weeks) != bracket_rounds(self.playoff_teams):
+            problems.append(f"a {self.playoff_teams}-team bracket needs "
+                            f"{bracket_rounds(self.playoff_teams)} playoff weeks")
+        elif self.playoff_weeks and self.playoff_weeks[0] != self.reg_weeks + 1:
+            problems.append("playoffs must start the week after the regular season")
+        if self.scoring_preset not in SCORING_PRESETS:
+            problems.append(f"unknown scoring preset {self.scoring_preset!r}; "
+                            f"known: {sorted(SCORING_PRESETS)}")
+        try:
+            self.ruleset()
+        except Exception as exc:                                  # noqa: BLE001 — surface as text
+            problems.append(f"scoring overrides invalid: {exc}")
+        try:
+            slots = self.roster_slots()
+            if self.rounds < slots.total:
+                problems.append(f"rounds {self.rounds} < roster size {slots.total}")
+            if self.n_teams * slots.starters > 0 and self.superflex and not self.qb:
+                problems.append("a superflex league needs at least one dedicated QB slot")
+        except ValueError as exc:
+            problems.append(str(exc))
+        seen: set[str] = set()
+        for kp in self.keepers:
+            if kp.player_key in seen:
+                problems.append(f"duplicate keeper {kp.player_key!r}")
+            seen.add(kp.player_key)
+            if kp.round < 1 or kp.round > self.rounds:
+                problems.append(f"keeper {kp.player_key!r} round {kp.round} "
+                                f"out of 1..{self.rounds}")
+            if not 1 <= kp.team <= self.n_teams:
+                problems.append(f"keeper {kp.player_key!r} team {kp.team} "
+                                f"out of 1..{self.n_teams}")
+        if problems:
+            raise ValueError("invalid league settings: " + "; ".join(problems))
+
+
+#: Which FFC ADP board a scoring preset should read. TE-premium has no FFC board of its own, so it
+#: reads the PPR one — stated here rather than silently defaulted, because it is an approximation.
+_ADP_SCORING_KEY: dict[str, str] = {
+    "standard": "standard", "half_ppr": "half", "full_ppr": "ppr", "te_premium": "ppr",
+}

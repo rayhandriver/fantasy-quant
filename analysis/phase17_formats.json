@@ -1,0 +1,71 @@
+{
+  "season": 2026,
+  "gates": [
+    {
+      "gate": "G1 solver == brute force (all formats)",
+      "pass": true,
+      "formats": [
+        "default",
+        "superflex",
+        "two_flex",
+        "2qb_superflex",
+        "no_k_dst_3flex"
+      ],
+      "n_per_format": 40,
+      "worst_abs_err": 0.0
+    },
+    {
+      "gate": "G2 superflex lifts QBs on the value board",
+      "pass": true,
+      "season": 2026,
+      "one_qb_qb_in_top50": 6,
+      "one_qb_best_qb_rank": 15,
+      "superflex_qb_in_top50": 7,
+      "superflex_best_qb_rank": 3
+    },
+    {
+      "gate": "G3 the default format did not move",
+      "pass": true,
+      "ranks": {
+        "QB": 10,
+        "RB": 24,
+        "WR": 24,
+        "TE": 12,
+        "K": 10,
+        "DST": 10
+      },
+      "checks": {
+        "replacement_ranks": true,
+        "flex_groups": true,
+        "starters_9_total_15": true,
+        "full_ppr_preset_is_default": true,
+        "default_ruleset_untouched": true,
+        "default_settings_rebuild": true,
+        "default_is_lockbox_validated": true
+      }
+    },
+    {
+      "gate": "G4 settings round-trip + reject the unplayable",
+      "pass": true,
+      "custom_league_ok": true,
+      "rejected": {
+        "odd_teams": true,
+        "bad_bracket": true,
+        "unknown_preset": true,
+        "typo_override": true,
+        "rounds_below_roster": true,
+        "keeper_out_of_range": true
+      }
+    },
+    {
+      "gate": "G5 keepers remove supply and cost picks",
+      "pass": true,
+      "picks_made": 147,
+      "forfeited": 3,
+      "kept_redrafted": []
+    }
+  ],
+  "all_pass": true,
+  "lockbox_validated_default": true,
+  "note": "Non-default formats are supported and correctness-tested but NOT lockbox-validated; no out-of-sample claim transfers to them."
+}

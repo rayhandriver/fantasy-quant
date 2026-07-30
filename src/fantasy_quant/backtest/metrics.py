@@ -33,18 +33,39 @@ _OFF_CANON = {"QB": "QB", "RB": "RB", "WR": "WR", "TE": "TE", "FB": "RB", "HB": 
 # replacement levels
 # --------------------------------------------------------------------------------------------
 def replacement_ranks(slots: RosterSlots, n_teams: int = 10) -> dict[str, int]:
-    """League-wide started count per position = the replacement rank (last starter). The FLEX is
-    allocated across ``flex_positions`` in proportion to their dedicated demand."""
+    """League-wide started count per position = the replacement rank (last starter).
+
+    Each flex group's slots are allocated across the positions it makes *newly* eligible, in
+    proportion to their dedicated demand. For the default RB/WR/TE flex that is the original rule,
+    unchanged and bit-identical.
+
+    **17.1 — why a superflex is allocated entirely to QB.** Groups are processed
+    most-restrictive-first, and a superflex differs from the base flex **only** by admitting QB —
+    RB/WR/TE depth was already priced by the narrower group. So the marginal effect of adding a
+    superflex falls on quarterbacks, and the slots go there. This is the line that makes a superflex
+    board draft QBs early: in a 10-team league it moves QB replacement from **QB10 to QB20**, i.e.
+    from "the last starter" to "the last *second* starter", which is where the scarcity actually is.
+    The old proportional-to-demand rule would have handed QB **1/6** of the superflex slot and left
+    replacement at ~QB12 — a format the engine claims to support, priced as if it were 1-QB.
+
+    *(Deliberate simplification, stated rather than hidden: a superflex is occasionally filled by a
+    third RB rather than a second QB. Pricing that needs realized points, which would make this
+    function impure — it is called from `projections/distribution.py` with no DB in scope. The
+    residual error is small next to the QB10 → QB20 move it captures.)*
+    """
     ded = {"QB": slots.qb, "RB": slots.rb, "WR": slots.wr, "TE": slots.te,
            "K": slots.k, "DST": slots.dst}
-    flex_total = sum(ded[p] for p in slots.flex_positions) or 1
-    ranks = {}
-    for pos, d in ded.items():
-        started = n_teams * d
-        if pos in slots.flex_positions:
-            started += n_teams * slots.flex * d / flex_total
-        ranks[pos] = max(1, int(round(started)))
-    return ranks
+    started = {pos: float(n_teams * d) for pos, d in ded.items()}
+    seen: set[str] = set()
+    for count, eligible in slots.flex_groups():
+        fresh = [p for p in eligible if p not in seen]
+        seen |= set(eligible)
+        share_over = fresh or list(eligible)
+        weight_total = sum(ded[p] for p in share_over if p in ded) or 1
+        for p in share_over:
+            if p in started:
+                started[p] += n_teams * count * ded[p] / weight_total
+    return {pos: max(1, int(round(v))) for pos, v in started.items()}
 
 
 @dataclass
@@ -83,11 +104,14 @@ def replacement_levels(con, season: int, slots: RosterSlots | None = None, n_tea
         vals = totals[pos]
         level = float(vals[min(rank - 1, len(vals) - 1)]) if len(vals) else 0.0
         by_pos[pos] = {"rank": rank, "level": level}
-    flex_level = max(by_pos[p]["level"] for p in slots.flex_positions)
     roster_total = (slots.qb * by_pos["QB"]["level"] + slots.rb * by_pos["RB"]["level"]
                     + slots.wr * by_pos["WR"]["level"] + slots.te * by_pos["TE"]["level"]
-                    + slots.k * by_pos["K"]["level"] + slots.dst * by_pos["DST"]["level"]
-                    + slots.flex * flex_level)
+                    + slots.k * by_pos["K"]["level"] + slots.dst * by_pos["DST"]["level"])
+    # Each flex group contributes its own best replacement level (17.1) — a superflex is worth the
+    # best of QB/RB/WR/TE, which in practice is the QB, so a superflex roster's replacement bar is
+    # correctly higher than a 1-QB one's. Single-FLEX default is unchanged.
+    for count, eligible in slots.flex_groups():
+        roster_total += count * max(by_pos[p]["level"] for p in eligible if p in by_pos)
     return ReplacementLevels(by_pos, float(roster_total), n_teams)
 
 

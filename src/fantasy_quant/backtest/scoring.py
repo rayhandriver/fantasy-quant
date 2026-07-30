@@ -16,7 +16,7 @@ Design: the arithmetic lives in **pure, unit-tested functions** (``score_offense
 from __future__ import annotations
 
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from fantasy_quant.data.sources.adp import normalize_name
 
@@ -24,7 +24,15 @@ from fantasy_quant.data.sources.adp import normalize_name
 # --------------------------------------------------------------------------------------------
 # the ruleset (pydantic — parametrized so non-standard leagues are a config change)
 # --------------------------------------------------------------------------------------------
-class OffenseRules(BaseModel):
+class _Rules(BaseModel):
+    """Base for every scoring-rule block. ``extra="forbid"`` is the point: 17.2 chose a **bounded**
+    field set over an open ``{stat: value}`` map precisely so a misspelled setting raises at
+    construction instead of scoring 0.0 for a whole season. Silently ignoring an unknown key is the
+    worst available behaviour here — it looks like it worked."""
+    model_config = ConfigDict(extra="forbid")
+
+
+class OffenseRules(_Rules):
     """Per-stat weights. Defaults reproduce nflverse ``fantasy_points_ppr`` exactly (full-PPR,
     4-pt pass TD, -2 INT, -2 fumble-lost) so the reconstruction can be asserted against it."""
     pass_yd: float = 0.04          # 1 pt / 25 passing yards
@@ -38,9 +46,21 @@ class OffenseRules(BaseModel):
     st_td: float = 6.0             # return TDs credited via weekly.special_teams_tds
     two_pt: float = 2.0
     fumble_lost: float = -2.0
+    # -- 17.2 custom scoring. All default to 0.0, so the lockbox-validated full-PPR ruleset is
+    #    byte-identical and every one of these is opt-in. --------------------------------------
+    #: Extra points per reception for **tight ends only** (TE-premium leagues, typically 0.5).
+    te_rec_bonus: float = 0.0
+    #: Flat weekly yardage milestone bonuses (ESPN/Yahoo "100-yard game" style), applied once per
+    #: player-week when the threshold is reached. Thresholds are inclusive.
+    pass_yd_bonus: float = 0.0
+    pass_yd_bonus_at: float = 300.0
+    rush_yd_bonus: float = 0.0
+    rush_yd_bonus_at: float = 100.0
+    rec_yd_bonus: float = 0.0
+    rec_yd_bonus_at: float = 100.0
 
 
-class KickingRules(BaseModel):
+class KickingRules(_Rules):
     """Field goals scored by distance bucket + PATs. Misses default to 0 (no penalty)."""
     fg_0_39: float = 3.0
     fg_40_49: float = 4.0
@@ -50,7 +70,7 @@ class KickingRules(BaseModel):
     pat_miss: float = 0.0
 
 
-class DstRules(BaseModel):
+class DstRules(_Rules):
     """Team-defense event weights + points-allowed tiers. Blocked kicks are not derived from
     ``pbp`` cleanly, so ``block`` is defined but not currently scored (documented approximation)."""
     sack: float = 1.0
@@ -66,7 +86,7 @@ class DstRules(BaseModel):
     )
 
 
-class RuleSet(BaseModel):
+class RuleSet(_Rules):
     """The league ruleset the backtest scores against (stated baseline: 10-team full-PPR, 1-QB,
     9-starter QB/2RB/2WR/TE/FLEX+K+DST)."""
     name: str = "full_ppr_1qb"
@@ -76,6 +96,42 @@ class RuleSet(BaseModel):
 
 
 DEFAULT_RULESET = RuleSet()
+
+
+#: 17.2 — the named scoring presets a settings form offers. ``full_ppr`` **is** ``DEFAULT_RULESET``
+#: (the lockbox-validated baseline); every other preset differs from it only in the reception rate
+#: or the TE bonus, so a board built under one is comparable to a board built under another.
+#: Anything a preset cannot express is set field-by-field on the returned :class:`RuleSet`.
+SCORING_PRESETS: dict[str, dict] = {
+    "standard":    {"rec": 0.0},
+    "half_ppr":    {"rec": 0.5},
+    "full_ppr":    {},
+    "te_premium":  {"te_rec_bonus": 0.5},
+}
+
+
+def ruleset_from_preset(preset: str = "full_ppr", **overrides) -> RuleSet:
+    """Build a :class:`RuleSet` from a named preset plus arbitrary offense overrides (17.2).
+
+    ``ruleset_from_preset("full_ppr")`` returns a ruleset **equal to** :data:`DEFAULT_RULESET`,
+    ``name`` included. That equality is load-bearing, not cosmetic: ``RuleSet`` is serialized into
+    the cache key of :func:`~fantasy_quant.projections.distribution.cached_distribution` (and the
+    16.13 board caches beneath it), so a preset that produced identical scoring under a *different*
+    name would silently force a full 9-season rebuild and split the cache in two.
+
+    Overrides are validated by pydantic with ``extra="forbid"``, which is the point of a bounded
+    field set rather than an open ``{stat: value}`` map — a typo raises here instead of silently
+    scoring zero for the rest of the season.
+    """
+    key = str(preset).strip().lower()
+    if key not in SCORING_PRESETS:
+        raise ValueError(f"unknown scoring preset {preset!r}; "
+                         f"known: {sorted(SCORING_PRESETS)}")
+    offense = OffenseRules(**{**SCORING_PRESETS[key], **overrides})
+    if key == "full_ppr" and not overrides:
+        return RuleSet()
+    name = key if not overrides else f"{key}_custom"
+    return RuleSet(name=name, offense=offense)
 
 
 # --------------------------------------------------------------------------------------------
@@ -99,6 +155,13 @@ def score_offense(df: pd.DataFrame, rules: OffenseRules | None = None) -> pd.Ser
                + _num(df, "receiving_fumbles_lost"))
     two_pt = (_num(df, "passing_2pt_conversions") + _num(df, "rushing_2pt_conversions")
               + _num(df, "receiving_2pt_conversions"))
+    # 17.2 — TE premium. Per-reception rate is `rec` plus a TE-only bonus, so it needs the row's
+    # position; when the frame carries none (pure unit-test frames, some derived panels) the bonus
+    # is simply not applied, which keeps the default `te_rec_bonus=0.0` path byte-identical.
+    rec_rate = pd.Series(float(r.rec), index=df.index)
+    if r.te_rec_bonus and "position" in df.columns:
+        is_te = df["position"].astype("string").str.upper().eq("TE").fillna(False)
+        rec_rate = rec_rate + is_te.astype(float) * float(r.te_rec_bonus)
     return (
         _num(df, "passing_yards") * r.pass_yd
         + _num(df, "passing_tds") * r.pass_td
@@ -107,10 +170,13 @@ def score_offense(df: pd.DataFrame, rules: OffenseRules | None = None) -> pd.Ser
         + _num(df, "rushing_tds") * r.rush_td
         + _num(df, "receiving_yards") * r.rec_yd
         + _num(df, "receiving_tds") * r.rec_td
-        + _num(df, "receptions") * r.rec
+        + _num(df, "receptions") * rec_rate
         + _num(df, "special_teams_tds") * r.st_td
         + two_pt * r.two_pt
         + fumbles * r.fumble_lost
+        + _num(df, "passing_yards").ge(r.pass_yd_bonus_at).astype(float) * r.pass_yd_bonus
+        + _num(df, "rushing_yards").ge(r.rush_yd_bonus_at).astype(float) * r.rush_yd_bonus
+        + _num(df, "receiving_yards").ge(r.rec_yd_bonus_at).astype(float) * r.rec_yd_bonus
     )
 
 

@@ -58,12 +58,18 @@ class LineupChoice:
 
 
 def _slot_plan(slots: RosterSlots) -> list[tuple[str, tuple[str, ...]]]:
-    """Ordered ``(label, allowed_positions)`` — dedicated slots first, then FLEX (so FLEX takes the
-    best leftover flex-eligible, matching :func:`lineup_points_matrix`)."""
+    """Ordered ``(label, allowed_positions)`` — dedicated slots first, then each flex group
+    most-restrictive-first, matching :func:`lineup_points_matrix`'s fill order.
+
+    17.1: the group order comes from :meth:`RosterSlots.flex_groups`, the single place it is
+    defined. A superflex is labelled ``SUPERFLEX`` because a user reading a lineup needs to see
+    *which* flex a quarterback is occupying."""
     plan = [(f"{p}{k + 1}" if need > 1 else p, (p,))
             for p, need in slots.base_demand().items() for k in range(need)]
-    plan += [(f"FLEX{k + 1}" if slots.flex > 1 else "FLEX", tuple(slots.flex_positions))
-             for k in range(slots.flex)]
+    for count, eligible in slots.flex_groups():
+        label = "SUPERFLEX" if "QB" in eligible else "FLEX"
+        plan += [(f"{label}{k + 1}" if count > 1 else label, tuple(eligible))
+                 for k in range(count)]
     return plan
 
 

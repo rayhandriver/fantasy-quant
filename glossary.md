@@ -1963,3 +1963,54 @@ show none** — and carry that discriminator (`live_board_changed`) in the artif
 the Phase-5 level would both have passed all six pre-registered bars. What distinguishes them is where
 the change lands: 0.0 % of top-24-ADP rows moved, ramping to 96.5 % of undrafted ones. Report the
 distribution of the change, not just the metrics it satisfied.
+
+**flex group** (17.1) — `(count, eligible_positions)`, the unit `RosterSlots.flex_groups()` returns,
+ordered **most-restrictive-first**. Every lineup solver in the repo (`lineup_points_matrix`,
+`optimal_lineup_points`, `inseason.lineup._slot_plan`) consumes it instead of reading
+`flex`/`flex_positions`, so the fill order is defined once. A **superflex** is simply a second group
+whose eligibility adds QB.
+
+**nested eligibility** (17.1) — the condition that makes greedy lineup-filling optimal: each flex
+group's positions contain the previous group's. Then a player the narrow slot can use is also usable
+by the wide one, so committing the narrow slot first never strands a better assignment. Non-nested
+sets (a WR/TE flex beside an RB/WR flex) break the argument and need a per-cell assignment that does
+not vectorize — so they are **refused at construction** (`assert_nested`) rather than mis-solved.
+*Supporting a format you would answer wrongly is worse than not supporting it.*
+
+**the carry** (17.1) — how multi-flex stays vectorized. Which roster row fills a flex differs per sim
+and per week, so used players cannot be removed by identity (the first implementation tried to match
+them by value and was wrong). Instead: sort a group's pool descending, take its top `n`, and carry
+the **unused tail** forward to the next wider group. Under nested eligibility that carry is exactly
+what is still available to the wider slot, per cell, with no loop over cells.
+
+**two greedies that share a bug agree perfectly** (17.1) — why Phase 17's solver gate is an
+exhaustive brute force rather than the repo's other lineup solver. Once both consume `flex_groups()`,
+agreement between them tests the plumbing, not the answer. Check a generalized optimizer against an
+optimum, not against its sibling.
+
+**the marginal position of a wider slot** (17.1) — a superflex admits exactly one position the base
+flex did not, so its replacement-level effect falls entirely on QB: **QB10 → QB20** in a 10-team
+league, the last starter becoming the last *second* starter. The old proportional-to-demand rule gave
+QB 1/6 of the slot and priced a superflex league almost as a 1-QB one. On the live 2026 board the fix
+moves the best QB from overall rank 15 to **rank 3**.
+
+**a field that is "only a label" is not, once something keys on it** (17.2) — `ruleset_from_preset
+("full_ppr")` first returned identical scoring under a different `RuleSet.name`. `RuleSet` is
+serialized into `cached_distribution`'s cache key, so that cosmetic difference would have split the
+cache and forced a silent nine-season rebuild. The preset returns `RuleSet()` itself.
+
+**extra="forbid"** (17.2) — the reason a *bounded* scoring field set beats an open `{stat: value}`
+map: a misspelled setting must raise at construction rather than score 0.0 all season. Worth noting
+that the first implementation had the defect it was designed to prevent — pydantic ignores unknown
+fields by default, so `OffenseRules(rec_typo=1.0)` was accepted until `_Rules` was added.
+
+**lockbox_validated()** (17.3) — the programmatic form of "this claim does not transfer". True for
+exactly one configuration: the 10-team full-PPR 1-QB league the lockbox was spent on. Every other
+format is supported and correctness-tested but carries **no out-of-sample claim**, and Phase 14 is
+expected to render that rather than let a user assume the calibration carries over.
+
+**removing supply IS the ADP adjustment** (17.4) — keepers re-inflate everyone's effective ADP
+because ADP is a *rank on the remaining board*, so dropping the kept player from the pool is the
+whole adjustment. Adding a separate "keeper ADP shift" on top would double-count it. The other half
+is the price: the owning team forfeits that round's pick (`skipped_picks`), so keeping three studs
+means drafting three fewer times — 147 picks instead of 150.
