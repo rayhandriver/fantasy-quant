@@ -1,0 +1,117 @@
+{
+  "generated": "2026-07-30T15:53:53.507054+00:00",
+  "season": 2026,
+  "bars": {
+    "B1": {
+      "passed": true,
+      "n_rows": 184,
+      "non_null": {
+        "proj_points": 183,
+        "mean": 183,
+        "games_played_mean": 183,
+        "base_value": 183
+      },
+      "rows_with_no_consensus_projection": [
+        "Brandon Aiyuk"
+      ],
+      "note": "a row with no upstream projection prints '-' (the T22 rule), never a 0"
+    },
+    "B2": {
+      "gate": "value_scale_2026",
+      "passed": false,
+      "max_rho": -0.5,
+      "min_n": 8,
+      "failed_positions": [
+        "RB"
+      ],
+      "skipped": [],
+      "by_position": {
+        "QB": {
+          "n": 27,
+          "rho": -0.9022,
+          "median_haircut": 0.2244,
+          "neg_haircut_share": 0.0
+        },
+        "RB": {
+          "n": 56,
+          "rho": -0.2882,
+          "median_haircut": 0.2874,
+          "neg_haircut_share": 0.0714
+        },
+        "WR": {
+          "n": 77,
+          "rho": -0.5382,
+          "median_haircut": 0.2478,
+          "neg_haircut_share": 0.013
+        },
+        "TE": {
+          "n": 23,
+          "rho": -0.8379,
+          "median_haircut": 0.3049,
+          "neg_haircut_share": 0.0
+        }
+      },
+      "full_board": {
+        "QB": {
+          "n": 78,
+          "rho": 0.4741,
+          "median_haircut": -2.4056,
+          "neg_haircut_share": 0.5897
+        },
+        "RB": {
+          "n": 121,
+          "rho": 0.2245,
+          "median_haircut": 0.1998,
+          "neg_haircut_share": 0.4215
+        },
+        "WR": {
+          "n": 169,
+          "rho": -0.0114,
+          "median_haircut": 0.166,
+          "neg_haircut_share": 0.3077
+        },
+        "TE": {
+          "n": 112,
+          "rho": 0.2368,
+          "median_haircut": 0.1348,
+          "neg_haircut_share": 0.3304
+        }
+      }
+    },
+    "B3": {
+      "passed": true,
+      "gated_diffs": [],
+      "readout_diffs": [],
+      "other_diffs": [],
+      "before": "mock_room_bars_verify_20260729.json",
+      "after": "mock_room_bars_h5_step1.json"
+    },
+    "B4": {
+      "passed": true,
+      "starter_value": 395.0,
+      "team_value": 395.0
+    },
+    "B5": {
+      "diff": -0.023046918308147372,
+      "lo": -0.04067168418392567,
+      "hi": -0.005499212044110234,
+      "share_positive": 0.00475,
+      "passed": false
+    },
+    "B6": {
+      "passed": true,
+      "method": "spine_3_cost_report.py diffed against a git worktree at the session-start commit"
+    }
+  },
+  "availability_brier": {
+    "value": 0.088996997698074,
+    "unchanged": true
+  },
+  "n_tests": 612,
+  "verdict": {
+    "T27": "shipped \u2014 the value chain is on the board, `why` prints it, and the gate found a live-board defect (B2)",
+    "T28": "closed as a LABELLING FIX \u2014 B5's pre-registered direction failed, so `value_hawk` keeps objective=portfolio_ce (bench_weight=1.0)",
+    "T29": "shipped \u2014 no driver prints a bare probability; the mock leads with the fair-share multiple",
+    "T30": "see analysis/mock_room_bars_t30_chalk_swap.json"
+  }
+}

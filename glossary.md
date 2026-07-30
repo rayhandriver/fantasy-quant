@@ -4,7 +4,9 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-27 — **the 2×5 mock-room terms** (bottom section: the 2×5 room · censored
+> **Last updated:** 2026-07-30 — **seat-map terms** (bottom section, planned 16.17/14.J: seat map ·
+> k-of-n control · the positional-mapping smell · one draft is one observation · bars have a scope,
+> not just a value). _Previously:_ 2026-07-27 — **the 2×5 mock-room terms** (bottom section: the 2×5 room · censored
 > signal · the level-vs-shape family's fourth and first self-inflicted instance · inert weight · width
 > without direction · reach budget · blind spot vs mis-weight · unsigned situation score · mandatory
 > needs / roster-completion rule · a filter not a data gap · the choice-set contract's second home ·
@@ -1783,3 +1785,141 @@ not ninety picks earlier. A statistic that changes sign when you fix its referen
 estimate of the thing it is named after — it was a different quantity wearing that name. Cheap
 diagnostic wherever a derived per-entity number looks merely *large*: fix the reference and see
 whether it shrinks or turns around.
+
+## The value-seam terms (2026-07-30) — Session H.5, T27–T30
+
+**the value seam (T27)** — the join between the number a human reads off the board (`proj_points`,
+consensus, re-scored full-PPR) and the number every seat actually optimizes (`base_value` = `ce_vbd`
+= Phase-5 CE − positional replacement CE). They are built from **different means** and disagree by up
+to **170 points** on the live 2026 board — Drake Maye proj 316.5 → **+68.5**, Jayden Daniels proj
+313.4 → **−101.6**, three points apart on screen. Not a bug in either quantity; a **missing bridge**
+between two correct ones. The product fix is auditability (`why <player>`, printing the whole chain),
+not a model change.
+
+**the level is intended, the dispersion is the defect** — the companion rule for reading a haircut.
+The mean gap between consensus and the Phase-5 mean (**0.28 QB · 0.33 RB · 0.28 WR · 0.30 TE**) is
+Phase 4.4's measured level optimism working exactly as designed, and "fixing" it would un-do a
+calibrated correction. What makes a board unreadable is the **spread** around it (QB 0.15–0.56,
+sd 0.12) with nothing on screen explaining who got cut. *Judge a systematic correction by its
+variance across comparable players, not by its mean.*
+
+**decompose before diagnosing** (2026-07-30) — `base_value` differs from `vbd` through **two**
+channels (the T3 availability haircut inside the Phase-5 mean, then λ·Var, then a subtraction of the
+*replacement's own* CE). A single-channel reading — "the variance charge is too big" — fits neither
+end of the board: Josh Allen `vbd` +70.0 → `base_value` +55.2 (a 15-point gap) while Daniels +22.6 →
+−101.6 (124 points). The arithmetic only closes with all three terms. *Before naming a cause for a
+gap between two quantities, write out every term that separates them.*
+
+**slot-blind value (T28)** — `team_value` = `Σ base_value` over all fifteen roster rows, with no
+starter/slot logic anywhere in the value path, so a second QB on a 1-QB roster is priced at full
+weight in both directions (−101.6 for a bench Caleb Williams, +51.0 for a Hurts taken second). Room
+total 1,938; the QB2 line alone nets **−122**. Measured cost: Spearman vs title probability is
+**+0.685** for `team_value` and **+0.758** for portfolio CE, against **+0.915** for the starting
+nine's Phase-5 mean. *A sum over a roster is not a forecast of a lineup.* The metric is correct as
+what it was built to be — "value over replacement, independent players" — and acquired a second,
+wrong meaning by being the only team-level number anyone printed.
+
+**fair-share multiple (T29)** — title probability expressed as `title_prob · n_teams`, so a 10-team
+league's uniform is 1.00× and 0.170 reads **1.70×**. A ratio to the uniform is immune to the season
+sim's documented **−113 pts/team** level bias, which the raw percentage is not. The general form:
+*when a model's ordering is calibrated and its level is not, publish the ratio, not the level.*
+
+**a composition question is not a defect (T30)** — `autopilot` sits in 1 of 10 seats against **0.2 %**
+of realized seats, and it is the seat that manufactures the spill the room harvests (mean `pool_rank`
+**1.77**, median **1.0**, harvest **+11.7 picks**). Every bar passes, so nothing is broken; what is
+missing is the **written argument** for the ratio. Booked as a ticket anyway, because an unstated
+modelling choice that survives every gate is exactly the kind of thing that is later mistaken for a
+measured result. *A null on a composition A/B is a decision, and decisions get written down.*
+
+**a display change that moves a bar is not a display change** — the hard bar carried by every step of
+Session H.5: `analysis/mock_room_bars_verify_20260729.json` must reproduce **bit-identically**. The
+cheap guard that keeps a "cosmetic" session from quietly becoming a modelling session.
+
+**check the suspicion before you write the ticket** (2026-07-30) — four defects that looked real by
+eye and died on contact with the corpus: the QB market (17 QBs for 10 teams is the realized **median
+of 16**, over 333 matched drafts), a stale behavioural fit (the corpus is 9 seasons, bulk 2021–25),
+elite fall (25.0 % vs a committed 25.2 %), and the reach budget (the reacher spent exactly 3 of 3
+swings and 5 of 5 leans, with a rounds-1–3 max reach of −0.1). Each one took a single query, and each
+would have produced a plausible, wrong ticket. The four that *did* survive are the register's
+T27–T30. *An audit's value is in what it clears, not only in what it opens.*
+
+**a guard that does not run on the path a human uses is not a guard** (2026-07-30, T27) — the
+`value_hawk` seat ran the Phase-9 greedy in every batch measurement in the repo and the plain
+behavioural softmax in every *human* mock, for as long as both existed. `assert_room_objectives` was
+written to catch exactly that and could not, because it lived in `draft/mock.py`'s room builder while
+`steps/mock_draft.py` used `personalities.make_room_pick_fn`, which had no `risk` parameter to guard.
+The guard moved down the import graph so both builders share it. Generalizes **T22's** lesson (*a
+column's consumers are not only the models that weight it*) from columns to assertions: when two code
+paths do the same job, the assertion belongs to the one *underneath* both, not to whichever one it was
+written in.
+
+**the predictor and the display are different claims** (2026-07-30, T28) — `team_value` sums
+`base_value` over all fifteen roster rows, so it prices a bench QB2 as if he started. That is a real
+reporting defect: the gap `capital − startable` is negative for every seat except `value_hawk`
+(+152.0), which is the only seat that *maximizes* the sum and therefore the only one that hoards
+startable-elsewhere value on its own bench. But scored against the Phase-10 title probability over 200
+seated-reshuffled drafts, the slot-blind sum is the **better** predictor (+0.8382 vs starter-aware
++0.7971, CI on the difference clear of zero) — because the sim draws injuries, so bench value alone
+predicts title probability at **+0.711, positive in 100 % of drafts**. *A number can be misleading to
+read and still be the most informative thing you have.* Fix the display; do not assume the objective
+was wrong too. (Cf. **the scoring trap**, which is the converse error.)
+
+**a pre-registered bar earns its keep on the day it fails by a little** (2026-07-30, T27→T31) — B2
+(`spearman(haircut, games_played_mean) ≤ −0.50` per position) was written into the plan before the
+number was known, with an explicit instruction not to soften it. It came back passing at QB/WR/TE and
+failing at **RB −0.288** on one board out of three — precisely the result that is effortless to round
+off as "basically fine" if the threshold is chosen after looking. Chasing it instead found **T31**, a
+real live-season defect worth 22.8 % of the value index. The corollary is the one that costs
+something: the gate ships **red**, because a threshold moved to make a report green is not a
+threshold. (Distinguish **T12**, red for *no* reason — that kind is worth silencing.)
+
+**role is not availability** (2026-07-30, T31) — the consensus projection and our Phase-5 level
+correction both discount a player, for different reasons: consensus prices **role** (a backup is
+projected low because he sits behind someone), our correction prices **availability** (an injury /
+games-played haircut). For a player consensus expects to start the two coincide, which is why
+`haircut ~ games_played_mean` holds at −0.6 to −0.9 on every historical board. For a projected backup
+they diverge, and on a **live** season — where there is no realized prior year to shrink the per-game
+level toward — the divergence inverts: 22.8 % of the 2026 value index has `mean` **above**
+`proj_points`. *Before treating two discounts as the same quantity, check they are discounting the
+same thing.*
+
+**the rule decides the borderline case, not the other way round** (2026-07-30, T30) — the T30
+composition A/B was agreed in advance to ship "only if every bar holds or improves". It came back
+closing **79 %** of the chalk-share gap and **63 %** of the moderate-share gap while regressing two
+reach bars by 2.3 % relative and 0.97 pp. Under a rule chosen *after* seeing that, it ships; under the
+rule chosen before, it does not. Both readings are defensible, which is the whole argument for fixing
+the rule first — otherwise the threshold is just a description of the result.
+
+## Seat-map terms (2026-07-30) — multi-seat human control (16.17 / 14.J, planned)
+
+**seat map** (16.17) — the object that says, for each of the `n_teams` seats, whether it is driven by a
+**human** or by a named **opponent personality**. It replaces the thing the engine used instead: a
+single `DraftState.your_team` int plus the positional arithmetic `seat = team - 1 if team >
+your_team else team`, which is only correct when exactly one seat is human. With a seat map, "I take
+4 of the 10 teams and give the other 6 personalities" is one construction argument rather than an
+unrepresentable state.
+
+**k-of-n control** — the capability the seat map buys: any `k ∈ 0…n` of the seats in a mock may be
+human. `k = 1` is the interactive mock; `k = 0` is the fully-simulated room the T15/T24 bars are
+measured on; `k = n` is a manual draft board with no engine opponents. Before 16.17 the engine
+supported **only** k=1 and k=0, in two separate builders.
+
+**the positional-mapping smell** — a `team → seat` index computed by *skipping* one distinguished
+team. It encodes "there is exactly one of these" into arithmetic, where a type would have said so out
+loud, and it duplicates: the same three-line skip existed in `make_room_pick_fn`,
+`full_room_pick_fn` and the CLI. The tell is that the two builders' docstring already described them
+as differing "only in the `team -> seat` mapping" — the difference *was* the design, and H.5 found it
+had already cost something (the interactive room ran `value_hawk` as `balanced` for as long as the two
+builders existed). Sibling of *a guard that does not run on the path a human uses is not a guard*.
+
+**one draft is one observation** (16.17 honesty rule) — a user who drafts four teams in the same mock
+has not run four trials. Every pick made on one of those seats removes a player from the other three
+pools, so the rosters are mechanically anti-correlated by construction; a strategy that "went 4-for-4"
+went 1-for-1. Consequence for the app: the cost report and draft grade stay **per-seat**, and no
+surface may average or aggregate a record across seats one user drove. *Correlated draws presented as
+a sample is the same error as reading one draw of ten teams as a Spearman* (H.5's B5).
+
+**bars have a scope, not just a value** (16.17 honesty rule) — the T15 room-realism bars (profile
+distance, dispersion, chalk share, elite-fall landing) were all measured on ten **modelled** seats. A
+room where four seats are human is not the population they describe, so the honest UI move is to
+label the scope rather than silently re-report the number or re-measure it per-mock on n=1.

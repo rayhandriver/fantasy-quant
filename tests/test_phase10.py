@@ -237,3 +237,43 @@ def test_leverage_underdog_gains_from_variance_favorite_loses():
     assert dog_curve[1.6] > dog_curve[0.6]                   # trailing team: add variance
     assert fav_curve[1.6] < fav_curve[0.6]                   # favorite: protect the lead
     assert dog["verdict"] in ("add variance", "hold")
+
+
+# ================================================================================================
+# T29 — no bare absolute probabilities (Session H.5 step 3)
+# ================================================================================================
+def test_fair_share_is_a_multiple_of_the_uniform():
+    """A 10-team league's fair share of titles is 0.100, so 0.170 reads 1.70x. The point is that a
+    ratio to the uniform is immune to the sim's documented −113 pts/team level bias, which moves
+    all ten teams together and therefore cancels."""
+    from fantasy_quant.simulation.season import fair_share, playoff_fair_share
+
+    fmt = LeagueFormat(n_teams=10)
+    assert fair_share([0.170, 0.100], 10) == pytest.approx([1.70, 1.00])
+    assert playoff_fair_share([0.60], fmt) == pytest.approx([1.00])
+
+
+def test_probability_sums_are_asserted_not_assumed():
+    """3c — titles sum to 1 and playoff berths to `playoff_teams` are structural identities of the
+    bracket, so a violation is an engine bug rather than a calibration question."""
+    from fantasy_quant.simulation.season import assert_probability_sums
+
+    fmt = LeagueFormat(n_teams=10)
+    good_t = np.full(10, 0.1)
+    good_p = np.full(10, 0.6)
+    assert_probability_sums(good_p, good_t, fmt)
+    with pytest.raises(AssertionError, match="title"):
+        assert_probability_sums(good_p, np.full(10, 0.09), fmt)
+    with pytest.raises(AssertionError, match="playoff"):
+        assert_probability_sums(np.full(10, 0.5), good_t, fmt)
+
+
+def test_provenance_states_the_marginal_playoff_brier_and_the_level_bias():
+    """The caption has to carry the *weak* numbers, not just the flattering one: the lockbox
+    recorded title Brier 0.088 (on-diagonal) but playoff Brier 0.240 as marginal."""
+    from fantasy_quant.simulation.season import PROB_PROVENANCE, provenance_lines
+
+    text = " ".join(provenance_lines(300, LeagueFormat(n_teams=10)))
+    assert "RELATIVE" in text and "0.240" in text and "MARGINAL" in text
+    assert "-113" in text
+    assert PROB_PROVENANCE["lockbox_playoff_brier"] == 0.240

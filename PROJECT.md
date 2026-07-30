@@ -375,7 +375,8 @@ momentum signal is validated **live on 2026 only** (see 16.11's data constraint)
   in the Phase-14.4 live-draft view. **Face-validity in replay** against real Sleeper drafts. → extend
   `draft/opponent_model.py` / `draft/availability.py`; surface in `app/`.
 
-*Opponent-personality set (16.13–16.15; added 2026-07-23, user request — folded into the availability track).
+*Opponent-personality set (16.13–16.15, + the seat map 16.17 added 2026-07-30; the set added 2026-07-23,
+user request — folded into the availability track).
 The behavioral opponent model (11.1) predicts the *average* manager; a realistic practice room also wants
 *heterogeneous* opponents. `draft/personalities.py` (Phase 11.3) already ships six ADP/behavioral tilts
 (`balanced`, `chalk`, `zero_rb`, `reacher`, `homer`, `rookie_hawk`) — but **none tilt on risk or value**
@@ -401,11 +402,22 @@ feature); the 16.9 narrative shock expresses **through** the ceiling/hype person
   realistic mix, user-overridable), the wiring where the 16.9 per-draft narrative shock is applied **through**
   the Upside/Homer personalities, and the Phase-14 app control to pick/see opponent personalities in a mock.
   → `draft/simulator.py` seat assignment + `app/` / `docs/PLAYER-VIEW.md`.
+- 16.17 **The seat map — multi-seat human control** *(added 2026-07-30, user request)*: the user picks **how
+  many seats they drive**, not just which one — assign personalities to 6 of 10 and draft the other 4 teams
+  yourself. 16.15 made any *opponent* seat configurable; the *human* side is fixed at one because
+  `DraftState.your_team` is a single int and the `team → seat` map is positional arithmetic repeated in three
+  places, so the engine supports only 1-human and 0-human rooms. → one `SeatMap` (`HUMAN` or a `Personality`
+  per seat) + `DraftState.human_teams` + per-seat pick functions + a `--seats` CLI, in
+  `draft/personalities.py` / `draft/simulator.py` / `steps/mock_draft.py`; UI in **14.J**. **Pure plumbing —
+  the done-bar is bit-identity with today's room at k=1 and k=0.** Two honesty rules travel with it: k human
+  teams in one draft are **one** observation (their picks deplete each other's pools), and the T15 realism
+  bars describe a **fully-simulated** room.
 - **Done when** (personalities) 16.13 enriches the board read-only; 16.14's 5 personalities pass **face-
   validity** checks (Upside skews young / high-`q90`, Safe skews durable / high-`q10`, Autopilot draws pure
   ADP order, Homer reaches for `fandom`/hype names, Balanced ≈ the fitted model) + unit-tested tilt mechanics;
-  16.15 assigns a realistic room, couples the hype shock, and exposes the selector in the app — **all
-  read-only w.r.t. the frozen value stack.**
+  16.15 assigns a realistic room, couples the hype shock, and exposes the selector in the app; **16.17 lets any
+  subset of seats be human — a 10-team mock runs for k = 0…10 human seats with the k=1 and k=0 paths
+  bit-identical to today's** — **all read-only w.r.t. the frozen value stack.**
 
 **Sequencing:** 0 → 1 gate everything. Phase 6 (ADP-bias) can run right after Phase 1. Phases 7 (causal)
 and 12 (NLP) are **cross-cutting workstreams** — start them alongside, not strictly after, the modeling

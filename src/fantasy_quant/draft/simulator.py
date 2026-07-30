@@ -44,10 +44,26 @@ DRAFTABLE = ("QB", "RB", "WR", "TE", "K", "DST")
 #: driver, +0.35 rounds/SD — but ``_prepare_board`` dropped it, so nothing in ``draft/`` could read
 #: it and every width the room had was indexed on the **round**. A column that never reaches the
 #: pick path is a finding that was never fed back into the room. Fourth instance of the same shape.
+#:
+#: ★ **``proj_points`` and ``base_value`` joined for T27 (2026-07-30) and, like ``stdev``, their
+#: absence *was* the ticket.** They are the two ends of the value chain — the number a human reads
+#: (consensus projection) and the number every seat optimizes (risk-adjusted VOR) — and on the live
+#: 2026 board they disagree by up to 179 points. Neither could reach ``DraftState.board``, so the
+#: CLI re-attached ``proj_points`` by hand after ``_prepare_board`` and ``base_value`` was simply
+#: invisible to anything a human could read.
+#: ⚠ **All three of ``proj_points``/``mean``/``base_value`` are LEVEL columns and must never enter
+#: ``personalities.SIGNAL_COLS``** — ``signal_bonus`` z-scores within position, which is precisely
+#: the level-vs-shape defect 16.14R/T19 spent a session undoing. ``test_personalities`` asserts the
+#: exclusion; the containment assertion above only runs the other way.
 PASSTHROUGH_COLS = ("team", "rookie", "stdev", "boom_prob", "q90", "bust_prob", "q10", "q50",
                     "games_played_mean", "mean", "upside", "floor", "durability", "tail_risk",
                     "vbd", "overall_rank", "cos", "role_share", "role_delta",
-                    "td_regression", "boom_prob_live", "bust_prob_live")
+                    "td_regression", "boom_prob_live", "bust_prob_live",
+                    "proj_points", "base_value")
+
+#: The T27 value chain, in the order the arithmetic runs — what ``mock_draft.py why`` prints and
+#: what :func:`~fantasy_quant.data.validate.value_scale_gate` audits. Level columns, never signals.
+VALUE_SCALE_COLS: tuple[str, ...] = ("proj_points", "mean", "games_played_mean", "base_value")
 
 
 def canon_pos(pos) -> str | None:

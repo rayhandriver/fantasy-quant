@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import datetime as dt
 
+import numpy as np
 import pandas as pd
 import pytest
 
+from fantasy_quant.data import validate as V
 from fantasy_quant.data.validate import (
     adp_freshness_gate,
     board_size_gate,
@@ -141,3 +143,65 @@ def test_adp_dup_gate_still_catches_a_true_duplicate():
                        _adp_row(snapshot_date="2026-07-18")])
     gate = next(g for g in V._dup_gates(con) if g["gate"].startswith("adp: unique"))
     assert not gate["passed"] and gate["offending_groups"] == 1
+
+
+# ================================================================================================
+# T27 — the value-scale gate (Session H.5 step 1d)
+# ================================================================================================
+def _hair(rho_sign: float, n: int = 20, seed: int = 0):
+    """A per-position frame whose haircut is (anti)correlated with availability by construction."""
+    rng = np.random.default_rng(seed)
+    avail = np.linspace(6.0, 16.0, n)
+    # a real haircut is POSITIVE (mean below the consensus projection); the offset keeps it so at
+    # both signs, which matters because `neg_haircut_share` is one of the numbers under test.
+    base = 0.5 if rho_sign < 0 else 0.0
+    haircut = base + rho_sign * avail / 40.0 + rng.normal(0, 0.005, n)
+    return pd.DataFrame({"pos": ["RB"] * n, "adp": np.linspace(5, 170, n),
+                         "haircut": haircut, "games_played_mean": avail,
+                         "proj_points": np.full(n, 200.0),
+                         "mean": 200.0 * (1 - haircut)})
+
+
+def test_value_scale_gate_passes_when_availability_explains_the_haircut():
+    from fantasy_quant.data.validate import value_scale_stats
+
+    stats = value_scale_stats(_hair(-1.0))
+    gate = V.value_scale_gate("value_scale", stats["drafted_range"])
+    assert gate["passed"], gate
+    assert gate["by_position"]["RB"]["rho"] <= -0.5
+    assert isinstance(gate["by_position"]["RB"]["n"], int)   # `n` stays an integer in the report
+
+
+def test_value_scale_gate_fails_when_it_does_not_and_names_the_position():
+    """The bar is pre-registered and allowed to fail — a level cut we cannot attribute to
+    availability is a modelling finding, not something to caption over."""
+    from fantasy_quant.data.validate import value_scale_stats
+
+    stats = value_scale_stats(_hair(+1.0))
+    gate = V.value_scale_gate("value_scale", stats["drafted_range"])
+    assert not gate["passed"]
+    assert gate["failed_positions"] == ["RB"]
+
+
+def test_value_scale_gate_skips_a_position_too_small_to_be_evidence():
+    from fantasy_quant.data.validate import value_scale_stats
+
+    stats = value_scale_stats(_hair(+1.0, n=5))
+    gate = V.value_scale_gate("value_scale", stats["drafted_range"])
+    assert "RB" in gate["skipped"] and not gate["failed_positions"]
+    assert not gate["passed"], "nothing scored is not a pass"
+
+
+def test_value_scale_stats_separates_the_drafted_range_from_the_deep_board():
+    """The exclusion the gate documents has to be *measurable*: off-board rows (null ADP) are kept
+    in the frame and reported under `full_board`, never silently dropped."""
+    from fantasy_quant.data.validate import value_scale_stats
+
+    good = _hair(-1.0, n=20)
+    deep = good.copy()
+    deep["adp"] = np.nan                      # a projection with no board row
+    deep["haircut"] = -0.5                    # mean ABOVE the consensus projection
+    stats = value_scale_stats(pd.concat([good, deep], ignore_index=True))
+    assert stats["drafted_range"]["RB"]["n"] == 20
+    assert stats["full_board"]["RB"]["n"] == 40
+    assert stats["full_board"]["RB"]["neg_haircut_share"] == 0.5

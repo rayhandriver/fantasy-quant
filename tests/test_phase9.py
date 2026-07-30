@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from fantasy_quant.covariance.shrinkage import neutral_model
 from fantasy_quant.draft.config import DraftConfig, LeagueSetup
@@ -22,7 +23,10 @@ from fantasy_quant.draft.optimizer import (
     build_risk_model,
     personalized_pick_fn,
     positional_cliff,
+    starter_marginal,
+    starter_value,
     survival_prob,
+    team_value,
     winprob_pick_fn,
 )
 from fantasy_quant.draft.simulator import (
@@ -221,3 +225,114 @@ def test_winprob_objective_prefers_the_higher_win_prob_pick():
     win = winprob_pick_fn(cfg, _model_with_star(), FMT_4OF6, risk,
                           noise=5.0, k=4, sims=30, base_seed=0)(state.clone())
     assert b.loc[win, "player_key"] == "p_9"                 # the win-prob-maximizing pick
+
+
+# ================================================================================================
+# T28 — starter-aware value (Session H.5 step 2)
+# ================================================================================================
+def _nine():
+    """A roster that IS the starting nine (QB, 3xRB with one filling FLEX, 2xWR, TE, K, DST)."""
+    pos = ["QB", "RB", "RB", "RB", "WR", "WR", "TE", "K", "DST"]
+    keys = [f"s{i}" for i in range(9)]
+    vi = pd.DataFrame({"player_key": keys, "pos": pos,
+                       "base_value": [80.0, 70.0, 60.0, 20.0, 75.0, 55.0, 30.0, 5.0, 0.0]})
+    return pd.DataFrame({"player_key": keys, "pos": pos}), vi
+
+
+def test_b4_starter_value_equals_team_value_on_exactly_the_starting_nine():
+    """B4, pre-registered: the two metrics differ only about *bench* rows, so with no bench they
+    must agree exactly — that is what makes `starter_value` a decomposition and not a new model."""
+    roster, vi = _nine()
+    assert starter_value(roster, vi, RosterSlots()) == pytest.approx(team_value(roster, vi))
+
+
+def test_starter_value_ignores_a_bench_qb2_and_team_value_does_not():
+    """T28's headline: a second QB moved a walkthrough team's *headline* by −101.6 while adding
+    nothing to any lineup it could field."""
+    roster, vi = _nine()
+    roster2 = pd.concat([roster, pd.DataFrame({"player_key": ["qb2"], "pos": ["QB"]})],
+                        ignore_index=True)
+    vi2 = pd.concat([vi, pd.DataFrame({"player_key": ["qb2"], "pos": ["QB"],
+                                       "base_value": [-90.0]})], ignore_index=True)
+    assert starter_value(roster2, vi2, RosterSlots()) == pytest.approx(
+        starter_value(roster, vi, RosterSlots()))
+    assert team_value(roster2, vi2) == pytest.approx(team_value(roster, vi) - 90.0)
+
+
+def test_starter_marginal_matches_the_solver_it_is_a_fast_path_for():
+    """The pick path cannot afford one `lineup_points_matrix` call per candidate, so the marginal
+    is closed-form — and stays honest only because this asserts the two agree. A second definition
+    of "starting" is how two halves of a repo begin to disagree (the T18 failure mode)."""
+    rng = np.random.default_rng(7)
+    slots = RosterSlots()
+    for _ in range(120):
+        n = int(rng.integers(1, 14))
+        pos = list(rng.choice(list(DRAFTABLE), n))
+        keys = [f"r{i}" for i in range(n)]
+        vi = pd.DataFrame({"player_key": keys, "pos": pos,
+                           "base_value": rng.normal(30, 40, n)})
+        roster = pd.DataFrame({"player_key": keys, "pos": pos})
+        by_pos = {p: vi.loc[[i for i, q in enumerate(pos) if q == p], "base_value"].to_numpy()
+                  for p in set(pos)}
+        cp, cv = str(rng.choice(list(DRAFTABLE))), float(rng.normal(30, 40))
+        fast = starter_marginal(np.array([cv]), cp, by_pos, slots)[0]
+        vi2 = pd.concat([vi, pd.DataFrame({"player_key": ["N"], "pos": [cp],
+                                           "base_value": [cv]})], ignore_index=True)
+        r2 = pd.concat([roster, pd.DataFrame({"player_key": ["N"], "pos": [cp]})],
+                       ignore_index=True)
+        slow = starter_value(r2, vi2, slots) - starter_value(roster, vi, slots)
+        assert fast == pytest.approx(slow, abs=1e-9)
+
+
+def test_bench_weight_one_is_the_shipped_greedy_bit_for_bit():
+    """★ The nesting claim, verified by re-running the draft rather than by reading the algebra —
+    `bench_weight=1.0` must leave the frozen cost report and every T15/T24 bar untouched."""
+    board = _simple_board(60)
+    vi = pd.DataFrame({
+        "player_key": [f"p_{i}" for i in range(60)],
+        "pos": [_POS_CYCLE[i % len(_POS_CYCLE)] for i in range(60)],
+        "team": [f"T{i}" for i in range(60)], "role_rank": [1] * 60,
+        "mean": [100.0] * 60, "sd": [10.0] * 60,
+        "base_value": list(np.linspace(120.0, 5.0, 60)),
+    })
+    bv_board = attach_value(board, vi)
+    cfg = DraftConfig(league=LeagueSetup(draft_slot=1, n_teams=6))
+    kw = dict(n_teams=6, rounds=10, slots=RosterSlots(bench=1), your_team=0, noise=0.0, seed=3)
+
+    def draft(bw):
+        risk = build_risk_model(bv_board, vi, neutral_model(), lam=cfg.risk_lambda,
+                                bench_weight=bw, slots=RosterSlots(bench=1))
+        st = simulate_draft(bv_board, personalized_pick_fn(cfg, 0.0, risk), **kw)
+        return st.pick_log().query("is_you")["player_key"].tolist()
+
+    default = build_risk_model(bv_board, vi, neutral_model(), lam=cfg.risk_lambda)
+    assert default.bench_weight == 1.0
+    assert draft(1.0) == simulate_draft(
+        bv_board, personalized_pick_fn(cfg, 0.0, default), **kw
+    ).pick_log().query("is_you")["player_key"].tolist()
+
+
+def test_bench_weight_zero_declines_a_second_qb_the_slot_blind_sum_would_take():
+    """The behaviour the knob exists to test: `value_hawk` took Jaxson Dart as a QB2 at 9.09
+    because a slot-blind sum prices a +33.1 bench quarterback at +33.1."""
+    slots = RosterSlots(qb=1, rb=1, wr=1, te=1, flex=0, k=0, dst=0, bench=1)
+    pool = pd.DataFrame({"player_key": ["qb2", "wr2"], "pos": ["QB", "WR"],
+                         "adp": [10.0, 11.0]})
+    roster = pd.DataFrame({"player_key": ["qb1", "wr1"], "pos": ["QB", "WR"]})
+    vi = pd.DataFrame({"player_key": ["qb1", "wr1", "qb2", "wr2"],
+                       "pos": ["QB", "WR", "QB", "WR"],
+                       "base_value": [90.0, 40.0, 60.0, 50.0]})
+    board = pd.DataFrame({"name": vi["player_key"], "position": vi["pos"],
+                          "adp": [1.0, 2.0, 10.0, 11.0]})
+    bv_board = attach_value(board, vi)
+
+    def values(bw):
+        risk = build_risk_model(bv_board, vi, neutral_model(), lam=0.0, scarcity_w=0.0,
+                                bench_weight=bw, slots=slots)
+        return risk._candidate_values(pool, roster)
+
+    slot_blind = values(1.0)
+    assert slot_blind[0] > slot_blind[1], "the shipped objective prefers the better bench QB2"
+    starter_aware = values(0.0)
+    assert starter_aware[1] > starter_aware[0], "priced by the lineup, the WR2 upgrade wins"
+    assert starter_aware[0] == pytest.approx(0.0), "a QB2 adds nothing to a one-QB lineup"

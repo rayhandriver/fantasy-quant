@@ -61,8 +61,131 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★★ Next-session pointer (2026-07-29 — THE MOCK DRAFTER IS COMPLETE. T13 + T18 + T22 ☑,
-> T26 opened. NOT COMMITTED — sessions 6, 7 and this one are one tree. READ THIS FIRST.)**
+> **★ Scoped 2026-07-30 (session 3, docs-only — no code, nothing run): 16.17 multi-seat human control.**
+> User asked for the finished mock drafter to let a user **drive as many seats as they like** (e.g. 6
+> personalities + 4 teams drafted by hand). **It was in none of the md files, and the gap is structural:**
+> `DraftState.your_team` is a single int and the `team → seat` map is positional arithmetic repeated in
+> three places (`personalities.make_room_pick_fn`, `mock.full_room_pick_fn`, `steps/mock_draft.py::seat_of`),
+> correct only at k=1 — so the engine supports exactly two room shapes, 1-human and 0-human. Scoped as
+> **16.17** (engine: a `SeatMap` + `DraftState.human_teams` + per-seat pick fns + `--seats` CLI;
+> **done-bar = bit-identity** at k=1 and k=0 plus the 07-29 bar sheet to the digit) and **14.J** (UI: a
+> YOU toggle per seat chip, clock routing, per-seat 14.I grade). Slotted as **Session I.5**, after Phase
+> 17, **pullable into Session I as a warm-up** — it depends on nothing in Phase 17 and refits nothing.
+> Spec: `docs/BUILD_PLAN.md` §16.17/§14.J · `docs/PLAYER-VIEW.md` §9.5 (and §9.1's `n_opponents`
+> contract, which was wrong as written) · `ROADMAP.md` ★ SESSION PLAN · `PROJECT.md` §5 · `PLAN.md`
+> §2026-07-30 (session 3) · `glossary.md`. **Two honesty rules travel with it:** k human teams in one
+> draft are **one** observation (their picks deplete each other's pools — never aggregate a record
+> across them), and the T15 realism bars describe a **fully-simulated** room.
+
+> **★★★ Next-session pointer (2026-07-30, session 2 — SESSION H.5 COMPLETE. T27/T28/T29/T30 all ☑,
+> **T31 opened**. 612 tests, ruff clean, UNCOMMITTED. READ THIS FIRST.)**
+>
+> **State:** **612 tests** (was 597), ruff clean. The spent lockbox, the frozen value stack and the
+> fitted β are untouched — nothing here refits anything, and both bit-identity bars hold: the room bar
+> sheet reproduces `analysis/mock_room_bars_verify_20260729.json` on **every field**, and the frozen
+> cost report was diffed against a **`git worktree` at the session-start commit**. Artifacts:
+> `analysis/session_h5_seam.json` (the six bars), `analysis/t28_starter_value.{json,csv}`,
+> `analysis/mock_room_bars_{h5_baseline,h5_step1,t30_chalk_swap,t28_benchw0}.json`. New steps:
+> `steps/t28_starter_value.py`, `steps/session_h5_seam.py`. Write-ups: `findings.md` §"Session H.5",
+> `docs/TECH-DEBT.md` (T27–T30 ☑ + **T31**), `PLAN.md` §2026-07-30 (session 2), `glossary.md`, `ROADMAP.md`.
+>
+> **The shape of the session: the two hard bars held and both falsifiable bars failed.**
+>
+> | | outcome |
+> |---|---|
+> | **T27** ☑ | The value chain is on the board (`PROJ · MEAN · AVAIL · BV`) and `mock_draft.py why "<player>"` prints it — Maye +68.5 vs Daniels −101.6 explained by **14.4 games against 7.7**. ⚠ **It also uncovered that the *interactive* room was never the shipped room**: `personalities.make_room_pick_fn` had no `risk` parameter, so `value_hawk` ran the Phase-9 greedy in every batch measurement and the plain behavioural softmax in every *human* mock. `assert_room_objectives` moved down into `personalities.py` so both builders share it. |
+> | **T28** ☑ | **Closed as a LABELLING FIX, as pre-registered.** `starter_value` ships beside `team_value`, both printed. **B5 failed**: −0.0230, CI[−0.0407, −0.0055] over 200 seated-reshuffled drafts. The slot-blind sum is the *better* predictor of title probability because the sim draws injuries — **bench value alone scores +0.711, positive in 100 % of drafts**, and the blend sweep peaks at w=0.90 against the shipped w=1.0. `value_hawk` keeps `objective="portfolio_ce"`. |
+> | **T29** ☑ | `PROB_PROVENANCE` + `fair_share`/`playoff_fair_share` + `assert_probability_sums`; every driver leads with the multiple (0.170 → **1.70×**). New surface: `mock_draft.py summary --odds`. |
+> | **T30** ☑ | **Argued and deliberately NOT changed.** The `chalk` swap closes **79 %** of the chalk-share gap (11.0 → 2.4 % vs a realized 0.2 %) and regresses two reach bars slightly; the rule ("every bar holds or improves") was fixed first, so it does not ship. **The closest call in the session** — reversal is one `--room` flag and the evidence is written down. |
+> | **T31** 🟠 NEW | T27's gate B2 fired: on a **live** board the level correction inverts for players consensus projects as backups — **22.8 % of the 2026 value index has `mean` ABOVE `proj_points`** (0.4 % on 2024). Cause: **consensus prices ROLE, our correction prices AVAILABILITY**; they agree for starters and diverge for backups, and a live season has no prior year to shrink the per-game level toward. The gate ships **red** rather than softened. |
+>
+> **⚠ Do not re-derive / do not "fix":** `value_hawk`'s objective is **settled by measurement** — do not
+> switch it to starter-aware without re-running `steps/t28_starter_value.py` and beating B5 · the
+> `bench_weight` knob is in `RiskModel`, default **1.0**, and 1.0 re-runs the greedy pick-for-pick
+> (`test_phase9`) · `mean`/`vbd`/`overall_rank` stay in `SIGNAL_COLS` (it is also the typo registry) but
+> `personalities.LEVEL_COLS` + `Personality.__post_init__` now make weighting one raise · the T30 swap
+> is a *composition* question, never delete the `autopilot` personality (it is the deterministic control
+> several tests depend on).
+>
+> **★ NEXT: review + commit (this session sits on top of the still-uncommitted docs tree), then
+> Session I = Phase 17 formats.** Against the mock drafter only **T31** is open, and it needs its own
+> session with a before/after against the 2025 dress-rehearsal calibration. **T26** still waits on the
+> next 11.1 refit. Stage-0 FFC chore was run at the **close** of this session (deliberately not the
+> start — a mid-session board refresh would have broken the live-board measurements).
+>
+> _(Prior pointer — the H.5 scoping session, still the authority on why these four tickets exist.)_
+>
+> **★★★ (2026-07-30 — SESSION H.5 SCOPED, docs-only; T27/T28/T29/T30 opened.)**
+>
+> **State:** **docs-only, no `src/` change, no test-count change (597, ruff clean).** The lockbox, the
+> frozen value stack and the fitted β are untouched. New artifacts: the walkthrough itself at
+> `analysis/mock_walkthrough_20260729_{picks,teams,seats}.csv` (untracked). Write-ups: `findings.md`
+> §"The all-personality walkthrough (2026-07-30)", `docs/TECH-DEBT.md` **T27–T30** + ordering item 11,
+> **`docs/BUILD_PLAN.md` §"Session H.5 — THE MOCK-DRAFTER VALUE SEAM" (the plan of record)**,
+> `ROADMAP.md` ★ SESSION PLAN, `PLAN.md` §2026-07-30, `glossary.md`.
+>
+> **What happened.** The user asked for a full 15-round mock with **all ten seats played by
+> personalities** (`REALISTIC_ROOM`, `room_seed=17`, `seed=0`, live 2026 board) and then for an
+> assessment of the mock drafter **as a shippable product**. The room *simulation* passed every bar it
+> was asked — see below — and the failures are all in the **seam between a correct engine and a human
+> reading it**. User instruction: **fix the mock-drafting system before any other session; the app
+> stays strictly last.** So Session H.5 is inserted ahead of Session I; E→L order is otherwise unchanged.
+>
+> | | ticket | the number that opened it |
+> |---|---|---|
+> | **T27** 🟠 | the board a human reads ≠ the board the seats optimize | CLI prints `proj_points`; seats optimize `base_value`. **Drake Maye proj 316.5 → +68.5, Jayden Daniels proj 313.4 → −101.6** — 3 points apart on screen, 170 apart in the number that decides every pick |
+> | **T28** 🟠 | `team_value`/`portfolio_value` are **slot-blind** | no slot logic in the value path at all; the walkthrough's QB2 line nets **−122** of a 1,938 room total, and **T4 is 9th of 10 on VBD, 3rd on starting-lineup projection**. Spearman vs title: portfolio CE **+0.758** vs starting-nine Phase-5 mean **+0.915** |
+> | **T29** 🟡 | bare absolute probabilities | printed from a sim with a documented **−113 pts/team** level bias and a *marginal* playoff Brier 0.240 (title 0.088 is fine) |
+> | **T30** 🟡 | `autopilot` is 1 of 10 seats vs **0.2 %** of real seats | and it is the seat that manufactures the spill: mean `pool_rank` **1.77**, median **1.0**, harvest **+11.7 picks** |
+>
+> **★★ THE FINDING TO CARRY FORWARD — T22's lesson one level up, on the first number a human reads.**
+> T22 sat on file as "latent, no personality weights it" while `steps/mock_draft.py` was *printing* it.
+> `proj_points` is the identical defect on a much bigger number. *A column's consumers are not only the
+> models that weight it.* Its mechanical half bit immediately: `proj_points` is **not** in
+> `simulator.PASSTHROUGH_COLS`, so `_prepare_board` drops it and a **fresh driver written this session
+> printed `-` for all 150 picks**. `mock_draft.cmd_start` already re-attaches it by hand — the fix is to
+> make the attach unnecessary, not to repair the CLI.
+>
+> **★ Two more, each one line.** **(1) Decompose before diagnosing** — `base_value` differs from `vbd`
+> through *two* channels (the T3 availability haircut inside the Phase-5 mean, then λ·Var, then
+> subtracting the replacement's own CE, 119.4 for QB here). The one-channel reading "λ is too big" fits
+> neither end: Allen +70.0 → +55.2 while Daniels +22.6 → −101.6. **(2) The level is intended, the
+> dispersion is the defect** — the mean haircut (0.28 QB / 0.33 RB / 0.28 WR / 0.30 TE) *is* Phase 4.4's
+> calibrated level correction; the spread around it (QB 0.15–0.56) with nothing on screen explaining it
+> is what makes the board unreadable.
+>
+> **★ What the walkthrough CLEARED, and do not re-open** — four suspicions that died on contact with
+> the corpus, each in one query: **the QB market is fine** (17 QBs for 10 teams against a realized
+> **median of 16** over 333 matched 10-team/15-round human drafts; the full mix matches at the median on
+> all six positions) · **the fit is not stale** (70,614 groups over **9 seasons**, bulk 2021–25, not a
+> 2017–20 extrapolation) · **elite fall is on distribution** (25.0 % past pick 10 vs a committed 25.2 %)
+> · **the reach budget works exactly as specified** (`reacher` spent 3 of 3 swings and 5 of 5 leans with
+> a rounds-1–3 max reach of **−0.1**; `upside_chaser`, which has no early clamp, reached +11.3 in round
+> 2). *An audit's value is in what it clears.*
+>
+> **⚠ Constraints on H.5, all pre-registered in `BUILD_PLAN.md` before anything runs:** every step's
+> hard bar is that `analysis/mock_room_bars_verify_20260729.json` reproduces **bit-identically** — *a
+> display change that moves a bar is not a display change* · **nothing refits β** and **nothing touches
+> the frozen value stack**; T26 stays deferred to the next 11.1 refit · **T28 ships a labelled second
+> metric, never an edit to `team_value`** (the cost report is frozen output, the lockbox is spent) ·
+> **§3.7 gates are NOT waived** (contrast 16.14R) — step 2 contains a decision that is the user's:
+> whether `value_hawk` keeps `objective="portfolio_ce"`, which changes the room's picks and therefore
+> needs the full T24 seating-marginalized treatment as its own sub-step · **B2 and B5 can fail
+> informatively** — if the level haircut is not explained by `games_played_mean` that is a *modelling*
+> finding (stop, open a ticket, do not caption it), and if starter-aware value does not out-rank
+> portfolio CE against title probability over ≥40 drafts × ≥4 seasons then **T28 closes as a labelling
+> fix only**.
+>
+> **★ NEXT: Session H.5, steps 1→5, gate after each** (`docs/BUILD_PLAN.md` §"Session H.5"). Then
+> Session I = Phase 17 formats → J (optional dynasty) → **K = Phase 14.1 MVP + surfacing, strictly
+> last**. **Stage-0 FFC chore: the board used here is the 2026-07-24 snapshot and is now at the 6-day
+> mark — run `steps/stage0_adp_snapshot.py` then `steps/backup_db.py` at the top of H.5.** Also still
+> owed: review + commit sessions 6, 7 and 2026-07-29 (one tree) plus these docs.
+>
+> _(Prior pointer — the 2026-07-29 completion audit, still the authority on T13/T18/T22.)_
+>
+> **★★★ (2026-07-29 — THE MOCK DRAFTER IS COMPLETE. T13 + T18 + T22 ☑,
+> T26 opened. NOT COMMITTED — sessions 6, 7 and this one are one tree.)**
 >
 > **State:** **597 tests** (was 587), ruff clean. The lockbox, the frozen value stack and the fitted
 > β are untouched — nothing here refits anything. New artifacts:

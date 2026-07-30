@@ -45,6 +45,7 @@ import pandas as pd
 from fantasy_quant.adp import boards
 from fantasy_quant.adp.drift_panel import PANEL_COLS
 from fantasy_quant.adp.panel import OFFENSE, _canon_pos
+from fantasy_quant.backtest.walkforward import draft_date
 from fantasy_quant.draft import enrichment
 from fantasy_quant.draft.enrichment import enrich_board
 from fantasy_quant.draft.opponent_model import (
@@ -58,6 +59,10 @@ from fantasy_quant.draft.personalities import (
     PRIVATE_KAPPA,
     Personality,
     WidthCurve,
+    # T27: the guard now lives in `personalities` (lower in the import graph) so the *interactive*
+    # room builder can run it too. Re-exported here because `mock.assert_room_objectives` is the
+    # name every existing caller and test uses, and renaming a guard is how you lose one.
+    assert_room_objectives,
     make_opponent_pick_fn,
     make_room,
     make_value_hawk_pick_fn,
@@ -71,6 +76,7 @@ from fantasy_quant.draft.simulator import (
     canon_pos,
     run_to_completion,
 )
+from fantasy_quant.valuation.value_board import value_board
 
 #: Every reach/fall number in T15 is quoted in **10-team ADP picks**; the drift panel stores rounds.
 #: One constant, applied in exactly one helper (:func:`_picks`), so the two never drift apart.
@@ -162,12 +168,42 @@ def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF
         cache = (Path(cache_dir) /
                  f"board_{season}_{scoring}_{teams}{tag}_{enrichment.ENRICH_VERSION}.parquet")
         if cache.exists():
-            return pd.read_parquet(cache), src
+            return attach_proj_points(con, int(season), pd.read_parquet(cache),
+                                      n_teams=int(teams)), src
     board = enrich_board(con, int(season), raw, n_teams=int(teams))
     if cache is not None:
         cache.parent.mkdir(parents=True, exist_ok=True)
         board.to_parquet(cache)
-    return board, src
+    return attach_proj_points(con, int(season), board, n_teams=int(teams)), src
+
+
+def attach_proj_points(con, season: int, board: pd.DataFrame, *, n_teams: int = TEAMS_REF,
+                       as_of=None) -> pd.DataFrame:
+    """Attach ``proj_points`` — the consensus projection, the number a human reads first (T27).
+
+    ★ **Why this is applied here and not folded into** :data:`~fantasy_quant.draft.enrichment.
+    VALUE_COLS`, which would be the tidier home: adding a column there changes the enriched board's
+    content and therefore has to bump ``ENRICH_VERSION``, invalidating every cached board. That is
+    the *correct* discipline for a column a model consumes — a stale cache under a new definition is
+    the failure this repo keeps finding — but ``proj_points`` is **display-only**: nothing in
+    ``draft/`` weights it, and :func:`~fantasy_quant.draft.optimizer.assemble_value` reads it from
+    ``value_board`` directly rather than from the board. So it is attached *outside* the cache
+    boundary, where a wrong value cannot be silently persisted, and every cached board keeps its
+    ~6-minute cold rebuild.
+
+    Applied to both the cache-hit and the freshly-built path, so a caller cannot get a board that
+    has it only sometimes — which would be worse than not having it at all.
+    """
+    if board.empty or "proj_points" in board.columns:
+        return board
+    out = board.copy()
+    vb = value_board(con, int(season), as_of or draft_date(con, int(season)), n_teams=int(n_teams))
+    if vb.empty:
+        return out
+    proj = (pd.Series(pd.to_numeric(vb["proj_points"], errors="coerce").to_numpy(float),
+                      index=vb["player_key"].astype(str)).groupby(level=0).first())
+    out["proj_points"] = board_player_key(out).astype(str).map(proj).astype(float)
+    return out
 
 
 # ------------------------------------------------------------------------------------------------
@@ -215,21 +251,6 @@ def full_room_pick_fn(model: OpponentModel, room: Sequence[Personality], *,
         return fns[team](state, team)
 
     return pick
-
-
-def assert_room_objectives(room: Sequence[Personality], risk) -> None:
-    """Fail loudly when a room contains a ``portfolio_ce`` seat but no risk model to give it.
-
-    Without this the seat quietly runs the behavioral softmax with no ``signal_weights`` — i.e. it
-    becomes ``balanced`` wearing the value hawk's name, completes a legal draft, and every number
-    downstream looks plausible. *An inert thing still passes*, fourth instance; this is the
-    assertion the lesson asks for.
-    """
-    needy = sorted({p.name for p in room if p.objective == "portfolio_ce"})
-    if needy and risk is None:
-        raise ValueError(
-            f"room contains objective='portfolio_ce' seats {needy} but no risk model — pass "
-            f"`risk=` (see steps/phase16_14r_6_value_hawk.py) or they silently draft as balanced")
 
 
 def simulate_room_draft(board: pd.DataFrame, room: Sequence[Personality], model: OpponentModel, *,

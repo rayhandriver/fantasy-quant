@@ -156,10 +156,101 @@ def attach_value(board_adp: pd.DataFrame, value_index: pd.DataFrame) -> pd.DataF
 def team_value(roster: pd.DataFrame, value_index: pd.DataFrame) -> float:
     """A roster's total ``base_value`` (risk-adjusted value-over-replacement); unvalued picks (DST)
     contribute 0. The independent-players yardstick — :func:`portfolio_value` adds the covariance
-    cross-terms."""
-    bv = (value_index.dropna(subset=["base_value"]).drop_duplicates("player_key")
-          .set_index("player_key")["base_value"])
-    return float(roster["player_key"].map(bv).fillna(0.0).sum())
+    cross-terms.
+
+    ⚠ **Slot-blind by definition** (T28): this is *total roster capital*, so a bench QB2 counts in
+    full. :func:`starter_value` is the startable-lineup companion; report them side by side and
+    label them, never substitute one for the other — this one is the frozen cost report's input.
+    """
+    return float(roster["player_key"].map(_bv_map(value_index)).fillna(0.0).sum())
+
+
+def _bv_map(value_index: pd.DataFrame) -> pd.Series:
+    """``player_key -> base_value`` (one row per key). The single lookup :func:`team_value` and
+    :func:`starter_value` share, so the two metrics can never disagree about a player's value —
+    only about whether he is in the lineup."""
+    return (value_index.dropna(subset=["base_value"]).drop_duplicates("player_key")
+            .set_index("player_key")["base_value"])
+
+
+def starter_value(roster: pd.DataFrame, value_index: pd.DataFrame,
+                  slots: RosterSlots | None = None) -> float:
+    """The roster's **startable** ``base_value``: the best legal starting lineup, not the sum of
+    fifteen players (T28).
+
+    ★ **Why this ships beside** :func:`team_value` **and never as an edit to it.** ``team_value``
+    sums ``base_value`` over every roster row, so a bench QB2 is priced as though he starts — on the
+    2026 walkthrough the second QB alone moved a team's headline by −101.6 (Caleb Williams), −92.1
+    (Kyler Murray) and +51.0 (Hurts) against a room total of 1,938. But ``team_value`` is also what
+    the frozen cost report differences and what the spent lockbox was evaluated on, so its numbers
+    are output, not opinion. Two labelled metrics, never one silently redefined — the T18 rule
+    (*a column whose meaning changes needs a new name*).
+
+    **The slot logic is not reimplemented here.** It is
+    :func:`~fantasy_quant.simulation.season.lineup_points_matrix`, the same vectorized solver the
+    Phase-10 season sim scores every week with (itself regression-tested against the Phase-1.3
+    reference), called on a value vector instead of a points vector. A third lineup solver is
+    exactly how two parts of a repo start disagreeing about what "starting" means.
+
+    Unvalued rows (team defenses carry no projection) contribute 0.0, matching ``team_value`` — so
+    on a roster that *is* the starting nine the two functions return the same number by
+    construction, which is bar **B4**.
+    """
+    slots = slots or RosterSlots()
+    if roster.empty:
+        return 0.0
+    bv = _bv_map(value_index)
+    vals = roster["player_key"].map(bv).fillna(0.0).to_numpy(float)
+    from fantasy_quant.simulation.season import lineup_points_matrix
+    return float(np.ravel(lineup_points_matrix(vals[:, None], roster["pos"].tolist(), slots))[0])
+
+
+def starter_marginal(cand_values: np.ndarray, pos: str, roster_by_pos: dict[str, np.ndarray],
+                     slots: RosterSlots) -> np.ndarray:
+    """Vectorized ``starter_value(roster + one player at ``pos``) − starter_value(roster)`` for a
+    whole array of candidate values — the pick-path form of :func:`starter_value`.
+
+    Calling :func:`starter_value` once per candidate would be ~16M solver calls across a batch
+    measurement, so this evaluates the same piecewise-linear function in closed form. It is **not**
+    a second definition of "starting": ``test_phase9`` asserts it equals the
+    :func:`starter_value` difference on random rosters, which is what keeps the fast path honest.
+
+    ``roster_by_pos`` maps position -> that position's current ``base_value``s (any order).
+    """
+    need = slots.base_demand()
+    flex_ok = bool(slots.flex) and pos in slots.flex_positions
+    n_p = int(need.get(pos, 0))
+
+    def top(arr: np.ndarray, k: int) -> float:
+        return float(np.sort(arr)[::-1][:k].sum()) if k > 0 and len(arr) else 0.0
+
+    def nth(arr: np.ndarray, k: int) -> float:
+        s = np.sort(arr)[::-1]
+        return float(s[k]) if len(s) > k else -np.inf
+
+    mine = np.asarray(roster_by_pos.get(pos, np.empty(0)), float)
+    # the best flex candidate the *other* flex-eligible positions already offer
+    other_flex = -np.inf
+    if slots.flex:
+        for q, arr in roster_by_pos.items():
+            if q == pos or q not in slots.flex_positions:
+                continue
+            other_flex = max(other_flex, nth(np.asarray(arr, float), int(need.get(q, 0))))
+
+    base_ded = top(mine, n_p)
+    base_flex = max(nth(mine, n_p), other_flex) if slots.flex else -np.inf
+    base = base_ded + (base_flex if np.isfinite(base_flex) else 0.0)
+
+    out = np.empty(len(cand_values), float)
+    for i, v in enumerate(np.asarray(cand_values, float)):
+        if not np.isfinite(v):
+            out[i] = np.nan
+            continue
+        new = np.concatenate([mine, [v]])
+        ded = top(new, n_p)
+        fl = max(nth(new, n_p), other_flex) if (slots.flex and flex_ok) else base_flex
+        out[i] = ded + (fl if np.isfinite(fl) else 0.0) - base
+    return out
 
 
 def cross_covariance(roster: pd.DataFrame, value_index: pd.DataFrame,
@@ -279,6 +370,53 @@ class RiskModel:
     #: Empty (the default) leaves this class bit-identical to its pre-16.12 behaviour, which
     #: `tests/test_drift_consumption.py` asserts by re-running the frozen greedy.
     hype: dict[str, float] = field(default_factory=dict, repr=False)
+    #: ★ **T28 — how much of a candidate's value counts when he would sit on the bench.**
+    #:
+    #:     v_eff = Δstarter(j | roster) + bench_weight · (base_value_j − Δstarter(j | roster))
+    #:
+    #: ``1.0`` (the default) is **exactly** ``base_value``, so the shipped greedy, the frozen cost
+    #: report and every T15/T24 bar are untouched — the algebra collapses term-for-term, and
+    #: `test_phase9` re-runs the greedy to prove it rather than trusting the algebra. ``0.0`` prices
+    #: a pick purely by what it adds to the best legal starting lineup, which is the behaviour T28
+    #: asks about: `value_hawk` took Jaxson Dart as a *second* QB at 9.09 because a slot-blind sum
+    #: says a +33.1 bench QB is worth +33.1.
+    #:
+    #: Anything strictly between the two says bench depth has **option value** — which it does, via
+    #: injury and bye weeks — without pretending a QB2 starts. It is one knob because that is what
+    #: makes the A/B legible (T24's lesson: *moving two knobs together wore the wrong credit for
+    #: three runs*).
+    bench_weight: float = 1.0
+    #: The roster shape the starter marginal is computed against; ``None`` = the league default.
+    slots: RosterSlots | None = None
+
+    def _candidate_values(self, pool: pd.DataFrame, roster: pd.DataFrame) -> np.ndarray:
+        """Each candidate's value on the objective this model carries (T28).
+
+        ``bench_weight == 1.0`` returns ``base_value`` itself — the same ``dict.get`` the pre-T28
+        loop did, in the same order, so the shipped path is not merely equivalent but identical.
+        Below 1.0 the value becomes the blend documented on :attr:`bench_weight`, computed through
+        :func:`starter_marginal` (which is regression-tested against :func:`starter_value`).
+        """
+        keys = list(pool["player_key"])
+        base = np.array([self.bv.get(k, np.nan) for k in keys], float)
+        if self.bench_weight >= 1.0:
+            return base
+
+        slots = self.slots or RosterSlots()
+        by_pos: dict[str, list[float]] = {}
+        for k in roster["player_key"]:
+            p, v = self.pos.get(k), self.bv.get(k)
+            if p and v is not None and np.isfinite(v):
+                by_pos.setdefault(p, []).append(float(v))
+        roster_by_pos = {p: np.asarray(v, float) for p, v in by_pos.items()}
+
+        out = base.copy()
+        pos_arr = np.asarray(list(pool["pos"]), dtype=object)
+        for p in {q for q in pos_arr if q is not None}:
+            ix = np.where(pos_arr == p)[0]
+            marg = starter_marginal(base[ix], str(p), roster_by_pos, slots)
+            out[ix] = marg + self.bench_weight * (base[ix] - marg)
+        return out
 
     def effective_rank(self, pool: pd.DataFrame, roster: pd.DataFrame,
                        window_end: float | None = None) -> np.ndarray:
@@ -310,9 +448,11 @@ class RiskModel:
         else:
             urgency = np.zeros(len(pool))
 
+        vals = self._candidate_values(pool, roster)
+
         out = np.full(len(pool), np.nan)
         for n, (pk, pos) in enumerate(zip(pool["player_key"], pool["pos"], strict=False)):
-            v = self.bv.get(pk)
+            v = vals[n]
             if v is None or not np.isfinite(v):
                 continue
             pen = 0.0
@@ -329,7 +469,9 @@ class RiskModel:
 def build_risk_model(board: pd.DataFrame, value_index: pd.DataFrame, corr: CorrelationModel,
                      lam: float, scarcity_w: float = DEFAULT_SCARCITY_W,
                      noise: float = DEFAULT_NOISE,
-                     hype: dict[str, float] | None = None) -> RiskModel:
+                     hype: dict[str, float] | None = None,
+                     bench_weight: float = 1.0,
+                     slots: RosterSlots | None = None) -> RiskModel:
     """Assemble the :class:`RiskModel` from a value-attached board + the value index. The rank
     curve interpolates the board's own ``base_value → value`` mapping, so a zero penalty reproduces
     the static rank (and λ=0, ``scarcity_w=0`` the covariance-blind, myopic draft) exactly.
@@ -359,7 +501,7 @@ def build_risk_model(board: pd.DataFrame, value_index: pd.DataFrame, corr: Corre
         role={k: int(r) for k, r in zip(vi["player_key"], vi["role_rank"], strict=False)
               if pd.notna(r)},
         rank_x=x, rank_y=y, scarcity_w=float(scarcity_w), noise=float(noise),
-        hype=dict(hype or {}),
+        hype=dict(hype or {}), bench_weight=float(bench_weight), slots=slots,
     )
 
 

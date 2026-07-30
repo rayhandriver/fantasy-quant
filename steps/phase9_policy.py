@@ -29,7 +29,13 @@ from fantasy_quant.config import DEV_SEASONS
 from fantasy_quant.data import db
 from fantasy_quant.draft.config import DraftConfig, LeagueSetup
 from fantasy_quant.draft.optimizer import assemble_value, build_risk_model, optimize_draft
-from fantasy_quant.simulation.season import LeagueFormat, league_probabilities
+from fantasy_quant.simulation.season import (
+    LeagueFormat,
+    fair_share,
+    league_probabilities,
+    playoff_fair_share,
+    provenance_lines,
+)
 from fantasy_quant.simulation.weekly import build_weekly_model
 
 SEASON = 2022
@@ -101,12 +107,16 @@ def main() -> None:
     # ---- independent evaluation: each drafted league scored on a fresh, larger sim --------------
     wm = build_weekly_model(con, SEASON, seat.ruleset, seed=0)   # same seed → shared draws (T6)
     fmt = LeagueFormat(n_teams=seat.n_teams)
+    print("\n".join(provenance_lines(args.eval_sims, fmt)))
     for obj, st in drafts.items():
         rosters = [st.roster(t) for t in range(seat.n_teams)]
         pp, tp = league_probabilities(rosters, wm, fmt, seat.slots, np.random.default_rng(99),
                                       sims=args.eval_sims)
         me = seat.your_team
-        print(f"  {obj:22s} your seat: playoff {pp[me]:.3f}  title {tp[me]:.3f}")
+        # T29: lead with the fair-share multiple — the sim's level bias moves all ten teams
+        # together, so it cancels in a ratio to the uniform and survives in the percentage.
+        print(f"  {obj:22s} your seat: playoff {playoff_fair_share(pp, fmt)[me]:.2f}x "
+              f"({pp[me]:.3f})  title {fair_share(tp, fmt.n_teams)[me]:.2f}x ({tp[me]:.3f})")
 
     # ---- gates --------------------------------------------------------------------------------
     gates = {

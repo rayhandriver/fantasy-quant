@@ -49,6 +49,7 @@ Before 16.13 nothing in the mock path supplied either column *or* passed ``fav``
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 
 import numpy as np
@@ -250,6 +251,25 @@ def effective_budget(pers: Personality) -> ReachBudget:
 SIGNAL_COLS: tuple[str, ...] = ("boom_prob", "q90", "bust_prob", "q10", "games_played_mean",
                                 "mean", "upside", "floor", "durability", "tail_risk", "vbd",
                                 "overall_rank", "cos", "role_share", "role_delta", "td_regression")
+
+#: ★ **T27 — the subset of the above that may NEVER be weighted, enforced in
+#: :meth:`Personality.__post_init__`.**
+#:
+#: ``signal_bonus`` z-scores **within position**, so weighting a *level* column is not "prefer good
+#: players": it re-prices the level the seat is already choosing on, on a scale that has thrown away
+#: the only content the column had. Both halves of that are measured, not argued —
+#: ``pos_z(vbd)`` has ``corr(vbd, adp)`` of −0.955 RB / −0.933 WR within position, i.e. ADP with a
+#: sign flip (:func:`make_value_hawk_pick_fn`), and 16.14R step 2 (T19) found that residualizing a
+#: level-scaled quantile on ``mean`` *inverts* the signal at board depth. The fix there was to
+#: rebuild every signal as a **ratio to the projected level**, which is why every column a shipped
+#: seat actually weights — ``upside``/``floor``/``tail_risk``/``durability``/``cos`` — is a shape.
+#:
+#: They stay in :data:`SIGNAL_COLS` because that tuple is also the *known-column* registry that
+#: turns a typo into a loud error, and because a reporting consumer legitimately reads them. What
+#: changes is that naming one in ``signal_weights`` now fails at construction instead of quietly
+#: recreating a defect this project has already paid for twice. No shipped personality weights one,
+#: so this is a guardrail over a live invariant rather than a behaviour change.
+LEVEL_COLS: tuple[str, ...] = ("mean", "vbd", "overall_rank", "proj_points", "base_value")
 
 #: Minimum members a position group needs before its z-scores mean anything. Below this (or at zero
 #: variance) the group contributes 0 — no tilt, rather than a tilt built on one observation.
@@ -542,6 +562,14 @@ class Personality:
             raise ValueError(f"{self.name}: unknown signal_weights {sorted(unknown)} — "
                              f"a typo here fails silently forever, so it fails loudly here. "
                              f"Known signals: {list(SIGNAL_COLS)}")
+        level = set(self.signal_weights) & set(LEVEL_COLS)
+        if level:
+            raise ValueError(
+                f"{self.name}: {sorted(level)} are LEVEL columns and cannot be weighted — "
+                f"`signal_bonus` z-scores within position, which deletes exactly the content a "
+                f"level column has (see LEVEL_COLS; T19 / 16.14R). Use a shape column "
+                f"(upside/floor/tail_risk/durability), or a roster-level objective as `value_hawk` "
+                f"does.")
 
     def adjusted_beta(self, feature_cols, base_beta) -> np.ndarray:
         """This seat's β: ``scale``/``override`` per feature, then the ``width_mult`` on ``adp_s``.
@@ -1124,8 +1152,34 @@ def normalized_hype_gains(room) -> np.ndarray:
     return g if m <= 0 else g / m
 
 
+def assert_room_objectives(room: Sequence[Personality], risk) -> None:
+    """Fail loudly when a room contains a ``portfolio_ce`` seat but no risk model to give it.
+
+    Without this the seat quietly runs the behavioral softmax with no ``signal_weights`` — i.e. it
+    becomes ``balanced`` wearing the value hawk's name, completes a legal draft, and every number
+    downstream looks plausible. *An inert thing still passes*, fourth instance; this is the
+    assertion the lesson asks for.
+
+    ★ **It lives here, not in ``draft/mock.py``, as of T27 (2026-07-30) — and the move is the
+    ticket.** The guard was written for the fully-simulated batch room and only ever ran there,
+    while ``steps/mock_draft.py`` — the *interactive* driver, the one surface a human actually
+    watches — built its nine opponents through :func:`make_room_pick_fn`, which had no ``risk``
+    parameter and therefore no guard. So the shipped room's ``value_hawk`` seat ran the Phase-9
+    greedy in every batch measurement and the **behavioral softmax in every human mock**, silently,
+    and the assertion designed to catch exactly that could not see it. ``draft/mock.py`` re-exports
+    this name so its own callers and tests are unchanged. *A guard that does not run on the path a
+    human uses is not a guard* — the display-layer lesson of T22, one layer down.
+    """
+    needy = sorted({p.name for p in room if p.objective == "portfolio_ce"})
+    if needy and risk is None:
+        raise ValueError(
+            f"room contains objective='portfolio_ce' seats {needy} but no risk model — pass "
+            f"`risk=` (see steps/phase16_14r_6_value_hawk.py) or they silently draft as balanced")
+
+
 def make_room_pick_fn(model: OpponentModel, room=None, *, hype: np.ndarray | None = None,
-                      normalize_hype: bool = True, **kw):
+                      normalize_hype: bool = True, risk=None, require_objectives: bool = True,
+                      **kw):
     """One ``opponent_pick_fn(state, team)`` that routes each seat to its own personality.
 
     ``room`` is a tuple of :class:`Personality` (see :func:`make_room`), ordered by seat *excluding*
@@ -1133,12 +1187,25 @@ def make_room_pick_fn(model: OpponentModel, room=None, *, hype: np.ndarray | Non
     per-draft narrative draw shared by the whole room (16.9); each seat scales it by its
     :func:`normalized_hype_gains` share, which is how a shock expressed by an upside chaser and a
     homer looks different from the same shock in a room of autopickers.
+
+    ``risk`` (T27) routes ``objective="portfolio_ce"`` seats to :func:`make_value_hawk_pick_fn`,
+    exactly as :func:`~fantasy_quant.draft.mock.full_room_pick_fn` does for the ten-seat room — the
+    two builders now differ only in the ``team -> seat`` mapping they were split over, which was
+    always the intent. Passing ``risk=None`` with such a seat present raises
+    (:func:`assert_room_objectives`); ``require_objectives=False`` opts out for the ADP-only
+    harnesses that legitimately have no value index.
     """
     seats = tuple(room if room is not None else make_room())
+    if require_objectives:
+        assert_room_objectives(seats, risk)
     gains = normalized_hype_gains(seats) if normalize_hype else np.array(
         [p.hype_gain for p in seats], float)
-    fns = [make_opponent_pick_fn(model, replace(p, hype_gain=float(g)), hype=hype, **kw)
-           for p, g in zip(seats, gains, strict=True)]
+    fns = [
+        (make_value_hawk_pick_fn(replace(p, hype_gain=float(g)), risk, n_teams=len(seats))
+         if p.objective == "portfolio_ce" and risk is not None
+         else make_opponent_pick_fn(model, replace(p, hype_gain=float(g)), hype=hype, **kw))
+        for p, g in zip(seats, gains, strict=True)
+    ]
 
     def pick(state, team) -> int:
         seat = team - 1 if team > state.your_team else team

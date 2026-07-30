@@ -74,6 +74,11 @@ def main() -> None:
                     help="T24 width narrowing: WidthCurve.base (default: the model's own curve)")
     ap.add_argument("--shuffle-room", action="store_true",
                     help="re-seat the room every seed (marginalizes seating; see the note below)")
+    ap.add_argument("--bench-weight", type=float, default=None,
+                    help="T28: value_hawk's objective. 1.0 (default) = the shipped slot-blind "
+                         "base_value; 0.0 = pure starting-lineup marginal")
+    ap.add_argument("--room", nargs="*", default=None,
+                    help="T30: override the ten-seat mix (e.g. swap `autopilot` for `chalk`)")
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args()
     out = args.out or OUT_DIR / f"mock_room_bars_{args.label}.json"
@@ -83,7 +88,8 @@ def main() -> None:
     if args.width_base is not None:
         model.width_curve = replace(model.width_curve, base=float(args.width_base))
     kw = {} if args.kappa is None else {"kappa": float(args.kappa)}
-    room = mock.full_room(REALISTIC_ROOM, n_teams=10, seed=args.room_seed)
+    mix = tuple(args.room) if args.room else REALISTIC_ROOM
+    room = mock.full_room(mix, n_teams=10, seed=args.room_seed)
     seasons = tuple(args.seasons) if args.seasons else MATCHED_SEASONS
     # ⚠ The room's κ lives on the **model** (T24 ships it beside the width curve); `PRIVATE_KAPPA`
     # is only the no-op fallback for a hand-built model. Reading the constant here would label a
@@ -110,8 +116,14 @@ def main() -> None:
         config = DraftConfig()
         vi = optimizer.assemble_value(con, season, config)
         attached = optimizer.attach_value(board, vi)
+        # T28: `bench_weight` is the value hawk's objective knob and nothing else consults it —
+        # `full_room_pick_fn` hands `risk` to the portfolio_ce seats only. 1.0 reproduces the
+        # shipped room exactly (asserted in test_phase9), so an unflagged run is a true baseline.
         risk = optimizer.build_risk_model(attached, vi, optimizer.assemble_correlation(con, season),
-                                          lam=config.risk_lambda)
+                                          lam=config.risk_lambda,
+                                          bench_weight=(1.0 if args.bench_weight is None
+                                                        else float(args.bench_weight)),
+                                          slots=config.league.slots)
         # ★ `--shuffle-room` re-draws the seating for every seed instead of holding one arrangement
         # for the whole batch. T24's sweep found why it matters: with a fixed arrangement the
         # **round-1 half-split** measures *where the reachy seats happen to sit*, not the width law
@@ -122,8 +134,8 @@ def main() -> None:
         # produced by different code than its before column is the thing this harness exists to
         # prevent. Run the pair.
         if args.shuffle_room:
-            def seating(s: int):
-                return mock.full_room(REALISTIC_ROOM, n_teams=10, seed=args.room_seed + 1000 * s)
+            def seating(s: int, mix=mix):
+                return mock.full_room(mix, n_teams=10, seed=args.room_seed + 1000 * s)
             per = [mock.batch_drafts(
                 attached, seating(s), model, season=season, seeds=[s], n_teams=10,
                 rounds=args.rounds, board_source=src, risk=risk, **kw)
@@ -238,6 +250,8 @@ def main() -> None:
         "label": args.label,
         "room": [p.name for p in room],
         "config": {"seeds": args.seeds, "rounds": args.rounds, "seasons": list(seasons),
+                   "bench_weight": (1.0 if args.bench_weight is None else float(args.bench_weight)),
+                   "mix": list(mix),
                    "room_seed": args.room_seed, "width_curve": model.width_curve.to_dict(),
                    "kappa": kappa, "shuffle_room": bool(args.shuffle_room)},
         "bar1": bar1, "bar1_table": json.loads(cmp.to_json(orient="records")),

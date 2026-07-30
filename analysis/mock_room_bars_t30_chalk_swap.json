@@ -1,0 +1,808 @@
+{
+  "generated": "2026-07-30T15:43:03.081284+00:00",
+  "label": "t30_chalk_swap",
+  "room": [
+    "balanced",
+    "chalk",
+    "balanced",
+    "reacher",
+    "upside_chaser",
+    "safe_floor",
+    "balanced",
+    "chalk",
+    "value_hawk",
+    "balanced"
+  ],
+  "config": {
+    "seeds": 40,
+    "rounds": 15,
+    "seasons": [
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ],
+    "bench_weight": 1.0,
+    "mix": [
+      "chalk",
+      "balanced",
+      "balanced",
+      "balanced",
+      "balanced",
+      "value_hawk",
+      "safe_floor",
+      "reacher",
+      "upside_chaser",
+      "chalk"
+    ],
+    "room_seed": 17,
+    "width_curve": {
+      "kind": "power",
+      "gamma": 1.0,
+      "max_round": 15,
+      "base": 0.6
+    },
+    "kappa": 0.0,
+    "shuffle_room": true
+  },
+  "bar1": {
+    "pass": true,
+    "round1_sim_mean": 2.7670937500000004,
+    "round1_corpus_mean": 2.8683645314533712,
+    "profile_distance": 0.0914382391386293,
+    "shipped_round1": 3.7,
+    "shipped_distance": 0.1156
+  },
+  "bar1_table": [
+    {
+      "round": 1,
+      "corpus_mean": 2.8683645315,
+      "sim_mean": 2.76709375,
+      "corpus_p90": 5.2270833333,
+      "sim_p90": 6.5,
+      "corpus_n": 12652,
+      "sim_n": 3200.0,
+      "mean_gap": -0.1012707815,
+      "mean_ratio": 0.9646938943
+    },
+    {
+      "round": 2,
+      "corpus_mean": 5.1091057938,
+      "sim_mean": 4.787375,
+      "corpus_p90": 10.8055555556,
+      "sim_p90": 10.0,
+      "corpus_n": 12575,
+      "sim_n": 3200.0,
+      "mean_gap": -0.3217307938,
+      "mean_ratio": 0.937027964
+    },
+    {
+      "round": 3,
+      "corpus_mean": 7.1909460184,
+      "sim_mean": 6.52846875,
+      "corpus_p90": 15.4424242424,
+      "sim_p90": 13.2,
+      "corpus_n": 12505,
+      "sim_n": 3200.0,
+      "mean_gap": -0.6624772684,
+      "mean_ratio": 0.9078734193
+    },
+    {
+      "round": 4,
+      "corpus_mean": 9.2700609273,
+      "sim_mean": 7.9745625,
+      "corpus_p90": 19.525,
+      "sim_p90": 15.9,
+      "corpus_n": 12412,
+      "sim_n": 3200.0,
+      "mean_gap": -1.2954984273,
+      "mean_ratio": 0.8602492004
+    },
+    {
+      "round": 5,
+      "corpus_mean": 10.836577157,
+      "sim_mean": 10.51984375,
+      "corpus_p90": 23.2142857143,
+      "sim_p90": 21.01,
+      "corpus_n": 12271,
+      "sim_n": 3200.0,
+      "mean_gap": -0.316733407,
+      "mean_ratio": 0.9707718219
+    },
+    {
+      "round": 6,
+      "corpus_mean": 12.0040978997,
+      "sim_mean": 11.6560625,
+      "corpus_p90": 26.5,
+      "sim_p90": 22.71,
+      "corpus_n": 12103,
+      "sim_n": 3200.0,
+      "mean_gap": -0.3480353997,
+      "mean_ratio": 0.9710069509
+    },
+    {
+      "round": 7,
+      "corpus_mean": 13.2785346177,
+      "sim_mean": 13.248375,
+      "corpus_p90": 29.0666666667,
+      "sim_p90": 26.0,
+      "corpus_n": 11888,
+      "sim_n": 3200.0,
+      "mean_gap": -0.0301596177,
+      "mean_ratio": 0.9977286938
+    },
+    {
+      "round": 8,
+      "corpus_mean": 14.1223613608,
+      "sim_mean": 13.5434375,
+      "corpus_p90": 31.7,
+      "sim_p90": 28.11,
+      "corpus_n": 11553,
+      "sim_n": 3200.0,
+      "mean_gap": -0.5789238608,
+      "mean_ratio": 0.9590065821
+    },
+    {
+      "round": 9,
+      "corpus_mean": 14.8348190283,
+      "sim_mean": 14.32365625,
+      "corpus_p90": 32.5583333333,
+      "sim_p90": 28.2,
+      "corpus_n": 10904,
+      "sim_n": 3200.0,
+      "mean_gap": -0.5111627783,
+      "mean_ratio": 0.9655430392
+    },
+    {
+      "round": 10,
+      "corpus_mean": 16.042927885,
+      "sim_mean": 14.787,
+      "corpus_p90": 33.91,
+      "sim_p90": 29.6,
+      "corpus_n": 10275,
+      "sim_n": 3200.0,
+      "mean_gap": -1.255927885,
+      "mean_ratio": 0.9217145465
+    },
+    {
+      "round": 11,
+      "corpus_mean": 17.2265828479,
+      "sim_mean": 15.43128125,
+      "corpus_p90": 33.7305555556,
+      "sim_p90": 28.9,
+      "corpus_n": 9558,
+      "sim_n": 3200.0,
+      "mean_gap": -1.7953015979,
+      "mean_ratio": 0.8957830689
+    },
+    {
+      "round": 12,
+      "corpus_mean": 18.514460215,
+      "sim_mean": 15.497625,
+      "corpus_p90": 36.6,
+      "sim_p90": 29.2,
+      "corpus_n": 8493,
+      "sim_n": 3200.0,
+      "mean_gap": -3.016835215,
+      "mean_ratio": 0.8370551893
+    },
+    {
+      "round": 13,
+      "corpus_mean": 19.5092091868,
+      "sim_mean": 15.8304660619,
+      "corpus_p90": 39.6433333333,
+      "sim_p90": 28.9,
+      "corpus_n": 7188,
+      "sim_n": 3197.0,
+      "mean_gap": -3.6787431249,
+      "mean_ratio": 0.811435559
+    },
+    {
+      "round": 14,
+      "corpus_mean": 21.2780445671,
+      "sim_mean": null,
+      "corpus_p90": 44.8333333333,
+      "sim_p90": null,
+      "corpus_n": 5435,
+      "sim_n": null,
+      "mean_gap": null,
+      "mean_ratio": null
+    },
+    {
+      "round": 15,
+      "corpus_mean": 27.0984653994,
+      "sim_mean": 21.8496613995,
+      "corpus_p90": 52.3333333333,
+      "sim_p90": 41.68,
+      "corpus_n": 3923,
+      "sim_n": 443.0,
+      "mean_gap": -5.2488039999,
+      "mean_ratio": 0.8063062272
+    }
+  ],
+  "bar2_elite_fall": {
+    "pass": true,
+    "p95_slot": 16.0,
+    "p95_max": 20.0,
+    "share_past_10": 0.26210526315789473,
+    "past10_max": 0.3,
+    "mean_slot": 7.53,
+    "n": 3800
+  },
+  "bar3_harvest": {
+    "pass": true,
+    "worst_excess_sds": 0.0,
+    "tol_sds": 1.0,
+    "n_bins_scored": 6,
+    "bins": [
+      {
+        "bin": "[1.0, 2.0)",
+        "sim_harvest": 14.030586080586081,
+        "corpus_harvest": 17.594289942513626,
+        "corpus_sd": 16.985739253975776,
+        "excess_sds": -0.2098056380497778,
+        "sim_n": 78,
+        "corpus_n": 19
+      },
+      {
+        "bin": "[2.0, 3.0)",
+        "sim_harvest": 11.372934853308685,
+        "corpus_harvest": 12.389659282301201,
+        "corpus_sd": 10.596416092128308,
+        "excess_sds": -0.09594984003580265,
+        "sim_n": 321,
+        "corpus_n": 186
+      },
+      {
+        "bin": "[3.0, 5.0)",
+        "sim_harvest": 7.875478377344049,
+        "corpus_harvest": 8.823066242204844,
+        "corpus_sd": 9.992731709017582,
+        "excess_sds": -0.09482771002504534,
+        "sim_n": 402,
+        "corpus_n": 1623
+      },
+      {
+        "bin": "[5.0, 8.0)",
+        "sim_harvest": 1.8372799530566521,
+        "corpus_harvest": 4.346774389465246,
+        "corpus_sd": 8.708309424024506,
+        "excess_sds": -0.2881724011190271,
+        "sim_n": 824,
+        "corpus_n": 4791
+      },
+      {
+        "bin": "[8.0, 12.0)",
+        "sim_harvest": -3.196187258687259,
+        "corpus_harvest": 0.6248402750182392,
+        "corpus_sd": 9.418801339844467,
+        "excess_sds": -0.40568087125283764,
+        "sim_n": 1036,
+        "corpus_n": 3835
+      },
+      {
+        "bin": "[12.0, 20.0)",
+        "sim_harvest": -8.825197251727863,
+        "corpus_harvest": -3.112298629752572,
+        "corpus_sd": 9.69274832387025,
+        "excess_sds": -0.5893992530380866,
+        "sim_n": 539,
+        "corpus_n": 1512
+      }
+    ]
+  },
+  "bar5_dispersion": {
+    "sd_drift_sim": 1.4995615940363163,
+    "sd_drift_corpus": 1.6897869313246314,
+    "level_error": -0.1125735640168531,
+    "pass": true
+  },
+  "landing": {
+    "sim": [
+      {
+        "band": "0-2.5",
+        "n": 640,
+        "mean_slot": 2.790625,
+        "median_slot": 2.0,
+        "p90_slot": 5.0,
+        "p99_slot": 7.0,
+        "past_4": 0.153125,
+        "past_6": 0.0171875,
+        "past_10": 0.0
+      },
+      {
+        "band": "2.5-4.5",
+        "n": 520,
+        "mean_slot": 3.9673076923,
+        "median_slot": 4.0,
+        "p90_slot": 7.0,
+        "p99_slot": 9.0,
+        "past_4": 0.3711538462,
+        "past_6": 0.1096153846,
+        "past_10": 0.0019230769
+      },
+      {
+        "band": "4.5-6.5",
+        "n": 800,
+        "mean_slot": 6.40125,
+        "median_slot": 6.0,
+        "p90_slot": 10.0,
+        "p99_slot": 16.0,
+        "past_4": 0.76375,
+        "past_6": 0.46625,
+        "past_10": 0.05
+      },
+      {
+        "band": "6.5-10.5",
+        "n": 1320,
+        "mean_slot": 9.6636363636,
+        "median_slot": 10.0,
+        "p90_slot": 15.0,
+        "p99_slot": 18.0,
+        "past_4": 0.8818181818,
+        "past_6": 0.7825757576,
+        "past_10": 0.4143939394
+      }
+    ],
+    "corpus": [
+      {
+        "band": "0-2.5",
+        "n": 2398,
+        "mean_slot": 3.1976652847,
+        "median_slot": 1.6666666667,
+        "p90_slot": 5.0,
+        "p99_slot": 31.7416666667,
+        "past_4": 0.1313594662,
+        "past_6": 0.0675562969,
+        "past_10": 0.0275229358
+      },
+      {
+        "band": "2.5-4.5",
+        "n": 1765,
+        "mean_slot": 4.6465453299,
+        "median_slot": 3.3333333333,
+        "p90_slot": 7.0,
+        "p99_slot": 29.5428571429,
+        "past_4": 0.3337110482,
+        "past_6": 0.128611898,
+        "past_10": 0.0413597734
+      },
+      {
+        "band": "4.5-6.5",
+        "n": 2596,
+        "mean_slot": 7.5024771363,
+        "median_slot": 5.0,
+        "p90_slot": 12.0,
+        "p99_slot": 47.0666666667,
+        "past_4": 0.7411402157,
+        "past_6": 0.3671032357,
+        "past_10": 0.1190292758
+      },
+      {
+        "band": "6.5-10.5",
+        "n": 4708,
+        "mean_slot": 9.9905192882,
+        "median_slot": 8.0,
+        "p90_slot": 15.0,
+        "p99_slot": 49.0,
+        "past_4": 0.9241716228,
+        "past_6": 0.7206881903,
+        "past_10": 0.2644435004
+      }
+    ],
+    "gate": {
+      "pass": true,
+      "band": "0-2.5",
+      "metric": "past_4",
+      "sim_share": 0.153125,
+      "corpus_share": 0.13135946622185155,
+      "margin": 0.05,
+      "sim_median_slot": 2.0,
+      "corpus_median_slot": 1.6666666666666665,
+      "fall_pass": true,
+      "n_sim": 640,
+      "n_corpus": 2398,
+      "sim_rise": 0.7173125000000002,
+      "corpus_rise": 1.2204607313750815,
+      "shape_pass": true
+    },
+    "round1_split": {
+      "sim": [
+        {
+          "half": "first_half",
+          "n": 1600,
+          "mean_abs": 2.4084375,
+          "p90_abs": 6.1
+        },
+        {
+          "half": "second_half",
+          "n": 1600,
+          "mean_abs": 3.12575,
+          "p90_abs": 7.0
+        }
+      ],
+      "corpus": [
+        {
+          "half": "first_half",
+          "n": 6323,
+          "mean_abs": 2.2578447742,
+          "p90_abs": 4.0
+        },
+        {
+          "half": "second_half",
+          "n": 6329,
+          "mean_abs": 3.4783055056,
+          "p90_abs": 6.3428571429
+        }
+      ]
+    }
+  },
+  "legality": {
+    "n_seats": 3600,
+    "n_illegal": 443,
+    "share_illegal": 0.12305555555555556,
+    "by_position": {
+      "QB": 0.0,
+      "RB": 0.0,
+      "WR": 0.0,
+      "TE": 0.0008333333333333334,
+      "K": 0.07777777777777778,
+      "DST": 0.044444444444444446
+    },
+    "starter_min": {
+      "QB": 1,
+      "RB": 2,
+      "WR": 2,
+      "TE": 1,
+      "K": 1,
+      "DST": 1
+    },
+    "unavoidable_by_position": {
+      "QB": 0.0,
+      "RB": 0.0,
+      "WR": 0.0,
+      "TE": 0.0,
+      "K": 0.07777777777777778,
+      "DST": 0.044444444444444446
+    },
+    "avoidable_by_position": {
+      "QB": 0.0,
+      "RB": 0.0,
+      "WR": 0.0,
+      "TE": 0.0008333333333333334,
+      "K": 0.0,
+      "DST": 0.0
+    },
+    "share_avoidable": 0.0008333333333333334,
+    "by_personality": {
+      "upside_chaser": 0.13055555555555556,
+      "safe_floor": 0.13055555555555556,
+      "chalk": 0.12777777777777777,
+      "balanced": 0.125,
+      "reacher": 0.11666666666666667,
+      "value_hawk": 0.09722222222222222
+    }
+  },
+  "personality_buckets": {
+    "chalk": {
+      "R1-3": 1.4927083333,
+      "R4-6": 2.4083333333,
+      "R7-10": 3.508203125,
+      "R11-13": 3.6645833333,
+      "R14-15": 2.3152173913,
+      "overall": 2.8197812649
+    },
+    "safe_floor": {
+      "R1-3": 3.7708333333,
+      "R4-6": 5.6583333333,
+      "R7-10": 8.04921875,
+      "R11-13": 5.8237747654,
+      "R14-15": 2.2765957447,
+      "overall": 5.955064194
+    },
+    "balanced": {
+      "R1-3": 4.3684895833,
+      "R4-6": 9.43359375,
+      "R7-10": 11.7072265625,
+      "R11-13": 6.7199791612,
+      "R14-15": 2.4888888889,
+      "overall": 8.2755811879
+    },
+    "value_hawk": {
+      "R1-3": 10.1760416667,
+      "R4-6": 9.4489583333,
+      "R7-10": 12.4265625,
+      "R11-13": 7.2979166667,
+      "R14-15": 2.2,
+      "overall": 9.9711561383
+    },
+    "reacher": {
+      "R1-3": 4.68125,
+      "R4-6": 16.9083333333,
+      "R7-10": 18.77890625,
+      "R11-13": 8.4489583333,
+      "R14-15": 3.4047619048,
+      "overall": 12.6170871014
+    },
+    "upside_chaser": {
+      "R1-3": 8.4739583333,
+      "R4-6": 15.9041666667,
+      "R7-10": 17.6703125,
+      "R11-13": 7.8675703858,
+      "R14-15": 2.1914893617,
+      "overall": 12.7601046125
+    }
+  },
+  "faithfulness": {
+    "sim": {
+      "n_seats": 3200,
+      "mean_pool_rank": 8.001971153846153,
+      "median_pool_rank": 7.923076923076923,
+      "p10_pool_rank": 2.769230769230769,
+      "p90_pool_rank": 13.076923076923077,
+      "moderate_share": 0.4834375,
+      "chalk_share": 0.024375
+    },
+    "corpus": {
+      "n_seats": 12146,
+      "mean_pool_rank": 8.391097848944726,
+      "median_pool_rank": 7.615384615384615,
+      "p10_pool_rank": 4.461538461538462,
+      "p90_pool_rank": 13.095454545454546,
+      "moderate_share": 0.5433887699654207,
+      "chalk_share": 0.0015643010044459082
+    },
+    "shipped": {
+      "round1_sim_mean": 3.7,
+      "profile_distance": 0.1156,
+      "elite_p95": 19.0,
+      "elite_past10": 0.3007,
+      "median_pool_rank": 9.38,
+      "moderate_share": 0.278,
+      "chalk_share": 0.106
+    }
+  },
+  "readout_2026": {
+    "elite_fall": {
+      "pass": true,
+      "p95_slot": 16.0,
+      "p95_max": 20.0,
+      "share_past_10": 0.2520833333333333,
+      "past10_max": 0.3,
+      "mean_slot": 7.46875,
+      "n": 480
+    },
+    "landing": [
+      {
+        "band": "0-2.5",
+        "n": 80,
+        "mean_slot": 3.0125,
+        "median_slot": 3.0,
+        "p90_slot": 6.0,
+        "p99_slot": 7.0,
+        "past_4": 0.1875,
+        "past_6": 0.025,
+        "past_10": 0.0
+      },
+      {
+        "band": "2.5-4.5",
+        "n": 80,
+        "mean_slot": 3.4,
+        "median_slot": 4.0,
+        "p90_slot": 6.0,
+        "p99_slot": 7.0,
+        "past_4": 0.275,
+        "past_6": 0.0375,
+        "past_10": 0.0
+      },
+      {
+        "band": "4.5-6.5",
+        "n": 80,
+        "mean_slot": 6.4625,
+        "median_slot": 6.5,
+        "p90_slot": 9.0,
+        "p99_slot": 13.0,
+        "past_4": 0.8375,
+        "past_6": 0.5,
+        "past_10": 0.0375
+      },
+      {
+        "band": "6.5-10.5",
+        "n": 160,
+        "mean_slot": 9.075,
+        "median_slot": 9.0,
+        "p90_slot": 14.0,
+        "p99_slot": 16.82,
+        "past_4": 0.875,
+        "past_6": 0.7875,
+        "past_10": 0.31875
+      }
+    ],
+    "round1_split": [
+      {
+        "half": "first_half",
+        "n": 200,
+        "mean_abs": 2.121,
+        "p90_abs": 5.51
+      },
+      {
+        "half": "second_half",
+        "n": 200,
+        "mean_abs": 2.6995,
+        "p90_abs": 6.0
+      }
+    ],
+    "by_player": [
+      {
+        "name": "Bijan Robinson",
+        "adp": 1.6,
+        "n": 40,
+        "mean_slot": 2.925,
+        "median_slot": 3.0,
+        "p90_slot": 5.0,
+        "max_slot": 6.0,
+        "past_4": 0.15,
+        "past_6": 0.0,
+        "past_10": 0.0
+      },
+      {
+        "name": "Jahmyr Gibbs",
+        "adp": 1.8,
+        "n": 40,
+        "mean_slot": 3.1,
+        "median_slot": 3.0,
+        "p90_slot": 6.0,
+        "max_slot": 7.0,
+        "past_4": 0.225,
+        "past_6": 0.05,
+        "past_10": 0.0
+      },
+      {
+        "name": "Puka Nacua",
+        "adp": 2.7,
+        "n": 40,
+        "mean_slot": 3.025,
+        "median_slot": 3.0,
+        "p90_slot": 5.1,
+        "max_slot": 6.0,
+        "past_4": 0.2,
+        "past_6": 0.0,
+        "past_10": 0.0
+      },
+      {
+        "name": "Ja'Marr Chase",
+        "adp": 3.9,
+        "n": 40,
+        "mean_slot": 3.775,
+        "median_slot": 4.0,
+        "p90_slot": 6.0,
+        "max_slot": 7.0,
+        "past_4": 0.35,
+        "past_6": 0.075,
+        "past_10": 0.0
+      },
+      {
+        "name": "Christian McCaffrey",
+        "adp": 5.1,
+        "n": 40,
+        "mean_slot": 5.9,
+        "median_slot": 6.0,
+        "p90_slot": 8.1,
+        "max_slot": 9.0,
+        "past_4": 0.825,
+        "past_6": 0.375,
+        "past_10": 0.0
+      },
+      {
+        "name": "Jaxon Smith-Njigba",
+        "adp": 5.9,
+        "n": 40,
+        "mean_slot": 7.025,
+        "median_slot": 7.0,
+        "p90_slot": 10.0,
+        "max_slot": 13.0,
+        "past_4": 0.85,
+        "past_6": 0.625,
+        "past_10": 0.075
+      },
+      {
+        "name": "Amon-Ra St. Brown",
+        "adp": 7.2,
+        "n": 40,
+        "mean_slot": 7.125,
+        "median_slot": 7.5,
+        "p90_slot": 10.1,
+        "max_slot": 16.0,
+        "past_4": 0.775,
+        "past_6": 0.65,
+        "past_10": 0.1
+      },
+      {
+        "name": "Jonathan Taylor",
+        "adp": 7.7,
+        "n": 40,
+        "mean_slot": 9.2,
+        "median_slot": 9.0,
+        "p90_slot": 14.0,
+        "max_slot": 18.0,
+        "past_4": 0.95,
+        "past_6": 0.825,
+        "past_10": 0.25
+      },
+      {
+        "name": "De'Von Achane",
+        "adp": 9.5,
+        "n": 40,
+        "mean_slot": 9.775,
+        "median_slot": 10.0,
+        "p90_slot": 15.0,
+        "max_slot": 20.0,
+        "past_4": 0.875,
+        "past_6": 0.8,
+        "past_10": 0.35
+      },
+      {
+        "name": "Justin Jefferson",
+        "adp": 10.3,
+        "n": 40,
+        "mean_slot": 10.2,
+        "median_slot": 11.0,
+        "p90_slot": 14.0,
+        "max_slot": 16.0,
+        "past_4": 0.9,
+        "past_6": 0.875,
+        "past_10": 0.575
+      }
+    ],
+    "legality": {
+      "n_seats": 400,
+      "n_illegal": 0,
+      "share_illegal": 0.0,
+      "by_position": {
+        "QB": 0.0,
+        "RB": 0.0,
+        "WR": 0.0,
+        "TE": 0.0,
+        "K": 0.0,
+        "DST": 0.0
+      },
+      "starter_min": {
+        "QB": 1,
+        "RB": 2,
+        "WR": 2,
+        "TE": 1,
+        "K": 1,
+        "DST": 1
+      },
+      "unavoidable_by_position": {
+        "QB": 0.0,
+        "RB": 0.0,
+        "WR": 0.0,
+        "TE": 0.0,
+        "K": 0.0,
+        "DST": 0.0
+      },
+      "avoidable_by_position": {
+        "QB": 0.0,
+        "RB": 0.0,
+        "WR": 0.0,
+        "TE": 0.0,
+        "K": 0.0,
+        "DST": 0.0
+      },
+      "share_avoidable": 0.0,
+      "by_personality": {
+        "balanced": 0.0,
+        "chalk": 0.0,
+        "reacher": 0.0,
+        "safe_floor": 0.0,
+        "upside_chaser": 0.0,
+        "value_hawk": 0.0
+      }
+    }
+  }
+}

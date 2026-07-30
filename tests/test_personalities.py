@@ -1214,3 +1214,58 @@ def test_the_shipped_artifact_carries_kappa_and_the_width_base(tmp_path):
     p.write_text(json.dumps(old))
     m = mock_mod.load_opponent_model(p)
     assert m.private_kappa == 0.0 and m.width_curve.base == 1.0 and m.width_curve.gamma == 0.8
+
+
+# ================================================================================================
+# T27 — the value seam (Session H.5 step 1)
+# ================================================================================================
+def test_the_value_chain_reaches_the_board_but_never_becomes_a_signal():
+    """★ The T27 invariant, both halves.
+
+    ``proj_points``/``mean``/``base_value`` must survive ``_prepare_board`` (or a human reads one
+    scale while the room optimizes another), and must **never** be weightable — ``signal_bonus``
+    z-scores within position, which is exactly the level-vs-shape defect T19/16.14R spent a session
+    undoing. A level column in ``SIGNAL_COLS`` would restore it silently.
+    """
+    from fantasy_quant.draft.personalities import LEVEL_COLS
+    from fantasy_quant.draft.simulator import PASSTHROUGH_COLS, VALUE_SCALE_COLS
+
+    level_cols = ("proj_points", "mean", "base_value")
+    assert set(level_cols) <= set(PASSTHROUGH_COLS)
+    assert set(VALUE_SCALE_COLS) <= set(PASSTHROUGH_COLS)
+    assert set(level_cols) <= set(LEVEL_COLS)
+    # the invariant that matters is enforced at construction, not by list membership
+    for col in level_cols:
+        with pytest.raises(ValueError, match="LEVEL|unknown"):
+            Personality("probe", signal_weights={col: 0.5})
+    # ...and no shipped seat weights one today, which is what makes this a guardrail not a change
+    for p in personalities().values():
+        assert not set(p.signal_weights) & set(LEVEL_COLS), p.name
+
+
+def test_the_interactive_room_builder_routes_a_value_hawk_like_the_batch_one():
+    """★ T27's silent divergence: ``steps/mock_draft.py`` built its nine opponents through
+    ``make_room_pick_fn``, which had no ``risk`` parameter — so the shipped room's ``value_hawk``
+    ran the Phase-9 greedy in every batch measurement and the behavioral softmax in every *human*
+    mock, and ``assert_room_objectives`` could not see it because it only ran in the other builder.
+    """
+    from fantasy_quant.draft import mock as mock_mod
+    from fantasy_quant.draft.personalities import assert_room_objectives, make_room_pick_fn
+
+    assert mock_mod.assert_room_objectives is assert_room_objectives, "one guard, re-exported"
+    room = tuple(personalities()[n] for n in ("value_hawk", *["balanced"] * 8))
+    model = _model()
+    with pytest.raises(ValueError, match="portfolio_ce"):
+        make_room_pick_fn(model, room)                       # the interactive path, unguarded
+    make_room_pick_fn(model, room, risk=object())            # a risk model satisfies it
+    make_room_pick_fn(model, room, require_objectives=False)  # ADP-only harnesses opt out
+
+
+def test_attach_proj_points_is_idempotent_and_never_invents_a_column():
+    from fantasy_quant.draft.mock import attach_proj_points
+
+    board = pd.DataFrame({"name": ["A"], "position": ["RB"], "adp": [1.0],
+                          "proj_points": [123.0]})
+    same = attach_proj_points(None, 2026, board)              # already present -> con never touched
+    assert same["proj_points"].tolist() == [123.0]
+    assert attach_proj_points(None, 2026, pd.DataFrame()).empty

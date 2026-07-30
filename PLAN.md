@@ -1978,3 +1978,230 @@ human drafts from.
 Review + commit sessions 6, 7 and this one (one tree), then **Session I = Phase 17 formats**. The
 mock drafter has no open register entry against it. Stage-0 FFC chore last pulled **2026-07-24** —
 **due after 07-30**, i.e. next session.
+
+## 2026-07-30 — the all-personality walkthrough → Session H.5 scoped (docs-only, no code)
+
+**Status: DOCS-ONLY.** No `src/` change, no `analysis/` write beyond three CSVs of the walkthrough
+itself. The user asked for a full 15-round mock with **all ten seats played by personalities**
+(`REALISTIC_ROOM`, `room_seed=17`, draft `seed=0`, live 2026 FFC board snapshotted 2026-07-24, 223
+players), a round-by-round walkthrough, team constructions, and an assessment of the mock drafter
+**as a shippable product**. Then: write the resulting work into the docs as the direct next steps,
+ahead of the existing session order, app still last.
+
+Write-ups: `findings.md` §"The all-personality walkthrough (2026-07-30)"; register entries
+`docs/TECH-DEBT.md` **T27/T28/T29/T30** + ordering item 11; the plan of record
+`docs/BUILD_PLAN.md` §"Session H.5 — THE MOCK-DRAFTER VALUE SEAM"; `ROADMAP.md` ★ SESSION PLAN
+(H.5 inserted ahead of I, "← NOW" moved); `glossary.md`; this entry.
+
+### What the walkthrough established — the simulation is finished
+
+Four things were tried and could not be broken, and each is worth keeping because each was a
+*suspicion* first:
+
+- **Positional mix matches reality.** The QB market looked broken by eye (17 QBs for 10 teams; Lamar
+  Jackson available at pick 75 projecting 315). It is not: over **333** realized 10-team/15-round
+  complete human Sleeper drafts the medians are WR 53 · RB 45 · QB **16** · TE 15 · K 9 · DEF 10,
+  against the sim's 55 · 42 · **17** · 16 · 10 · 10. Six positions in line at once.
+- **The mechanisms are legible by eye.** `reacher` spent **exactly** its `ReachBudget` — 3 of 3
+  swings (>25 picks: Dobbins +37.4 R6, Goff +30.2 R7, Nailor +38.8 R10) and 5 of 5 leans (8–25) —
+  with a rounds-1–3 max reach of **−0.1** against its 8-pick clamp. `upside_chaser`, which inherits
+  `ROOM_CEILING` (no count tiers, no early clamp), reached **+11.3 in round 2**: the two budget
+  mechanisms are separately visible in one draft.
+- **Elite fall sits on the shipped distribution.** 3 of 12 consensus top-12 past pick 10 = **25.0 %**
+  against the committed 25.2 %; worst fall Jonathan Taylor ADP 7.7 → pick 15.
+- **The behavioural fit is not stale.** 70,614 choice groups over **9 seasons**; the human corpus
+  spans 2017–2026 with the bulk in 2021–25 (1,079 human drafts in 2025 alone). The "β fit on 2017–20
+  applied to a 2026 board" worry is unfounded — checked, not assumed.
+
+Also confirmed internally consistent: title probabilities sum to **1.000**, playoff to **6.000**; all
+ten rosters legal; the room's `tail_risk` ordering is monotone across seven seat types
+(value_hawk −0.260 · safe_floor −0.090 · chalk −0.078 · balanced −0.010 · autopilot +0.013 ·
+reacher +0.052 · upside_chaser **+0.152**).
+
+### What failed — the seam, not the simulator
+
+- **T27 (🟠) — the board a human reads is not the board the seats optimize.** The CLI prints
+  `proj_points`; utility and `value_hawk`'s objective run on `base_value = ce_vbd`. **Maye proj 316.5
+  → +68.5; Daniels proj 313.4 → −101.6.** Per-position mean haircut 0.28 QB / 0.33 RB / 0.28 WR /
+  0.30 TE is Phase 4.4's intended level correction; the **dispersion** (QB 0.15–0.56, sd 0.12) is the
+  defect for a reader. Mechanical half: `proj_points` is not in `PASSTHROUGH_COLS`, so
+  `_prepare_board` drops it and any new driver silently prints an empty column — **verified by
+  writing one and getting `-` for all 150 picks.**
+- **T28 (🟠) — `team_value`/`portfolio_value` are slot-blind.** `grep -n "starters"` over
+  `draft/optimizer.py` returns nothing. QB2 contributions on this draft: **−101.6** (T1 Caleb
+  Williams), **−92.1** (T4 Kyler), −55.6 (T5 Mahomes), **+51.0** (T3 Hurts), +33.1 (T9 Dart); room
+  total 1,938, QB2 line **−122**. Spearman vs title over the ten teams: portfolio CE **+0.758** ·
+  `team_value` **+0.685** · starting-nine consensus proj **+0.455** · **starting-nine Phase-5 mean
+  +0.915**. T4 reacher: **9th of 10 on VBD, 3rd on starting-lineup projection, 9th on title.**
+- **T29 (🟡)** bare absolute probabilities from a sim carrying a documented **−113 pts/team** level
+  bias and a *marginal* playoff Brier 0.240 (title 0.088, on-diagonal — ordering is fine).
+- **T30 (🟡)** `autopilot` at 1 of 10 seats vs **0.2 %** of realized seats (50×), and it is the seat
+  that manufactures the spill: mean `pool_rank` **1.77**, median **1.0**, harvest **+11.7 picks**.
+
+### Decisions taken
+
+- **Session H.5 runs NEXT, before Session I / Phase 17.** User instruction: the mock-drafting system
+  is adjusted before any other session, and **the app stays strictly last** — every fix lands in the
+  engine and the CLI, and Phase 14's board view inherits it for free. E→L ordering otherwise unchanged.
+- **All four tickets are display, labelling or composition.** None refits β; none touches the frozen
+  value stack; T26 stays deferred to the next 11.1 refit. Every step's hard bar is that
+  `analysis/mock_room_bars_verify_20260729.json` reproduces **bit-identically** — *a display change
+  that moves a bar is not a display change.*
+- **§3.7 gates are NOT waived this session** (contrast 16.14R). Step 2 contains a decision that is the
+  user's, and each step is independently shippable.
+- **T28 ships a labelled second metric, never an edit to `team_value`.** The cost report's numbers are
+  frozen output and the lockbox is spent. **`value_hawk` keeps `objective="portfolio_ce"` for now** —
+  changing it refits nothing but *does* change the room's picks, so it moves T15 bars 1/2/5 and needs
+  the full T24 treatment (seating-marginalized before/after) as its own sub-step.
+- **Bars B1–B6 are pre-registered in `docs/BUILD_PLAN.md` before any of it runs**, including two that
+  can fail informatively: **B2** (if the level haircut is *not* explained by `games_played_mean`, that
+  is a modelling finding — stop and open a ticket, do not caption it) and **B5** (if starter-aware
+  value does not out-rank portfolio CE against title probability over ≥40 drafts × ≥4 seasons, **T28
+  closes as a labelling fix only** — the ten-team walkthrough is one draw).
+
+### Dead ends / do not re-derive
+
+- **The QB market is not broken.** 17 QBs for 10 teams is the corpus median (16). Do not "fix" the
+  room's QB timing; if anything looks wrong at QB it is T27's level dispersion, not the seats.
+- **`steps/mock_draft.py` does not have T27's mechanical half** — `cmd_start` already re-attaches
+  `proj_points` after `_prepare_board`, with a comment. The fix is to make the attach unnecessary, not
+  to repair the CLI.
+- **λ is not "too big".** `base_value` differs from `vbd` through **two** channels — the Phase-5 mean
+  (T3 availability) *and* λ·Var — and the variance charge is taken relative to the positional
+  replacement's own CE (`ce_replacement(QB)` = 119.4 here). A first pass read the gap as a pure
+  variance penalty and it does not reconcile: Josh Allen `vbd` +70.0 → `base_value` +55.2 while
+  Daniels +22.6 → −101.6. **Decompose before diagnosing.**
+- **`chalk` vs `safe_floor` is not separable in one draft** (mean floor 0.023 vs 0.034; `safe_floor`
+  took 3 rookies to `chalk`'s 1, including Hampton at floor −0.35 against its own weights). That is
+  consistent with what the code already documents — the durability weight's gap to `balanced` is noise
+  around zero, which is why its done-bar A/Bs the weight against *itself-off*. Do not read a seat's
+  spec off 13 picks.
+
+### ★ Next
+
+**Session H.5, steps 1→5 in order, gate after each.** Then Session I = Phase 17 formats, J (optional
+dynasty), K = Phase 14.1 MVP + surfacing (strictly last, do not bundle), L+ the go-live tail.
+**Stage-0 FFC chore: last pulled 2026-07-24 and the board used here is that snapshot — it is at the
+6-day mark, so run `steps/stage0_adp_snapshot.py` then `steps/backup_db.py` at the top of H.5.**
+
+---
+
+## 2026-07-30 (session 2) — ★ SESSION H.5 COMPLETE: the mock-drafter value seam (T27 · T28 · T29 · T30)
+
+**Status: BUILT, all five steps, run straight through** — the user waived the §3.7 sub-step gate for
+this session ("run through all of them without stopping, no stop gate") after answering four
+decisions up front. **612 tests (was 597), ruff clean. UNCOMMITTED** per the user's choice, on top of
+the existing uncommitted docs tree. DEV-only; the spent lockbox and the frozen value stack are
+untouched.
+
+**The four decisions, and what happened to each.**
+
+| decision | outcome |
+|---|---|
+| switch `value_hawk` to a starter-aware objective **with the full T24 treatment** | **not shipped** — the treatment ran and B5, the pre-registered bar that authorises the switch, failed first |
+| on a pre-registered bar failing: **record, open a ticket, keep going, chase the cause** | exercised twice (B2 → **T31**, B5 → T28 closes as labelling); both causes chased to a mechanism |
+| ship a T30 composition change **only if every bar holds or improves** | not shipped — two bars regressed slightly; the argument is written down either way |
+| leave the tree uncommitted | done |
+
+**Artifacts.** `analysis/session_h5_seam.json` (the six bars in one place) ·
+`analysis/mock_room_bars_{h5_baseline,h5_step1,t30_chalk_swap,t28_benchw0}.json` ·
+`analysis/t28_starter_value.{json,csv}` (2,000 team-rows). New steps: `steps/t28_starter_value.py`,
+`steps/session_h5_seam.py`. Write-ups: `findings.md` §"Session H.5", `docs/TECH-DEBT.md`
+T27/T28/T29/T30 ☑ + **T31**, `glossary.md` (five entries), `ROADMAP.md`, this entry.
+
+### Method notes worth keeping
+
+- **The baseline was banked before anything was touched.** `mock_room_bars.py --label h5_baseline
+  --shuffle-room` reproduced `mock_room_bars_verify_20260729.json` **bit-identically on every field**
+  before the first edit. Without that, "B3 passes" would only have meant "matches a number from
+  another session's code".
+- **B6 was diffed against a `git worktree` at the session-start commit**, not argued from the algebra.
+  Cheap and available because all `src/` was committed at HEAD (only docs were dirty) — worth
+  remembering as a technique: `git worktree add <tmp> HEAD` + symlink `data/` and `analysis/`.
+- **The Stage-0 FFC chore was deliberately deferred to the end of the session**, not run first as the
+  pointer suggested. Refreshing the 2026 board mid-session would have changed the live-board
+  measurements (B1/B2) and the bar sheet's 2026 readout, breaking comparability with the walkthrough
+  that opened these tickets. The board is banked at the close instead; nothing about the chore's
+  purpose (the boards are unrecoverable later) cares which end of a session it runs at.
+- **`bench_weight` and `--room` are both knobs that nest**: `bench_weight=1.0` re-runs the greedy
+  pick-for-pick and the default `--room` is `REALISTIC_ROOM`, so an unflagged run is a true baseline.
+  T24's lesson about moving two knobs at once is the reason each A/B moved exactly one.
+
+### Dead ends and near-misses
+
+- **The `SIGNAL_COLS` assertion the spec asked for was already false.** `mean` (and `vbd`,
+  `overall_rank`) were in `SIGNAL_COLS` before this session, weighted by nothing. Writing the test as
+  specified would have failed on arrival. Rather than edit the list (which is also the known-column
+  registry that turns a typo into a loud error) the invariant moved to the point of use:
+  `personalities.LEVEL_COLS` + a `__post_init__` guard.
+- **A `starter_value`-per-candidate pick path was never viable** — ~16M `lineup_points_matrix` calls
+  across a batch measurement. The closed-form `starter_marginal` exists for that reason and is
+  asserted equal to the solver on 120 random rosters, because a second definition of "starting" is
+  the T18 failure mode waiting to happen.
+- **The walkthrough's Spearman(starting-nine Phase-5 mean, title) = +0.915 did not replicate** (+0.792
+  over 200 drafts, *worse* than portfolio CE). One draw of ten teams. The spec said so in advance and
+  was right.
+
+### ★ Next
+
+**Session I = Phase 17 League-Format Fidelity (17.1–17.4)**, unchanged. Open against the mock drafter:
+**T31** only, and it is a modelling ticket that needs its own session and its own before/after against
+the 2025 dress-rehearsal calibration — it is *not* a Phase-14 blocker for the drafted range, but it is
+one for any surface that shows a distribution for a deep player. **T26** still waits on the next 11.1
+refit. The T30 composition swap is a live candidate for a deliberate overrule; the flag is recorded.
+
+## 2026-07-30 (session 3) — multi-seat human control scoped: 16.17 + 14.J (docs-only, no code)
+
+**Ask (user):** in the finished mock drafter, "users can control as many of the picks as they'd like —
+for example, they can pick personalities for 6/10 to automate most of it, but they control the other
+4/10 slots and thus create 4 teams themselves." Asked whether that already exists in the md files, and
+to add it to a session if not.
+
+**Answer: it did not exist anywhere — not in BUILD_PLAN, ROADMAP, PROJECT, PLAYER-VIEW §9, or the code.**
+Every doc and every call site assumes **exactly one** human seat. Checked, and the gap is structural, not
+an oversight of the UI spec:
+- `DraftState.your_team` is a single `int`; `run_to_completion` routes on `team == state.your_team`.
+- The `team → seat` map is positional arithmetic, `seat = team - 1 if team > state.your_team else team`,
+  written out **three times** — `personalities.make_room_pick_fn`, `mock.full_room_pick_fn` (identity
+  variant, zero humans), `steps/mock_draft.py::seat_of`/`seat_name`. It is correct only at k = 1.
+- `make_room(mix, n_opponents=n_teams - 1)` **raises** on any mix that is not exactly `n_teams - 1` long,
+  so even the room-composition call refuses a 6-personality room.
+- Consequence: the engine supports two room shapes — 1 human + 9 personalities (interactive) and 0 humans
+  + 10 (batch measurement). Every k in between is unreachable.
+
+**Scoped as 16.17 (engine) + 14.J (UI).** Written into `docs/BUILD_PLAN.md` §16.17 / §14.J, `ROADMAP.md`
+(phase line + a new **Session I.5**), `PROJECT.md` §5, `docs/PLAYER-VIEW.md` §9.1 (the `n_opponents`
+contract was wrong as written) + new §9.5, `glossary.md`, `CLAUDE.md`.
+
+**Design decisions taken while scoping:**
+1. **One `SeatMap`, and the three copies of the arithmetic are deleted rather than joined by a fourth.**
+   `mock.full_room_pick_fn`'s docstring already conceded the two builders "differ only in the `team ->
+   seat` mapping they were split over" — H.5 then found that split had silently made the *interactive*
+   room a different room (`value_hawk` running as `balanced`). A second divergence of the same shape is
+   what a `human_teams` parameter bolted onto both builders would buy.
+2. **`SeatMap` lives in `personalities.py`, not `simulator.py`** — 16.15's layering argument, unchanged:
+   the draft engine every earlier phase imports must not learn the personality library.
+3. **`your_team` stays and stays primary.** The frozen cost report, the 9.5 win-prob objective,
+   `bestball`, `mcts` and every backtest step read it; none of them should learn about a second human.
+   `human_teams` defaults to `{your_team}`, so nothing outside the mock drafter changes shape.
+4. **The done-bar is bit-identity, not a new metric.** k=1 reproduces the shipped interactive room
+   pick-for-pick, k=0 reproduces `full_room_pick_fn` pick-for-pick, and
+   `analysis/mock_room_bars_verify_20260729.json` reproduces to the digit. *A plumbing change that moves a
+   bar is not a plumbing change* (H.5). Nothing here refits β or touches a frozen contract.
+5. **Placed as Session I.5, after Phase 17** — 17.1 generalizes `RosterSlots`/`LeagueFormat` inside the
+   same `draft/simulator.py`, and 17.3's settings contract is the natural home for `human_teams`, so
+   landing the seat map second avoids a rebase. **Explicitly pullable into Session I as a warm-up** (the
+   T10 pattern) if the user wants to draft four teams sooner — it depends on nothing in Phase 17.
+
+**★ Two honesty rules attached to the feature, in the engine substep rather than the app** (16.12's
+precedent — the rule belongs where the number is made):
+- **k human teams in one draft are ONE observation.** Each human pick removes a player from the other
+  human seats' pools, so the teams are mechanically anti-correlated. The cost report is per-seat and
+  stays per-seat; no combined record, win-rate or average grade across seats one user drove. Drafting
+  four teams and liking all four is one draw, and it will *look* like four.
+- **The T15 realism bars describe a fully-simulated room.** Profile distance, dispersion, chalk share and
+  the elite-fall landing were all measured with ten modelled seats; a room where four are human is not
+  that room. Print the scope; do not re-measure the bars per-mock.
+
+**Not decided (left to the build):** whether `--seats` supersedes `--seat` or wraps it, and whether the
+per-seat pick-fn map is exposed on `simulate_draft` as well as `run_to_completion`.

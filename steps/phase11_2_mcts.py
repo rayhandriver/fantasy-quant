@@ -52,7 +52,11 @@ from fantasy_quant.draft.optimizer import (
     portfolio_value,
 )
 from fantasy_quant.draft.simulator import RosterSlots, simulate_draft
-from fantasy_quant.simulation.season import LeagueFormat, league_probabilities
+from fantasy_quant.simulation.season import (
+    LeagueFormat,
+    league_probabilities,
+    provenance_lines,
+)
 from fantasy_quant.simulation.weekly import build_weekly_model
 
 DEFAULT_SEASONS = (2020, 2021, 2022)      # DEV tail, ≥3 training seasons behind each
@@ -147,6 +151,7 @@ def main() -> None:
           f"CI[{ci_ce.lo:+.2f},{ci_ce.hi:+.2f}]  win-rate {np.mean(d_ce >= -1e-9):.0%}")
     print(f"  Δ realized pts   (OOS truth)   : mean {d_real.mean():+7.1f}  "
           f"CI[{ci_real.lo:+.1f},{ci_real.hi:+.1f}]  win-rate {np.mean(d_real > 0):.0%}")
+    print("\n".join(provenance_lines(args.sims if hasattr(args, "sims") else 0)))
     print(f"  Δ playoff prob   (north-star)  : mean {d_pp.mean():+.4f}  "
           f"win-rate {np.mean(d_pp > 0):.0%}")
     print(f"  Δ title prob                   : mean {d_tp.mean():+.4f}")

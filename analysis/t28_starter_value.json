@@ -1,0 +1,70 @@
+{
+  "generated": "2026-07-30T15:34:44.189098+00:00",
+  "config": {
+    "seeds": 40,
+    "seasons": [
+      2018,
+      2019,
+      2020,
+      2021,
+      2022
+    ],
+    "rounds": 15,
+    "sims": 300,
+    "room_seed": 17,
+    "room": [
+      "autopilot",
+      "balanced",
+      "balanced",
+      "balanced",
+      "balanced",
+      "value_hawk",
+      "safe_floor",
+      "reacher",
+      "upside_chaser",
+      "chalk"
+    ],
+    "shuffled_seating": true
+  },
+  "n_drafts": 200,
+  "n_team_seasons": 2000,
+  "spearman": {
+    "portfolio_value": {
+      "mean_spearman": 0.8201627173982539,
+      "sd": 0.1303493057657052
+    },
+    "team_value": {
+      "mean_spearman": 0.8382127332844064,
+      "sd": 0.10993461086586233
+    },
+    "starter_value": {
+      "mean_spearman": 0.7971157990901063,
+      "sd": 0.12533169446372608
+    },
+    "starter_mean": {
+      "mean_spearman": 0.7920357039952387,
+      "sd": 0.13401159033550022
+    }
+  },
+  "b5": {
+    "diff": -0.023046918308147372,
+    "lo": -0.04067168418392567,
+    "hi": -0.005499212044110234,
+    "share_positive": 0.00475,
+    "passed": false
+  },
+  "also": {
+    "starter_value_vs_team_value": {
+      "diff": -0.041096934194299946,
+      "lo": -0.05597605658209109,
+      "hi": -0.026633472127931542,
+      "share_positive": 0.0
+    },
+    "starter_mean_vs_starter_value": {
+      "diff": -0.005080095094867659,
+      "lo": -0.020529208981853297,
+      "hi": 0.00996134090775911,
+      "share_positive": 0.25875
+    }
+  }
+}

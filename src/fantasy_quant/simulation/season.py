@@ -49,6 +49,76 @@ class LeagueFormat:
         return self.playoff_weeks[-1]
 
 
+#: ★ **T29 — what a probability out of this engine is allowed to claim.**
+#:
+#: The lockbox (2023+2024, spent once) recorded **title Brier 0.088** with reliability on-diagonal —
+#: championship calibration and *ordering* generalize out of sample — but **playoff Brier 0.240**,
+#: recorded as *marginal*, and unconditional distribution coverage of **72–77 %** against an 80 %
+#: target. Underneath sits a documented residual sim level bias of **−113 points per team** that
+#: T4's κ deliberately cannot remove, because κ is mean-preserving.
+#:
+#: So the ordering is trustworthy and the *level* is not, which makes a bare "17.0 % to win the
+#: league" the single weakest number in the stack wearing the most authoritative costume. Every
+#: driver that prints one prints this beside it, and leads with
+#: :func:`fair_share` — a ratio to the uniform is immune to a level bias that moves all ten teams
+#: together.
+PROB_PROVENANCE: dict[str, object] = {
+    "reading": "RELATIVE, not absolute — compare teams to each other, not to a betting market.",
+    "lockbox_title_brier": 0.088,
+    "lockbox_playoff_brier": 0.240,
+    "playoff_brier_note": "recorded as MARGINAL at the lockbox; treat playoff odds as the softer "
+                          "of the two.",
+    "level_bias_pts_per_team": -113,
+    "coverage_uncond": "72-77% against an 80% target",
+}
+
+
+def fair_share(prob, n_teams: int) -> np.ndarray:
+    """A probability as a **multiple of its fair share** (T29 3b).
+
+    In a 10-team league every team's fair share of titles is 0.100, so a 0.170 title probability
+    reads **1.70x**. This is the number to lead with: the sim's documented level bias moves all ten
+    teams in the same direction, so it cancels in a ratio to the uniform while surviving in the
+    percentage. ``n_teams`` is the denominator for titles; pass ``n_teams / playoff_teams`` scaling
+    yourself for playoff odds (see :func:`playoff_fair_share`).
+    """
+    return np.asarray(prob, float) * int(n_teams)
+
+
+def playoff_fair_share(prob, fmt: LeagueFormat) -> np.ndarray:
+    """Playoff probability as a multiple of fair share — ``playoff_teams / n_teams`` of the field
+    makes the playoffs, so a 6-of-10 league's fair share is 0.60."""
+    return np.asarray(prob, float) * (fmt.n_teams / fmt.playoff_teams)
+
+
+def provenance_lines(n_sims: int, fmt: LeagueFormat | None = None) -> list[str]:
+    """The caption every printed probability carries (T29 3a). One place, so a driver cannot
+    accidentally print a number with a friendlier disclaimer than the evidence supports."""
+    p = PROB_PROVENANCE
+    lines = [f"  probabilities: {n_sims:,} simulated seasons · {p['reading']}",
+             f"  calibration:   lockbox title Brier {p['lockbox_title_brier']:.3f} "
+             f"(reliability on-diagonal) · playoff Brier {p['lockbox_playoff_brier']:.3f} "
+             f"(MARGINAL)",
+             f"  known bias:    sim level {p['level_bias_pts_per_team']:+d} pts/team; "
+             f"coverage {p['coverage_uncond']} — so lead with the fair-share MULTIPLE"]
+    if fmt is not None:
+        lines.append(f"  fair share:    title {1 / fmt.n_teams:.3f} · "
+                     f"playoff {fmt.playoff_teams / fmt.n_teams:.3f} (a 1.00x team is average)")
+    return lines
+
+
+def assert_probability_sums(playoff_prob, title_prob, fmt: LeagueFormat, tol: float = 1e-9) -> None:
+    """The cheap internal check that already works (T29 3c): titles sum to 1 and playoff berths to
+    ``playoff_teams``. Both are structural identities of the bracket, so a violation is an
+    engine bug — not a calibration question — and is worth asserting wherever probabilities are
+    produced for a human."""
+    t, p = float(np.sum(title_prob)), float(np.sum(playoff_prob))
+    if abs(t - 1.0) > tol:
+        raise AssertionError(f"title probabilities sum to {t:.6f}, not 1.0")
+    if abs(p - fmt.playoff_teams) > 1e-6:
+        raise AssertionError(f"playoff probabilities sum to {p:.6f}, not {fmt.playoff_teams}")
+
+
 def round_robin_schedule(n_teams: int, weeks: int, rng: np.random.Generator) -> np.ndarray:
     """``(weeks, n_teams)`` opponent indices: circle-method round robin (each team plays every
     other once per ``n_teams−1`` weeks) under a random seat permutation, cycled as needed."""

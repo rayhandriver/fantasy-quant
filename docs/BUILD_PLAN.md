@@ -797,6 +797,20 @@ win for novice and sharp alike. Done-bar for all: **renders correctly reading fr
   strengths/holes, biggest reach & best value (cost report).
 - **Out:** a post-draft report; **Done:** grade + report render for a completed mock. **Reuse:** `simulation/`
   (Phase 10), `valuation/cost_report.py`, 14.7 mock output.
+### 14.J — Multi-seat mock control → `app/` (Streamlit 14.1) *(added 2026-07-30; UI half of 16.17)*
+- **Do:** let the user hand **any subset of seats to themselves** — the seat-chip row from the 16.15 selector
+  gains a **YOU / personality** toggle per seat, so "6 personalities + I draft the other 4" is two clicks.
+  The draft view then routes the clock to whichever human seat is up (a "T3 is on the clock" banner + that
+  seat's board/roster/needs), and offers **autopick-this-seat** for a human seat the user wants to coast.
+  Post-draft, **14.I runs once per human seat** — never blended.
+- **Out:** the per-seat YOU toggle + clock routing + per-seat report tabs; **Done:** a k-of-n mock runs
+  end-to-end in the app for k = 0…n, the mix control resizes to `n_teams − k` automatically, and an invalid
+  seat set surfaces `make_room`'s raise as a **form error**, not a mid-draft crash.
+- **Honesty (carried from 16.17, must render, not just be true):** the per-seat reports are **one draft**, so
+  no combined record/win-rate across your own teams; and the room-realism copy from PLAYER-VIEW §9.3 is
+  labelled as describing a fully-simulated room.
+- **Reuse:** 16.17 `SeatMap` + `human_teams` (the engine call is identical for every k), `docs/PLAYER-VIEW.md`
+  §9 + §9.5, 14.I, 14.7.
 
 ---
 
@@ -1223,7 +1237,7 @@ the Sleeper corpus; 16.9 reproduces realized draft-slot dispersion without regre
 16.10 loads + applies a user-reviewed hype board; 16.11 computes live 2026 momentum (labeled forward-only);
 16.12 wires realism + opt-in advice + the app readout — all outside the frozen value stack.
 
-## Phase 16 — opponent-personality set (16.13–16.15) *(added 2026-07-23, user request — folded in)*
+## Phase 16 — opponent-personality set (16.13–16.15) + the seat map (16.17) *(added 2026-07-23, user request — folded in; 16.17 added 2026-07-30)*
 *Goal of the cluster: the behavioral opponent model (11.1) predicts the **average** manager; a realistic
 mock-draft room also wants **heterogeneous** opponents so practice drafts feel like a real league.
 `draft/personalities.py` (Phase 11.3) already ships six ADP/behavioral tilts (`balanced`, `chalk`, `zero_rb`,
@@ -1581,6 +1595,73 @@ median `pool_rank` **10.40 → 8.59** (corpus 7.62) and the moderate band **13.5
 face-validity + mechanics unit tests; 16.15 assigns a realistic room, couples the shock, and surfaces the
 selector — the whole cluster provably isolated from the frozen value stack.
 
+### 16.17 — The seat map: **multi-seat human control** → `draft/personalities.py`, `draft/simulator.py`, `steps/mock_draft.py` *(added 2026-07-30, user request)*
+
+**The ask (user, 2026-07-30):** in the finished mock drafter a user must be able to control **as many
+seats as they like** — e.g. assign personalities to 6 of 10 and draft the other 4 teams themselves.
+16.15 shipped the *opponent* half of this (any seat can be any personality); the *human* half does not
+exist at any k except 1.
+
+**★ Why this is an engine substep and not a UI checkbox.** "Which seat is the human" is stored as a
+**single int** — `DraftState.your_team` — and the `team → seat` mapping is positional arithmetic
+(`seat = team - 1 if team > state.your_team else team`) written out **three times**:
+`personalities.make_room_pick_fn`, `mock.full_room_pick_fn` (the identity variant, for the
+zero-human room), and `steps/mock_draft.py::seat_of`/`seat_name`. That arithmetic is only correct for
+**exactly one** human seat. So the engine today supports exactly two room shapes — 1 human + 9
+personalities, or 0 humans + 10 — and every k in between is unreachable. `mock.full_room_pick_fn`'s
+own docstring already says the two builders "differ only in the `team -> seat` mapping they were split
+over"; this substep is that observation carried to its conclusion.
+
+- **Do (a) — one `SeatMap`, `n_teams` entries, each `HUMAN` or a `Personality`.** Lives in
+  `draft/personalities.py`, **not** `simulator.py`, for 16.15's layering reason (composing a room needs
+  `Personality`; the draft engine every earlier phase imports must not learn the personality library).
+  `SeatMap.of(n_teams, human_teams=(2, 6), mix=(...))` builds it and is the **only** place the mapping
+  is computed; `make_room_pick_fn` and `mock.full_room_pick_fn` become thin wrappers over it and the
+  three copies of the arithmetic are **deleted, not left beside it** (the T18/F.5 rule).
+  `make_room`'s length check is restated against **`n_teams − len(human_teams)`**, not `n_teams − 1`.
+- **Do (b) — `DraftState.human_teams: frozenset[int]`,** defaulting to `frozenset({your_team})`.
+  `run_to_completion` routes `team in state.human_teams` to a human pick-fn instead of
+  `team == state.your_team`. **`your_team` stays, and stays the *primary* seat** — the frozen cost
+  report (`cost_report.py`), the 9.5 win-prob objective, `formats/bestball.py`, `draft/mcts.py` and
+  every backtest step read it, and none of them should learn about a second human. `DraftState.clone`
+  (the 9.5 rollout path) carries the set. The pick log keeps `is_you` for the primary seat and gains a
+  `seat_role` column (`human` / personality name) so a log with four human seats is still readable.
+- **Do (c) — per-seat pick functions.** `run_to_completion(state, your_pick_fn, …)` generalizes to a
+  `dict[int, pick_fn]` with the scalar kept as sugar. This is what lets four human seats be driven
+  *differently* — and it is the same seam that lets one of your own seats be handed to the Phase-9
+  greedy (`--auto 3`), which is exactly what 9.5's rollout already does to your seat internally.
+- **Do (d) — the interactive CLI** (`steps/mock_draft.py`): `--seats 3,7` (extends `--seat`);
+  `advance()` stops at **any** human seat and names it; `pick` applies to the seat on the clock with an
+  explicit `--team` override; `board`/`roster`/`why` default to that seat; `finish` autopicks every
+  remaining human seat; saved `meta` carries `human_teams` + the resolved seat map; `summary` prints
+  **one block per human seat** and the room table labels each seat `YOU (T3)` or its personality.
+- **Out:** `SeatMap` + wrappers in `draft/personalities.py`; `human_teams` + routing in
+  `draft/simulator.py`; `mock.full_room_pick_fn` reduced to a `SeatMap` call; multi-seat CLI in
+  `steps/mock_draft.py`; `steps/phase16_17_seat_map.py` done-bar; tests in `tests/test_personalities.py`
+  + `tests/test_mock.py` + `tests/test_draft.py`.
+
+**★ Done-when — the hard bar is bit-identity, because this changes no model.** Over the T15 seeds:
+`human_teams={your_team}` reproduces the shipped interactive room **pick-for-pick**, `human_teams=∅`
+reproduces `full_room_pick_fn` **pick-for-pick**, and `analysis/mock_room_bars_verify_20260729.json`
+reproduces **to the digit**. *A plumbing change that moves a bar is not a plumbing change* (H.5's rule).
+Then the new capability: a 10-team draft with k ∈ {0,1,4,9,10} human seats runs to completion, every
+seat legal (T23's `mandatory_needs` bar), and the room mix length is validated **at construction**.
+
+**★ Two honesty rules this substep owns** (they belong here, not in the app, for the same reason 16.12's
+readout does):
+1. **k human teams in one draft are ONE draft, not k observations.** Every human pick removes a player
+   from the other human seats' pools, so their outcomes are mechanically anti-correlated — the cost
+   report is per-seat and stays per-seat, and `summary` must never average your teams or report a
+   combined win rate. Four teams going 4-for-4 on a strategy is one draw.
+2. **The T15 realism bars describe a fully-simulated room.** Profile distance, dispersion, chalk share
+   and the elite-fall landing were all measured with ten *modelled* seats; a room where four seats are
+   human is not the room those numbers are about. Print the bars' scope, don't re-measure them per-mock.
+
+**Reuse:** 16.15 `make_room`/`normalized_hype_gains`/`make_room_pick_fn`, `mock.full_room_pick_fn`,
+`simulator.run_to_completion`/`DraftState.clone`, T23's legality gate, `mock_room_bars.py` as the
+regression harness. **Size:** ~250–400L / 6–9 files / ~10–14 tests. **Touches no fitted parameter, no
+frozen contract, no lockbox.** UI half → **14.J**.
+
 ### 0.11 — ECR + Underdog ADP ingest → `data/sources/`, `steps/phase0_11_ecr_underdog.py` *(added 2026-07-23)*
 - **Do:** ingest two new market sources. **(a) FantasyPros ECR** — the expert-consensus *rank* pages (distinct
   from the projection pages `consensus.py` already scrapes), giving the *true* expert-rank-minus-ADP signal 16.8
@@ -1632,6 +1713,140 @@ selector — the whole cluster provably isolated from the frozen value stack.
     extra positional bump adds bias without information. Confirming it means refitting 11.1 (cf. T15).*
   - **Kept, not default** — the detector is a genuinely useful **live-draft alert** for 14.4 ("RBs are
     flying"), a UX claim its face-validity evidence supports independently of forecasting.
+
+## ★★ Session H.5 — THE MOCK-DRAFTER VALUE SEAM (T27 · T28 · T29 · T30) — ☑ COMPLETE 2026-07-30
+
+> **RESULT (2026-07-30, session 2).** All five steps built; §3.7 gate waived by the user for this
+> session. **612 tests** (was 597), ruff clean, uncommitted. **The two hard bars held and both
+> falsifiable bars failed** — B3 (room bar sheet) and B6 (frozen cost report, diffed against a `git
+> worktree` at the session-start commit) are bit-identical; **B2 failed at RB → new 🟠 T31**, and
+> **B5 failed → T28 closes as a labelling fix**, both as the plan below explicitly allowed.
+> **T27 ☑** shipped, and wiring it in uncovered that the *interactive* room had been running
+> `value_hawk` as `balanced` (no `risk` parameter on `make_room_pick_fn`, so
+> `assert_room_objectives` never ran on the human path). **T28 ☑** `starter_value` ships beside
+> `team_value`; the objective does **not** move — the slot-blind sum predicts title probability
+> *better* (+0.8382 vs +0.7971) because the sim draws injuries and bench value alone scores **+0.711**,
+> and the T24 treatment on `--bench-weight 0.0` costs profile distance and dispersion for nothing.
+> **T29 ☑** provenance + fair-share multiples. **T30 ☑** argued and deliberately **not** changed under
+> the pre-agreed rule. Also logged on the way out: **T32** (the enriched-board cache key omits the
+> board vintage, so the Stage-0 chore does not invalidate it — 25 fresh players invisible).
+> Done-bar: `steps/session_h5_seam.py` → `analysis/session_h5_seam.json`. Full write-up:
+> `findings.md` §"Session H.5"; decisions + dead ends: `PLAN.md` §2026-07-30 (session 2).
+>
+> _(the plan as written, kept verbatim — the pre-registered bars are the point:)_
+
+*(written 2026-07-30, user decision: this runs **NEXT**, before Session I / Phase 17. The app stays
+strictly last; the E→L ordering below is otherwise unchanged.)*
+
+**Why this session exists.** The room simulation is finished and re-verified — T15 steps 0–4, 16.14R's
+seven steps, T23/T25/T24, then the 2026-07-29 audit, which reproduced all five bars to the digit. The
+first **fully-simulated ten-personality walkthrough** (2026-07-30, `findings.md` §"The all-personality
+walkthrough") then stress-tested the drafter as a *product* rather than as a simulator, and the
+simulation passed everything it was asked:
+
+- **positional mix matches reality** — 333 realized 10-team/15-round complete human drafts give medians
+  WR 53 · RB 45 · QB 16 · TE 15 · K 9 · DEF 10, against the sim's 55 · 42 · 17 · 16 · 10 · 10;
+- **the mechanisms are legible by eye** — `reacher` spent *exactly* its budget (3 of 3 swings, 5 of 5
+  leans) with a round-1–3 max reach of **−0.1** against its 8-pick clamp;
+- **elite fall lands on the shipped distribution** — 3 of 12 consensus top-12 past pick 10 (**25.0 %**
+  vs the committed 25.2 %), worst fall Jonathan Taylor ADP 7.7 → pick 15;
+- **the behavioural fit is not stale** — 70,614 choice groups over **9 seasons**, corpus bulk 2021–25.
+
+**What failed is the seam between a correct engine and a human reading it**, and all four tickets live
+there. **None of them refits β. None of them touches the frozen value stack.** Every step below
+carries the same hard bar: `analysis/mock_room_bars_verify_20260729.json` reproduces **bit-identically**.
+*A display change that moves a bar is not a display change.*
+
+**Stop and report after each step** (CLAUDE.md rule 7 — not waived this session; each step is
+independently shippable and step 2 contains a decision that is the user's).
+
+### Step 1 — T27: make the two value scales visible and auditable → `draft/simulator.py`, `draft/mock.py`, `steps/mock_draft.py`, `data/validate.py`
+The board prints `proj_points`; every seat optimizes `base_value` (= `ce_vbd` = Phase-5 CE − positional
+replacement CE). **Drake Maye proj 316.5 → `base_value` +68.5; Jayden Daniels proj 313.4 → −101.6.**
+- **1a.** Add `proj_points`, `mean`, `base_value` to `simulator.PASSTHROUGH_COLS` and attach
+  `proj_points` inside `mock.room_board`, so the post-`_prepare_board` re-attach in
+  `mock_draft.cmd_start` can be deleted rather than duplicated. Additive and safe: `_prepare_board`
+  copies only columns the caller supplied. ⚠ **A test must assert none of the three ever enters
+  `SIGNAL_COLS`** — they are *level* columns and a `signal_weights` entry on one recreates the 16.14
+  level-vs-shape defect exactly.
+- **1b.** CLI board columns become `PROJ · MEAN · BV · AVAIL` (`games_played_mean`) — the fourth is the
+  one that explains the first three. Unseen players print `-`, never 0 (the T22 rule).
+- **1c.** **`mock_draft.py why "<player>"`** — the arithmetic chain, printed:
+  `proj_points → Phase-5 mean → games_played_mean → sd → λ·Var → ce_value → ce_replacement(pos) →
+  base_value`. This is the real product deliverable: an auditable path from the number a human trusts
+  to the number the engine uses.
+- **1d.** `validate.value_scale_gate` → `data_health_report`: report per-position median haircut
+  (`1 − mean/proj_points`; expect ≈ 0.28 QB / 0.33 RB / 0.28 WR / 0.30 TE) and assert **B2**.
+- **Bars.** **B1** every drafted-range (top-180 ADP) skill row prints all four columns · **B2**
+  `spearman(haircut, games_played_mean) ≤ −0.50` within each of QB/RB/WR/TE on the live 2026 board ·
+  **B3** the room bar sheet is bit-identical.
+- ⚠ **B2 is a real risk and must not be softened.** If the level cut is *not* explained by projected
+  availability, that is a modelling finding — record it, stop, open a ticket. Do not add a caption to
+  a number you cannot explain.
+
+### Step 2 — T28: stop calling a slot-blind sum "team strength" → `draft/optimizer.py`, `steps/mock_draft.py`
+`team_value` sums `base_value` over all 15 rows; there is no slot logic in the value path. The
+walkthrough's QB2 line nets **−122** of a 1,938 room total, and **T4 is 9th of 10 on VBD, 3rd on
+starting-lineup projection**. `value_hawk` optimizes this quantity, so it steers picks too.
+- **2a.** `optimizer.starter_value(roster, value_index, slots)` — a **second, labelled** metric, never
+  an edit to `team_value`. The cost report's numbers are frozen output and the lockbox is spent.
+  **Reuse `simulation.season.lineup_points_matrix` / `rosters_weekly`** on the shared T6 draws; do not
+  write a third lineup solver.
+- **2b.** Every surface that prints a team-level number prints **both**, labelled *total roster
+  capital* vs *startable value* — mock summary, walkthrough drivers, cost report (additively).
+- **Bars.** **B4** `starter_value == team_value` exactly when the roster *is* the starting nine ·
+  **B5** `spearman(starter_value, title) > spearman(portfolio_value, title)` over ≥40 seeded drafts ×
+  ≥4 DEV seasons, **seating reshuffled per seed** · **B6** the frozen cost report and the room bar
+  sheet are both bit-identical.
+- ⚠ **B5's direction is pre-registered. If it fails, T28 closes as a labelling fix only** — the ten-team
+  walkthrough is one draw and is not licence to ship a new headline metric.
+- **☐ THE DECISION FOR THE USER (do not take it unilaterally):** whether `value_hawk` keeps
+  `objective="portfolio_ce"`. Changing it refits nothing but **does** change the room's picks, so it
+  moves T15 bars 1/2/5 and the faithfulness population — that needs the full T24 treatment
+  (seating-marginalized before/after on the shipped measurement path) and is its **own** sub-step, not
+  a line in this one. **Recommendation: leave it, ship 2a/2b, revisit with a measured A/B.**
+
+### Step 3 — T29: no bare absolute probabilities → `simulation/season.py`, every driver that prints one
+Title Brier **0.088** with on-diagonal reliability (ordering + championship calibration hold OOS);
+playoff Brier **0.240** *marginal*; unconditional coverage **72–77 %**; residual sim level bias
+**−113 pts/team** that κ cannot remove because κ is mean-preserving.
+- **3a.** `simulation.season.PROB_PROVENANCE` — `n_sims`, the lockbox Brier pair, and the
+  "relative, not absolute" statement. Printed wherever a probability is printed.
+- **3b.** Lead with **fair-share multiple** (`title_prob · n_teams`; a 10-team league's fair share is
+  0.100, so 0.170 reads **1.70×**). A ratio to the uniform is immune to the level bias.
+- **3c.** Keep the cheap internal check that already works: title probabilities sum to **1.000**,
+  playoff to `n_playoff` (**6.000** measured).
+- **Done:** no driver prints a bare probability; the mock summary leads with the multiple.
+
+### Step 4 — T30: argue the autopilot seat's share, or change it → `draft/personalities.py` (composition only)
+`autopilot` is 1 of 10 seats against **0.2 %** of realized seats, and it is the seat that manufactures
+the spill (walkthrough: mean `pool_rank` **1.77**, median **1.0**, harvest **+11.7 picks** — the
+largest in the room). 16.14R halved it from two on this exact argument and stopped; bar 3 passes at
+**+0.06 sd**.
+- **4a.** Seating-marginalized A/B: swap the `autopilot` seat for a **near**-autopilot (`chalk`-shaped:
+  `zero_out`, cooled softmax, narrow width — it already sits between them at `pool_rank` 3.38 / median
+  2.0, harvest +7.3).
+- **4b.** Whichever way it lands, **write the paragraph.** A null here is a decision.
+- **Bars.** All five T15 bars + landing + legality unmoved within noise; `worst_excess_sds` unchanged
+  or lower; `median_pool_rank` no further from the corpus's 7.62 than the shipped **8.04**.
+- ⚠ **Do not delete the personality** — it is the deterministic control that reproduces
+  `pick_by_adp(noise=0)` exactly and several tests rely on it. This is a **composition** ticket.
+
+### Step 5 — close out: re-measure everything, one artifact
+- `steps/mock_room_bars.py --shuffle-room` and `steps/session_h5_seam.py` (new done-bar) →
+  `analysis/session_h5_seam.json`, plus a refreshed full-room pick CSV for the user's eye.
+- Confirm the three bit-identical bars (B3/B6 + the frozen cost report), the 11.2 availability Brier
+  (**+0.0890**, unchanged — `draft/availability.py` imports nothing from `personalities`), and the test
+  count. Then `findings.md` / `glossary.md` / `PLAN.md` / `ROADMAP.md` / this file / `CLAUDE.md`.
+
+**Sizing.** Four contained tickets, mostly display/labelling plus one new metric and one A/B —
+**~350–600 lines, 8–12 files, ~10–15 new tests.** Well under the 1.5–2.2k full-phase band, which is
+the point: it is the last thing standing between a correct simulator and a board a human can read.
+
+**★ What this session is NOT.** It is not a re-opening of the room simulation (finished, re-verified,
+and its residuals are documented and accepted), not a refit (T26 stays deferred to the next 11.1
+refit), and not app work (Phase 14 stays strictly last — every fix here lands in the engine and the
+CLI, and Phase 14's board view inherits it for free).
 
 # Phase 17 — League-Format Fidelity & Custom Settings *(new 2026-07-23; correct advice for ANY league)*
 *Goal: the engine hard-codes vanilla 10-team full-PPR 1-QB (`RosterSlots.qb=1`, `flex=1`, `season.py` raises

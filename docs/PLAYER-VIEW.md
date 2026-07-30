@@ -149,6 +149,7 @@ Reached by clicking a player anywhere. Contents, top to bottom:
 | #6 Situation-change | ⏳ **needs Phase 16** (value-side 16.1–16.6) — the one *bar* gating dependency |
 | Reach-risk / drift readout | ✅ **engine-side built** 2026-07-26 (16.12 `draft/drift.py::availability_readout`) — UI still owed by Phase 14 |
 | Mock-room opponent selector | ✅ **engine-side built** 2026-07-27 (16.15 `draft/personalities.py::make_room`) — UI owed by Phase 14; spec in §9 |
+| Multi-seat human control (drive k of n seats) | ☐ **not built either side** — engine = 16.17 (`SeatMap` + `DraftState.human_teams`; the one-human `team → seat` arithmetic is the blocker), UI = 14.J; spec in §9.5 |
 
 **The new-signal dependencies both point at Phase 16.** Building Phase 16 next double-serves: the value-side
 (16.1/16.2 mined signals + 16.4 fingerprints + 16.6 tab) lights up the Beta-Lab tab *and* supplies the deep
@@ -185,14 +186,17 @@ because its honesty rules are the same family as §6.*
 The UI needs **two inputs and one call**. Everything else is defaulted engine-side:
 
 ```python
-room = make_room(mix, n_opponents=n_teams - 1, seed=..., fav_teams=...)   # draft/personalities.py
+n_opponents = n_teams - len(human_teams)                                 # = n_teams - 1 by default
+room = make_room(mix, n_opponents=n_opponents, seed=..., fav_teams=...)   # draft/personalities.py
 opponent_pick_fn = make_room_pick_fn(model, room, hype=...)               # -> simulate_draft
 ```
 
-- **`mix`** — a tuple of personality names, exactly `n_teams - 1` long. Omit it for `DEFAULT_ROOM`.
-  `make_room` raises on a wrong-length mix and on an unknown name (a typo must not degrade to
-  `balanced`), so the UI can surface both as form errors rather than validating them itself.
-- **`n_opponents`** — derived from the league size the user already set. Never a separate control.
+- **`mix`** — a tuple of personality names, exactly as long as there are **non-human** seats. Omit it
+  for `DEFAULT_ROOM`. `make_room` raises on a wrong-length mix and on an unknown name (a typo must not
+  degrade to `balanced`), so the UI can surface both as form errors rather than validating them itself.
+- **`n_opponents`** — derived, never a separate control: `n_teams − (number of seats the user is
+  driving)`. It is `n_teams - 1` only in the default one-human case; see §9.5, and 16.17 for the
+  engine contract that makes any k legal.
 - **`seed`** — shuffles seats so a personality is not confounded with a draft slot. `None` keeps the
   listed order, which is what a "name my room" power-user flow wants.
 - **`fav_teams`** — attaches to the `homer` seat only; expose it as a team picker that appears when a
@@ -244,6 +248,42 @@ in a typical room; it stays one override away.
 Same split as §7: **click-to-select seat chips** in the Streamlit MVP (14.1) — a `st.selectbox` per
 seat over the personality list, plus a "shuffle seats" toggle bound to `seed` — and a proper
 drag-to-assign room editor in the Next.js frontend (14.3). The engine call is identical either way.
+
+### 9.5 Driving more than one seat (16.17 / 14.J)
+
+*Added 2026-07-30 on user request: "users can control as many of the picks as they'd like — pick
+personalities for 6/10 to automate most of it, and control the other 4/10 slots themselves."*
+
+The selector above assigns a personality to every seat **that isn't yours**, and §9.1 assumed exactly
+one of those. The generalization is one extra state per chip:
+
+**Each of the `n_teams` seats is either `YOU` or a personality.** The chip row gains a YOU toggle; the
+mix control resizes itself to `n_teams − k` where `k` is the number of YOU seats. `k = 1` is the
+default and looks exactly like today; `k = 0` is a fully-simulated room to watch; `k = 4` is four teams
+drafted by hand against six bots; `k = n` is a manual draft board with no engine opponents at all.
+
+```python
+seats = SeatMap.of(n_teams, human_teams={2, 6}, mix=(...))    # draft/personalities.py (16.17)
+opponent_pick_fn = seats.pick_fn(model, hype=..., risk=...)   # -> simulate_draft
+```
+
+The engine call is the same for every `k`, which is the point of 16.17 — the UI never computes a
+seat index itself.
+
+**What the draft view must do differently at `k > 1`:**
+1. **Say whose turn it is.** The clock banner names the seat (`T3 — YOU`), and the board, roster and
+   starter-needs panels follow that seat rather than a fixed "your team".
+2. **Offer autopick per human seat.** A user driving four teams will want to coast one of them; that
+   is the same `--auto` seam the engine exposes, not a UI hack.
+3. **Report each of your teams separately.** The 14.I draft grade and the cost report are per-seat.
+
+**Two honesty rules, both inherited from 16.17 and both required to render:**
+- **Your k teams are one draft, not k trials.** Each pick you make removes a player from your other
+  seats' pools, so the teams are mechanically anti-correlated. Never show a combined record,
+  win-rate or average grade across seats a single user drove — it reads as replication and is not.
+- **The room-realism claims in §9.3 describe a fully-simulated room.** Profile distance, dispersion
+  and chalk share were measured with ten *modelled* seats. A room where four seats are human is not
+  the room those numbers describe; label the copy accordingly rather than restating the bars.
 
 ---
 

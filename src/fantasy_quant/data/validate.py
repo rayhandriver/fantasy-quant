@@ -35,6 +35,15 @@ FP_BOARD_ROW_BAND = (400, 700)  # a full FantasyPros consensus board sits here (
 GSIS_MATCH_FLOOR = 0.95         # consensus-board identity match floor (2026 ran ~0.99)
 MANAGER_REACH_MAX_ROUNDS = 2.0  # T18: a profile reach past this is a join defect, not a manager
 
+# --- T27 value-scale guard ------------------------------------------------------------------
+# The board prints `proj_points`; every seat optimizes `base_value`. The intended bridge between
+# them is the Phase-5 level correction `mean = proj x projected availability`, so the **haircut**
+# `1 - mean/proj_points` must be explained by `games_played_mean`. If it is not, the level cut is
+# something we cannot name, and a display caption over an unexplained number is worse than none.
+VALUE_HAIRCUT_RHO_MAX = -0.50   # spearman(haircut, games_played_mean), per position
+VALUE_SCALE_ADP_MAX = 180.0     # the drafted range: 15 rounds x 10 teams + a little air
+VALUE_SCALE_MIN_N = 8           # below this a per-position rho is noise, not evidence
+
 
 # --------------------------------------------------------------------------------------------
 # small query helpers
@@ -124,6 +133,42 @@ def manager_reach_gate(name: str, mean_abs_reach_rounds, n_managers: int,
     return _gate(name, ok, n_managers=int(n_managers), max_rounds=max_rounds,
                  mean_abs_reach_rounds=(None if mean_abs_reach_rounds is None
                                         else round(float(mean_abs_reach_rounds), 3)))
+
+
+def _round_stats(s: dict) -> dict:
+    """Round a per-position stat block for the report, keeping ``n`` an integer."""
+    return {k: (None if v is None else int(v) if k == "n" else round(float(v), 4))
+            for k, v in s.items()}
+
+
+def value_scale_gate(name: str, per_pos: dict, *, max_rho: float = VALUE_HAIRCUT_RHO_MAX,
+                     min_n: int = VALUE_SCALE_MIN_N) -> dict:
+    """Gate (T27): the level cut from ``proj_points`` to the Phase-5 ``mean`` is **explained by
+    projected availability**, within each of QB/RB/WR/TE.
+
+    ``per_pos`` maps position -> ``{"n", "rho", "median_haircut"}`` over the drafted range (see
+    :func:`value_scale_frame`); positions with fewer than ``min_n`` rows are reported and skipped.
+
+    ★ **This gate is allowed to fail, and saying so is the point.** The pre-registered bar
+    (``rho <= -0.50``) was written before the number was known, precisely so that a level cut we
+    *cannot* attribute to availability shows up as a modelling finding rather than being captioned
+    over. Do not soften ``max_rho`` to make a board green — the failure is the deliverable.
+
+    ⚠ **Population: the drafted range** (``adp <= VALUE_SCALE_ADP_MAX``), not the whole board. The
+    haircut identity assumes consensus and Phase-5 are pricing the same player; below the drafted
+    range they are not, because consensus prices a backup's **role** while our availability channel
+    prices his **injury risk**, so the two disagree in a direction the identity cannot express.
+    Measured on the 2026 board: 22.8 % of *all* rows carry a **negative** haircut (Phase-5 ``mean``
+    above the consensus projection — structurally impossible for a level correction), against 2.7 %
+    inside the drafted range and 0.0 % on 2022/2024. The whole-board numbers are still reported
+    under ``full_board`` so the exclusion is visible rather than quiet.
+    """
+    scored = {p: s for p, s in per_pos.items() if int(s.get("n", 0)) >= min_n}
+    failed = sorted(p for p, s in scored.items()
+                    if s.get("rho") is None or float(s["rho"]) > max_rho)
+    return _gate(name, not failed and bool(scored), max_rho=max_rho, min_n=min_n,
+                 failed_positions=failed, skipped=sorted(set(per_pos) - set(scored)),
+                 by_position={p: _round_stats(s) for p, s in per_pos.items()})
 
 
 def sleeper_human_slot_gate(name: str, n_mocks: int, n_with_human_slot: int) -> dict:
@@ -377,10 +422,84 @@ def _survivorship(con, season: int = 2022) -> dict:
     }
 
 
-def data_health_report(con, write: bool = True) -> dict:
+def value_scale_frame(con, season: int, *, n_teams: int = 10) -> pd.DataFrame:
+    """``player_key · pos · adp · proj_points · mean · games_played_mean · vbd · haircut`` for one
+    season's board — the frame :func:`value_scale_gate` is computed from (T27 1d).
+
+    The imports are deferred: this reaches up into the ``draft``/``projections`` layers, and a
+    module-level import would make the data layer depend on the modelling layers it validates.
+    """
+    from fantasy_quant.draft import mock, optimizer
+    from fantasy_quant.draft.config import DraftConfig
+    from fantasy_quant.draft.simulator import board_player_key
+    from fantasy_quant.projections import distribution
+
+    board, _ = mock.room_board(con, int(season), teams=int(n_teams),
+                               cache_dir=PROJECT_ROOT / "analysis" / "cache")
+    if board.empty:
+        return pd.DataFrame()
+    vi = optimizer.assemble_value(con, int(season), DraftConfig())
+    dist = distribution.cached_distribution(con, int(season))[0]
+    vi = vi.merge(dist[["player_key", "games_played_mean"]].drop_duplicates("player_key"),
+                  on="player_key", how="left")
+    b = (pd.DataFrame({"player_key": board_player_key(board).astype(str),
+                       "adp": pd.to_numeric(board["adp"], errors="coerce")})
+         .dropna(subset=["adp"]).drop_duplicates("player_key"))
+    # LEFT from the value index, so players with a projection but **no board row** are kept with a
+    # null ADP. That is the population the drafted-range restriction excludes, and it has to be in
+    # the frame for the exclusion to be measurable rather than assumed. (An FFC 10-team board stops
+    # at ~180 picks, so an inner join makes `full_board` a synonym for `drafted_range` and the
+    # contrast the gate's docstring claims silently disappears.)
+    d = vi.assign(player_key=vi["player_key"].astype(str)).merge(b, on="player_key", how="left")
+    d = d.dropna(subset=["proj_points", "mean"])
+    d = d[d["proj_points"] > 0]
+    d["haircut"] = 1.0 - d["mean"] / d["proj_points"]
+    return d
+
+
+def value_scale_stats(df: pd.DataFrame, *, adp_max: float = VALUE_SCALE_ADP_MAX) -> dict:
+    """Per-position ``{n, rho, median_haircut, neg_haircut_share}`` over the drafted range, plus a
+    ``full_board`` block carrying the same numbers unrestricted (pure; see :func:`value_scale_gate`
+    for why the two populations differ and why both are reported)."""
+    from scipy.stats import spearmanr
+
+    def block(sub: pd.DataFrame) -> dict:
+        out = {}
+        for pos in ("QB", "RB", "WR", "TE"):
+            s = sub[(sub["pos"] == pos)].dropna(subset=["games_played_mean", "haircut"])
+            rho = (float(spearmanr(s["haircut"], s["games_played_mean"]).statistic)
+                   if len(s) >= 3 and s["haircut"].nunique() > 1 else None)
+            out[pos] = {"n": int(len(s)), "rho": rho,
+                        "median_haircut": float(s["haircut"].median()) if len(s) else None,
+                        "neg_haircut_share": float((s["haircut"] < 0).mean()) if len(s) else None}
+        return out
+
+    if df.empty:
+        return {"drafted_range": {}, "full_board": {}}
+    inside = df[df["adp"].notna() & (df["adp"] <= adp_max)]
+    return {"drafted_range": block(inside), "full_board": block(df)}
+
+
+def _value_scale_gates(con, season: int | None = None) -> list[dict]:
+    """The T27 gate for the live board (skipped, passing, when the stack cannot be assembled —
+    a partial store is not a value-scale failure)."""
+    season = int(season or max(FANTASY_SEASONS))
+    try:
+        stats = value_scale_stats(value_scale_frame(con, season))
+    except Exception as exc:                                    # noqa: BLE001 — report, never raise
+        return [_gate(f"value_scale_{season}", True, applicable=False, reason=str(exc)[:200])]
+    if not stats["drafted_range"]:
+        return [_gate(f"value_scale_{season}", True, applicable=False, reason="no board")]
+    g = value_scale_gate(f"value_scale_{season}", stats["drafted_range"])
+    g["full_board"] = {p: _round_stats(s) for p, s in stats["full_board"].items()}
+    return [g]
+
+
+def data_health_report(con, write: bool = True, value_scale_season: int | None = None) -> dict:
     """Assemble the store-wide health report; write ``analysis/results/data_health.json``."""
     gates = (_range_gates(con) + _dup_gates(con) + _join_rate_gates(con)
-             + _scrape_gates(con) + _sleeper_gates(con))
+             + _scrape_gates(con) + _sleeper_gates(con)
+             + _value_scale_gates(con, value_scale_season))
     tables = {t: db.row_count(con, t) for t in db.list_tables(con)}
     report = {
         "generated_at": dt.datetime.now(dt.UTC).isoformat(),

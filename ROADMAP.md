@@ -107,7 +107,14 @@ headline personalities — **Autopilot** (deterministic ADP autopick), **Balance
 quantiles · ☑ **16.15** mock-room composition + hype-shock coupling + app selector (all ☑ 2026-07-27; see
 the Session-H entry below for the two nulls and the ceiling-scope fix). Decisions (user 2026-07-23): BPA =
 **ADP autopilot only** · enrich with **real frozen fields** · validation = **face-validity + unit-tested
-mechanics** (no Brier gate).
+mechanics** (no Brier gate). · ☐ **16.17** **the seat map — multi-seat human control** (added 2026-07-30,
+user request): the user must be able to run **as many seats as they like** (e.g. 6 personalities + 4 teams
+drafted by hand). 16.15 shipped the opponent half; the human half is stuck at k=1 because "which seat is
+the human" is a single int (`DraftState.your_team`) and the `team → seat` map is positional arithmetic
+written out three times. Fix = one `SeatMap` (each of `n_teams` entries is `HUMAN` or a `Personality`) +
+`DraftState.human_teams` + per-seat pick functions + a multi-seat CLI. **Hard bar = bit-identity**
+(k=1 reproduces the shipped interactive room, k=0 reproduces `full_room_pick_fn`, the 07-29 bar sheet
+reproduces to the digit). Touches no fitted parameter and no frozen contract. UI half = **14.J**.
 **Live reactivity + data (added 2026-07-23):** ☐ **0.11** ECR + Underdog ADP ingest (true expert-rank + sharp
 best-ball board; feeds 16.8; `data/sources/`) · ☐ **16.16** live-draft run-detection (mid-draft positional-run
 reactive availability; face-validity replay; `draft/opponent_model.py` → surfaced in 14.4). Scoping questions
@@ -242,7 +249,7 @@ how 11+7 combined a spine-completion phase with a 4-substep exploratory phase:
 
 **(2026-07-26: Session F.6 ☑ — the re-derivation sweep. 11.1/11.2/S6 re-fit on the *eligible*
 redraft corpus after the behavioral path was found to carry F.5's contamination bug; 16.8 re-asked
-and the null HELD (headline +9.25 %, ablation +0.01 %). **Session G ☑ COMPLETE 2026-07-26** — 16.9 + 16.11 + 16.10 + 16.12 + 16.16; the availability track ends with **four** honest nulls, and everything it ships is opt-in and default OFF. **Session H ☑ COMPLETE 2026-07-27** — 16.13 + 16.14 + 16.15 + T17; the personality set ships as a *realism* feature (face validity + mechanics, no Brier gate) and the hype coupling is Phase 16's **fifth** null. ← NOW: Session I (Phase 17 formats).)**
+and the null HELD (headline +9.25 %, ablation +0.01 %). **Session G ☑ COMPLETE 2026-07-26** — 16.9 + 16.11 + 16.10 + 16.12 + 16.16; the availability track ends with **four** honest nulls, and everything it ships is opt-in and default OFF. **Session H ☑ COMPLETE 2026-07-27** — 16.13 + 16.14 + 16.15 + T17; the personality set ships as a *realism* feature (face validity + mechanics, no Brier gate) and the hype coupling is Phase 16's **fifth** null. **Session H.5 ☑ COMPLETE 2026-07-30** — the mock-drafter value seam (T27–T30): T27/T29 shipped, T28 closed as a labelling fix when its pre-registered bar failed, T30 argued and deliberately not changed; B2's failure opened **T31**. **← NOW: Session I (Phase 17 formats).**)**
 
 **★ SESSION PLAN (re-ordered 2026-07-23 — the full remaining backlog, dependency-optimal, app strictly last,
 same ~1.5–2.2k-line one-concept discipline).** Covers everything not done: Phase 16 (3 tracks) + 0.11 + 16.16,
@@ -415,14 +422,70 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   QB sign reverses). **New T26** (🟡): `pos_share_*` is pooled across formats while the fit is
   redraft-only and `mgr_lean` reads it — measured (0.83 pp) and deferred to the next 11.1 refit,
   because fixing it refits β and moves every T15/T24 width bar.
+- **★ Session H.5 — the mock-drafter value seam (T27 · T28 · T29 · T30). ☑ COMPLETE 2026-07-30.**
+  **Result: the two hard bars held and both falsifiable bars failed.** T27 ☑ shipped (the value chain is on
+  the board; `why <player>` prints it; and wiring it in found that the *interactive* room had been running
+  `value_hawk` as `balanced` all along, because `make_room_pick_fn` had no `risk` parameter and so
+  `assert_room_objectives` never ran on the human path). **T28 ☑ closed as a LABELLING FIX** — `starter_value`
+  ships beside `team_value` and every surface prints both, but **B5 failed** (−0.0230, CI[−0.0407,−0.0055]
+  over 200 seated-reshuffled drafts): the slot-blind sum predicts title probability *better*, because the sim
+  draws injuries and bench value alone scores **+0.711**, so `value_hawk` keeps `objective=portfolio_ce`.
+  **T29 ☑** provenance + fair-share multiples everywhere. **T30 ☑ argued and NOT changed** — the `chalk` swap
+  closes 79 % of the chalk-share gap but regresses two reach bars, and the rule was fixed first.
+  **B2 failed at RB → new 🟠 T31** (on a live board the level correction inverts for players consensus
+  projects as backups: 22.8 % of the 2026 value index has `mean` **above** `proj_points`). 612 tests
+  (was 597), ruff clean, bar sheet + frozen cost report both bit-identical.
+  _(original scoping, for the record:)_ The room *simulation* is finished and re-verified; what is not finished is the
+  **seam between a correct engine and a human reading it**, and the first fully-simulated ten-personality
+  walkthrough found all of it there. **The simulation passed everything it was asked** — positional mix matches
+  333 realized 10-team/15-round human drafts at the median (WR 53/55 · RB 45/42 · QB 16/17 · TE 15/16 · K 9/10 ·
+  DEF 10/10), `reacher` spent *exactly* its budget (3 of 3 swings, 5 of 5 leans, round-1–3 max reach **−0.1**),
+  elite fall landed on the shipped distribution (**25.0 %** past pick 10 vs a committed 25.2 %), and the fit is
+  9 seasons / 70,614 groups, not a stale 2017–20 extrapolation. The four tickets:
+  - **T27 🟠 — the board a human reads is not the board the seats optimize.** The CLI prints
+    `proj_points`; utility and `value_hawk`'s objective run on `base_value` = Phase-5 CE − replacement CE.
+    **Drake Maye proj 316.5 → +68.5, Jayden Daniels proj 313.4 → −101.6**: 3 points apart on screen, 170 apart
+    in the number that decides every pick. The mean haircut (0.28 QB/0.33 RB/0.28 WR/0.30 TE) is the *intended*
+    level correction; the **dispersion** (QB 0.15–0.56) is what makes the board unreadable. Fix = show both
+    scales + `games_played_mean`, a **`why <player>`** command printing the whole arithmetic chain, and a
+    health gate asserting the haircut is *explained* by projected availability. **T22's lesson one level up —
+    a column's consumers are not only the models that weight it, and this is the first number a human reads.**
+  - **T28 🟠 — `team_value`/`portfolio_value` are slot-blind.** No slot logic exists in the value path, so a
+    bench QB2 is priced at full weight: the walkthrough's QB2 line nets **−122** of a 1,938 room total and
+    **T4 is 9th of 10 on VBD, 3rd on starting-lineup projection**. Spearman vs title: portfolio CE **+0.758**,
+    starting-nine Phase-5 mean **+0.915**. `value_hawk` *optimizes* it, so it steers picks too. Fix = a
+    **labelled second metric** beside the frozen one, never an edit; the value-hawk-objective question is
+    explicitly the user's and gets its own sub-step.
+  - **T29 🟡 — bare absolute probabilities** from a sim with a documented **−113 pts/team** level bias and a
+    *marginal* playoff Brier 0.240. Fix = provenance + lead with **fair-share multiple**.
+  - **T30 🟡 — `autopilot` is 1 of 10 seats against 0.2 % of real seats** (50×) and is the seat that
+    manufactures the spill. 16.14R halved it on this argument and stopped. Fix = a cheap
+    seating-marginalized A/B against a near-autopilot seat, then **write the paragraph either way**.
+  - **None of it refits β; none of it touches the frozen value stack.** Every step's hard bar is that
+    `analysis/mock_room_bars_verify_20260729.json` reproduces **bit-identically** — *a display change that
+    moves a bar is not a display change.* **~350–600L / 8–12 files / ~10–15 tests.** Steps + pre-registered
+    bars B1–B6: `docs/BUILD_PLAN.md` §"Session H.5". **§3.7 gates NOT waived** — step 2 contains a user decision.
 - **Session I — Phase 17 League-Format Fidelity 17.1–17.4.** 17.1 roster+lineup generalization (superflex/
   multi-flex; the `season.py` solver + format-aware VBD replacement — the meaty bit), 17.2 custom scoring, 17.3
   generic settings contract (engine/parser; form UI → 14), 17.4 keeper. **~full-phase (1,000–1,800L).**
+- **★ Session I.5 — the seat map: multi-seat human control (16.17).** *(inserted 2026-07-30, user request —
+  "users can control as many of the picks as they'd like: pick personalities for 6/10 and draft the other 4
+  teams themselves".)* One `SeatMap` replacing the three copies of the one-human `team → seat` arithmetic,
+  `DraftState.human_teams`, per-seat pick functions, and a `--seats 3,7` CLI. **~250–400L / 6–9 files /
+  ~10–14 tests** — short, and it is pure plumbing: **the hard done-bar is bit-identity** (k=1 reproduces the
+  shipped interactive room pick-for-pick, k=0 reproduces `full_room_pick_fn`, and
+  `analysis/mock_room_bars_verify_20260729.json` reproduces to the digit). **Placed after Session I on
+  purpose:** 17.1 generalizes `RosterSlots`/`LeagueFormat` inside the same `draft/simulator.py` the seat map
+  edits, and 17.3's league-settings contract is the natural home for `human_teams` — landing the seat map
+  second avoids rebasing it onto a moved file. **It can be pulled forward into Session I as a warm-up** (the
+  T10 pattern) if the user wants to draft multiple teams sooner; nothing in it depends on Phase 17. Spec:
+  `docs/BUILD_PLAN.md` §16.17. UI half ships in Session K as **14.J**.
 - **Session J — (optional) Phase 15.1 dynasty.** Multi-year asset pricing; deferred/optional per user scope —
   a short session or skipped. Keeper (17.4) already covers the nearer-term need.
 - **Session K — Phase 14.1 Streamlit MVP + all surfacing (do NOT bundle — the largest phase).** The app shell +
-  the 17.3 custom-settings form + PLAYER-VIEW cards + surfacing E/F/G/I + the 16.6 Beta Lab tab + the 16.12
-  availability/reach-risk readout + the 16.15 personality selector. **Multiple-session-sized on its own.**
+  the 17.3 custom-settings form + PLAYER-VIEW cards + surfacing E/F/G/I/**J** + the 16.6 Beta Lab tab + the
+  16.12 availability/reach-risk readout + the 16.15 personality selector **with 14.J's per-seat YOU toggle on
+  it**. **Multiple-session-sized on its own.**
 - **Session L+ — Phase 14 go-live tail (14.2–14.7).** Personalization tiers, explain, FastAPI backend, Next.js
   frontend (PLAYER-VIEW deep pages + 14.H playoff-SOS lens), Sleeper live-draft sync (+ 16.16 run-detection
   alert, item D), widget, mock-draft sim. **Expect multiple sessions**, each ≥ a single past phase.

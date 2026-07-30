@@ -27,6 +27,7 @@ At a glance:
 | **T14** | ✅ | 11.2 does not scale. **Diagnosis corrected 2026-07-26**: the bootstrap was 0.79 s (0.008 %); the cost was pandas in `simulate_survival` (99.3 %). Fixed both → **396 s → 12.7 s, bit-identical** | when 11.2 is next re-run at scale | ☑ 2026-07-26 |
 | **T12** | 🟠 | `data_health_report` is **permanently red** — the ADP uniqueness gate's key omits `snapshot_date`, so the Stage-0 2026 series trips it (1,028 groups, 0 genuine dups) | soon — a red-by-default gate protects nothing | ☑ 2026-07-25 |
 | **T15** | ✅ | simulated draft-slot dispersion is **the wrong shape in board depth** — **escalated + measured 2026-07-27** against 1,420 realized human drafts: round-1 mean reach **11.4 picks vs a realized 3.3** (p90 27.7 vs 6.6) and round-15 **15.0 vs 27.1**, i.e. ~3.5× too wide early and ~1.8× too narrow late. Elite players fall past the corpus's 95th percentile every draft, and the `autopilot` seats harvest the spill (they won this mock). Cause is arithmetic: ADP is worth **0.034 utility/pick** vs `is_TE` +0.57 and `need` +0.47, softmaxed over a fixed top-40 | **the user-facing blocker on mock realism**; an 11.1 respecification (measured exponent ~0.5–0.6, *not* log) | ☑ 2026-07-27 (**steps 0–4 all done**; row corrected 2026-07-29 — the section below was already ☑ while this line still read open. Residuals, both named and neither reopening it: the **late-round** half of bar 1 is structurally out of reach for a one-board simulator, and the seat-faithfulness population was closed the rest of the way by T24/T25) |
+| **T16** | ✅ | **a curated hype row cannot express in a standard 15-round league** — `top_k` admits only the top-40 available by ADP, so a board-rank-171 claim enters the candidate set in the last handful of a 150-pick draft: a **+12-pick** claim on Daniel Jones gave a **bit-identical** 30-draft result. **Closed 2026-07-28 by T15's widening band, exactly as option (2) predicted** (re-run at 15 rounds: sign agreement **1.00** vs a 0.75 bar, elasticity 0.57 picks/claimed pick, **14 of 20 claims resolvable**). Honest residue: 6 deep claims still cannot express | dissolved by T15 (16.14R step 7) | ☑ 2026-07-28 *(index row added 2026-07-30 — the section was ☑ while the table had no row at all; cf. T15's stale row)* |
 | **T17** | ✅ | **the live season has no per-player availability at all** — `availability_projection(con, 2026)` returned **0 rows**, collapsing the live Phase-5 `mean` to **37 % of the consensus projection**. Fixed by rolling the covariates forward (`projected_availability_frame`) + a **level-band guard** that now runs on the live season, where it breaks | before Phase 14 shows a user any distribution number for the season they are drafting | ☑ 2026-07-27 |
 | **T18** | ✅ | `sleeper_manager_profiles.avg_reach` was measured against a **pooled** ADP board, so it reported a **+91.9-pick** mean QB reach — a board mismatch, not a behaviour. **Fixed 2026-07-29:** the column is **gone** (not renamed), replaced by `avg_reach_rounds` from `sleeper.redraft_reach` → `drift_panel.manager_panel` — every pick scored against **its own draft's board** over the redraft-eligible corpus. Mean \|reach\| **35.8 picks → 0.776 rounds**; scored properly, QBs drift **later** (−0.58 rounds), the opposite sign to the artifact. Range gate `validate.manager_reach_gate` (±2 rounds) wired into the health report | before `avg_reach` is consumed by a model or shown to a user | ☑ 2026-07-29 |
 | **T19** | ✅ | **the `floor` signal is inverted at board depth** — `q10` is **censored at exactly 0 for 42.9 %** of offensive rows, so residualizing it on `mean` gives the biggest "floor" to players just above the censoring point: `corr(floor, adp)` = **+0.179 RB / +0.124 WR**. The safest RBs on the live board are Jonah Coleman (ADP 171) and Jaydon Blue (ADP 140). Also **`boom_prob`/`bust_prob` are exactly 0 for 64.7 % / 56.0 %** of rows, so `safe_floor`'s `bust_prob: −0.35` is inert over half the board | **before any personality consumes it** — 16.14R Step 2 | ☑ 2026-07-28 |
@@ -37,6 +38,12 @@ At a glance:
 | **T24** | ✅ | **consensus elites fell past pick 4 26.6 % of the time against a realized 13.1 %** (seating-marginalized), and the aggregate \|drift\| bar could not see it. The ticket's prescription — a per-seat `adp_stdev`-scaled **private board** — was built and **REJECTED: it is monotonically harmful** (18.8 / 19.7 / 26.6 % at κ = 0/1/2), because at the top of the board `adp_stdev` is the same size as the gaps it perturbs. **The fix was the width *level*, split from the width *shape*:** `WidthCurve(base 1.0·γ0.8) → (base 0.6·γ1.0)` → **15.3 %**, every T15 bar still passing. Round 1 was too wide, not the wrong shape | **the user-facing blocker on mock realism** — 2×5 mock objection 3, T15's carry-forward | ☑ 2026-07-28 |
 | **T25** | ✅ | **the corpus reach ceiling was applied to 2 of 10 seat types**, so `CORPUS_REACH_P95` bound `reacher`/`value_hawk` — the seats that had been *given* discipline — and nothing bound `balanced`, which is 4 of 10 seats in `REALISTIC_ROOM`. The asymmetry was the bug, not the budget | with T24 (it is T24's cheap half) — 2×5 mock objection 2 | ☑ 2026-07-28 |
 | **T26** | 🟡 | **`pos_share_*` is pooled across formats while the fit that consumes it is redraft-only** — T18's sibling, found in the same audit and *not* fixed with it. The profiles are built over every complete human draft (dynasty, 2QB, IDP included); `mgr_lean` — a live Tier-B feature of the shipped β — is `share − mean(share)` over that table. Measured: mean \|Δ QB share\| **0.83 pp** across the 2,816 managers in both scopes (>5 pp for 3.3 %), and the pooled *baseline* is the bigger distortion (QB 13.65 % pooled vs 11.22 % redraft), though a constant per-position offset is largely absorbed by the position dummies | with the next 11.1 refit — **not before**: changing it refits β and moves every T15/T24 width bar, which is a whole session's calibration for a sub-1 pp feature shift | ☐ 2026-07-29 |
+| **T32** | 🟡 | **the enriched-board cache key omits the board vintage, so the mandated Stage-0 chore does not invalidate it.** `mock.room_board` caches on `(season, scoring, teams, include_dst, ENRICH_VERSION)` — nothing about *which snapshot* `resolve_board` answered with. Measured live on 2026-07-30, immediately after running the chore: `resolve_board` returns **244** rows and `room_board` serves the cached **223**, with **25 players on the fresh board invisible** to every caller and 4 stale ones still present. `ENRICH_VERSION` exists to force exactly this kind of rebuild and covers the enrichment but not its input. It bites hardest in-season, when the chore runs weekly and the boards diverge fastest | fix with the next batch measurement (the key change invalidates all 9 season caches → ~6 min/season cold). **Deliberately NOT fixed on 2026-07-30**: Session H.5's central claim is bit-identity against caches built before it, and invalidating them at the close would have made that claim unverifiable | ☐ 2026-07-30 |
+| **T31** | 🟠 | **on a LIVE board the Phase-5 level correction inverts for players consensus projects as backups — 22.8 % of the 2026 value index carries a *negative* haircut** (`mean` **above** `proj_points`, structurally impossible for a level correction) against **0.4 % on 2024**, and the per-position `spearman(haircut, games_played_mean)` flips sign (QB **+0.474** with 59 % negative, RB +0.225, TE +0.237). Inside the drafted range it is milder but still fails T27's pre-registered bar at **RB −0.288** (vs −0.50; QB −0.902, WR −0.538, TE −0.838 all pass, and every position passes on 2022/2024). **Cause: consensus prices ROLE, our level correction prices AVAILABILITY.** For a projected starter the two coincide; for a backup consensus says 22 points because he sits behind someone while the Phase-5 level — with no prior-season basis to shrink toward on a live season — hands him a starter-ish per-game rate times ~11 expected games (worst case `proj 22.3 → mean 102.9, sd 78.2`; sd ≈ mean is the fingerprint of a distribution built on nothing). Conditioning on `vbd ≥ 0` repairs it outright (RB −0.288 → **−0.599**, WR → −0.912), which is the confirmation. Rookies ruled out (non-rookie RB ρ −0.32) | **before Phase 14 shows a distribution number for a deep player**, and before anything downstream trusts `mean` off the drafted range. T27's `validate.value_scale_gate` ships **red** rather than softened | ☐ 2026-07-30 |
+| **T27** | ✅ | **the board a human reads and the board every seat optimizes are different quantities, and they disagree by up to 179 points.** `steps/mock_draft.py` prints `PROJ` = `proj_points` (consensus, re-scored full-PPR); utility and the value hawk's objective run on `base_value` = `ce_vbd` = Phase-5 CE − positional replacement. On the live 2026 board **Drake Maye (proj 316.5) carries `base_value` +68.5 while Jayden Daniels (proj 313.4) carries −101.6** — 3 points apart on screen, 170 apart in the number that drives every pick. The mean haircut (0.28 QB / 0.33 RB / 0.28 WR / 0.30 TE) is the *intended* level correction; the **dispersion** (QB range 0.15–0.56, sd 0.12) is what makes the board unreadable. Nothing on screen explains which players get cut | **the user-facing blocker on the mock board** — Session H.5 step 1; display-layer only, the frozen stack does not move | ☑ 2026-07-30 — **shipped**; the value chain is on the board and `why` prints it. Also caught a divergence nobody was looking for: the *interactive* room ran `value_hawk` as `balanced`. Its gate **B2 FAILED at RB on the live board** and that failure is real → **T31** |
+| **T28** | ✅ | **`team_value`/`portfolio_value` are slot-blind, so a bench QB2 is priced as if he starts.** `team_value` sums `base_value` over all 15 roster rows and nothing in `draft/optimizer.py` references starters. On the 2026 walkthrough the second QB alone moves a team's headline value by **−101.6** (T1 Caleb Williams), **−92.1** (T4 Kyler Murray) and **+51.0** (T3 Hurts), against a room total of 1,938 — the QB2 line nets **−122**. Consequence, measured over the same ten teams: Spearman(portfolio CE, title) **+0.758** and Spearman(VBD, title) **+0.685** against Spearman(starting-nine Phase-5 mean, title) **+0.915**; T4 is **9th of 10 on VBD and 3rd on starting-lineup projection**. It is not only a reporting artifact — `value_hawk` *maximizes* this quantity, and took Jaxson Dart (`base_value` +33.1) as a second QB at 9.09 | Session H.5 step 2 — **a decision, not a patch**: the frozen cost-report headline must not move, so a starter-aware metric ships **beside** it | ☑ 2026-07-30 — **closed as a LABELLING FIX, as pre-registered.** `starter_value` ships beside `team_value` and every surface prints both. **B5 failed** (−0.0230, CI[−0.0407,−0.0055] over 200 drafts): the slot-blind sum predicts title probability *better*, because bench value alone scores +0.711 in a sim that draws injuries. `value_hawk` keeps `objective=portfolio_ce` |
+| **T29** | ✅ | **absolute probabilities are printed from a sim whose level bias is documented as −113 pts/team.** Any driver that calls `league_probabilities` prints `playoff_prob`/`title_prob` as bare percentages. The lockbox recorded title Brier **0.088** with reliability on-diagonal (ordering and championship calibration hold) but playoff Brier **0.240** as *marginal*, unconditional coverage **72–77 %**. So the weakest number in the stack is the one a user reads as fact | Session H.5 step 3 — labelling + a fair-share ratio | ☑ 2026-07-30 — `PROB_PROVENANCE` + `fair_share`/`playoff_fair_share` + `assert_probability_sums`; every driver leads with the multiple (0.170 → **1.70x**) |
+| **T30** | ✅ | **`autopilot` is 1 of 10 seats against 0.2 % of realized seats — 50×**, and it is the seat that manufactures the spill the rest of the room harvests (walkthrough: mean `pool_rank` **1.77**, median **1.0**, harvest **+11.7 picks**, the largest in the room). 16.14R halved it from two seats *on this exact argument* and stopped there; bar 3 passes at +0.06 sd, so this is a **composition question that has never been argued explicitly**, not a known defect | Session H.5 step 4 — a cheap seating-marginalized A/B against a near-autopilot seat; **accept or change the mix, but state the argument** | ☑ 2026-07-30 — **argued and NOT changed**, under the pre-agreed rule (ship only if every bar holds or improves). The `chalk` swap closes **79 %** of the chalk-share gap (11.0 → 2.4 % vs a realized 0.2 %) and 63 % of the moderate-share gap, and costs **+0.0021** profile distance and **+0.97 pp** elite-past-10. Every gate passes both ways; bar 3 harvest is **0.00 in both**, so the spill the seat manufactures is not being harvested |
 
 ---
 
@@ -542,8 +549,17 @@ you show it still catches the thing it was built to catch.
    Phase 12 news/NLP + Phase 15.2/15.3/15.4**).
 9. ~~**At Phase 15.4 (auction support):** T9.~~ ☑ **done (2026-07-13, Session C)** — `draft/auction.py`
    built; `faab_bid` consumes `endgame_cap`; auction done-bar 6/6 DEV.
-10. **Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params) — **the only
-    open pre-lockbox tech-debt item.** (Optional MCTS/RL research gate sits just before it.)
+10. ~~**Right before the lockbox:** T5 (pre-register the frozen stack, incl. the T3/T4 params).~~
+    ☑ done (2026-07-19, Session D) — the lockbox is **spent**; the modelling stack is frozen.
+11. **NEXT (2026-07-30, user decision): Session H.5 — the mock-drafter value seam.**
+    **T27** (the board a human reads ≠ the board the seats optimize) → **T28** (slot-blind
+    `team_value`) → **T29** (bare absolute probabilities) → **T30** (the autopilot seat's share).
+    Runs **before Session I / Phase 17**; the app stays strictly last. All four are display,
+    labelling or composition — **none refits β and none touches the frozen value stack**, and every
+    one carries a bit-identical re-measure of `analysis/mock_room_bars_verify_20260729.json` as a
+    hard bar. Execution order + bars: `docs/BUILD_PLAN.md` §"Session H.5".
+12. **Still deferred, with the reason on file:** T26 (`pos_share_*`) — with the next 11.1 refit,
+    never on its own; T11(a) Underdog ADP (no keyless endpoint).
 
 
 ## ✅ T13 — the Phase-5 cloud is not reproducible across processes — **DONE 2026-07-29**
@@ -1599,3 +1615,401 @@ repo's most-repeated lesson, and it applies to the controls' own controls. Spend
 re-verification on a sub-1 pp feature shift is the wrong trade until something else forces the refit.
 
 **Who is affected.** The mock room's opponents, faintly and unmeasurably. Nothing user-facing.
+
+---
+
+## ✅ T27 — the board a human reads is not the board the seats optimize — **DONE 2026-07-30**
+*(opened 2026-07-30, from the first fully-simulated ten-personality walkthrough —
+`findings.md` §"The all-personality walkthrough (2026-07-30)")*
+
+**Symptom.** `steps/mock_draft.py` prints a `PROJ` column. Every seat's utility, and `value_hawk`'s
+whole objective, run on `base_value`. These are different quantities built from different means, and
+on the live 2026 board the gap is large, non-monotone, and **unexplained by anything on screen**:
+
+| QB | `proj_points` | Phase-5 `mean` | haircut | `base_value` |
+|---|---|---|---|---|
+| Drake Maye | 316.5 | 261.3 | **0.17** | **+68.5** |
+| Jayden Daniels | 313.4 | 137.1 | **0.56** | **−101.6** |
+| Trevor Lawrence | 290.8 | 246.0 | 0.15 | +53.4 |
+| Joe Burrow | 299.3 | 162.5 | 0.46 | −55.6 |
+| Kyler Murray | 261.9 | 127.3 | 0.51 | −92.1 |
+
+Maye and Daniels are **3 points apart on the screen and 170 apart in the number that decides every
+pick**. A user cannot audit that, and the natural reading is that the engine is broken.
+
+**Root cause — not a bug, a missing bridge.** `assemble_value` merges `value_board` (`proj_points`,
+`vbd`) with `utility.risk_adjusted_board` (`mean`, `sd`, `ce_value`, `ce_vbd`) and sets
+`base_value = ce_vbd`. So the priced quantity is `ce_value − ce_replacement(pos)` where
+`ce_value = Phase-5 mean − λ·Var`, λ = 0.01. Two things enter that the consensus projection knows
+nothing about: the **T3 availability channel** inside the Phase-5 `mean` (`avail_p`, `rho`,
+`crater_avail`, the cohort prior) and a **variance charge** that for a QB reaches ~119 points
+(sd up to 109.2, median 75.2). `ce_replacement(QB)` is 119.4 on this board. The CLI shows the input
+that is *not* used and hides both channels that move it.
+
+**The level itself is correct and intended — the dispersion is the problem.** Mean haircut by
+position: **QB 0.28 · RB 0.33 · WR 0.28 · TE 0.30**, which is Phase 4.4's measured level optimism
+(bias 0.575) and the lockbox's 0.62, working as designed. What is new is the *spread* —
+QB 0.15–0.56 (sd 0.12), RB 0.16–0.55, WR 0.15–0.58, TE 0.17–0.46.
+
+**A second, mechanical half.** `proj_points` is **not** in `simulator.PASSTHROUGH_COLS`, so
+`_prepare_board` drops it and `st.roster()`/`draftable_pool` never carry it. `steps/mock_draft.py`
+re-attaches it by hand after `_prepare_board` (`cmd_start`, with a comment saying it is display-only).
+That is correct and also a trap: **any new driver silently shows an empty column** — verified by
+writing one on 2026-07-30 and getting `-` for all 150 picks. `optimizer.attach_value` adds only
+`base_value` and `value`.
+
+**Fix — display layer only. The frozen value stack is untouched; nothing here refits or re-scores.**
+1. Put `proj_points`, `mean` and `base_value` in `PASSTHROUGH_COLS` and attach `proj_points` inside
+   `mock.room_board`, so the re-attach cannot be forgotten. Additive: `_prepare_board` copies only
+   columns the caller supplied, so an ADP-only board is byte-for-byte unchanged.
+   ⚠ **Assert no personality can weight them.** They are *level* columns; a `signal_weights` entry on
+   one would recreate the 16.14 level-vs-shape defect exactly. `SIGNAL_COLS` stays as it is and a test
+   fails if any of the three is added to it.
+2. The CLI board shows `PROJ` · `MEAN` · `BV` · `AVAIL` (`games_played_mean`) — the fourth column is
+   the one that *explains* the first three.
+3. **`mock_draft.py why "<player>"`** — print the whole chain for one player:
+   `proj_points → Phase-5 mean → games_played_mean → sd → ce_value → ce_replacement(pos) → base_value`,
+   with the arithmetic shown. This is the actual product fix: an auditable path from the number a
+   human trusts to the number the engine uses.
+4. `validate.value_scale_gate` in `data_health_report`: per-position median haircut reported, and the
+   **auditability bar** below asserted.
+
+**Pre-registered bars (state before running — the T5 habit).**
+- **B1** every row the CLI prints for a drafted-range player (top-180 by ADP, skill positions) carries
+  all four columns non-null, except where the player is genuinely absent from the Phase-5 cloud — and
+  those print `-`, never a fabricated 0 (the T22 rule).
+- **B2** `spearman(haircut, games_played_mean) ≤ −0.50` within **each** of QB/RB/WR/TE on the live
+  2026 board. ⚠ **If B2 fails, that is a modelling finding, not a display bug** — it would mean the
+  level cut is being driven by something other than projected availability. Record it, stop, and open
+  a ticket; do **not** paper over it with a caption.
+- **B3** `steps/mock_room_bars.py` reproduces `analysis/mock_room_bars_verify_20260729.json`
+  **bit-identically** (distance 0.0894, round-1 2.64, elite past-10 25.24 %, dispersion −11.4 %,
+  past-pick-4 15.3 %). A display change that moves a bar is not a display change.
+
+**Done-when.** B1–B3 pass; `why` reproduces the chain to the digit; the gate is in the health report.
+
+**Who is affected.** Every human who reads the mock board — i.e. the entire purpose of the drafter,
+and Phase 14's board view inherits it verbatim.
+
+**★ Why this is the T22 lesson again, one level up.** T22 was audited by grepping `signal_weights`,
+which is why it sat on file as "latent" while the drafter was printing it. *A column's consumers are
+not only the models that weight it.* `proj_points` is the same shape of defect and a much bigger
+number: it is the **first** thing a human reads.
+
+---
+
+### ✅ RESOLVED 2026-07-30 (Session H.5 step 1) — shipped, and the gate found something
+
+**What shipped.** `proj_points`/`base_value` added to `simulator.PASSTHROUGH_COLS` (`mean` was
+already there) + `simulator.VALUE_SCALE_COLS`; `mock.attach_proj_points` called from `room_board`
+**outside** the parquet-cache boundary — deliberately *not* folded into `enrichment.VALUE_COLS`,
+because that would bump `ENRICH_VERSION` and force a 9-season cold rebuild for a column no model
+consumes; the hand-rolled re-attach in `cmd_start` is deleted; the CLI board leads with
+`PROJ · MEAN · AVAIL · BV`; `mock_draft.py why "<player>"` prints the chain, every line an identity
+(`lambda*Var` as `mean − ce_value`, replacement as `ce_value − ce_vbd`) so it cannot drift from the
+frozen stack it describes.
+
+**The `SIGNAL_COLS` assertion, strengthened.** The spec asked for a test that `proj_points`/`mean`/
+`base_value` never enter `SIGNAL_COLS` — but **`mean`, `vbd` and `overall_rank` were already in it**,
+latent, weighted by nothing. Rather than a test that was already failing or a list edit that would
+make the registry lie, the invariant moved to the point of use: new `personalities.LEVEL_COLS` +
+a `Personality.__post_init__` guard, so naming a level column in `signal_weights` now raises at
+construction. No shipped seat weights one, so it is a guardrail over a live invariant.
+
+**★ The divergence this uncovered — the interactive room was not the shipped room.** Wiring the risk
+model into the CLI revealed that `steps/mock_draft.py` built its nine opponents through
+`personalities.make_room_pick_fn`, which had **no `risk` parameter**, while the batch harness used
+`mock.full_room_pick_fn`, which does. `value_hawk` therefore ran the Phase-9 greedy in every batch
+measurement in the repo and the plain behavioural softmax in every *human* mock — `balanced` wearing
+its name, which is precisely what `assert_room_objectives` exists to prevent. The guard could not see
+it because it only ran in the other builder. `assert_room_objectives` moved down into
+`personalities.py` (re-exported from `mock`, no caller changed) and `make_room_pick_fn` gained the
+same routing. *A guard that does not run on the path a human uses is not a guard* — T22's lesson
+about display consumers, restated about assertions.
+
+**Bars.** B1 **PASS** (183/184 drafted-range skill rows carry all four; Brandon Aiyuk has no upstream
+consensus projection and prints `-`, the T22 rule). B3 **PASS** — bit-identical on every field
+including the 2026 readout. **B2 FAILED at RB** and was neither softened nor papered over: the gate
+ships red and the finding is **T31**.
+
+---
+
+## ✅ T28 — `team_value`/`portfolio_value` are slot-blind — **CLOSED AS A LABELLING FIX 2026-07-30**
+*(opened 2026-07-30, same walkthrough)*
+
+**Symptom.** `optimizer.team_value` is `Σ base_value` over every roster row;
+`portfolio_value` adds the covariance cross-term and nothing else. `grep -n "starters" ` over
+`draft/optimizer.py` returns **nothing** — there is no slot logic in the value path at all. A 1-QB
+roster's second quarterback is therefore priced at full weight, in both directions:
+
+| team | seat | QB2 | `base_value` contributed |
+|---|---|---|---|
+| T1 | balanced | Caleb Williams | **−101.6** |
+| T4 | reacher | Kyler Murray | **−92.1** |
+| T5 | upside_chaser | Patrick Mahomes | −55.6 |
+| T3 | balanced | Jalen Hurts *(taken second)* | **+51.0** |
+| T9 | value_hawk | Jaxson Dart | +33.1 |
+
+Room total `base_value` 1,938; the QB2 line alone nets **−122**. Those players sit on a bench and
+cost their teams nothing real.
+
+**Consequence, measured over the ten walkthrough teams.** Spearman against the Phase-10 title
+probability: `portfolio_ce` **+0.758** · `team_value` **+0.685** · starting-nine consensus projection
+**+0.455** · **starting-nine Phase-5 mean +0.915**. The clean case is **T4 reacher — 9th of 10 on
+VBD, 3rd of 10 on starting-lineup projection, 9th on title**; and T1, 7th on VBD and 2nd on title.
+
+**Why it matters twice.**
+1. `portfolio_value` is the **cost report's headline** ("portfolio CE + risk profile"), so a
+   preference that buys depth is priced as though the depth plays.
+2. `value_hawk` **optimizes it** (`objective="portfolio_ce"`), so this steers picks, not just
+   reporting. Dart at 9.09 is the visible instance.
+
+**Fix — a decision, and the frozen output must not move.** Two candidates:
+- **(i) a starter-aware metric.** The machinery exists: `simulation.season.lineup_points_matrix` /
+  `rosters_weekly` already compute exactly "what this roster can actually field", on the same shared
+  draws (T6). Ship `optimizer.starter_value(roster, value_index, slots)` as a **second, labelled**
+  metric — never an edit to `team_value`, because the cost report's numbers are frozen output and the
+  lockbox is spent.
+- **(ii) fix the label.** Keep `team_value` as *total roster capital*, stop presenting it as team
+  strength, and print starting-nine value beside it everywhere (cost report, mock summary,
+  walkthroughs).
+
+**Recommendation: (ii) now, (i) as the additive labelled metric, and leave `value_hawk`'s objective
+alone this session.** Changing the seat's objective refits nothing but does change the room's picks,
+so it moves T15 bars 1/2/5 and the faithfulness population — that needs the full T24 treatment
+(seating-marginalized, before/after on the shipped measurement path), which is its own sub-step.
+
+**Pre-registered bars.**
+- **B4** `starter_value` equals `team_value` exactly when the roster *is* the starting nine
+  (self-consistency — a new metric that disagrees with the old one on the case where they must agree
+  is wrong).
+- **B5** `spearman(starter_value, title_prob) > spearman(portfolio_value, title_prob)` over ≥40
+  seeded drafts × ≥4 DEV seasons, seating reshuffled per seed. ⚠ Pre-register the **direction**: if
+  B5 fails, slot-blindness is costing nothing measurable and **T28 closes as a labelling fix only** —
+  do not ship (i) on the strength of the ten-team walkthrough, which is one draw.
+- **B6** the frozen cost report is **bit-identical** (`steps/spine_3_cost_report.py`), and so is
+  `analysis/mock_room_bars_verify_20260729.json`.
+
+**Done-when.** B4/B6 pass, B5 is measured and reported either way, and no surface calls a slot-blind
+sum "team strength".
+
+**★ The lesson to state.** *A sum over a roster is not a forecast of a lineup.* The metric was
+built as "value over replacement, independent players" and is correct as that; it acquired the second
+meaning by being the only team-level number anyone printed.
+
+---
+
+### ✅ RESOLVED 2026-07-30 (Session H.5 step 2) — closed as a LABELLING FIX, as pre-registered
+
+**What shipped.** `optimizer.starter_value(roster, value_index, slots)` as a **second, labelled**
+metric — never an edit to `team_value`, whose numbers are the frozen cost report's input. It calls
+`simulation.season.lineup_points_matrix` (the Phase-10 solver, itself regression-tested against the
+1.3 reference) rather than writing a third definition of "starting"; the pick-path fast form
+`optimizer.starter_marginal` is closed-form and asserted equal to it on 120 random rosters. Every
+team-level surface prints both, labelled **STARTABLE** vs **CAPITAL**.
+
+**B5 FAILED, significantly and in the opposite direction** (200 seeded drafts x 10 teams, seating
+reshuffled per seed, `steps/t28_starter_value.py`, `analysis/t28_starter_value.json`):
+
+| metric | mean per-draft Spearman vs title probability |
+|---|---|
+| `team_value` (slot-blind) | **+0.8382** |
+| `portfolio_value` (shipped headline) | +0.8202 |
+| `starter_value` (T28) | +0.7971 |
+| `starter_mean` (the walkthrough's +0.915) | +0.7920 |
+
+`starter_value − portfolio_value` = **−0.0230, CI[−0.0407, −0.0055]**. The walkthrough's **+0.915 did
+not replicate** — one draw of ten teams, exactly as the spec warned.
+
+**★ Why, chased rather than assumed: in a sim that draws injuries, the bench is load-bearing.**
+Bench value alone (`team_value − starter_value`) predicts title probability at **+0.711 (sd 0.175),
+positive in 100 % of the 200 drafts**. Sweeping the blend `starter + w·(team − starter)` — the knob
+`RiskModel.bench_weight` implements — peaks at **w = 0.90 (+0.8399)** against the shipped
+**w = 1.0 (+0.8382)**, well inside the noise, flat from 0.7 to 1.2, with **w = 0 the worst point**.
+A starter who misses games is replaced from the bench, so pricing depth at zero discards real
+information. **The slot-blind sum was never wrong as a *predictor*; it is wrong as a *display*.**
+
+The display claim survives, and the per-seat numbers show it is seat-dependent: the gap
+`capital − startable` is **negative for every seat except `value_hawk`** (upside_chaser −229.5,
+balanced −171.5, autopilot −144.9, … **value_hawk +152.0**), because only the seat that *maximizes*
+the slot-blind sum hoards startable-elsewhere value on its own bench. That is the Jaxson-Dart-QB2
+objection — a reporting distortion, not a predictive one.
+
+**The T24 treatment ran anyway** (the user's decision was to switch it *with* the treatment): `--bench-weight 0.0`, seating-marginalized, one knob. Every gate still passes and only `value_hawk` moves, but **bar 1 profile distance 0.0894 → 0.1020** (+14 % relative) and **bar 5 dispersion −11.39 % → −12.48 %**, while its `pool_rank` drifts **10.12 → 9.23** — priced by the lineup it stops paying for bench depth and moves *toward* best-available, the opposite of what the room needs. So the swap is refused on two independent grounds: a worse predictor (B5) and a worse room (the treatment). `analysis/mock_room_bars_t28_benchw0.json`.
+
+**The decision.** `value_hawk` keeps `objective="portfolio_ce"`; `bench_weight` stays **1.0**. The
+user's choice was to switch it with the full T24 treatment; the treatment ran and the pre-registered
+bar that authorises the switch failed first. The knob ships default-off and nests exactly —
+`bench_weight=1.0` re-runs the greedy pick-for-pick (`test_phase9`) — so re-asking costs one flag.
+
+---
+
+## ✅ T29 — absolute probabilities are printed from a sim with a documented level bias — **DONE 2026-07-30**
+*(opened 2026-07-30, same walkthrough)*
+
+**Symptom.** `league_probabilities` returns `playoff_prob`/`title_prob` and every driver prints them
+as bare percentages (`playoff 0.685  title 0.140`). What the lockbox actually established: title
+Brier **0.088** with reliability on-diagonal — the championship calibration and the **ordering** hold
+OOS — but playoff Brier **0.240** (recorded as *marginal*), unconditional coverage **72–77 %**, and a
+residual season-sim level bias of **−113 pts/team** that T4 could not remove (κ is mean-preserving).
+So the least trustworthy number in the stack is the one printed most confidently.
+
+**Fix.** Cheap and entirely presentational.
+1. `simulation.season.PROB_PROVENANCE` — one constant carrying `n_sims`, the lockbox Brier pair, and
+   the "relative, not absolute" statement. Every driver that prints a probability prints it.
+2. Report title probability **as a multiple of fair share** (`title_prob · n_teams`): a 10-team
+   league's fair share is 0.100, so T9's 0.170 reads **1.70× fair share**. A ratio to the uniform is
+   immune to the level bias, which is the honest way to publish this number.
+3. Playoff probability keeps its number and gains the *marginal* label.
+
+**Done-when.** No driver prints a bare probability; the mock summary leads with the fair-share
+multiple. **Internal consistency check to keep:** title probabilities sum to 1.000 and playoff to
+`n_playoff` (6.000 measured) — cheap, and it catches a broken sim immediately.
+
+---
+
+### ✅ RESOLVED 2026-07-30 (Session H.5 step 3)
+
+`simulation/season.py` gained `PROB_PROVENANCE`, `fair_share`, `playoff_fair_share`,
+`provenance_lines` and `assert_probability_sums`. Every driver that prints a probability leads with
+the **fair-share multiple** (0.170 in a 10-team league → **1.70x**): the −113 pts/team level bias
+moves all ten teams together, so it cancels in a ratio to the uniform and survives in the percentage.
+The caption carries the *weak* numbers — playoff Brier 0.240 recorded as MARGINAL, 72–77 %
+unconditional coverage — not only the flattering title Brier 0.088. New human surface:
+`mock_draft.py summary --odds`, which asserts the structural identity (titles sum to 1.000, playoff
+berths to 6.000) every time it prints.
+
+---
+
+## 🟡 T30 — `autopilot` is 1 of 10 seats against 0.2 % of real seats, and that has never been argued
+*(opened 2026-07-30, same walkthrough)*
+
+**Symptom.** `REALISTIC_ROOM` carries one `autopilot`. Realized full-autopick behaviour is **0.2 %**
+of corpus seats (T15 step 0), so the room over-represents it **50×** — and it is precisely the seat
+that manufactures the spill the rest of the room harvests. Walkthrough numbers: mean `pool_rank`
+**1.77**, median **1.0** (i.e. usually *literally* the top of the board), harvest **+11.7 picks**,
+the largest in the room; highest starting-lineup projection (2,009) on a 3rd-place title probability.
+
+**Why it is a question and not a defect.** 16.14R cut the seat from two to one **on this exact
+argument** and stopped, and bar 3 (harvest excess vs corpus-faithful managers) passes comfortably at
+**+0.06 sd**. There is also a real defence: "one manager is asleep for part of the draft" is far more
+common than "one manager autopicks all fifteen rounds", and the seat is the room's cheapest way to
+represent it. That defence has never been written down or measured.
+
+**Fix — argue it or change it, with a cheap A/B.** Replace the `autopilot` seat with a
+**near**-autopilot (a `chalk`-shaped seat: `zero_out` features, cooled softmax, narrow width) and
+re-measure seating-marginalized. `chalk` already sits between them behaviourally — walkthrough mean
+`pool_rank` 3.38 / median 2.0, harvest +7.3 — so the swap is a small, legible move.
+
+**Pre-registered bars.** All five T15 bars, the landing gate and the legality report unmoved within
+noise; `bar3_harvest.worst_excess_sds` unchanged or lower; `median_pool_rank` no further from the
+corpus's 7.62 than the shipped 8.04. **If every bar is flat, keep the autopilot seat and write the
+paragraph** — a null here is a decision, not a failure.
+
+⚠ **Do not delete the personality.** `autopilot` is also the deterministic control that reproduces
+`pick_by_adp(noise=0)` exactly, which several tests rely on. This ticket is about **room
+composition**, nothing else.
+
+---
+
+## 🟠 T31 — on a live board the level correction inverts for players consensus projects as backups
+*(opened 2026-07-30 by T27's own pre-registered gate, Session H.5 step 1 — the bar was written to be
+falsifiable and it fired)*
+
+**Symptom.** `spearman(haircut, games_played_mean)` — where `haircut = 1 − mean/proj_points` — is the
+claim that the Phase-5 level correction *is* the projected-availability discount. On the drafted range
+(top-180 ADP) it holds almost everywhere and fails in one cell:
+
+| season | QB | RB | WR | TE |
+|---|---|---|---|---|
+| **2026 (live)** | −0.902 | **−0.288 FAIL** | −0.538 | −0.838 |
+| 2024 | −0.898 | −0.594 | −0.681 | −0.812 |
+| 2022 | −0.643 | −0.716 | −0.773 | −0.662 |
+
+**Off the drafted range the live board is far worse, and the tell is a sign.** Over the whole 2026
+value index **22.8 % of rows carry a *negative* haircut** — Phase-5 `mean` **above** the consensus
+projection, which a level correction cannot produce — against **0.4 % on 2024**. Per position the
+correlation flips outright: **QB +0.474 with 59 % negative**, RB +0.225 / 42 %, TE +0.237 / 33 %,
+WR −0.011 / 31 %. On 2024 the same whole-index numbers are −0.93 / −0.65 / −0.84 / −0.88 with ~0 %
+negative, so this is a **live-season** phenomenon, not a depth phenomenon.
+
+**Root cause — two quantities that agree for starters and diverge for backups.** The consensus
+projection prices **role**: a backup is projected for 22 points because he sits behind someone. Our
+level correction prices **availability**: `mean = H · (avail_frac / G_ref)`, an injury/games-played
+discount. For a player consensus expects to start, role ≈ full and the two coincide — which is why the
+identity holds at −0.6 to −0.9 on every historical board and at three of four positions on the live
+one. For a projected backup they do not, and on a **live** season there is no realized prior-season
+basis to shrink the per-game level `H` toward, so he inherits a starter-ish rate multiplied by ~11
+expected games. The worst offenders have exactly that fingerprint:
+
+| player | `proj_points` | `mean` | `sd` | `games_played_mean` |
+|---|---|---|---|---|
+| QB `00-0039923` | 22.3 | **102.9** | 78.2 | 11.2 |
+| QB `BEC122142` | 22.1 | 75.2 | 73.8 | 7.7 |
+| RB `00-0036893` | 22.4 | 54.4 | 42.9 | 11.4 |
+
+**`sd ≈ mean` is the signature of a distribution built on nothing.**
+
+**Confirmation, and two ruled-out alternatives.** Conditioning on "consensus thinks he starts"
+(`vbd ≥ 0`) repairs the failing cell outright — 2026 RB **−0.288 → −0.599**, WR −0.538 → **−0.912**,
+QB −0.902 → −0.976 — so the break is at the role boundary. **Rookies are not the cause** (non-rookie
+RB ρ is −0.32 against −0.29 pooled, and the worst drafted-range offender, Ray Davis, is not a rookie).
+Nor is it a thin tail: 22.8 % of the index.
+
+**Why it was not fixed on the spot.** Session H.5 was a display session with a hard bit-identity bar on
+every step; this is a modelling defect in the frozen Phase-5 level path. The honest interim is what
+shipped: `validate.value_scale_gate` asserts the pre-registered −0.50 on the drafted range and reports
+the whole-index numbers beside it, so the health report is **red for a real reason** rather than green
+by a softened threshold. (Contrast **T12**, which is red for no reason — that one is worth silencing,
+this one is not.)
+
+**Fix — a sketch, not a prescription** (the register's own lesson: T13's and T24's filed prescriptions
+were both wrong). The natural shape is a **role floor on the live-season level**: shrink `H` toward the
+consensus per-game rate when there is no prior-season basis, so a player consensus prices as a backup
+cannot inherit a starter's rate. That would make the haircut non-negative by construction, which is the
+property being violated. It touches the frozen Phase-5 assembler, so it needs its own session and its
+own before/after on the 2025 dress-rehearsal calibration (coverage 75.5 % uncond / 81.5 % cond) — a fix
+that repairs the deep board and moves those is not a fix.
+
+**Who is affected.** Nothing in the shipped room: the personalities weight *shape* columns, and
+`base_value` off the drafted range is not reachable inside 15 rounds. It matters for **Phase 14**, which
+will show a distribution for any player a user clicks, and for anything that later trusts `mean` below
+replacement.
+
+**★ The lesson, and it is about the bar rather than the defect.** B2 was written into the plan before
+the number was known, with an explicit instruction not to soften it. It failed at one position out of
+four on one board out of three — a result that would have been effortless to round off as "basically
+fine" if the threshold had been chosen after looking. *A pre-registered bar earns its keep on the day
+it fails by a little.*
+
+---
+
+### ✅ T30 — RESOLVED 2026-07-30 (Session H.5 step 4): argued, measured, and deliberately not changed
+
+**The A/B.** `autopilot` → a second `chalk` seat (zero-out overrides, temperature 0.6,
+`width_mult` 0.55 — already the nearest thing in the library), seating-marginalized over
+40 seeds × 8 seasons × 10 seats on the shipped measurement path.
+`analysis/mock_room_bars_t30_chalk_swap.json` vs `analysis/mock_room_bars_h5_baseline.json`.
+
+**Result: every gate passes in both rooms, and the trade splits cleanly by category.** Realism
+improves a lot — chalk share (`pool_rank` < 2) **11.0 % → 2.4 %** against a realized **0.2 %**,
+moderate share 38.2 → **48.3 %** (corpus 54.3 %), median `pool_rank` 8.07 → **7.92** (corpus 7.62),
+round-1 mean \|reach\| 2.64 → **2.77** (corpus 2.87). Two reach bars regress slightly — profile
+distance 0.0894 → **0.0914**, elite past-10 25.24 → **26.21 %** (ceiling 30 %). Landing, legality and
+bar 3 are unchanged to the digit.
+
+**Why it was not shipped.** The rule was fixed before the run: *change the mix only if every bar holds
+or improves*. Two did not. The regressions are small and the gains are large, so this is a live
+candidate for a deliberate overrule rather than a settled null — but the point of agreeing the rule
+first is that it decides the borderline case instead of the borderline case deciding the rule.
+Reversing it is one flag on `steps/mock_room_bars.py --room ...`.
+
+**The argument the ticket asked for.** `autopilot` at 1-of-10 is **not** defensible as a frequency
+claim: 0.2 % of realized seats behave that way, so the room over-represents it ~50×, and its overall
+`pool_rank` of **1.23** (the literal best available, almost every pick) is what produces most of the
+sim's 11 % chalk share. It **is** defensible as a **role** — it is the deterministic control that
+reproduces `pick_by_adp(noise=0)` exactly and several tests depend on it. And the suspicion that
+motivated the ticket does not survive measurement: **bar 3 (harvest) reads 0.00 excess sds in both
+rooms**, so the spill this seat manufactures is not currently being harvested by anybody. Net: it
+costs realism on the faithfulness axis and costs nothing on the axis it was suspected of corrupting.
+**Do not delete the personality** — this was always a composition question.
