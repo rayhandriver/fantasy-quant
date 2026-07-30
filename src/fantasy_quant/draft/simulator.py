@@ -186,6 +186,33 @@ class DraftState:
     #: 17.4 — ``(team, round)`` slots forfeited to a keeper. ``run_to_completion`` skips them, so a
     #: team that kept three players simply drafts three fewer times.
     skipped_picks: set[tuple[int, int]] = field(default_factory=set)
+    #: **16.17 — every seat a caller drives by hand**, 0-indexed. ``None`` (the default) means
+    #: ``{your_team}``, which is what every phase before 16.17 assumed and is why nothing outside
+    #: this module has to change. ``frozenset()`` is a fully-simulated room.
+    #:
+    #: ★ ``your_team`` stays, and stays the **primary** seat: the frozen cost report, the 9.5
+    #: win-prob objective, ``formats/bestball.py``, ``draft/mcts.py`` and every backtest step read
+    #: it, and none of them should learn that a second human exists. The pick log keeps ``is_you``
+    #: for that seat alone. This field is deliberately a set of plain ints — the seat *map* (who is
+    #: a human vs which personality) lives in :class:`~fantasy_quant.draft.personalities.SeatMap`,
+    #: so the draft engine never imports the personality library.
+    human_teams: frozenset[int] | None = None
+    #: Optional per-seat labels (``"human"`` / a personality name), length ``n_teams``. When set,
+    #: :func:`_apply_pick` writes a ``seat_role`` column into the pick log so a log with four human
+    #: seats is readable without re-deriving who sat where. Left ``None`` by the batch harnesses,
+    #: whose panels already carry ``seat_personality`` — see
+    #: :meth:`~fantasy_quant.draft.personalities.SeatMap.roles`.
+    seat_roles: tuple[str, ...] | None = None
+
+    def __post_init__(self) -> None:
+        self.human_teams = (frozenset({self.your_team}) if self.human_teams is None
+                            else frozenset(int(t) for t in self.human_teams))
+        bad = sorted(t for t in self.human_teams if not 0 <= t < self.n_teams)
+        if bad:
+            raise ValueError(f"human seats {bad} out of 0..{self.n_teams - 1}")
+        if self.seat_roles is not None and len(self.seat_roles) != self.n_teams:
+            raise ValueError(f"seat_roles has {len(self.seat_roles)} labels "
+                             f"for {self.n_teams} teams")
 
     # -- draft geometry (snake order) --------------------------------------------------------
     def round(self) -> int:
@@ -313,6 +340,8 @@ class DraftState:
             available=set(self.available), rosters=[list(r) for r in self.rosters],
             log=list(self.log), overall_pick=self.overall_pick,
             skipped_picks=set(self.skipped_picks),      # 17.4: a rollout must forfeit them too
+            human_teams=self.human_teams,               # 16.17: a rollout drafts the same room
+            seat_roles=self.seat_roles,
         )
 
 
@@ -386,13 +415,18 @@ def _prepare_board(board: pd.DataFrame) -> pd.DataFrame:
 
 def simulate_draft(board: pd.DataFrame, your_pick_fn=None, n_teams: int = 10, rounds: int = 15,
                    slots: RosterSlots | None = None, your_team: int = 0, noise: float = 5.0,
-                   seed: int | None = None, opponent_pick_fn=None, keepers=()) -> DraftState:
+                   seed: int | None = None, opponent_pick_fn=None, keepers=(),
+                   human_teams: frozenset[int] | None = None,
+                   seat_roles: tuple[str, ...] | None = None) -> DraftState:
     """Simulate a full ``n_teams`` x ``rounds`` snake draft.
 
     ``your_pick_fn(state) -> board_label`` drives your seat (defaults to :func:`adp_pick_fn`);
     every other seat picks via ``opponent_pick_fn(state, team) -> board_label`` when supplied
     (Phase 11.3 behavioral/personality opponents), else :func:`pick_by_adp` with ``noise``.
     Reproducible given ``seed``. Returns the final :class:`DraftState`.
+
+    ``human_teams`` (16.17) drives **several** seats by hand — pass a ``dict[team, pick_fn]`` as
+    ``your_pick_fn`` to give each one its own policy. The default, ``None``, is ``{your_team}``.
     """
     slots = slots or RosterSlots()
     b = _prepare_board(board)
@@ -400,6 +434,7 @@ def simulate_draft(board: pd.DataFrame, your_pick_fn=None, n_teams: int = 10, ro
         board=b, n_teams=n_teams, rounds=rounds, slots=slots, your_team=your_team,
         rng=np.random.default_rng(seed), noise=noise,
         available=set(b.index), rosters=[[] for _ in range(n_teams)],
+        human_teams=human_teams, seat_roles=seat_roles,
     )
     if keepers:
         apply_keepers(state, keepers)
@@ -440,33 +475,72 @@ def apply_keepers(state: DraftState, keepers) -> DraftState:
         state.available.discard(idx)
         state.rosters[team0].append(idx)
         row = state.board.loc[idx]
-        state.log.append({
+        entry = {
             "overall_pick": 0, "round": int(kp.round), "team": team0,
             "is_you": team0 == state.your_team, "player_key": str(kp.player_key),
             "player_name": row.get("player_name"), "pos": row.get("pos"),
             "adp": row.get("adp"), "keeper": True,
-        })
+        }
+        if state.seat_roles is not None:
+            entry["seat_role"] = state.seat_roles[team0]
+        state.log.append(entry)
     return state
+
+
+def human_pick_fns(state: DraftState, your_pick_fn=None) -> dict[int, object]:
+    """Resolve ``your_pick_fn`` to one ``fn(state) -> board_label`` per seat in
+    ``state.human_teams`` (16.17).
+
+    A bare callable is sugar for ``{your_team: fn}`` — the pre-16.17 contract, unchanged, and the
+    reason no existing caller had to be touched. A ``dict[int, pick_fn]`` drives several seats
+    *differently*, which is what makes four hand-drafted teams (or ``--auto 3``, one of your own
+    seats handed to the Phase-9 greedy) expressible at all. Each entry still takes only ``state``:
+    a per-seat function knows its own seat by closure, exactly as 9.5's rollout already does.
+
+    Mismatches raise rather than default, because both directions are silent bugs: a human seat
+    with no function would fall through to :func:`adp_pick_fn`, which drafts for ``your_team`` and
+    would quietly fill somebody else's roster from your seat's pool; a function for a seat the map
+    calls modelled would never be called and the caller would think it was.
+    """
+    if isinstance(your_pick_fn, dict):
+        fns = {int(t): f for t, f in your_pick_fn.items()}
+        missing = sorted(state.human_teams - set(fns))
+        extra = sorted(set(fns) - state.human_teams)
+        if missing or extra:
+            raise ValueError(
+                f"pick functions {sorted(fns)} do not match human seats "
+                f"{sorted(state.human_teams)} (missing {missing}, unexpected {extra})")
+        return fns
+    others = sorted(state.human_teams - {state.your_team})
+    if others:
+        raise ValueError(f"human seats {others} besides your_team={state.your_team} need a "
+                         f"dict[team, pick_fn], not a single your_pick_fn")
+    return {int(state.your_team): your_pick_fn or adp_pick_fn}
 
 
 def run_to_completion(state: DraftState, your_pick_fn=None, opponent_pick_fn=None) -> DraftState:
     """Drive ``state`` from its current pick to the end of the draft, in place (and return it).
 
-    Your seat uses ``your_pick_fn`` (defaults to :func:`adp_pick_fn`); every other seat uses
-    ``opponent_pick_fn(state, team)`` when supplied (11.3), else :func:`pick_by_adp` with
+    Every seat in ``state.human_teams`` uses its own function from ``your_pick_fn`` (a callable for
+    the single-human default, or a ``dict[team, fn]`` — see :func:`human_pick_fns`); every other
+    seat uses ``opponent_pick_fn(state, team)`` when supplied (11.3), else :func:`pick_by_adp` with
     ``state.noise`` — the MVP ADP+noise baseline. :func:`simulate_draft` runs this from a fresh
     state; the 9.5 win-prob policy runs it on a :meth:`DraftState.clone`.
+
+    ★ **16.17 — the routing test is membership, not equality.** It was ``team == state.your_team``,
+    which is what limited the engine to one human seat; ``human_teams`` defaults to
+    ``{your_team}``, so the default path is the same branch it always took.
     """
-    pick_fn = your_pick_fn or adp_pick_fn
+    pick_fns = human_pick_fns(state, your_pick_fn)
     while not state.is_done() and state.available:
         team = state.team_on_clock()
         if (team, state.round()) in state.skipped_picks:      # 17.4: forfeited to a keeper
             state.overall_pick += 1
             continue
-        if team == state.your_team:
-            idx = int(pick_fn(state))
+        if team in state.human_teams:
+            idx = int(pick_fns[team](state))
             if idx not in state.available:
-                raise ValueError(f"your_pick_fn returned unavailable pick {idx}")
+                raise ValueError(f"pick fn for seat {team} returned unavailable pick {idx}")
         elif opponent_pick_fn is not None:
             idx = int(opponent_pick_fn(state, team))
             if idx not in state.available:
@@ -481,16 +555,22 @@ def _apply_pick(state: DraftState, team: int, idx: int) -> None:
     row = state.board.loc[idx]
     state.available.discard(idx)
     state.rosters[team].append(idx)
-    state.log.append({
+    entry = {
         "overall_pick": state.overall_pick,
         "round": state.round(),
         "pick_in_round": state.pick_in_round(),
         "team": team,
+        # 16.17: still the PRIMARY seat only. `is_you` is read by the frozen cost report and by
+        # every backtest step as "the seat under study"; widening it to `team in human_teams`
+        # would silently redefine a column several frozen artifacts are differenced on.
         "is_you": team == state.your_team,
         "player_key": row["player_key"],
         "player_name": row["player_name"],
         "pos": row["pos"],
         "adp": float(row["adp"]),
         "pos_rank": row["pos_rank"],
-    })
+    }
+    if state.seat_roles is not None:                  # 16.17: only when a caller labelled the map
+        entry["seat_role"] = state.seat_roles[team]
+    state.log.append(entry)
     state.overall_pick += 1

@@ -149,7 +149,7 @@ Reached by clicking a player anywhere. Contents, top to bottom:
 | #6 Situation-change | ⏳ **needs Phase 16** (value-side 16.1–16.6) — the one *bar* gating dependency |
 | Reach-risk / drift readout | ✅ **engine-side built** 2026-07-26 (16.12 `draft/drift.py::availability_readout`) — UI still owed by Phase 14 |
 | Mock-room opponent selector | ✅ **engine-side built** 2026-07-27 (16.15 `draft/personalities.py::make_room`) — UI owed by Phase 14; spec in §9 |
-| Multi-seat human control (drive k of n seats) | ☐ **not built either side** — engine = 16.17 (`SeatMap` + `DraftState.human_teams`; the one-human `team → seat` arithmetic is the blocker), UI = 14.J; spec in §9.5 |
+| Multi-seat human control (drive k of n seats) | ◐ **engine ☑ 2026-07-30** (16.17: `SeatMap` + `DraftState.human_teams` + per-seat pick fns; `steps/mock_draft.py --seats 3,7` drives it today), **UI ☐ = 14.J**; spec in §9.5 |
 
 **The new-signal dependencies both point at Phase 16.** Building Phase 16 next double-serves: the value-side
 (16.1/16.2 mined signals + 16.4 fingerprints + 16.6 tab) lights up the Beta-Lab tab *and* supplies the deep
@@ -264,11 +264,15 @@ drafted by hand against six bots; `k = n` is a manual draft board with no engine
 
 ```python
 seats = SeatMap.of(n_teams, human_teams={2, 6}, mix=(...))    # draft/personalities.py (16.17)
-opponent_pick_fn = seats.pick_fn(model, hype=..., risk=...)   # -> simulate_draft
+opponent_pick_fn = seats.pick_fn(model, hype=..., risk=...)   # -> simulate_draft; None at k = n
+state = DraftState(..., your_team=2, human_teams=frozenset({2, 6}), seat_roles=seats.roles())
 ```
 
 The engine call is the same for every `k`, which is the point of 16.17 — the UI never computes a
-seat index itself.
+seat index itself. **Built 2026-07-30** and shipping exactly as sketched here; `your_team` stays the
+**primary** seat (the frozen cost report, the 9.5 objective, best-ball and MCTS all read it and none
+of them learn a second human exists), and `run_to_completion` takes a `dict[team, pick_fn]` so each
+of your seats can be driven differently — which is also the `--auto <seat>` seam item 2 asks for.
 
 **What the draft view must do differently at `k > 1`:**
 1. **Say whose turn it is.** The clock banner names the seat (`T3 — YOU`), and the board, roster and

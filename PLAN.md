@@ -2349,3 +2349,65 @@ approximating with its one-flex closed form.
 
 **★ NEXT: hard stop, then Session I.5 = 16.17 the seat map** (per the user's gate: straight through
 T31 + Session I, stop before I.5).
+
+---
+
+## 2026-07-30 (session 5) — ★ SESSION I.5: 16.17, the seat map (multi-seat human control)
+
+**Scope as specified in `docs/BUILD_PLAN.md` §16.17, run straight through.** 668 tests (was 658),
+ruff clean. Nothing refits — no fitted β, no frozen contract, the spent lockbox untouched.
+Uncommitted, on top of `63fc304`.
+
+### Decisions taken during the build (none were the user's to make — all are bit-identity-forced)
+
+1. **`HUMAN` is a string sentinel, not a singleton object.** `SeatMap` is reconstructed from
+   `steps/mock_draft.py`'s pickled `meta` on every invocation; an object sentinel's `is` identity
+   would not survive the round trip, and `meta` already stores personality *names* for the same
+   reason.
+2. **`your_team` stays, and stays the primary seat.** `human_teams` defaults to `{your_team}`, which
+   is why nothing outside `draft/` had to change, and the pick log's `is_you` still marks that seat
+   alone — the frozen cost report and every backtest step difference on it. Widening `is_you` to
+   `team in human_teams` would have been a silent column redefinition (the F.5/T19 failure mode).
+3. **`seat_role` is opt-in.** It is written only when a caller sets `DraftState.seat_roles`, so the
+   batch harnesses — whose panels already carry `seat_personality` — keep the exact column set every
+   committed artifact was differenced on. The interactive CLI and the done-bar set it.
+4. **`n_teams=len(seats)` in `make_value_hawk_pick_fn` is preserved verbatim** → **T33**. It is the
+   one argument the two builders genuinely disagreed on (9 interactive vs 10 batch, an ~11 % scale on
+   the hawk's context weights). Changing it is a behaviour change; bit-identity is the bar.
+5. **The realistic room drops one `balanced` per human seat**, generalizing the k=1 rule that already
+   existed, and **refuses** once there is no `balanced` left rather than deleting a character seat
+   and silently changing the composition 16.14R step 7 validated.
+6. **`run_to_completion` raises on a pick-fn/human-seat mismatch in both directions.** A missing
+   function would fall through to `adp_pick_fn`, which drafts for `your_team` — i.e. it would fill
+   someone else's roster from your seat's pool, and complete a plausible-looking draft.
+
+### What was found on the way
+
+- **There were FOUR copies of the arithmetic, not three.** The fourth was in
+  `steps/phase16_15_mock_room.py`'s hype-routing measurement. The scoping pass grepped `draft/` and
+  the CLI. *A duplicated formula spreads to the code that measures a thing, not only to the code that
+  does it.*
+- **The bar-6 reference had gone stale** and only a control run could show it — see `findings.md`
+  §"Session I.5" and the two new glossary terms (*the poisoned control*, *a stale reference is not a
+  control*).
+- **The first draft of the legality bar could not be passed**: it reported 90 illegal seats on a 2022
+  board carrying five kickers for ten seats. `mock.roster_legality`'s `supply`/`avoidable` split
+  already existed for exactly that, and says so in its own docstring.
+
+### Dead ends / things deliberately not done
+
+- **A `SeatMap` on `DraftState` was rejected on layering grounds** (16.15's rule): composing a room
+  needs `Personality`, and the draft engine every earlier phase imports must not learn the
+  personality library. `DraftState` carries only `frozenset[int]` and a tuple of label strings.
+- **`simulate_room_draft` no longer points `your_pick_fn` back at its own room function.** It says
+  `human_teams=frozenset()` instead, which is the true statement; the log is unchanged.
+- **T32 not fixed here** (the board cache key still omits the vintage) — it is a batch-measurement
+  ticket and fixing it mid-session would have invalidated the caches this session's bit-identity
+  claim rests on, which is the same reason H.5 deferred it.
+
+**★ NEXT: user reviews + commits (Session I.5 sits on top of Session I's commit), then Session J
+(optional Phase 15.1 dynasty) → Session K = Phase 14.1 MVP + all surfacing, strictly last.** Open
+against the mock drafter: **T33** (new, needs a seating-marginalized before/after), **T26** (waits on
+the next 11.1 refit), **T32** (with the next batch measurement). Stage-0 FFC chore last pulled
+**2026-07-30** (verified in-DB this session — the 07-30 board is what the caches now hold), next due
+after 08-05.

@@ -1,14 +1,16 @@
-"""Interactive mock draft — you at one seat, the fantasy-quant personalities at the other nine.
+"""Interactive mock draft — you at **any number of seats**, personalities at the rest.
 
     uv run python steps/mock_draft.py start --seat 7 [--room a,b,..] [--teams 10] [--seed 7]
                                  # --room defaults to the SHIPPED room (REALISTIC_ROOM, minus one
-                                 # `balanced` seat, which is the one you take)
+                                 # `balanced` seat per human seat, which is the one you take)
+    uv run python steps/mock_draft.py start --seats 3,7 --auto 7
+                                 # 16.17: drive two teams; hand seat 7 to the ADP autopicker
     uv run python steps/mock_draft.py board [--pos RB] [--n 20]
-    uv run python steps/mock_draft.py pick "Bijan"
+    uv run python steps/mock_draft.py pick "Bijan" [--team 3]
     uv run python steps/mock_draft.py why "Maye"      # PROJ -> BASE_VALUE, the whole chain
     uv run python steps/mock_draft.py roster [--team 3]
     uv run python steps/mock_draft.py drift          # your draft in the corpus's own units
-    uv run python steps/mock_draft.py finish         # autodraft your remaining picks by ADP
+    uv run python steps/mock_draft.py finish         # autodraft every remaining human pick by ADP
     uv run python steps/mock_draft.py summary [--odds]   # --odds -> Phase-10 season odds
 
 Promoted from a session scratchpad, where it was written to let the user draft against the room one
@@ -20,15 +22,26 @@ one bar a domain expert could fail by eye, and this is that bar for the draft ro
 Thin over the real engine — there is no modelling here:
   board      ``mock.room_board``      (FFC ADP + 16.13 read-only enrichment)
   opponents  ``personalities``        on the fitted 11.1 β
+  seats      ``personalities.SeatMap`` — the one ``team -> seat`` mapping (16.17)
   mechanics  ``DraftState``/``_apply_pick``, one pick at a time instead of ``run_to_completion``
   drift      ``mock.sim_drift_panel`` — the same frame ``steps/t15_0_baseline.py`` measures
 
 State is pickled between invocations so a draft survives across shell calls (and chat turns); the
 opponents' rng lives in ``DraftState``, so the room stays reproducible from ``--seed``.
 
-Note this driver keeps the **nine-opponents-plus-you** shape, which is the real use case. The
-fully-simulated ten-personality room used for batch measurement is
-:func:`fantasy_quant.draft.mock.full_room` — different question, different harness.
+★ **16.17 — ``--seats`` drives k of the n teams.** This driver used to hardwire the
+**nine-opponents-plus-you** shape because the engine had no other: the human seat was a single int
+and ``team -> seat`` was positional arithmetic correct only at k=1. Any k now works, including k=0
+(a fully simulated room, the batch harness's shape, which is
+:func:`fantasy_quant.draft.mock.full_room`) and k=n.
+
+⚠ **Two honesty rules the readouts state, and this docstring restates because they are easy to
+lose:** (1) **k teams in one draft are ONE observation** — every pick you make removes a player
+from your other seats' pools, so their outcomes are mechanically anti-correlated; ``summary``
+prints them per seat and never averages them or reports a combined record. (2) **The T15 realism
+bars describe a fully-simulated room** — profile distance, dispersion and the elite-fall landing
+were measured with ten *modelled* seats, so ``drift`` labels its scope rather than re-measuring
+them for a room you are sitting in.
 """
 
 from __future__ import annotations
@@ -46,9 +59,9 @@ from fantasy_quant.draft import mock, optimizer
 from fantasy_quant.draft.config import DraftConfig
 from fantasy_quant.draft.personalities import (
     DEFAULT_ROOM,
+    HUMAN,
     REALISTIC_ROOM,
-    make_room,
-    make_room_pick_fn,
+    SeatMap,
     personalities,
 )
 from fantasy_quant.draft.simulator import (
@@ -57,6 +70,7 @@ from fantasy_quant.draft.simulator import (
     _apply_pick,
     _prepare_board,
     pick_by_adp,
+    run_to_completion,
 )
 
 DB = Path("data/fantasy_quant.duckdb")
@@ -116,15 +130,39 @@ def load() -> tuple[DraftState, dict, pd.DataFrame | None, object]:
 #: The nine opponents a human faces, from the ten-seat shipped room. One ``balanced`` seat is the
 #: one dropped, because **you** are taking a seat and ``balanced`` is the modal manager — removing
 #: any character seat instead would change the composition 16.14R step 7 validated.
+#:
+#: ★ **16.17 generalizes the same rule to k seats:** :func:`realistic_mix` drops **one ``balanced``
+#: per human seat**, for exactly the argument above, and refuses once there are no ``balanced``
+#: seats left to give up rather than silently deleting a character seat and quietly changing the
+#: composition step 7 validated.
 REALISTIC_NINE: tuple[str, ...] = tuple(
     [n for i, n in enumerate(REALISTIC_ROOM) if not (n == "balanced" and i == REALISTIC_ROOM.index(
         "balanced"))])
 
 
-def room_mix(arg: str | None) -> tuple[str, ...]:
-    """``--room`` -> a nine-name mix. Default is the **shipped** room, not the pre-16.14R one."""
+def realistic_mix(n_humans: int, n_teams: int = 10) -> tuple[str, ...]:
+    """The shipped room with ``n_humans`` seats taken out of it — one ``balanced`` per human."""
+    names = list(REALISTIC_ROOM)
+    if n_teams != len(REALISTIC_ROOM):
+        raise SystemExit(f"--room realistic is the {len(REALISTIC_ROOM)}-seat shipped room; "
+                         f"pass an explicit --room for a {n_teams}-team draft")
+    if n_humans >= n_teams:               # k = n: you drive the whole table, there is no room
+        return ()
+    for _ in range(n_humans):
+        if "balanced" not in names:
+            raise SystemExit(
+                f"the shipped room has only {REALISTIC_ROOM.count('balanced')} `balanced` seats to "
+                f"give up; for {n_humans} human seats pass an explicit --room of "
+                f"{n_teams - n_humans} names")
+        names.remove("balanced")
+    return tuple(names)
+
+
+def room_mix(arg: str | None, n_humans: int = 1, n_teams: int = 10) -> tuple[str, ...]:
+    """``--room`` -> the modelled-seat mix. Default is the **shipped** room, not the pre-16.14R
+    one; it must be exactly ``n_teams - n_humans`` long, which :meth:`SeatMap.of` re-checks."""
     if arg in (None, "", "realistic"):
-        return REALISTIC_NINE
+        return realistic_mix(n_humans, n_teams)
     if arg == "default":
         return tuple(DEFAULT_ROOM)
     return tuple(x.strip() for x in arg.split(","))
@@ -137,23 +175,35 @@ def room_from(meta: dict):
                  for n in meta["room"])
 
 
-def seat_of(team: int, your_team: int) -> int:
-    return team - 1 if team > your_team else team
+def seat_map_from(meta: dict) -> SeatMap:
+    """Rebuild the draft's :class:`SeatMap` from the pickled ``meta``.
+
+    ``meta["human_teams"]`` is 16.17's; a draft started before it falls back to ``{your_team}``,
+    which is what that draft was. Rebuilding rather than pickling the map itself keeps the state
+    file readable across a code change to :class:`Personality` — the same reason ``meta`` stores
+    personality *names* and not objects.
+    """
+    humans = meta.get("human_teams", [meta["your_team"]])
+    return SeatMap.of(meta["teams"], human_teams=humans, room=room_from(meta))
 
 
-def seat_name(team: int, meta: dict) -> str:
-    return "YOU" if team == meta["your_team"] else meta["room"][seat_of(team, meta["your_team"])]
+def seat_label(team: int, sm: SeatMap) -> str:
+    """``YOU (T3)`` for a human seat in a multi-seat draft, ``YOU`` when you drive only one."""
+    if sm.seats[team] != HUMAN:
+        return sm.seats[team].name
+    return "YOU" if len(sm.human_teams) == 1 else f"YOU (T{team + 1})"
 
 
 # ---------------------------------------------------------------------------------- display
-def fmt_pick(r: dict, meta: dict) -> str:
+def fmt_pick(r: dict, sm: SeatMap) -> str:
     return (f"  {r['round']:>2}.{r['pick_in_round']:02d}  {'T' + str(r['team'] + 1):<4}"
-            f"{seat_name(r['team'], meta):<15}{r['player_name'][:23]:<24}{r['pos']:<4}"
+            f"{seat_label(r['team'], sm):<15}{r['player_name'][:23]:<24}{r['pos']:<4}"
             f"(ADP {r['adp']:.1f})")
 
 
-def show_available(st: DraftState, n: int = 18, pos: str | None = None) -> None:
-    pool = st.draftable_pool(st.your_team)
+def show_available(st: DraftState, n: int = 18, pos: str | None = None,
+                   team: int | None = None) -> None:
+    pool = st.draftable_pool(st.your_team if team is None else team)
     if pos:
         pool = pool[pool["pos"].isin([p.strip().upper() for p in pos.split(",")])]
     # BOOM/BUST are the **live** pair (T22): the frozen Phase-5 columns are
@@ -249,42 +299,60 @@ def show_roster(st: DraftState, team: int) -> None:
     print(f"  {'':<4}{'TOTAL (consensus proj pts)':<26}{'':>10}  {tot:>9.0f}")
 
 
+def auto_teams(meta: dict) -> frozenset[int]:
+    """Human seats the caller handed to the ADP autopicker (``--auto``) — still *yours*, just not
+    typed by hand. The same seam 9.5's rollout uses on your own seat internally."""
+    return frozenset(int(t) for t in meta.get("auto", ()))
+
+
 def advance(st: DraftState, meta: dict, risk=None) -> list[dict]:
-    """Run opponent picks until it is your turn (or the draft ends).
+    """Run modelled (and ``--auto``) picks until a seat **you** drive is on the clock.
 
     ``risk`` is what routes the room's ``value_hawk`` seat to the Phase-9 greedy instead of the
     behavioral softmax (T27). Omitting it now **raises** rather than silently seating a second
     ``balanced`` — see :func:`~fantasy_quant.draft.personalities.assert_room_objectives`.
+
+    ★ **16.17 — the stop condition is membership, not equality.** It was ``team == st.your_team``,
+    which is why a second human seat would have been drafted *for* you by the room.
     """
-    opp = make_room_pick_fn(mock.load_opponent_model(), room_from(meta), risk=risk)
+    sm = seat_map_from(meta)
+    opp = sm.pick_fn(mock.load_opponent_model(), risk=risk)
+    auto = auto_teams(meta)
     made: list[dict] = []
     while not st.is_done() and st.available:
         team = st.team_on_clock()
-        if team == st.your_team:
+        if team in st.human_teams and team not in auto:
             break
-        _apply_pick(st, team, int(opp(st, team)))
+        idx = pick_by_adp(st, team, noise=0.0) if team in auto else int(opp(st, team))
+        _apply_pick(st, team, idx)
         made.append(st.log[-1])
     return made
 
 
 def report_turn(st: DraftState, meta: dict, made: list[dict], n: int = 18,
                 pos: str | None = None, vi: pd.DataFrame | None = None) -> None:
+    sm = seat_map_from(meta)
     if made:
         print(f"\n--- {len(made)} picks since your last turn ---")
         for r in made:
-            print(fmt_pick(r, meta))
+            print(fmt_pick(r, sm))
     if st.is_done() or not st.available:
         print("\n=== DRAFT COMPLETE ===")
         summary(st, meta, vi)
         return
-    print(f"\n=== ON THE CLOCK: YOU — round {st.round()}, pick {st.pick_in_round()} "
-          f"(#{st.overall_pick} overall) ===")
-    print("\n  YOUR ROSTER")
-    show_roster(st, st.your_team)
-    needs = st.starter_needs(st.your_team)
+    team = st.team_on_clock()
+    print(f"\n=== ON THE CLOCK: {seat_label(team, sm)} — T{team + 1}, round {st.round()}, "
+          f"pick {st.pick_in_round()} (#{st.overall_pick} overall) ===")
+    if len(sm.human_teams) > 1:
+        others = ", ".join(f"T{t + 1}" for t in sorted(sm.human_teams - {team}))
+        print(f"  (you also drive {others} — `pick` applies to the seat on the clock; "
+              f"`--team` overrides, `roster --team` / `board --team` read another seat)")
+    print(f"\n  ROSTER — T{team + 1}")
+    show_roster(st, team)
+    needs = st.starter_needs(team)
     print("  starter needs: " + ", ".join(f"{k} {v}" for k, v in needs.items() if v))
     print("\n  BEST AVAILABLE")
-    show_available(st, n=n, pos=pos)
+    show_available(st, n=n, pos=pos, team=team)
 
 
 def summary(st: DraftState, meta: dict, vi: pd.DataFrame | None = None) -> None:
@@ -297,15 +365,22 @@ def summary(st: DraftState, meta: dict, vi: pd.DataFrame | None = None) -> None:
     points on the QB2 line alone, which is how a team could sit 9th of 10 on one and 3rd on the
     other. Neither is deleted and neither is silently renamed: ``team_value`` is what the frozen
     cost report differences, so it stays exactly what it was.
+
+    ★ **16.17 — one block per human seat, never a combined line.** With k seats you get k blocks
+    and no average, because **k human teams in one draft are ONE observation**: your picks deplete
+    each other's pools, so the seats' outcomes are mechanically anti-correlated and four teams
+    going 4-for-4 on a strategy is a single draw. That is the honesty rule the substep owns, and it
+    is enforced here by simply not having a place to put a combined number.
     """
+    sm = seat_map_from(meta)
     print("\n=== FINAL ROSTERS ===")
     slots = st.slots
     rows = []
     for t in range(st.n_teams):
         roster = st.roster(t)
         pp = pd.to_numeric(roster.get("proj_points"), errors="coerce").fillna(0.0)
-        row = {"team": t + 1, "who": seat_name(t, meta), "proj": float(pp.sum()),
-               "starters": float(pp.nlargest(9).sum())}
+        row = {"team": t + 1, "who": seat_label(t, sm), "human": t in sm.human_teams,
+               "proj": float(pp.sum()), "starters": float(pp.nlargest(9).sum())}
         if vi is not None:
             row["startable"] = optimizer.starter_value(roster, vi, slots)
             row["capital"] = optimizer.team_value(roster, vi)
@@ -315,7 +390,7 @@ def summary(st: DraftState, meta: dict, vi: pd.DataFrame | None = None) -> None:
     head = f"  {'RANK':<6}{'TEAM':<6}{'PERSONALITY':<16}{'TOP-9 PROJ':>12}{'FULL ROSTER':>13}"
     print(head + (f"{'STARTABLE':>11}{'CAPITAL':>10}" if has_bv else ""))
     for i, (_, r) in enumerate(tab.iterrows(), 1):
-        star = "  <-- you" if r["who"] == "YOU" else ""
+        star = "  <-- you" if r["human"] else ""
         extra = f"{r['startable']:>11.0f}{r['capital']:>10.0f}" if has_bv else ""
         print(f"  {i:<6}{'T' + str(int(r['team'])):<6}{r['who']:<16}"
               f"{r['starters']:>12.0f}{r['proj']:>13.0f}{extra}{star}")
@@ -326,8 +401,14 @@ def summary(st: DraftState, meta: dict, vi: pd.DataFrame | None = None) -> None:
     if has_bv:
         print("  (STARTABLE = best legal starting lineup's base_value; CAPITAL = the slot-blind")
         print("   sum over all 15 rows, which prices a bench QB2 as if he started. T28.)")
-    print("\n  YOUR TEAM")
-    show_roster(st, st.your_team)
+    for t in sorted(sm.human_teams):
+        print(f"\n  YOUR TEAM — T{t + 1}")
+        show_roster(st, t)
+    if len(sm.human_teams) > 1:
+        print(f"\n  (These {len(sm.human_teams)} teams are ONE observation, not "
+              f"{len(sm.human_teams)}: every pick you made removed a player from your other")
+        print("   seats' pools, so their outcomes are mechanically anti-correlated. Read them")
+        print("   side by side; do NOT average them or count a record across them. 16.17.)")
 
 
 def league_odds(st: DraftState, meta: dict, sims: int = 400) -> None:
@@ -358,38 +439,76 @@ def league_odds(st: DraftState, meta: dict, sims: int = 400) -> None:
     assert_probability_sums(pp, tp, fmt)                      # 3c — a structural identity
     pf, tf = playoff_fair_share(pp, fmt), fair_share(tp, fmt.n_teams)
 
+    sm = seat_map_from(meta)
     print("\n=== SEASON ODDS (Phase-10 sim) ===")
     print("\n".join(provenance_lines(sims, fmt)))
     order = np.argsort(-tf)
     print(f"\n  {'TEAM':<6}{'PERSONALITY':<16}{'PLAYOFF':>9}{'vs FAIR':>9}"
           f"{'TITLE':>9}{'vs FAIR':>9}")
     for t in order:
-        star = "  <-- you" if t == st.your_team else ""
-        print(f"  {'T' + str(t + 1):<6}{seat_name(t, meta):<16}{pp[t]:>8.1%}{pf[t]:>8.2f}x"
+        star = "  <-- you" if t in sm.human_teams else ""
+        print(f"  {'T' + str(t + 1):<6}{seat_label(t, sm):<16}{pp[t]:>8.1%}{pf[t]:>8.2f}x"
               f"{tp[t]:>9.1%}{tf[t]:>8.2f}x{star}")
+    if len(sm.human_teams) > 1:
+        print("\n  (Your seats' probabilities are NOT independent and do not add up to your")
+        print("   chance of winning the league — the sim runs one league in which they play each")
+        print("   other. 16.17.)")
 
 
 # ---------------------------------------------------------------------------------- commands
+def human_seats(a) -> list[int]:
+    """``--seats 3,7`` (1-indexed, 16.17) or the single ``--seat``, as 0-indexed teams.
+
+    The **first listed** seat is the primary one — ``DraftState.your_team`` — because that is the
+    seat the frozen cost report, the 9.5 objective, best-ball and MCTS all read, and none of them
+    should learn that a second human exists.
+    """
+    raw = a.seats if getattr(a, "seats", None) else str(a.seat)
+    try:
+        seats = [int(x.strip()) - 1 for x in str(raw).split(",") if x.strip()]
+    except ValueError:
+        raise SystemExit(f"--seats wants comma-separated seat numbers, got {raw!r}") from None
+    if not seats:
+        raise SystemExit("--seats needs at least one seat (or use --seats '' for a 0-human room)")
+    if len(set(seats)) != len(seats):
+        raise SystemExit(f"--seats has a repeat: {raw!r}")
+    return seats
+
+
 def cmd_start(a) -> None:
     board, vi, risk = build_board(season=a.season, teams=a.teams)
     # T27 1a: `proj_points` and `base_value` are `simulator.PASSTHROUGH_COLS` now, so they ride
     # through `_prepare_board` with everything else. The hand-rolled re-attach that used to sit
     # here is deleted rather than duplicated — it was the visible half of the two-scales defect.
     b = _prepare_board(board)
-    mix = room_mix(a.room)
+    seats = [] if a.seats == "" else human_seats(a)
     fav = tuple(x.strip().upper() for x in (a.fav or "").split(",") if x.strip())
-    resolved = [p.name for p in make_room(mix, n_opponents=a.teams - 1, seed=a.room_seed,
-                                          fav_teams=fav)]
-    meta = {"your_team": a.seat - 1, "room": resolved, "teams": a.teams, "rounds": a.rounds,
+    mix = room_mix(a.room, n_humans=len(seats), n_teams=a.teams)
+    # 16.17: `SeatMap.of` is the only length check — `n_teams - k`, not `n_teams - 1`.
+    sm = SeatMap.of(a.teams, human_teams=seats, mix=mix, seed=a.room_seed, fav_teams=fav)
+    auto = sorted({int(x.strip()) - 1 for x in (a.auto or "").split(",") if x.strip()})
+    if set(auto) - set(seats):
+        raise SystemExit(f"--auto {sorted(t + 1 for t in set(auto) - set(seats))} are not your "
+                         f"seats; --auto hands one of YOUR seats to the ADP autopicker")
+    primary = seats[0] if seats else 0
+    meta = {"your_team": primary, "human_teams": seats, "auto": auto,
+            "room": [p.name for p in sm.room()], "teams": a.teams, "rounds": a.rounds,
             "fav": list(fav), "seed": a.seed, "season": a.season}
     st = DraftState(board=b, n_teams=a.teams, rounds=a.rounds, slots=RosterSlots(),
-                    your_team=a.seat - 1, rng=np.random.default_rng(a.seed), noise=5.0,
-                    available=set(b.index), rosters=[[] for _ in range(a.teams)])
+                    your_team=primary, rng=np.random.default_rng(a.seed), noise=5.0,
+                    available=set(b.index), rosters=[[] for _ in range(a.teams)],
+                    human_teams=frozenset(seats), seat_roles=sm.roles())
+    yours = ", ".join(str(t + 1) for t in seats) or "none (fully simulated room)"
     print(f"=== MOCK DRAFT — {a.teams}-team full-PPR snake, {a.rounds} rounds, "
-          f"you pick {a.seat} ===")
+          f"you pick {yours} ===")
     print("  the room:")
-    for i, n in enumerate(resolved):
-        print(f"    T{(i + 1 if i >= meta['your_team'] else i) + 1:<3} {n}")
+    for t in range(a.teams):
+        tag = "  [autopick]" if t in auto else ""
+        print(f"    T{t + 1:<3} {seat_label(t, sm)}{tag}")
+    if len(seats) > 1:
+        print(f"\n  ⚠ {len(seats)} seats in one draft are ONE observation, not {len(seats)} — "
+              f"your picks deplete\n    each other's pools. Read the teams side by side; never "
+              f"average them (16.17).")
     made = advance(st, meta, risk)
     save(st, meta, vi, risk)
     report_turn(st, meta, made, n=a.n, pos=a.pos, vi=vi)
@@ -397,7 +516,13 @@ def cmd_start(a) -> None:
 
 def cmd_pick(a) -> None:
     st, meta, vi, risk = load()
-    pool = st.draftable_pool(st.your_team)
+    team = st.team_on_clock() if a.team is None else a.team - 1
+    if team not in st.human_teams:
+        raise SystemExit(f"T{team + 1} is not one of your seats "
+                         f"({', '.join('T' + str(t + 1) for t in sorted(st.human_teams))})")
+    if team != st.team_on_clock():
+        raise SystemExit(f"T{team + 1} is not on the clock — T{st.team_on_clock() + 1} is")
+    pool = st.draftable_pool(team)
     q = a.query.strip()
     if q.isdigit() and int(q) in pool.index:
         idx = int(q)
@@ -413,33 +538,44 @@ def cmd_pick(a) -> None:
             return
         idx = int(hit.index[0])
     row = st.board.loc[idx]
-    _apply_pick(st, st.your_team, idx)
-    print(f"\n>>> YOU pick {row['player_name']} ({row['pos']}, ADP {row['adp']:.1f}) "
-          f"at #{st.overall_pick - 1}")
+    _apply_pick(st, team, idx)
+    print(f"\n>>> T{team + 1} picks {row['player_name']} ({row['pos']}, "
+          f"ADP {row['adp']:.1f}) at #{st.overall_pick - 1}")
     made = advance(st, meta, risk)
     save(st, meta, vi, risk)
     report_turn(st, meta, made, n=a.n, pos=a.pos, vi=vi)
 
 
+def _seat_arg(st: DraftState, team: int | None) -> int:
+    """``--team`` -> a 0-indexed seat; default is the seat on the clock when it is one of yours,
+    else the primary seat (16.17: with k seats "your board" is ambiguous without one)."""
+    if team is not None:
+        return team - 1
+    on_clock = st.team_on_clock()
+    return on_clock if on_clock in st.human_teams else st.your_team
+
+
 def cmd_board(a) -> None:
     st, _, _, _ = load()
-    show_available(st, n=a.n, pos=a.pos)
+    show_available(st, n=a.n, pos=a.pos, team=_seat_arg(st, a.team))
 
 
 def cmd_roster(a) -> None:
     st, meta, _, _ = load()
-    t = (a.team - 1) if a.team else st.your_team
-    print(f"\n=== T{t + 1} — {seat_name(t, meta)} ===")
+    t = _seat_arg(st, a.team)
+    print(f"\n=== T{t + 1} — {seat_label(t, seat_map_from(meta))} ===")
     show_roster(st, t)
 
 
 def cmd_finish(a) -> None:
+    """Autodraft **every** remaining human seat by ADP, then run the room out."""
     st, meta, vi, risk = load()
-    opp = make_room_pick_fn(mock.load_opponent_model(), room_from(meta), risk=risk)
-    while not st.is_done() and st.available:
-        team = st.team_on_clock()
-        idx = pick_by_adp(st, team, noise=0.0) if team == st.your_team else int(opp(st, team))
-        _apply_pick(st, team, idx)
+    sm = seat_map_from(meta)
+    opp = sm.pick_fn(mock.load_opponent_model(), risk=risk)
+    run_to_completion(
+        st,
+        your_pick_fn={t: (lambda s, _t=t: pick_by_adp(s, _t, noise=0.0)) for t in st.human_teams},
+        opponent_pick_fn=opp)
     save(st, meta, vi, risk)
     summary(st, meta, vi)
 
@@ -461,18 +597,17 @@ def cmd_why(a) -> None:
 
 def cmd_log(a) -> None:
     st, meta, _, _ = load()
+    sm = seat_map_from(meta)
     for r in st.log[-a.n:]:
-        print(fmt_pick(r, meta))
+        print(fmt_pick(r, sm))
 
 
 def cmd_drift(a) -> None:
     """This draft in the corpus's own units — the eyeball bar, quantified."""
     st, meta, _, _ = load()
-    room = room_from(meta)
-    # seat i of the room is the i-th team excluding yours; the panel wants one label per team
-    by_team = [None if t == meta["your_team"] else room[seat_of(t, meta["your_team"])]
-               for t in range(st.n_teams)]
-    labels = ["YOU" if p is None else p.name for p in by_team]
+    # 16.17: the panel wants one label per team, and `SeatMap` is where that mapping lives now.
+    sm = seat_map_from(meta)
+    labels = [seat_label(t, sm) for t in range(st.n_teams)]
     panel = mock.sim_drift_panel(st, season=meta.get("season", 2026), draft_id="interactive",
                                  board_teams=meta["teams"], seed=meta["seed"])
     panel["seat_personality"] = panel["draft_slot"].map(lambda s: labels[s - 1])
@@ -482,6 +617,12 @@ def cmd_drift(a) -> None:
     print("  " + str(mock.elite_fall_profile(panel)))
     print("\n=== PER SEAT ===")
     print(mock.seat_table(panel).round(2).to_string(index=False))
+    # 16.17 honesty rule 2 — state the bars' scope rather than re-measuring them here.
+    n_h = len(sm.human_teams)
+    print("\n  (SCOPE: the committed T15 realism bars — profile distance, dispersion, chalk")
+    print("   share, elite-fall landing — were measured on a **fully simulated** ten-seat room.")
+    print(f"   This draft has {n_h} human seat(s), so these numbers describe THIS draft and are")
+    print("   not a re-measurement of those bars. Use steps/mock_room_bars.py for those.)")
 
 
 def main() -> None:
@@ -489,15 +630,21 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("start")
-    s.add_argument("--seat", type=int, default=4)
+    s.add_argument("--seat", type=int, default=4, help="the single seat you drive (1-indexed)")
+    s.add_argument("--seats", default=None,
+                   help="16.17: several seats, e.g. '3,7'. The first is the primary one "
+                        "(DraftState.your_team). '' is a fully simulated room. Overrides --seat")
+    s.add_argument("--auto", default="",
+                   help="16.17: seats of YOURS the ADP autopicker drives, e.g. '7'")
     s.add_argument("--teams", type=int, default=10)
     s.add_argument("--rounds", type=int, default=15)
     s.add_argument("--season", type=int, default=2026)
     s.add_argument("--seed", type=int, default=7)
     s.add_argument("--room-seed", type=int, default=None)
     s.add_argument("--room", default="realistic",
-                   help="'realistic' (the shipped room, default) | 'default' (pre-16.14R) | "
-                        "a comma-separated list of nine personality names")
+                   help="'realistic' (the shipped room minus one `balanced` per human seat, "
+                        "default) | 'default' (pre-16.14R) | a comma-separated list of exactly "
+                        "n_teams - (your seats) personality names")
     s.add_argument("--fav", default="")
     s.add_argument("--n", type=int, default=18)
     s.add_argument("--pos", default=None)
@@ -505,11 +652,14 @@ def main() -> None:
 
     p = sub.add_parser("pick")
     p.add_argument("query")
+    p.add_argument("--team", type=int, default=None,
+                   help="which of your seats (1-indexed); default = the one on the clock")
     p.add_argument("--n", type=int, default=18)
     p.add_argument("--pos", default=None)
     p.set_defaults(fn=cmd_pick)
 
     b = sub.add_parser("board")
+    b.add_argument("--team", type=int, default=None)
     b.add_argument("--n", type=int, default=18)
     b.add_argument("--pos", default=None)
     b.set_defaults(fn=cmd_board)

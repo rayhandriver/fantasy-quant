@@ -61,7 +61,61 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★★ Next-session pointer (2026-07-30, session 4 — T31 ☑ + SESSION I ☑. READ THIS FIRST.)**
+> **★★★ Next-session pointer (2026-07-30, session 5 — ★ SESSION I.5 ☑ COMPLETE. READ THIS FIRST.)**
+>
+> **State: 668 tests (was 658), ruff clean. UNCOMMITTED**, sitting on top of Session I (`63fc304`).
+> Nothing refits: no fitted β, no frozen contract, the spent lockbox untouched.
+>
+> **★ 16.17 — the seat map. A user can now drive as many seats as they like.**
+> `steps/mock_draft.py start --seats 3,7 --auto 7` · `pick --team 3` · per-seat `summary`.
+> One `SeatMap` (`draft/personalities.py`) replaced **four** copies of the one-human `team → seat`
+> arithmetic — the spec named three and missed the one in `steps/phase16_15_mock_room.py`'s
+> hype-routing measurement. `DraftState` gained `human_teams` (default `{your_team}`, which is why
+> nothing outside `draft/` changed) + `seat_roles`; `run_to_completion` takes a `dict[team, pick_fn]`;
+> `mock.full_room_pick_fn` is now one call with a zero-human map.
+> Done-bar `steps/phase16_17_seat_map.py` → `analysis/phase16_17_seat_map.json`. Write-ups:
+> `findings.md` §"Session I.5", `PLAN.md` §2026-07-30 (session 5), `docs/TECH-DEBT.md` **T33**,
+> `docs/BUILD_PLAN.md` §16.17 ☑, `ROADMAP.md`, `glossary.md`, `docs/PLAYER-VIEW.md` §9.5.
+>
+> | bar | result |
+> |---|---|
+> | `room_index` == the deleted formula, **exhaustively** | 1,014 triples, 0 mismatches |
+> | k=1 / k=0 reproduce the deleted arithmetic pick-for-pick | 54 draft pairs, **0 differ** |
+> | **the control can fail** (poisoned mapping) | 36/36 poisoned runs differ |
+> | k ∈ {0,1,4,9,10} complete + legal | 15 drafts, **0.00 % avoidable illegality at every k** |
+> | the room bar sheet | **0/628 fields differ** vs a pre-16.17 control on today's board |
+>
+> **⚠ Do not re-derive / do not "fix":**
+> - **`analysis/mock_room_bars_verify_20260729.json` is NO LONGER a clean reference.** It differs on
+>   **79/628** fields — all in `readout_2026` (Stage-0 banked a 07-30 board; T31's `ENRICH_VERSION`
+>   bump rebuilt the caches against it) or in two `config` provenance fields that postdate it. **0 of
+>   the 412 gate fields** differ. To claim bit-identity against it, run a *pre-change control* on
+>   today's board (`git worktree` + **`PYTHONPATH=<wt>/src`**, then assert the old module lacks the
+>   new symbol) — `steps/phase16_17_seat_map.py --control-bars`. *A committed artifact is a control
+>   only while nothing else it depends on has moved.*
+> - **`is_you` stays the PRIMARY seat**, not `team in human_teams` — the frozen cost report and every
+>   backtest step difference on it. `your_team` likewise stays a single int and stays primary;
+>   `cost_report.py`, the 9.5 objective, `formats/bestball.py` and `draft/mcts.py` must never learn a
+>   second human exists.
+> - **`seat_role` is opt-in** (written only when `DraftState.seat_roles` is set) so the batch pick log
+>   keeps the exact column set the committed artifacts were differenced on. Do not make it default.
+> - **`make_value_hawk_pick_fn(n_teams=len(seats))` is the ROOM size and was preserved on purpose** —
+>   9 interactive vs 10 batch, and now `10 − k`. That is **T33**, and fixing it needs a T24-style
+>   seating-marginalized before/after, not an edit.
+> - `SeatMap` lives in `personalities.py`, **not** `simulator.py` (16.15's layering rule): the draft
+>   engine every earlier phase imports must not learn the personality library.
+> - The two **honesty rules** are rendered by the readouts, not just documented: *k human teams in one
+>   draft are ONE observation* (`summary` has nowhere to put a combined number) and *the T15 realism
+>   bars describe a fully-simulated room* (`drift` prints its scope). 14.J must keep both.
+>
+> **★ NEXT: user reviews + commits, then Session J (optional Phase 15.1 dynasty) → Session K =
+> Phase 14.1 MVP + all surfacing, strictly last, do not bundle.** Open against the mock drafter:
+> **T33** (new) · **T26** (next 11.1 refit) · **T32** (next batch measurement). Stage-0 FFC chore last
+> pulled **2026-07-30**, next due after 08-05.
+>
+> _(Session I's pointer, still the authority on Phase 17, follows.)_
+>
+> **★★★ Next-session pointer (2026-07-30, session 4 — T31 ☑ + SESSION I ☑.)**
 >
 > **State: 658 tests, ruff clean. Two commits this session, both LOCAL (not pushed).** T31 is
 > `496836f`; Session I sits on top. The spent lockbox and the frozen value stack are untouched: T31
@@ -97,11 +151,10 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > - **`lockbox_validated()` is an honesty method, not a feature flag.** Non-default formats are
 >   supported and correctness-tested and carry **no** out-of-sample claim. Phase 14 must render that.
 >
-> **★ NEXT: Session I.5 = 16.17 the seat map** (multi-seat human control), the scoping for which is
-> immediately below and unchanged. Its hard done-bar is **bit-identity** at k=1 and k=0 plus
-> `analysis/mock_room_bars_verify_20260729.json` to the digit — note that sheet must be reproduced
-> with **`--shuffle-room`**, which is how it was generated; without the flag it differs on 149
-> gate-side fields and looks like a regression that is not one.
+> **★ Session I.5 = 16.17 the seat map ☑ DONE 2026-07-30** — see the pointer above. (Its bar-6
+> instruction here was right about `--shuffle-room` and wrong about the reference being clean: the
+> 07-29 sheet's `readout_2026` block had already moved with the board refresh, so the claim was
+> settled by a pre-change control run instead.)
 >
 > _(T31's entry, still the authority on the level cap, follows.)_
 >
@@ -148,7 +201,7 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 >
 > **★ NEXT: Session I = Phase 17 formats**, then a hard stop, then Session I.5 = 16.17.
 
-> **★ Scoped 2026-07-30 (session 3, docs-only — no code, nothing run): 16.17 multi-seat human control.**
+> **★ ☑ BUILT 2026-07-30 (Session I.5). Scoped 2026-07-30 (session 3, docs-only): 16.17 multi-seat human control.**
 > User asked for the finished mock drafter to let a user **drive as many seats as they like** (e.g. 6
 > personalities + 4 teams drafted by hand). **It was in none of the md files, and the gap is structural:**
 > `DraftState.your_team` is a single int and the `team → seat` map is positional arithmetic repeated in

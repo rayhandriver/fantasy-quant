@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Sequence
-from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -58,15 +57,15 @@ from fantasy_quant.draft.personalities import (
     DEFAULT_ROOM,
     PRIVATE_KAPPA,
     Personality,
+    # 16.17: the one place `team -> seat` is computed. `full_room_pick_fn` is a zero-human map.
+    SeatMap,
     WidthCurve,
     # T27: the guard now lives in `personalities` (lower in the import graph) so the *interactive*
     # room builder can run it too. Re-exported here because `mock.assert_room_objectives` is the
     # name every existing caller and test uses, and renaming a guard is how you lose one.
     assert_room_objectives,
-    make_opponent_pick_fn,
     make_room,
-    make_value_hawk_pick_fn,
-    normalized_hype_gains,
+    make_room_pick_fn,
 )
 from fantasy_quant.draft.simulator import (
     DraftState,
@@ -225,32 +224,24 @@ def full_room_pick_fn(model: OpponentModel, room: Sequence[Personality], *,
                       risk=None, **kw):
     """``pick(state, team) -> board label`` for a room where **every** seat is a personality.
 
-    :func:`~fantasy_quant.draft.personalities.make_room_pick_fn` maps ``team -> seat`` by skipping
-    ``state.your_team``, because it was built for nine opponents sitting opposite a human. Here
-    there is no human, so the mapping is the identity and seat ``i`` is team ``i``. Only that one
-    line differs — the hype normalization and the per-seat pick functions are the shipped ones, so
-    a change to how a personality drafts reaches this harness automatically.
+    ★ **16.17 — this is now literally one call.** It used to be a verbatim copy of
+    :func:`~fantasy_quant.draft.personalities.make_room_pick_fn` differing in a single line: that
+    builder mapped ``team -> seat`` by skipping ``state.your_team`` (nine opponents opposite a
+    human), while here there is no human and the mapping is the identity. Its own docstring said
+    the two "differ only in the ``team -> seat`` mapping they were split over" — a
+    :class:`~fantasy_quant.draft.personalities.SeatMap` with **zero** human seats is that
+    observation carried to its conclusion, and the duplicated body is deleted rather than left
+    beside the general one (the T18/F.5 rule: a second copy is how the two drift apart).
+
+    ``require_objectives=False`` preserves this function's own contract exactly — a
+    ``portfolio_ce`` seat with no ``risk`` falls back to the behavioral path here rather than
+    raising, because :func:`simulate_room_draft` already runs
+    :func:`~fantasy_quant.draft.personalities.assert_room_objectives` before calling it and some
+    ADP-only harnesses legitimately have no value index.
     """
-    seats = tuple(room)
-    gains = (normalized_hype_gains(seats) if normalize_hype
-             else np.array([p.hype_gain for p in seats], float))
-    # 16.14R step 6: a seat whose objective is `portfolio_ce` does not run the behavioral softmax
-    # at all — it runs the Phase-9 greedy in its seat. Without a `risk` model there is nothing for
-    # it to maximize, so it falls back to the behavioral path rather than silently drafting by ADP;
-    # `assert_room_objectives` is how a caller finds out instead of guessing.
-    fns = [
-        (make_value_hawk_pick_fn(replace(p, hype_gain=float(g)), risk, n_teams=len(seats))
-         if p.objective == "portfolio_ce" and risk is not None
-         else make_opponent_pick_fn(model, replace(p, hype_gain=float(g)), hype=hype, **kw))
-        for p, g in zip(seats, gains, strict=True)
-    ]
-
-    def pick(state: DraftState, team: int) -> int:
-        if not 0 <= team < len(fns):
-            raise ValueError(f"team {team} has no seat in a {len(fns)}-seat room")
-        return fns[team](state, team)
-
-    return pick
+    return make_room_pick_fn(model, tuple(room), hype=hype, normalize_hype=normalize_hype,
+                             risk=risk, require_objectives=False,
+                             seat_map=SeatMap(tuple(room)), **kw)
 
 
 def simulate_room_draft(board: pd.DataFrame, room: Sequence[Personality], model: OpponentModel, *,
@@ -259,9 +250,13 @@ def simulate_room_draft(board: pd.DataFrame, room: Sequence[Personality], model:
                         slots: RosterSlots | None = None, **kw) -> DraftState:
     """One seeded snake draft in which all ``n_teams`` seats are personalities.
 
-    ``run_to_completion`` routes ``your_team`` to ``your_pick_fn``, so that seat is pointed back at
-    the same room function rather than being left on the ADP autopilot default — otherwise one seat
-    in every batch draft would silently be chalk, which is exactly the behaviour bar #3 measures.
+    ★ **16.17 — the room is now declared, not worked around.** ``run_to_completion`` used to route
+    ``your_team`` to ``your_pick_fn``, so this harness had to point that seat back at its own room
+    function by hand — otherwise one seat in every batch draft would silently be chalk, which is
+    exactly the behaviour bar #3 measures. ``human_teams=frozenset()`` says the true thing instead
+    (*this room has no human*), and every seat goes through ``opponent_pick_fn``. ``your_team``
+    stays 0 so the pick log's ``is_you`` column is unchanged — the batch artifacts are differenced
+    on it.
     """
     if len(room) != n_teams:
         raise ValueError(f"room has {len(room)} seats for {n_teams} teams")
@@ -272,9 +267,9 @@ def simulate_room_draft(board: pd.DataFrame, room: Sequence[Personality], model:
         board=b, n_teams=n_teams, rounds=rounds, slots=slots or RosterSlots(),
         your_team=0, rng=np.random.default_rng(seed), noise=0.0,
         available=set(b.index), rosters=[[] for _ in range(n_teams)],
+        human_teams=frozenset(),
     )
-    return run_to_completion(state, your_pick_fn=lambda st: pick(st, st.your_team),
-                             opponent_pick_fn=pick)
+    return run_to_completion(state, opponent_pick_fn=pick)
 
 
 # ------------------------------------------------------------------------------------------------

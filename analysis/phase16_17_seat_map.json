@@ -1,0 +1,137 @@
+{
+  "seasons": [
+    2022,
+    2024,
+    2026
+  ],
+  "seeds": 6,
+  "rounds": 15,
+  "bar1_3_bit_identity": {
+    "n_comparisons": 54,
+    "n_identical": 54,
+    "n_different": 0,
+    "k1_identical": true,
+    "k0_identical": true,
+    "poison_n": 36,
+    "poison_n_differ": 36,
+    "poison_always_differs": true,
+    "pass": true
+  },
+  "bar4_capability": {
+    "k_values": [
+      0,
+      1,
+      4,
+      9,
+      10
+    ],
+    "n_drafts": 15,
+    "all_complete": true,
+    "all_150_picks": true,
+    "seat_role_logged": true,
+    "bad_mix_refused": true,
+    "legality": {
+      "n_seats": 150,
+      "n_illegal": 0,
+      "share_illegal": 0.0,
+      "by_position": {
+        "QB": 0.0,
+        "RB": 0.0,
+        "WR": 0.0,
+        "TE": 0.0,
+        "K": 0.0,
+        "DST": 0.0
+      },
+      "starter_min": {
+        "QB": 1,
+        "RB": 2,
+        "WR": 2,
+        "TE": 1,
+        "K": 1,
+        "DST": 1
+      },
+      "unavoidable_by_position": {
+        "QB": 0.0,
+        "RB": 0.0,
+        "WR": 0.0,
+        "TE": 0.0,
+        "K": 0.0,
+        "DST": 0.0
+      },
+      "avoidable_by_position": {
+        "QB": 0.0,
+        "RB": 0.0,
+        "WR": 0.0,
+        "TE": 0.0,
+        "K": 0.0,
+        "DST": 0.0
+      },
+      "share_avoidable": 0.0
+    },
+    "share_avoidable_by_k": {
+      "0": 0.0,
+      "1": 0.0,
+      "4": 0.0,
+      "9": 0.0,
+      "10": 0.0
+    },
+    "avoidable_ok": true,
+    "pass": true
+  },
+  "bar5_mapping": {
+    "n_checked": 1014,
+    "n_mismatch": 0,
+    "examples": [],
+    "pass": true
+  },
+  "bar6_room_bar_sheet": {
+    "reference": "analysis/mock_room_bars_verify_20260729.json",
+    "candidate": "analysis/mock_room_bars_seat_map_16_17.json",
+    "n_gate_fields": 412,
+    "n_fields": 628,
+    "vs_reference_gate_different": 0,
+    "vs_reference_all_different": 79,
+    "gate_differences": {},
+    "non_gate_differences": {
+      "config.bench_weight": [
+        null,
+        1.0
+      ],
+      "config.mix.0": [
+        null,
+        "autopilot"
+      ],
+      "config.mix.1": [
+        null,
+        "balanced"
+      ],
+      "config.mix.2": [
+        null,
+        "balanced"
+      ],
+      "config.mix.3": [
+        null,
+        "balanced"
+      ],
+      "config.mix.4": [
+        null,
+        "balanced"
+      ],
+      "config.mix.5": [
+        null,
+        "value_hawk"
+      ],
+      "config.mix.6": [
+        null,
+        "safe_floor"
+      ]
+    },
+    "gate_identical": true,
+    "control": "analysis/mock_room_bars_head_control_16_17.json",
+    "vs_control_different": 0,
+    "control_differences": {},
+    "control_identical": true,
+    "pass": true
+  },
+  "pass": true
+}

@@ -44,6 +44,7 @@ At a glance:
 | **T28** | ✅ | **`team_value`/`portfolio_value` are slot-blind, so a bench QB2 is priced as if he starts.** `team_value` sums `base_value` over all 15 roster rows and nothing in `draft/optimizer.py` references starters. On the 2026 walkthrough the second QB alone moves a team's headline value by **−101.6** (T1 Caleb Williams), **−92.1** (T4 Kyler Murray) and **+51.0** (T3 Hurts), against a room total of 1,938 — the QB2 line nets **−122**. Consequence, measured over the same ten teams: Spearman(portfolio CE, title) **+0.758** and Spearman(VBD, title) **+0.685** against Spearman(starting-nine Phase-5 mean, title) **+0.915**; T4 is **9th of 10 on VBD and 3rd on starting-lineup projection**. It is not only a reporting artifact — `value_hawk` *maximizes* this quantity, and took Jaxson Dart (`base_value` +33.1) as a second QB at 9.09 | Session H.5 step 2 — **a decision, not a patch**: the frozen cost-report headline must not move, so a starter-aware metric ships **beside** it | ☑ 2026-07-30 — **closed as a LABELLING FIX, as pre-registered.** `starter_value` ships beside `team_value` and every surface prints both. **B5 failed** (−0.0230, CI[−0.0407,−0.0055] over 200 drafts): the slot-blind sum predicts title probability *better*, because bench value alone scores +0.711 in a sim that draws injuries. `value_hawk` keeps `objective=portfolio_ce` |
 | **T29** | ✅ | **absolute probabilities are printed from a sim whose level bias is documented as −113 pts/team.** Any driver that calls `league_probabilities` prints `playoff_prob`/`title_prob` as bare percentages. The lockbox recorded title Brier **0.088** with reliability on-diagonal (ordering and championship calibration hold) but playoff Brier **0.240** as *marginal*, unconditional coverage **72–77 %**. So the weakest number in the stack is the one a user reads as fact | Session H.5 step 3 — labelling + a fair-share ratio | ☑ 2026-07-30 — `PROB_PROVENANCE` + `fair_share`/`playoff_fair_share` + `assert_probability_sums`; every driver leads with the multiple (0.170 → **1.70x**) |
 | **T30** | ✅ | **`autopilot` is 1 of 10 seats against 0.2 % of realized seats — 50×**, and it is the seat that manufactures the spill the rest of the room harvests (walkthrough: mean `pool_rank` **1.77**, median **1.0**, harvest **+11.7 picks**, the largest in the room). 16.14R halved it from two seats *on this exact argument* and stopped there; bar 3 passes at +0.06 sd, so this is a **composition question that has never been argued explicitly**, not a known defect | Session H.5 step 4 — a cheap seating-marginalized A/B against a near-autopilot seat; **accept or change the mix, but state the argument** | ☑ 2026-07-30 — **argued and NOT changed**, under the pre-agreed rule (ship only if every bar holds or improves). The `chalk` swap closes **79 %** of the chalk-share gap (11.0 → 2.4 % vs a realized 0.2 %) and 63 % of the moderate-share gap, and costs **+0.0021** profile distance and **+0.97 pp** elite-past-10. Every gate passes both ways; bar 3 harvest is **0.00 in both**, so the spill the seat manufactures is not being harvested |
+| **T33** | 🟡 | **`make_value_hawk_pick_fn(n_teams=)` receives the ROOM size, not the league size** — both room builders pass `len(seats)`, so the *interactive* room (9 modelled seats) scales the value hawk's `_local_z` context weights by **9** and the *batch* room by **10**: the same seat prices step-3 context ~10 % apart depending on which harness it is sitting in. Pre-existing since 16.14R step 6, and 16.17 only made it visible — with k human seats the divisor becomes `10 − k`, so it now varies with the room shape rather than being one of two constants | with the next room measurement. **Deliberately preserved verbatim by 16.17**, whose entire done-bar is bit-identity against both builders; fixing it changes the shipped room's picks and needs the full T24 seating-marginalized before/after as its own sub-step | ☐ 2026-07-30 |
 
 ---
 
@@ -2089,3 +2090,44 @@ motivated the ticket does not survive measurement: **bar 3 (harvest) reads 0.00 
 rooms**, so the spill this seat manufactures is not currently being harvested by anybody. Net: it
 costs realism on the faithfulness axis and costs nothing on the axis it was suspected of corrupting.
 **Do not delete the personality** — this was always a composition question.
+
+---
+
+## 🟡 T33 — `n_teams` in the value hawk is the room size, not the league size
+
+**Opened 2026-07-30 (Session I.5 / 16.17).** Found while unifying the two room builders: they are
+identical except for the `team -> seat` mapping *and* one argument nobody had lined up.
+
+```python
+make_value_hawk_pick_fn(replace(p, hype_gain=g), risk, n_teams=len(seats))
+```
+
+`seats` is the **room** — the modelled seats — so `n_teams` is 9 in `make_room_pick_fn` (nine
+opponents opposite a human) and 10 in `mock.full_room_pick_fn` (a fully simulated room). Inside the
+hawk it is a **scale on the step-3 context weights**:
+
+```python
+eff = eff - w * n_teams * _local_z(pool[col], adp, pos)
+```
+
+So `role_share` / `role_delta` / `td_regression` are priced ~11 % harder in every batch measurement
+than in the interactive mock a human actually watches. It is the T27 divergence one argument along:
+*the interactive room was never quite the shipped room*, for a second and much smaller reason.
+
+**Why it was not fixed in 16.17.** That substep's entire done-bar is **bit-identity against both
+builders**, and `n_teams` is the one place they legitimately disagreed. Changing it moves the value
+hawk's picks in one room or the other by construction, which is a behaviour change wearing a
+plumbing change's clothes — exactly what the bar exists to catch. The line is preserved verbatim
+with a comment pointing here.
+
+**16.17 also makes it worse in a specific way, and that is the argument for fixing it soon.** With
+k human seats the divisor is `10 − k`, so a value hawk in a 4-human room prices context **1.7×**
+harder than the same seat in the batch room. Two constants was a wart; a knob that moves with the
+room shape is a defect.
+
+**The fix.** Pass the **league** size (`state.n_teams`, or a `n_teams=` threaded from the caller
+that built the room) and re-measure. Accountable bars: the five T15 bars + landing + legality,
+seating-marginalized (`steps/mock_room_bars.py --shuffle-room`), before/after, exactly as T24 was
+run — the hawk is 1 of 10 seats so the effect should be small, but "should be small" is what the
+harness is for. **Done-when:** one sheet each way, the difference stated, and whichever divisor
+ships is the one both builders use.

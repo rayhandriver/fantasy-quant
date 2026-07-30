@@ -1595,7 +1595,25 @@ median `pool_rank` **10.40 → 8.59** (corpus 7.62) and the moderate band **13.5
 face-validity + mechanics unit tests; 16.15 assigns a realistic room, couples the shock, and surfaces the
 selector — the whole cluster provably isolated from the frozen value stack.
 
-### 16.17 — The seat map: **multi-seat human control** → `draft/personalities.py`, `draft/simulator.py`, `steps/mock_draft.py` *(added 2026-07-30, user request)*
+### 16.17 ☑ — The seat map: **multi-seat human control** → `draft/personalities.py`, `draft/simulator.py`, `steps/mock_draft.py` *(added 2026-07-30, user request; BUILT 2026-07-30, Session I.5)*
+
+> **☑ DONE 2026-07-30 — every done-when met, nothing refitted.** 668 tests (+10), ruff clean.
+> `SeatMap` + `HUMAN` in `draft/personalities.py`; `DraftState.human_teams` + `seat_roles` +
+> `human_pick_fns` in `draft/simulator.py`; `mock.full_room_pick_fn` reduced to one call;
+> `--seats 3,7` / `--auto <seat>` / `pick --team` / per-seat `summary` in `steps/mock_draft.py`;
+> done-bar `steps/phase16_17_seat_map.py` → `analysis/phase16_17_seat_map.json`.
+> **Four** copies of the arithmetic were deleted, not three — the spec missed one in
+> `steps/phase16_15_mock_room.py`'s hype-routing measurement.
+> **Bit-identity held on every comparison**: 1,014 exhaustive mapping triples · 54 draft pairs vs
+> the deleted arithmetic re-implemented verbatim · the room bar sheet **bit-identical to a
+> pre-16.17 control run on today's board**. ⚠ The committed 07-29 sheet is **not** a clean
+> reference any more (Stage-0 + T31's `ENRICH_VERSION` bump refreshed the live board, so its
+> `readout_2026` block moved) — hence the control. Two corrections to this spec's own bars are
+> recorded in `findings.md` §"Session I.5": the legality bar must use `roster_legality`'s
+> `supply`/`avoidable` split (the naive version reports 90 illegal seats on a 2022 board that
+> carries five kickers), and a "0 differ" claim needs a **poisoned control** first (36/36).
+> Opened **T33** (`make_value_hawk_pick_fn`'s `n_teams` is the *room* size). UI half → **14.J**,
+> unchanged.
 
 **The ask (user, 2026-07-30):** in the finished mock drafter a user must be able to control **as many
 seats as they like** — e.g. assign personalities to 6 of 10 and draft the other 4 teams themselves.

@@ -38,9 +38,11 @@ from fantasy_quant.draft.opponent_model import _ADP_SCALE, ALL_FEATURES, Opponen
 from fantasy_quant.draft.personalities import (
     DEFAULT_ROOM,
     HEADLINERS,
+    HUMAN,
     MIN_Z_GROUP,
     SIGNAL_COLS,
     Personality,
+    SeatMap,
     make_opponent_pick_fn,
     make_room,
     make_room_pick_fn,
@@ -673,11 +675,14 @@ def test_make_room_pick_fn_maps_seats_around_your_own_team():
     assert st.your_team == 3
 
 
-def test_make_room_pick_fn_rejects_a_team_outside_the_room():
+def test_make_room_pick_fn_rejects_a_room_that_does_not_fit_the_table():
+    """16.17 moved this check **earlier** — a nine-seat room in a four-team draft used to survive
+    until some team happened to map past the end of the list, and now fails when the seat map is
+    built, naming both sides of the mismatch."""
     board = _enriched_board(40, seed=1)
     st = simulate_draft(board, n_teams=4, rounds=1, seed=0)
-    with pytest.raises(ValueError, match="the room has 9 seats"):
-        make_room_pick_fn(_model(), make_room())(st, 12)
+    with pytest.raises(ValueError, match="room has 9 seats for a 4-team draft"):
+        make_room_pick_fn(_model(), make_room())(st, 2)
 
 
 def test_a_room_of_one_personality_matches_broadcasting_that_personality():
@@ -1269,3 +1274,167 @@ def test_attach_proj_points_is_idempotent_and_never_invents_a_column():
     same = attach_proj_points(None, 2026, board)              # already present -> con never touched
     assert same["proj_points"].tolist() == [123.0]
     assert attach_proj_points(None, 2026, pd.DataFrame()).empty
+
+
+# ==================================================================================================
+# 16.17 — the seat map
+# ==================================================================================================
+def test_seat_map_room_index_reproduces_the_deleted_positional_formula():
+    """★ **The whole substep in one assertion.** ``team -> seat`` was ``team - 1 if team >
+    your_team else team``, repeated in four places and correct only at k=1. ``room_index`` counts
+    the modelled seats before ``team``, which *contains* that formula — so a single-human map must
+    agree with it for every ``(n_teams, your_team, team)``, exhaustively rather than by sample."""
+    lib_room = make_room()
+    for n_teams in range(2, 13):
+        room = (lib_room * 3)[:n_teams - 1]
+        for your_team in range(n_teams):
+            sm = SeatMap.of(n_teams, human_teams=(your_team,), room=room)
+            for team in range(n_teams):
+                want = None if team == your_team else (team - 1 if team > your_team else team)
+                assert sm.room_index(team) == want, (n_teams, your_team, team)
+
+
+def test_seat_map_of_validates_the_room_against_n_teams_minus_k():
+    """``make_room``'s check was against ``n_teams - 1``, which is why no shape but 1-human and
+    0-human was constructible. It is now ``n_teams - len(human_teams)``, **at construction**."""
+    lib = personalities()
+    six = tuple(lib["balanced"] for _ in range(6))
+    SeatMap.of(10, human_teams=(2, 4, 6, 8), room=six)                 # k=4 -> exactly 6 seats
+    with pytest.raises(ValueError, match="room has 6 seats for a 10-team draft"):
+        SeatMap.of(10, human_teams=(2,), room=six)
+    with pytest.raises(ValueError, match="human seats"):
+        SeatMap.of(10, human_teams=(2, 10), room=six)
+    # the two ends: nobody human, everybody human
+    assert SeatMap.of(4, mix=("balanced",) * 4).human_teams == frozenset()
+    assert len(SeatMap.of(4, human_teams=range(4), mix=()).room()) == 0
+
+
+def test_seat_map_rejects_a_seat_that_is_neither_human_nor_a_personality():
+    with pytest.raises(TypeError, match="expected HUMAN or a Personality"):
+        SeatMap((personalities()["balanced"], "balanced"))
+    assert HUMAN not in personalities(), "the sentinel must not collide with a personality name"
+
+
+def test_empty_mix_means_no_modelled_seats_not_the_default_room():
+    """The falsy-empty-collection trap: ``mix or DEFAULT_ROOM`` turned "no modelled seats" into
+    the nine-seat default, which is the one shape k = n_teams must not silently become."""
+    assert make_room((), n_opponents=0) == ()
+    assert len(make_room(None)) == len(DEFAULT_ROOM)
+
+
+def test_human_teams_defaults_to_your_team_and_routing_follows_it():
+    """``DraftState.human_teams`` defaults to ``{your_team}`` — that default is why nothing outside
+    ``draft/`` had to change — and ``run_to_completion`` routes on membership, not equality."""
+    board = _enriched_board(120, seed=3)
+    st = simulate_draft(board, n_teams=10, rounds=2, seed=0, your_team=3)
+    assert st.human_teams == frozenset({3})
+
+    seen: list[int] = []
+
+    def spy(state, team):
+        seen.append(team)
+        room = make_room(("balanced",) * 6, n_opponents=6)
+        return make_room_pick_fn(_model(), room)(state, team)
+
+    st = simulate_draft(board, n_teams=10, rounds=2, seed=0, your_team=1,
+                        human_teams=frozenset({1, 3, 5, 7}), opponent_pick_fn=spy,
+                        your_pick_fn={t: (lambda s, _t=t: int(s.draftable_pool(_t).index[0]))
+                                      for t in (1, 3, 5, 7)})
+    assert set(seen) == {0, 2, 4, 6, 8, 9}, "human seats are never routed to the room"
+    assert st.your_team == 1, "the PRIMARY seat is unchanged"
+    assert set(st.pick_log().query("is_you")["team"]) == {1}, "is_you stays the primary seat"
+
+
+def test_multi_seat_pick_fns_must_match_the_human_seats_exactly():
+    """Both directions of the mismatch are silent bugs, so both raise: a human seat with no
+    function would fall through to ``adp_pick_fn`` (which drafts for *your_team*, filling somebody
+    else's roster), and a function for a modelled seat would simply never be called."""
+    board = _enriched_board(80, seed=4)
+    kw = dict(n_teams=10, rounds=2, seed=0, your_team=1)
+    with pytest.raises(ValueError, match="do not match human seats"):
+        simulate_draft(board, human_teams=frozenset({1, 3}),
+                       your_pick_fn={1: (lambda s: int(s.draftable_pool(1).index[0]))}, **kw)
+    with pytest.raises(ValueError, match="do not match human seats"):
+        simulate_draft(board, human_teams=frozenset({1}),
+                       your_pick_fn={1: (lambda s: int(s.draftable_pool(1).index[0])),
+                                     4: (lambda s: int(s.draftable_pool(4).index[0]))}, **kw)
+    with pytest.raises(ValueError, match="need a dict"):
+        simulate_draft(board, human_teams=frozenset({1, 3}),
+                       your_pick_fn=(lambda s: int(s.draftable_pool(1).index[0])), **kw)
+
+
+def test_a_draft_completes_and_stays_legal_at_every_k():
+    """The capability itself: 0, 1, 4, 9 and 10 human seats all run to a full 10x8 draft."""
+    board = _enriched_board(200, seed=5)
+    lib = personalities()
+    for k in (0, 1, 4, 9, 10):
+        humans = tuple(range(k))
+        sm = SeatMap.of(10, human_teams=humans, room=tuple(lib["balanced"] for _ in range(10 - k)))
+        opp = make_room_pick_fn(_model(), sm.room(), seat_map=sm) if sm.room() else None
+        st = simulate_draft(
+            board, n_teams=10, rounds=8, seed=1, your_team=(humans[0] if humans else 0),
+            human_teams=frozenset(humans), seat_roles=sm.roles(), opponent_pick_fn=opp,
+            your_pick_fn=({t: (lambda s, _t=t: int(s.draftable_pool(_t).index[0]))
+                           for t in humans} or None))
+        assert st.is_done() and len(st.log) == 80, f"k={k}"
+        assert all(len(r) == 8 for r in st.rosters), f"k={k}"
+        assert {r["seat_role"] for r in st.log} <= {"human", "balanced"}
+
+
+def test_seat_roles_are_opt_in_so_the_batch_pick_log_is_unchanged():
+    """``seat_role`` is written only when a caller labelled the map. The batch harnesses leave it
+    ``None`` — their panels already carry ``seat_personality`` — so every committed artifact keeps
+    the exact column set it was differenced on (the H.5 bit-identity rule)."""
+    board = _enriched_board(80, seed=6)
+    plain = simulate_draft(board, n_teams=10, rounds=2, seed=0)
+    assert "seat_role" not in plain.pick_log().columns
+    labelled = simulate_draft(board, n_teams=10, rounds=2, seed=0,
+                              seat_roles=tuple(f"s{i}" for i in range(10)))
+    assert labelled.pick_log()["seat_role"].tolist()[:2] == ["s0", "s1"]
+    with pytest.raises(ValueError, match="seat_roles has 3 labels"):
+        simulate_draft(board, n_teams=10, rounds=1, seed=0, seat_roles=("a", "b", "c"))
+
+
+def test_clone_carries_the_seat_map_so_a_rollout_drafts_the_same_room():
+    """9.5's lookahead runs on a ``clone``; if the copy lost ``human_teams`` the rollout would
+    hand your other seats to the opponent model and score a room you are not in."""
+    board = _enriched_board(80, seed=7)
+    st = simulate_draft(board, n_teams=10, rounds=1, seed=0, your_team=2,
+                        human_teams=frozenset({2, 5}), seat_roles=("x",) * 10,
+                        your_pick_fn={t: (lambda s, _t=t: int(s.draftable_pool(_t).index[0]))
+                                      for t in (2, 5)})
+    c = st.clone()
+    assert c.human_teams == frozenset({2, 5}) and c.seat_roles == st.seat_roles
+
+
+def test_full_room_pick_fn_is_the_same_builder_with_a_zero_human_map():
+    """``mock.full_room_pick_fn`` was a verbatim copy of ``make_room_pick_fn`` differing in one
+    line. It is now a call to it, so a room of ten reproduces the identity mapping."""
+    from fantasy_quant.draft.mock import full_room_pick_fn
+
+    board = _enriched_board(150, seed=8)
+    room = make_room(("balanced", "chalk") * 5, n_opponents=10)
+    sm = SeatMap(room)
+    direct = make_room_pick_fn(_model(), room, seat_map=sm)
+    wrapped = full_room_pick_fn(_model(), room)
+    st = simulate_draft(board, n_teams=10, rounds=4, seed=2, human_teams=frozenset(),
+                        opponent_pick_fn=lambda s, t: direct(s, t))
+    st2 = simulate_draft(board, n_teams=10, rounds=4, seed=2, human_teams=frozenset(),
+                         opponent_pick_fn=lambda s, t: wrapped(s, t))
+    assert [r["player_key"] for r in st.log] == [r["player_key"] for r in st2.log]
+    assert sm.room_index(7) == 7, "no human -> the identity mapping"
+
+
+def test_seat_map_pick_fn_is_the_one_call_at_every_k():
+    """14.J's contract: the UI never computes a seat index. ``pick_fn`` returns ``None`` when there
+    are no modelled seats, which is what ``simulate_draft`` wants for "no opponent policy"."""
+    lib = personalities()
+    sm = SeatMap.of(10, human_teams=(1, 4), room=tuple(lib["balanced"] for _ in range(8)))
+    board = _enriched_board(120, seed=9)
+    fn = sm.pick_fn(_model())
+    st = simulate_draft(board, n_teams=10, rounds=3, seed=0, your_team=1,
+                        human_teams=frozenset({1, 4}), opponent_pick_fn=fn,
+                        your_pick_fn={t: (lambda s, _t=t: int(s.draftable_pool(_t).index[0]))
+                                      for t in (1, 4)})
+    assert len(st.log) == 30
+    assert SeatMap.of(4, human_teams=range(4), mix=()).pick_fn(_model()) is None

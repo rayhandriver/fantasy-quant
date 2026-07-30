@@ -4,9 +4,10 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-30 — **seat-map terms** (bottom section, planned 16.17/14.J: seat map ·
-> k-of-n control · the positional-mapping smell · one draft is one observation · bars have a scope,
-> not just a value). _Previously:_ 2026-07-27 — **the 2×5 mock-room terms** (bottom section: the 2×5 room · censored
+> **Last updated:** 2026-07-30 — **seat-map terms** (bottom section, 16.17 **BUILT**, 14.J still
+> planned: seat map · k-of-n control · the positional-mapping smell · one draft is one observation ·
+> bars have a scope, not just a value · **the poisoned control** · **a stale reference is not a
+> control**). _Previously:_ 2026-07-27 — **the 2×5 mock-room terms** (bottom section: the 2×5 room · censored
 > signal · the level-vs-shape family's fourth and first self-inflicted instance · inert weight · width
 > without direction · reach budget · blind spot vs mis-weight · unsigned situation score · mandatory
 > needs / roster-completion rule · a filter not a data gap · the choice-set contract's second home ·
@@ -1890,9 +1891,9 @@ reach bars by 2.3 % relative and 0.97 pp. Under a rule chosen *after* seeing tha
 rule chosen before, it does not. Both readings are defensible, which is the whole argument for fixing
 the rule first — otherwise the threshold is just a description of the result.
 
-## Seat-map terms (2026-07-30) — multi-seat human control (16.17 / 14.J, planned)
+## Seat-map terms (2026-07-30) — multi-seat human control (16.17 **built**, 14.J planned)
 
-**seat map** (16.17) — the object that says, for each of the `n_teams` seats, whether it is driven by a
+**seat map** (16.17, `draft/personalities.SeatMap`) — the object that says, for each of the `n_teams` seats, whether it is driven by a
 **human** or by a named **opponent personality**. It replaces the thing the engine used instead: a
 single `DraftState.your_team` int plus the positional arithmetic `seat = team - 1 if team >
 your_team else team`, which is only correct when exactly one seat is human. With a seat map, "I take
@@ -1911,6 +1912,10 @@ loud, and it duplicates: the same three-line skip existed in `make_room_pick_fn`
 as differing "only in the `team -> seat` mapping" — the difference *was* the design, and H.5 found it
 had already cost something (the interactive room ran `value_hawk` as `balanced` for as long as the two
 builders existed). Sibling of *a guard that does not run on the path a human uses is not a guard*.
+**Built 2026-07-30, and there were four copies, not three** — the fourth was in
+`steps/phase16_15_mock_room.py`'s hype-routing measurement, which a scoping pass that grepped the
+`draft/` package and the CLI did not reach. *A duplicated formula spreads to the places that measure
+it, not only to the places that use it.*
 
 **one draft is one observation** (16.17 honesty rule) — a user who drafts four teams in the same mock
 has not run four trials. Every pick made on one of those seats removes a player from the other three
@@ -1923,6 +1928,27 @@ a sample is the same error as reading one draw of ten teams as a Spearman* (H.5'
 distance, dispersion, chalk share, elite-fall landing) were all measured on ten **modelled** seats. A
 room where four seats are human is not the population they describe, so the honest UI move is to
 label the scope rather than silently re-report the number or re-measure it per-mock on n=1.
+
+**the poisoned control** (16.17) — before believing a before/after that reports *no difference*, run
+the same comparison against a version deliberately broken in a known way and check that it *does*
+report one. 16.17's bit-identity bars re-implement the deleted `team → seat` arithmetic and compare
+it to the shipped code; bar 3 rotates that legacy mapping by one seat and requires all 36 runs to
+differ. The lesson is T31's, paid for the hard way: its B5 before/after ran post-fix code twice (a
+`git worktree` under `uv run --project <main>` resolves the *editable* install back to the main
+tree's `src`) and produced identical hashes, which is **indistinguishable from "nothing moved"**.
+*A control that cannot fail is not evidence.* The cheap positive check for a worktree control is to
+assert the old module lacks the new symbol before trusting any number from it.
+
+**a stale reference is not a control** (16.17) — a committed artifact is a valid before/after
+reference only for as long as nothing *else* it depends on has moved. 16.17's spec named
+`analysis/mock_room_bars_verify_20260729.json` as its bit-identity bar; by 07-30 that sheet differed
+on 77 of 626 fields, all of them in the **2026 live-board readout** (the Stage-0 chore banked a new
+FFC board and T31's `ENRICH_VERSION` bump rebuilt the caches against it) or in two `config`
+provenance fields added after it was written. None of it was 16.17. The fix is not an argument, it
+is a **control run**: the same harness, pre-change code, *today's* data. In a repo with a standing
+weekly data chore, expect this — and note the matched-season **gate** fields, which run on
+2017–2024, were identical throughout, which is why partitioning a bar sheet into gates and readouts
+is worth doing before you need it.
 
 **out-of-support extrapolation** (T31) — the measured cause of the live-board level inversion. The
 Phase-5 level is a per-position linear `QuantReg` on `calibrated_mean`, fit on the *conditional*

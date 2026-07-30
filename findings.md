@@ -4950,3 +4950,114 @@ still deferred) · IDP (nflverse data too thin) · Sleeper settings auto-import 
 on top of the manual form, never the primary path). `starter_marginal`'s closed form reasons about
 one flex slot and now **routes multi-flex to the exact solver** rather than approximating — the
 candidates ride the trailing axis `lineup_points_matrix` already vectorizes, so it stays one call.
+
+---
+
+## Session I.5 — 16.17, the seat map: multi-seat human control
+
+*(2026-07-30. `steps/phase16_17_seat_map.py` → `analysis/phase16_17_seat_map.json`; room bar sheets
+`analysis/mock_room_bars_{seat_map_16_17,head_control_16_17}.json`. 668 tests (+10), ruff clean.
+Nothing refits: no fitted β, no frozen contract, no lockbox.)*
+
+The user asked whether the finished mock drafter lets him drive **as many seats as he likes** — say
+personalities in 6 of 10 and the other 4 teams drafted by hand. It did not, and the reason was not
+a missing checkbox.
+
+### The gap was structural, and it was four copies of one line
+
+"Which seat is the human" was a single int, `DraftState.your_team`, and the `team → seat` map was
+positional arithmetic:
+
+```python
+seat = team - 1 if team > state.your_team else team
+```
+
+written out in **four** places — `personalities.make_room_pick_fn`, `mock.full_room_pick_fn` (the
+identity variant), `steps/mock_draft.py::seat_of`, and a fourth in
+`steps/phase16_15_mock_room.py`'s hype-routing measurement that the scoping session had not found.
+It is correct for **exactly one** human seat. So the engine supported exactly two room shapes —
+1 human + 9 personalities and 0 humans + 10 — and every k in between was unreachable. The scoping
+note put it well and it turned out to be literal: `full_room_pick_fn`'s own docstring already said
+the two builders "differ only in the `team → seat` mapping they were split over".
+
+`SeatMap` is that observation carried to its conclusion: `n_teams` entries, each `HUMAN` or a
+`Personality`, and `room_index()` is the only place the mapping is computed. It **contains** the
+old formula — count the modelled seats before `team` and for a single human that is `team - 1`
+above him and `team` below him — which is why bar 5 can check the two against each other
+exhaustively rather than by sample.
+
+`full_room_pick_fn` is now one call to `make_room_pick_fn` with a zero-human map, and the duplicated
+body is deleted rather than left beside the general one (the T18/F.5 rule: a second copy is how the
+two drift apart).
+
+### The bars
+
+| | bar | result |
+|---|---|---|
+| 1 | k=1 reproduces the deleted arithmetic pick for pick | 36 draft pairs, 3 seasons, 2 rooms — **0 differ** |
+| 2 | k=0 reproduces `full_room_pick_fn` pick for pick | 18 draft pairs — **0 differ** |
+| 3 | **the control can fail** (poisoned mapping) | 36/36 poisoned runs differ |
+| 4 | k ∈ {0,1,4,9,10} complete and legal | 15 drafts, all 150 picks, **avoidable illegality 0.00 % at every k** |
+| 5 | `room_index` == the deleted formula, exhaustively | 1,014 `(n_teams, your_team, team)` triples, 0 mismatches |
+| 6 | the room bar sheet reproduces to the digit | **0 of 628 fields differ** against a pre-16.17 control on today's board; **0 of 412 gate fields** differ against the committed 07-29 sheet |
+
+### ★ Three things worth carrying forward
+
+**(1) The bar sheet's own reference had gone stale, and only a control run could show it.** Bar 6
+was specified as "`analysis/mock_room_bars_verify_20260729.json` reproduces to the digit". It does
+not — 79 of 628 fields differ. Every one of them is in `readout_2026` (the **live** board, which
+that sheet's own header calls *"an eyeball readout, never a gate"*) or in `config` (two provenance
+fields, `mix` and `bench_weight`, that did not exist on 07-29). The cause is dated and has nothing
+to do with this substep: the Stage-0 chore banked a **07-30** FFC board and T31 bumped
+`ENRICH_VERSION`, rebuilding all nine 16.13 caches against it, so Bijan Robinson and Jahmyr Gibbs
+swap at the top of the board and every landing statistic that reads the 2026 season moves with them.
+The **matched-season gates — the five T15 bars, landing, legality, faithfulness, personality
+buckets, all computed on 2017–2024 — are identical to the digit.**
+
+The fix was not to argue that; it was to produce a real control: the same harness run from a
+`git worktree` at the pre-16.17 commit (`63fc304`), on **today's** board
+(`analysis/mock_room_bars_head_control_16_17.json`). That comparison is bit-identical on **all 628
+fields**. *A reference artifact is only a control if nothing else has moved since it was
+written* — and in a repo with a standing weekly data chore, something usually has.
+
+**(2) The poisoned control, applied before it was needed.** T31's own write-up warns that its B5
+before/after ran post-fix code twice and produced identical hashes, *indistinguishable from
+"nothing moved"*. So bar 3 exists: the same comparison harness is pointed at a legacy mapping
+rotated by one seat and must report a difference. It does, 36/36. And the worktree control was
+verified the same way — `PYTHONPATH=<worktree>/src` first, then `assert not hasattr(personalities,
+"SeatMap")`, before any number from it was believed. *Assert the control can produce a known
+difference before trusting it to show none.*
+
+**(3) A bar that cannot be passed teaches a team to ignore it — and it was written that way first.**
+Bar 4's first draft counted seats with an unfilled dedicated starter slot and reported **90 illegal
+seats** on 2022. That board carries **5 kickers and 6 defenses for a ten-seat room**; half those
+seats cannot finish with a kicker and no pick policy can conjure one. `mock.roster_legality` already
+knew this and says so in its own docstring — the `supply` argument and the `avoidable` split exist
+for exactly this. Reused, the answer is **0.00 % avoidable at every k**. The claim 16.17 is
+accountable for is *multi-seat rooms are no less legal than the fully-simulated one on the same
+board*, not *every seat gets a kicker*.
+
+### Two honesty rules ship with the readouts, not with the docs
+
+They belong to this substep for the same reason 16.12's readout owns its own caveat — the surface
+that can mislead is the surface that must state it:
+
+1. **k human teams in one draft are ONE observation, not k.** Every pick you make removes a player
+   from your other seats' pools, so their outcomes are mechanically anti-correlated. `summary`
+   prints one block per seat and has nowhere to put a combined number; `--odds` says the same about
+   probabilities that do not add up because the sim runs *one* league in which your teams play each
+   other. Four teams going 4-for-4 on a strategy is a single draw.
+2. **The T15 realism bars describe a fully-simulated room.** Profile distance, dispersion, chalk
+   share and the elite-fall landing were all measured with ten *modelled* seats. `drift` now prints
+   that scope instead of implying it re-measured them.
+
+### T33, opened and deliberately not fixed
+
+Unifying the builders surfaced the one argument that genuinely differed between them:
+`make_value_hawk_pick_fn(..., n_teams=len(seats))` receives the **room** size, so the value hawk
+scales its step-3 context weights by **9** in the interactive room and **10** in the batch room —
+the T27 divergence one argument along, ~11 %. It is preserved **verbatim**, because bit-identity
+against both builders is this substep's entire done-bar and changing it is a behaviour change
+wearing a plumbing change's clothes. 16.17 does make it worse in a specific way, which is the
+argument for fixing it soon: with k human seats the divisor is `10 − k`, so it now varies with the
+room shape rather than being one of two constants. See `docs/TECH-DEBT.md` **T33**.

@@ -1113,10 +1113,18 @@ def make_room(mix: tuple[str, ...] | None = None, *, n_opponents: int = 9,
     caller wants a fixed, nameable room).
 
     ``fav_teams`` attaches to every ``homer`` seat, which is the only personality that reads it.
+
+    ★ **``n_opponents`` is the count of MODELLED seats, which is ``n_teams - k`` for ``k`` human
+    seats — not ``n_teams - 1``** (16.17). The old callers all passed ``n_teams - 1`` because one
+    human was the only shape the engine had; :meth:`SeatMap.of` is where the general arithmetic now
+    lives and it is the constructor to prefer.
     """
-    names = list(mix or DEFAULT_ROOM)
+    # `mix is None` means "use the default"; an EMPTY mix means a room with no modelled seats at
+    # all (16.17's k = n_teams), which `mix or DEFAULT_ROOM` would have silently turned into the
+    # nine-seat default — the falsy-empty-collection trap.
+    names = list(DEFAULT_ROOM if mix is None else mix)
     if len(names) != n_opponents:
-        raise ValueError(f"room has {len(names)} seats for {n_opponents} opponents — "
+        raise ValueError(f"room has {len(names)} seats for {n_opponents} modelled seats — "
                          f"pass a mix of exactly {n_opponents}")
     lib = personalities()
     unknown = [n for n in names if n not in lib]
@@ -1148,6 +1156,8 @@ def normalized_hype_gains(room) -> np.ndarray:
     without its controls* — here the control is the uniform application it was calibrated under.
     """
     g = np.array([float(p.hype_gain) for p in room], float)
+    if g.size == 0:                       # 16.17: k = n_teams, a room with no modelled seats
+        return g
     m = g.mean()
     return g if m <= 0 else g / m
 
@@ -1177,40 +1187,193 @@ def assert_room_objectives(room: Sequence[Personality], risk) -> None:
             f"`risk=` (see steps/phase16_14r_6_value_hawk.py) or they silently draft as balanced")
 
 
+# ==================================================================================================
+# 16.17 — the seat map: the ONE place ``team -> seat`` is computed
+# ==================================================================================================
+#: A seat driven by a caller-supplied pick function rather than by a personality — a human at the
+#: keyboard, or one of your own teams handed to the Phase-9 greedy (``mock_draft.py --auto``). A
+#: plain string so a :class:`SeatMap` pickles and prints without carrying a sentinel object whose
+#: identity would not survive a round trip through ``steps/mock_draft.py``'s state file.
+HUMAN: str = "HUMAN"
+
+
+@dataclass(frozen=True)
+class SeatMap:
+    """Who drives each of the ``n_teams`` seats: :data:`HUMAN`, or a :class:`Personality`.
+
+    ★ **Why this type exists (16.17).** "Which seat is the human" used to be a single int —
+    ``DraftState.your_team`` — and the ``team -> seat`` mapping was positional arithmetic,
+    ``seat = team - 1 if team > your_team else team``, written out in **three** places
+    (:func:`make_room_pick_fn`, ``mock.full_room_pick_fn``'s identity variant, and
+    ``steps/mock_draft.py``). That arithmetic is correct for **exactly one** human seat, so the
+    engine supported exactly two room shapes — 1 human + 9 personalities, or 0 humans + 10 — and
+    every k in between was unreachable. The three copies are deleted; this is the only survivor.
+
+    The mapping generalizes in the obvious way and reduces to the old formula by inspection:
+    :meth:`room_index` counts the non-human seats *before* ``team``, which for a single human at
+    ``your_team`` is ``team - 1`` above him and ``team`` below him.
+
+    It lives in ``draft/personalities.py`` and **not** in ``draft/simulator.py`` for 16.15's
+    layering reason: composing a room needs :class:`Personality`, and the draft engine every
+    earlier phase imports must not learn about the personality library. ``simulator.DraftState``
+    therefore carries only ``human_teams`` (a frozenset of ints) and ``seat_roles`` (labels) — no
+    behaviour, nothing to import.
+
+    ⚠ **Two honesty rules travel with multi-seat control** (they are enforced by convention and
+    stated at every surface that reports one, not by this class):
+
+    1. **k human teams in one draft are ONE observation, not k.** Every human pick removes a player
+       from the other human seats' pools, so their outcomes are mechanically anti-correlated. Never
+       average your own teams or report a combined win rate — four teams going 4-for-4 on a
+       strategy is one draw.
+    2. **The T15 realism bars describe a fully-simulated room.** Profile distance, dispersion,
+       chalk share and the elite-fall landing were all measured with ten *modelled* seats; a room
+       with four human seats is not the room those numbers are about. Print the bars' scope; do not
+       re-measure them per mock.
+    """
+    seats: tuple[Personality | str, ...]
+
+    def __post_init__(self) -> None:
+        if not self.seats:
+            raise ValueError("a seat map needs at least one seat")
+        for i, s in enumerate(self.seats):
+            if s != HUMAN and not isinstance(s, Personality):
+                raise TypeError(f"seat {i} is {s!r}; expected HUMAN or a Personality")
+
+    # -- geometry ----------------------------------------------------------------------------
+    @property
+    def n_teams(self) -> int:
+        return len(self.seats)
+
+    @property
+    def human_teams(self) -> frozenset[int]:
+        """0-indexed teams driven by a caller-supplied pick function."""
+        return frozenset(i for i, s in enumerate(self.seats) if s == HUMAN)
+
+    def room(self) -> tuple[Personality, ...]:
+        """The personality seats in table order — exactly the ``room`` sequence every builder in
+        this module already took, so a room list and a seat map are two views of one thing."""
+        return tuple(s for s in self.seats if s != HUMAN)
+
+    def room_index(self, team: int) -> int | None:
+        """Index of ``team`` within :meth:`room`, or ``None`` when that seat is human.
+
+        **The only ``team -> seat`` computation in the repo.** Re-deriving it anywhere else is the
+        defect this substep closes.
+        """
+        if not 0 <= team < len(self.seats):
+            raise ValueError(f"team {team} out of range for a {len(self.seats)}-team draft")
+        if self.seats[team] == HUMAN:
+            return None
+        return sum(1 for s in self.seats[:team] if s != HUMAN)
+
+    def roles(self) -> tuple[str, ...]:
+        """One label per seat — ``"human"`` or the personality's name. Written onto
+        :attr:`~fantasy_quant.draft.simulator.DraftState.seat_roles` so a pick log with four human
+        seats is readable without re-deriving who sat where."""
+        return tuple("human" if s == HUMAN else s.name for s in self.seats)
+
+    def label(self, team: int) -> str:
+        """Display label for one seat: ``YOU`` for a human, else the personality name."""
+        return "YOU" if self.seats[team] == HUMAN else self.seats[team].name
+
+    def pick_fn(self, model: OpponentModel, **kw):
+        """``opponent_pick_fn(state, team)`` for this map's modelled seats.
+
+        The one call a caller needs, at **every** k — which is the point of 16.17: the UI (14.J)
+        and ``steps/mock_draft.py`` never compute a seat index themselves. Returns ``None`` when
+        there are no modelled seats (k = ``n_teams``), which is what ``simulate_draft`` wants for
+        "no opponent policy" rather than a function that can never be called.
+        """
+        room = self.room()
+        return make_room_pick_fn(model, room, seat_map=self, **kw) if room else None
+
+    # -- construction ------------------------------------------------------------------------
+    @classmethod
+    def of(cls, n_teams: int = 10, *, human_teams: Sequence[int] | frozenset[int] = (),
+           mix: Sequence[str] | None = None, room: Sequence[Personality] | None = None,
+           seed: int | None = None, fav_teams: tuple[str, ...] = ()) -> SeatMap:
+        """Build a seat map for ``n_teams`` with ``human_teams`` (0-indexed) driven by hand.
+
+        The room is either passed in (``room=``, already-built personalities) or assembled from a
+        ``mix`` of names via :func:`make_room`. Either way its length is validated **at
+        construction** against ``n_teams - len(human_teams)`` — the general statement of the check
+        ``make_room`` used to make against ``n_teams - 1``, which is why no room shape other than
+        1-human and 0-human was constructible.
+        """
+        n_teams = int(n_teams)
+        humans = frozenset(int(t) for t in human_teams)
+        bad = sorted(t for t in humans if not 0 <= t < n_teams)
+        if bad:
+            raise ValueError(f"human seats {bad} out of 0..{n_teams - 1}")
+        n_sim = n_teams - len(humans)
+        if room is not None:
+            seats_room = tuple(room)
+        else:
+            seats_room = make_room(tuple(mix) if mix is not None else None, n_opponents=n_sim,
+                                   seed=seed, fav_teams=fav_teams)
+        if len(seats_room) != n_sim:
+            raise ValueError(
+                f"room has {len(seats_room)} seats for a {n_teams}-team draft with "
+                f"{len(humans)} human seat(s) — pass a mix of exactly {n_sim}")
+        it = iter(seats_room)
+        return cls(tuple(HUMAN if t in humans else next(it) for t in range(n_teams)))
+
+
 def make_room_pick_fn(model: OpponentModel, room=None, *, hype: np.ndarray | None = None,
                       normalize_hype: bool = True, risk=None, require_objectives: bool = True,
-                      **kw):
+                      seat_map: SeatMap | None = None, **kw):
     """One ``opponent_pick_fn(state, team)`` that routes each seat to its own personality.
 
     ``room`` is a tuple of :class:`Personality` (see :func:`make_room`), ordered by seat *excluding*
-    your own — seat ``i`` is the ``i``-th other team in draft order. ``hype`` is the single
-    per-draft narrative draw shared by the whole room (16.9); each seat scales it by its
+    the human seats — seat ``i`` is the ``i``-th modelled team in draft order. ``hype`` is the
+    single per-draft narrative draw shared by the whole room (16.9); each seat scales it by its
     :func:`normalized_hype_gains` share, which is how a shock expressed by an upside chaser and a
     homer looks different from the same shock in a room of autopickers.
 
     ``risk`` (T27) routes ``objective="portfolio_ce"`` seats to :func:`make_value_hawk_pick_fn`,
     exactly as :func:`~fantasy_quant.draft.mock.full_room_pick_fn` does for the ten-seat room — the
-    two builders now differ only in the ``team -> seat`` mapping they were split over, which was
-    always the intent. Passing ``risk=None`` with such a seat present raises
-    (:func:`assert_room_objectives`); ``require_objectives=False`` opts out for the ADP-only
+    two builders now differ in **nothing at all** (16.17: ``full_room_pick_fn`` is a call to this
+    function with a zero-human :class:`SeatMap`). Passing ``risk=None`` with such a seat present
+    raises (:func:`assert_room_objectives`); ``require_objectives=False`` opts out for the ADP-only
     harnesses that legitimately have no value index.
+
+    ★ **16.17 — the mapping.** ``seat_map`` names every seat explicitly and is what makes k > 1
+    human seats reachable. Omit it and one is derived on the first pick from the state itself
+    (``state.n_teams`` + ``state.human_teams``), which at the default ``human_teams={your_team}``
+    reproduces the old positional arithmetic exactly — that is the k=1 half of the done-bar.
     """
-    seats = tuple(room if room is not None else make_room())
+    seats = tuple(room if room is not None else
+                  (seat_map.room() if seat_map is not None else make_room()))
     if require_objectives:
         assert_room_objectives(seats, risk)
     gains = normalized_hype_gains(seats) if normalize_hype else np.array(
         [p.hype_gain for p in seats], float)
+    # ⚠ `n_teams=len(seats)` is the ROOM size, not the league size, and it has been since 16.14R
+    # step 6 — it scales the value hawk's context weights, so the interactive room (9 modelled
+    # seats) and the batch room (10) already price context 10 % apart. Preserved verbatim because
+    # the done-bar is bit-identity on both; see docs/TECH-DEBT.md T33.
     fns = [
         (make_value_hawk_pick_fn(replace(p, hype_gain=float(g)), risk, n_teams=len(seats))
          if p.objective == "portfolio_ce" and risk is not None
          else make_opponent_pick_fn(model, replace(p, hype_gain=float(g)), hype=hype, **kw))
         for p, g in zip(seats, gains, strict=True)
     ]
+    sm = seat_map
+    derived = seat_map is None
 
     def pick(state, team) -> int:
-        seat = team - 1 if team > state.your_team else team
-        if not 0 <= seat < len(fns):
-            raise ValueError(f"team {team} maps to seat {seat}, but the room has {len(fns)} seats")
+        nonlocal sm
+        # A derived map is re-derived whenever the state it is derived *from* changes shape, so one
+        # pick function reused across drafts (the 9.5 rollout does exactly this) can never carry a
+        # stale mapping. An explicitly supplied map is authoritative and is never second-guessed.
+        if sm is None or (derived and (sm.n_teams != state.n_teams
+                                       or sm.human_teams != frozenset(state.human_teams))):
+            sm = SeatMap.of(state.n_teams, human_teams=state.human_teams, room=seats)
+        seat = sm.room_index(team)
+        if seat is None:
+            raise ValueError(f"team {team} is a human seat in this map — it is not the room's "
+                             f"to pick (human seats: {sorted(sm.human_teams)})")
         return fns[seat](state, team)
 
     return pick

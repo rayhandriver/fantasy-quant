@@ -52,6 +52,7 @@ from fantasy_quant.draft.enrichment import enrich_board
 from fantasy_quant.draft.opponent_model import _ADP_SCALE, ALL_FEATURES, OpponentModel
 from fantasy_quant.draft.personalities import (
     DEFAULT_ROOM,
+    SeatMap,
     make_room,
     make_room_pick_fn,
     normalized_hype_gains,
@@ -130,8 +131,11 @@ def _loud_share(board, room, model, *, n_teams, rounds, n_drafts, amp: float | N
                             opponent_pick_fn=make_room_pick_fn(
                                 model, room, hype=None if amp is None else float(amp) * shock))
         log = st.pick_log().query("not is_you")
-        seats = np.where(log["team"].to_numpy() > st.your_team,
-                         log["team"].to_numpy() - 1, log["team"].to_numpy())
+        # 16.17: the fourth copy of the `team -> seat` arithmetic, now a `SeatMap` lookup like the
+        # other three. `st.human_teams` is the simulator's default {your_team}, so this is the
+        # same mapping it always computed — stated once instead of re-derived here.
+        sm = SeatMap.of(st.n_teams, human_teams=st.human_teams, room=room)
+        seats = np.array([sm.room_index(int(t)) for t in log["team"]], int)
         is_loud = log["player_key"].astype(str).isin(loud).to_numpy()
         for seat, ld in zip(seats, is_loud, strict=True):
             tot[seat] += 1
