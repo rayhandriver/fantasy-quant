@@ -67,6 +67,18 @@ BOARD_VIEW_COLS: tuple[tuple[str, str], ...] = (
     # season reads 0.00 — which renders as *never busts*. These are the same rates on season − 1,
     # and an unseen player stays NaN so the renderer can print "-" instead of a fabricated zero.
     ("boom_prob_live", "BOOM"), ("bust_prob_live", "BUST"),
+    # 14.E — the 9.1 scarcity cliff, read from the *decision* path rather than re-derived for
+    # display (see :func:`cliff_series`). It is last because it is the only column here that
+    # depends on the rest of the pool rather than on the player.
+    ("cliff", "CLIFF"),
+)
+
+#: Board columns that exist on the frame for :data:`RANGE_VIEW_COLS` to project but are not part of
+#: the advanced view — the raw Phase-5 quantiles and the two flags derived from them. Kept separate
+#: so the advanced view stays exactly :data:`BOARD_VIEW_COLS` and each mode is a *named subset* of
+#: one frame rather than three frames that have to be kept agreeing.
+_RANGE_EXTRA_COLS: tuple[tuple[str, str], ...] = (
+    ("q10", "Q10"), ("q50", "MED"), ("q90", "Q90"),
 )
 
 #: The four columns a human actually drafts on, plus the ``#`` pick handle carried by the index.
@@ -74,6 +86,23 @@ BOARD_VIEW_COLS: tuple[tuple[str, str], ...] = (
 #: column subsets, which is why :data:`BOARD_VIEW_COLS` and this tuple cannot describe different
 #: rows. (K1.5 step 2. The advanced view is simply :data:`BOARD_VIEW_COLS` in full.)
 SLIM_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "ADP", "PROJ")
+
+#: **14.G — the board as ranges rather than false-precise ranks.** The same frame again, projected
+#: onto the distribution's own quantiles: ``Q10``/``MED``/``Q90`` are the frozen Phase-5 season
+#: quantiles in points, ``COIN`` marks a player whose 80 % interval overlaps the player ranked
+#: directly below him, and ``FLAGS`` carries the PLAYER-VIEW confidence markers.
+#:
+#: ⚠ **``Q10`` is left-censored and the renderer must say so.** A season-points quantile cannot go
+#: below zero, so ``enrichment.CENSOR_AT`` piles up **36 % of the 2026 board** on exactly 0.0 —
+#: those rows do not have a floor of zero, they have *no resolvable floor*, which is T19's finding
+#: one display layer up. :func:`range_flags` emits ``censored floor`` for them and
+#: :data:`STAT_DICT` says it in the tooltip; printing a bare ``0`` would be the T22 defect
+#: (*blank is not zero*) wearing the other sign.
+RANGE_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "ADP", "PROJ", "Q10", "MED", "Q90",
+                                    "COIN", "FLAGS")
+
+#: The three board projections, in the order the mode control offers them.
+VIEW_MODES: tuple[str, ...] = ("slim", "ranges", "advanced")
 
 
 #: **14.O — one stat dictionary, served to every surface.** Board tooltips, the room grid, the
@@ -250,6 +279,82 @@ STAT_DICT: dict[str, dict[str, str]] = {
                           "misreading took the exact-zero share from 56 % to 8 % (T22).",
         "provenance": "draft/enrichment.py live_volatility (T22)",
     },
+    "CLIFF": {
+        "label": "Tier cliff",
+        "one_line": "How far the board falls at this player's position just below him.",
+        "what_it_means": "His base_value minus the value of the 3rd-next-best available player at "
+                         "the same position, floored at zero. A steep cliff means the tier does "
+                         "not refill: taking him is the difference between a starter and a "
+                         "replacement. A flat one means waiting costs you almost nothing.",
+        "worked_example": "RB 41 with two RBs above the same cliff = the third RB off this tier "
+                          "is 41 points of base_value worse than the second, so the drop happens "
+                          "inside the next two picks at that position.",
+        "how_to_read_it": "Read it beside ADP, not instead of it — a big cliff on a player nobody "
+                          "else is taking for two rounds is not urgent. That pairing is exactly "
+                          "what the drafting policy does (9.1 cliff × 9.4 survival).",
+        "provenance": "draft/optimizer.py positional_cliff (9.1) — the same call the greedy makes",
+    },
+    "Q10": {
+        "label": "Downside (10th percentile)",
+        "one_line": "One season in ten finishes at or below this.",
+        "what_it_means": "The frozen Phase-5 season-points 10th percentile, in points — the bad "
+                         "tail of the same distribution MEAN is the average of.",
+        "worked_example": "Jahmyr Gibbs 129 against a mean of 265: a bad Gibbs season is still "
+                          "half a good one.",
+        "how_to_read_it": "⚠ **A season total cannot be negative, so this column is censored at "
+                          "zero and about a third of the board sits exactly on it.** Those rows "
+                          "are flagged `censored floor`: they do not have a floor of zero, they "
+                          "have no resolvable floor (T19).",
+        "provenance": "player_distributions.q10 (Phase 5), via draft/enrichment.py",
+    },
+    "MED": {
+        "label": "Median (50th percentile)",
+        "one_line": "The middle season — half above, half below.",
+        "what_it_means": "The frozen Phase-5 q50. It sits below MEAN for most players because "
+                         "season totals are right-skewed: a healthy career year pulls the average "
+                         "up further than a lost season pulls it down.",
+        "worked_example": "Puka Nacua: median 273 against a mean of 264 — one of the rows where "
+                          "the ordering reverses, which is the availability tail doing the work.",
+        "how_to_read_it": "Compare it to MEAN to see which way a player's season is skewed.",
+        "provenance": "player_distributions.q50 (Phase 5), via draft/enrichment.py",
+    },
+    "Q90": {
+        "label": "Upside (90th percentile)",
+        "one_line": "One season in ten finishes at or above this.",
+        "what_it_means": "The frozen Phase-5 season-points 90th percentile, in points.",
+        "worked_example": "Bijan Robinson 413 — a top-of-the-range Bijan season is 150 points "
+                          "clear of his own mean.",
+        "how_to_read_it": "The gap Q90 − Q10 is the width of the whole claim. A wide band on a "
+                          "high mean is a swing; a wide band on a low mean is a lottery ticket.",
+        "provenance": "player_distributions.q90 (Phase 5), via draft/enrichment.py",
+    },
+    "COIN": {
+        "label": "Coin flip with the next player",
+        "one_line": "True when this player's 10–90 band overlaps the player ranked below him.",
+        "what_it_means": "Two adjacent rows whose 80 % intervals overlap are not distinguishable "
+                         "by this model. The board still has to print them in *some* order, and "
+                         "this column is the board admitting that the order is not evidence.",
+        "worked_example": "On the 2026 board almost every adjacent pair inside the first four "
+                          "rounds overlaps — the ranking there is a presentation, not a finding.",
+        "how_to_read_it": "Where it is true, break the tie on something the model does not price: "
+                          "your own read, roster fit, or the bye-week and concentration risks on "
+                          "the post-draft page.",
+        "provenance": "derived in session.range_flags from the frozen q10/q90 pair",
+    },
+    "FLAGS": {
+        "label": "Confidence flags",
+        "one_line": "Why a row's numbers deserve less weight than they look like they deserve.",
+        "what_it_means": "`no distribution` — no Phase-5 cloud at all, so this player drafts on "
+                         "ADP fallback and no seat's value objective can see him. `censored "
+                         "floor` — Q10 is on the zero censoring point. `rookie` — no NFL prior, so "
+                         "his projection is the 4.3 ridge landing-spot model rather than a "
+                         "measured history.",
+        "worked_example": "A rookie WR with `rookie, censored floor` has both a modelled level and "
+                          "an unresolvable downside — two independent reasons his band is softer "
+                          "than a veteran's of the same width.",
+        "how_to_read_it": "Flags never change a number; they tell you how hard to lean on one.",
+        "provenance": "session.range_flags over the board's rookie / q10 / mean columns",
+    },
 }
 
 
@@ -271,23 +376,41 @@ def stat_help(column: str) -> str:
 
 def assert_stat_dict_covers_board() -> None:
     """Every rendered board column has a dictionary entry. A new column without documentation is
-    a test failure, which is the only way a dictionary stays complete (14.O's done-bar)."""
-    missing = [lbl for _, lbl in BOARD_VIEW_COLS if lbl not in STAT_DICT]
-    if missing:
-        raise AssertionError(f"BOARD_VIEW_COLS with no STAT_DICT entry: {missing}")
+    a test failure, which is the only way a dictionary stays complete (14.O's done-bar).
 
-
-def project_view(view: pd.DataFrame, advanced: bool = False) -> pd.DataFrame:
-    """The rendered column subset of a :func:`board_view` frame.
-
-    Takes the *frame*, not the state, precisely so a caller cannot accidentally re-query for the
-    slim view: both views are this function applied to one object, so "the slim board and the
-    advanced board show the same rows in the same order" is true by construction rather than by
-    test (bar B2).
+    ★ **K2 widened this from the advanced view to every view.** 14.G added a third projection, and
+    a column documented only in the mode nobody opens is the defect 14.O exists to prevent — the
+    dictionary is complete when the *screens* are covered, not when one tuple is.
     """
-    if advanced:
-        return view
-    return view[[c for c in SLIM_VIEW_COLS if c in view.columns]]
+    rendered = {lbl for _, lbl in BOARD_VIEW_COLS} | set(RANGE_VIEW_COLS) | set(SLIM_VIEW_COLS)
+    missing = sorted(c for c in rendered if c not in STAT_DICT)
+    if missing:
+        raise AssertionError(f"rendered board columns with no STAT_DICT entry: {missing}")
+
+
+def project_view(view: pd.DataFrame, advanced: bool = False,
+                 mode: str | None = None) -> pd.DataFrame:
+    """The rendered column subset of a :func:`board_view` frame — slim, ranges or advanced.
+
+    Takes the *frame*, not the state, precisely so a caller cannot accidentally re-query for one of
+    the views: all three are this function applied to one object, so "the board modes show the same
+    rows in the same order" is true by construction rather than by test (K1.5 bar B2, K2 bar B4).
+
+    ``advanced=`` is K1.5's two-state control and still means what it meant; ``mode=`` supersedes it
+    when given. The older flag is kept rather than migrated because ``steps/session_k1_5_app.py``
+    differences against it, and a committed bar sheet that has to be edited to keep passing is not
+    a bar sheet.
+    """
+    mode = str(mode) if mode else ("advanced" if advanced else "slim")
+    if mode not in VIEW_MODES:
+        raise ValueError(f"project_view takes mode in {VIEW_MODES}, got {mode!r}")
+    if mode == "advanced":
+        cols = [lbl for _, lbl in BOARD_VIEW_COLS]
+    elif mode == "ranges":
+        cols = list(RANGE_VIEW_COLS)
+    else:
+        cols = list(SLIM_VIEW_COLS)
+    return view[[c for c in cols if c in view.columns]]
 
 
 # ------------------------------------------------------------------------------------------------
@@ -472,16 +595,141 @@ def resolve_pick(st: DraftState, team: int, query: str) -> int | list[dict]:
 # ------------------------------------------------------------------------------------------------
 # the derived frames — what a renderer renders
 # ------------------------------------------------------------------------------------------------
+def cliff_series(st: DraftState, team: int | None = None, *, risk=None) -> pd.Series:
+    """The 9.1 positional cliff for every player in one seat's pool — ``board index -> points``.
+
+    ★ **Read from the decision path, not re-derived for display (14.E).** The greedy computes this
+    inside :meth:`~fantasy_quant.draft.optimizer.RiskModel.effective_rank` as
+    ``positional_cliff(pool.player_key, pool.pos, risk.bv)``; this calls the same function on the
+    same pool with the same ``bv`` map, so the number on the board is the number the room is
+    drafting on. Passing ``risk`` is what makes that literally true — without it the pool's own
+    ``base_value`` column is used, which is where ``risk.bv`` came from, and the fallback exists
+    only so a board with no risk model still renders.
+
+    ⚠ **Computed over the seat's whole available pool**, before any position filter or row cap. A
+    cliff is a statement about what is left at a position; measuring it inside a 25-row window
+    would make "the tier runs out" mean "the tier runs out *on this screen*".
+    """
+    pool = st.draftable_pool(st.your_team if team is None else int(team))
+    if pool.empty:
+        return pd.Series(dtype=float)
+    if risk is not None and getattr(risk, "bv", None) is not None:
+        bv = risk.bv
+    else:
+        bv = dict(zip(pool["player_key"].astype(str),
+                      pd.to_numeric(pool["base_value"], errors="coerce"), strict=False))
+    vals = optimizer.positional_cliff(pool["player_key"], pool["pos"], bv)
+    return pd.Series(vals, index=pool.index, name="cliff")
+
+
+def cliff_table(st: DraftState, team: int | None = None, *, risk=None,
+                scan: int = 12) -> pd.DataFrame:
+    """Each position's **next** cliff — ``pos · n_before · drop · at_player · at_index``.
+
+    The board strip 14.E asks for ("after these 3 RBs, a big VBD drop"), as data. Within each
+    position, the cliff is scanned over the top ``scan`` available players and the largest one wins;
+    ``n_before`` counts the players at or above it, which is the number a drafter actually acts on —
+    *how many are left before the drop*.
+
+    ``scan`` bounds the search rather than the cliff: a position's steepest fall is usually near the
+    bottom of the board, where every remaining player is replacement level and the drop is an
+    artifact of the tail. Looking only at the part of the board being drafted from is the difference
+    between a live readout and a curiosity.
+    """
+    seat = st.your_team if team is None else int(team)
+    pool = st.draftable_pool(seat)
+    cliffs = cliff_series(st, seat, risk=risk)
+    rows = []
+    for p, grp in pool.groupby("pos", sort=False):
+        head = grp.head(int(scan))
+        c = cliffs.reindex(head.index)
+        if c.notna().sum() == 0 or float(c.max()) <= 0.0:
+            continue
+        at = c.idxmax()
+        rows.append({"pos": str(p),
+                     "n_before": int(list(head.index).index(at)) + 1,
+                     "drop": float(c.loc[at]),
+                     "at_player": str(head.loc[at, "player_name"]),
+                     "at_index": int(at),
+                     "n_available": int(len(grp))})
+    if not rows:
+        return pd.DataFrame(columns=["pos", "n_before", "drop", "at_player", "at_index",
+                                     "n_available"])
+    return pd.DataFrame(rows).sort_values("drop", ascending=False).reset_index(drop=True)
+
+
+def range_flags(pool: pd.DataFrame) -> pd.Series:
+    """The PLAYER-VIEW confidence markers for a pool, as one comma-joined string per row (14.G).
+
+    Three, in the order they matter: **no distribution** (no Phase-5 cloud — this player drafts on
+    ADP fallback and no value objective can see him), **censored floor** (``q10`` sits on
+    :data:`~fantasy_quant.draft.enrichment.CENSOR_AT`, so the downside is unresolvable rather than
+    zero — T19), and **rookie** (the projection is 4.3's landing-spot ridge, not a measured
+    history). A row with nothing to disclose gets an empty string, never a placeholder: a flag
+    column that is never blank stops being read.
+    """
+    from fantasy_quant.draft.enrichment import CENSOR_AT
+
+    idx = pool.index
+    mean = pd.to_numeric(pool.get("mean", pd.Series(np.nan, index=idx)), errors="coerce")
+    q10 = pd.to_numeric(pool.get("q10", pd.Series(np.nan, index=idx)), errors="coerce")
+    rook = pd.to_numeric(pool.get("rookie", pd.Series(0.0, index=idx)), errors="coerce").fillna(0.0)
+    out = []
+    for i in idx:
+        f = []
+        if pd.isna(mean.loc[i]):
+            f.append("no distribution")
+        elif pd.notna(q10.loc[i]) and float(q10.loc[i]) <= CENSOR_AT:
+            f.append("censored floor")
+        if float(rook.loc[i]) > 0:
+            f.append("rookie")
+        out.append(", ".join(f))
+    return pd.Series(out, index=idx, name="flags")
+
+
+def coin_flags(q10, q90) -> np.ndarray:
+    """``True`` where a row's 80 % interval overlaps the row **directly below it** (14.G).
+
+    Parameter-free on purpose. "These two are a coin flip" is a claim about resolution, and the
+    only resolution statement the frozen contract actually supports is whether the two intervals
+    intersect — anything narrower (a gap threshold, a probability of one outscoring the other)
+    would be a number this session invented and nothing validates.
+
+    The last row compares with nothing and is ``False``; so is any row whose band is missing, since
+    "we cannot tell" and "they are indistinguishable" are different answers.
+    """
+    lo = pd.to_numeric(pd.Series(q10), errors="coerce").to_numpy(float)
+    hi = pd.to_numeric(pd.Series(q90), errors="coerce").to_numpy(float)
+    out = np.zeros(len(lo), bool)
+    if len(lo) < 2:
+        return out
+    a = (lo[:-1] <= hi[1:]) & (lo[1:] <= hi[:-1])
+    out[:-1] = np.where(np.isfinite(lo[:-1]) & np.isfinite(hi[:-1])
+                        & np.isfinite(lo[1:]) & np.isfinite(hi[1:]), a, False)
+    return out
+
+
 def board_view(st: DraftState, team: int | None = None, *, pos: str | None = None,
-               n: int | None = None) -> pd.DataFrame:
-    """The best-available board for one seat: :data:`BOARD_VIEW_COLS`, index = the pick handle.
+               n: int | None = None, risk=None) -> pd.DataFrame:
+    """The best-available board for one seat: every rendered column, index = the pick handle.
 
     The index is preserved deliberately — it is the ``#`` a CLI user types and the row key an app
     selects on, and it is the board index :func:`~fantasy_quant.draft.simulator._apply_pick` wants.
     A missing column is created as all-NaN rather than dropped, so the frame's shape does not depend
     on how richly a particular board happened to enrich.
+
+    ★ **One frame, three projections** (:func:`project_view`). The frame carries the union of what
+    the slim, ranges and advanced views show; the mode chooses columns and never re-queries. K2
+    added ``CLIFF`` (14.E) and the ``Q10/MED/Q90/COIN/FLAGS`` block (14.G) to it rather than adding
+    a second query for each, because two queries are two chances to disagree about who is available.
+
+    ⚠ **``COIN`` is a property of the order on screen, so it is computed after the filter.** Filter
+    to RB and it tells you which RBs are indistinguishable *from each other*, which is the question
+    a drafter filtering to RB is asking.
     """
-    pool = st.draftable_pool(st.your_team if team is None else int(team))
+    seat = st.your_team if team is None else int(team)
+    cliffs = cliff_series(st, seat, risk=risk)
+    pool = st.draftable_pool(seat)
     if pos:
         wanted = [p.strip().upper() for p in str(pos).split(",") if p.strip()]
         pool = pool[pool["pos"].isin(wanted)]
@@ -489,7 +737,14 @@ def board_view(st: DraftState, team: int | None = None, *, pos: str | None = Non
         pool = pool.head(int(n))
     out = pd.DataFrame(index=pool.index)
     for col, label in BOARD_VIEW_COLS:
+        if col == "cliff":
+            out[label] = cliffs.reindex(pool.index)
+        else:
+            out[label] = pool[col] if col in pool.columns else np.nan
+    for col, label in _RANGE_EXTRA_COLS:
         out[label] = pool[col] if col in pool.columns else np.nan
+    out["COIN"] = coin_flags(out["Q10"], out["Q90"])
+    out["FLAGS"] = range_flags(pool)
     return out
 
 
@@ -522,6 +777,34 @@ def _slot_scores(roster: pd.DataFrame, vi: pd.DataFrame | None) -> np.ndarray:
     col = roster["base_value"] if "base_value" in roster.columns else pd.Series(
         np.nan, index=roster.index)
     return pd.to_numeric(col, errors="coerce").fillna(0.0).to_numpy(float)
+
+
+def slot_plan(st: DraftState) -> list[str]:
+    """The league's starting-slot labels in fill order — ``QB · RB1 · … · FLEX · K · DST``."""
+    from fantasy_quant.inseason.lineup import _slot_plan
+
+    return [label for label, _ in _slot_plan(st.slots)]
+
+
+def lineup_choice(st: DraftState, roster: pd.DataFrame,
+                  vi: pd.DataFrame | None = None) -> tuple[dict, np.ndarray]:
+    """``(slot label -> roster row position, the base_value vector)`` from the **frozen** solver.
+
+    ★ **The single fill-order read, shared by every K1.5/K2 surface that needs one** — the 14.L slot
+    grid, the roster rail, and 14.F's bye/concentration analysis all call this rather than each
+    asking :func:`~fantasy_quant.inseason.lineup.optimal_lineup` themselves. 17.1's rule is that
+    :meth:`RosterSlots.flex_groups` is the *single* fill-order rule after three solvers had each
+    re-derived it once; three display surfaces re-deriving it would be the same mistake at a lower
+    altitude, and the display copy is the one nobody would think to test.
+
+    A degenerate one-draw "week": ``optimal_lineup`` reduces to its greedy mean-max fill, which is
+    the frozen ``flex_groups`` order. Nothing here chooses a lineup; it reads one.
+    """
+    from fantasy_quant.inseason.lineup import optimal_lineup
+
+    scores = _slot_scores(roster, vi)
+    choice = optimal_lineup(scores[:, None], roster["pos"].tolist(), st.slots)
+    return dict(choice.slots), scores
 
 
 def room_grid(st: DraftState, sm: SeatMap, *, by: str = "pick",
@@ -559,21 +842,16 @@ def room_grid(st: DraftState, sm: SeatMap, *, by: str = "pick",
     if by != "slot":
         raise ValueError(f"room_grid takes by='pick' or by='slot', got {by!r}")
 
-    from fantasy_quant.inseason.lineup import _slot_plan, optimal_lineup
-
-    plan = [label for label, _ in _slot_plan(st.slots)]
+    plan = slot_plan(st)
     rows = plan + [f"BN{i + 1}" for i in range(max(0, st.rounds - len(plan)))]
     grid = pd.DataFrame("", index=rows, columns=cols)
     for t in range(st.n_teams):
         roster = st.roster(t)
         if roster.empty:
             continue
-        scores = _slot_scores(roster, vi)
-        # a degenerate one-draw "week": `optimal_lineup` reduces to its greedy mean-max fill, which
-        # is the frozen `flex_groups` order. Nothing here chooses a lineup; it reads one.
-        choice = optimal_lineup(scores[:, None], roster["pos"].tolist(), st.slots)
+        slots, scores = lineup_choice(st, roster, vi)
         started = set()
-        for label, i in choice.slots.items():
+        for label, i in slots.items():
             if i is None or label not in grid.index:
                 continue
             started.add(int(i))
@@ -586,6 +864,173 @@ def room_grid(st: DraftState, sm: SeatMap, *, by: str = "pick",
                 r = roster.iloc[int(i)]
                 grid.at[f"BN{k + 1}", cols[t]] = f"{r['player_name']} ({r['pos']})"
     return grid
+
+
+# ------------------------------------------------------------------------------------------------
+# 14.F — roster-construction risk: the three ways a good roster is badly built
+# ------------------------------------------------------------------------------------------------
+#: Cache for the pooled Phase-8.5 backfield elevation ratio, which is a property of the DEV panel
+#: and not of any draft — recomputing it per page render would read nine seasons per rerun.
+_ELEVATION: dict[str, float] = {}
+
+
+def elevation_ratio(con) -> float:
+    """The pooled DEV multiplier a backup's ppg gets when his starter is out (Phase 8.5).
+
+    Read from the *same* call ``steps/phase8_covariance.py`` makes — ``elevation_stats`` over
+    ``copula.handcuff_pairs`` on the DEV weekly panel — so the option premium the app quotes is the
+    one the 8.5 done-bar asserted, not a constant retyped into a display layer.
+    """
+    if "ratio" not in _ELEVATION:
+        from fantasy_quant.config import DEV_SEASONS
+        from fantasy_quant.covariance import copula
+        from fantasy_quant.covariance.estimate import weekly_offense_panel
+        from fantasy_quant.valuation.handcuff import elevation_stats
+
+        _ELEVATION["ratio"] = float(
+            elevation_stats(copula.handcuff_pairs(weekly_offense_panel(con, DEV_SEASONS)))["ratio"])
+    return _ELEVATION["ratio"]
+
+
+def bye_weeks(con, season: int) -> pd.Series:
+    """``player_key -> bye week`` for a season, from the FantasyPros ECR snapshots (0.11).
+
+    ⚠ **The store has no schedule table, so this is the only bye source in the repo** and it is
+    incomplete — roughly nine in ten 2026 board rows carry one. A player whose bye is unknown must
+    stay unknown all the way to the screen: an ``fillna(0)`` here would put him in a "week 0" bucket
+    that reads as *no bye*, which is the T22 defect (blank is not zero) in a new column.
+
+    Keys the same way :func:`~fantasy_quant.draft.simulator.board_player_key` does — ``gsis_id``,
+    so team defenses (which carry none) simply have no bye here rather than a wrong one.
+    """
+    df = con.execute(
+        "SELECT gsis_id, MAX(bye) AS bye FROM ecr_snapshots "
+        "WHERE season = ? AND bye IS NOT NULL AND gsis_id IS NOT NULL GROUP BY gsis_id",
+        [int(season)]).df()
+    if df.empty:
+        return pd.Series(dtype=float)
+    return pd.Series(pd.to_numeric(df["bye"], errors="coerce").to_numpy(float),
+                     index=df["gsis_id"].astype(str), name="bye")
+
+
+def roster_construction_risk(st: DraftState, team: int, *, vi: pd.DataFrame | None = None,
+                             byes: pd.Series | None = None,
+                             elevation: float | None = None) -> dict:
+    """The three construction risks for one seat — bye clustering, concentration, handcuff gaps.
+
+    A roster can win every player-level comparison and still be badly built, and all three of these
+    are invisible in ``STARTABLE``/``CAPITAL`` because both are sums over players. They are reported
+    **separately and unweighted**: there is no evidence for a rate of exchange between "four
+    starters idle in week 11" and "three of your players share a bye", and inventing one would bury
+    the only part of this readout a drafter can act on.
+
+    Returns ``{team, starters, byes, max_bye_starters, unknown_byes, concentration,
+    max_team_players, handcuffs, n_handcuff_gaps, elevation_ratio}``.
+
+    ⚠ **Bye clustering is measured over your STARTERS, not your roster** — a bench player's bye
+    costs nothing, and counting him would make a deep roster look fragile for being deep. Starters
+    come from :func:`lineup_choice`, the frozen solver, so this readout and the 14.L grid can never
+    disagree about who starts.
+    """
+    seat = int(team)
+    roster = st.roster(seat)
+    out: dict = {"team": seat, "starters": [], "byes": pd.DataFrame(columns=["week", "n", "who"]),
+                 "max_bye_starters": 0, "unknown_byes": 0,
+                 "concentration": pd.DataFrame(columns=["nfl_team", "n", "n_starters", "who"]),
+                 "max_team_players": 0,
+                 "handcuffs": pd.DataFrame(columns=["starter", "nfl_team", "backup", "held",
+                                                    "option_premium"]),
+                 "n_handcuff_gaps": 0, "elevation_ratio": elevation}
+    if roster.empty:
+        return out
+
+    slots, _ = lineup_choice(st, roster, vi)
+    starter_rows = sorted({int(i) for lbl, i in slots.items() if i is not None})
+    starters = roster.iloc[starter_rows] if starter_rows else roster.iloc[[]]
+    out["starters"] = [str(n) for n in starters["player_name"]]
+
+    # --- bye clustering, over the starters ------------------------------------------------------
+    if byes is not None and len(byes):
+        wk = starters["player_key"].astype(str).map(byes)
+        known = wk.notna()
+        out["unknown_byes"] = int((~known).sum())
+        if known.any():
+            grp = (pd.DataFrame({"week": wk[known].astype(int),
+                                 "who": starters.loc[known.to_numpy(), "player_name"].astype(str)})
+                   .groupby("week"))
+            out["byes"] = (pd.DataFrame({"n": grp.size(), "who": grp["who"].apply(", ".join)})
+                           .reset_index().sort_values(["n", "week"], ascending=[False, True])
+                           .reset_index(drop=True))
+            out["max_bye_starters"] = int(out["byes"]["n"].max())
+
+    # --- NFL-team concentration, over the whole roster ------------------------------------------
+    if "team" in roster.columns:
+        tm = roster["team"].astype("string")
+        start_keys = set(starters["player_key"].astype(str))
+        rows = []
+        for t, grp in roster.assign(_t=tm).groupby("_t", dropna=True, sort=False):
+            rows.append({"nfl_team": str(t), "n": int(len(grp)),
+                         "n_starters": int(sum(str(k) in start_keys
+                                               for k in grp["player_key"])),
+                         "who": ", ".join(str(n) for n in grp["player_name"])})
+        if rows:
+            out["concentration"] = (pd.DataFrame(rows)
+                                    .sort_values(["n", "nfl_team"], ascending=[False, True])
+                                    .reset_index(drop=True))
+            out["max_team_players"] = int(out["concentration"]["n"].max())
+
+    # --- handcuff gaps, priced with the frozen 8.5 option -----------------------------------------
+    out.update(_handcuff_gaps(st, roster, elevation))
+    return out
+
+
+def _handcuff_gaps(st: DraftState, roster: pd.DataFrame, elevation: float | None) -> dict:
+    """Which of your lead RBs you do **not** hold the backup for, and what that option is worth.
+
+    ★ **Restricted to RB, deliberately.** The 8.5 elevation ratio is estimated on backfields
+    (``copula.handcuff_pairs``), so quoting an option premium for a WR2 would apply a measured
+    number to a population it was not measured on — the T24 failure (*a relationship measured on
+    one object is not a specification for another*) in its cheapest form. The other positions get
+    no row rather than a made-up one.
+
+    ⚠ **Only your seat's *lead* backs generate a row.** Board order within an NFL backfield is the
+    consensus's own depth read, so the handcuff of the RB1 is the RB2 — and if you hold the RB2 you
+    do not have a gap, you *are* the handcuff. The first run of this function reported "Tyjae
+    Spears → backup Tony Pollard", which is the depth chart upside down: taking "the next RB on the
+    same team" without first checking which of them is the starter prices insurance on the wrong
+    life.
+    """
+    cols = ["starter", "nfl_team", "backup", "held", "option_premium"]
+    if roster.empty or "team" not in roster.columns:
+        return {"handcuffs": pd.DataFrame(columns=cols), "n_handcuff_gaps": 0}
+    board = st.board
+    held = set(str(k) for k in roster["player_key"])
+    rows = []
+    for _, r in roster[roster["pos"] == "RB"].iterrows():
+        nfl = r.get("team")
+        if not isinstance(nfl, str) or not nfl:
+            continue
+        mates = board[(board["team"] == nfl) & (board["pos"] == "RB")]
+        if len(mates) < 2 or str(mates.iloc[0]["player_key"]) != str(r["player_key"]):
+            continue                      # not this backfield's lead back — no insurance to price
+        backup = mates.iloc[1]
+        gp = pd.to_numeric(pd.Series([r.get("games_played_mean")]), errors="coerce").iloc[0]
+        p_out = float(np.clip(1.0 - (gp / 17.0), 0.0, 1.0)) if pd.notna(gp) else np.nan
+        b_mean = pd.to_numeric(pd.Series([backup.get("mean")]), errors="coerce").iloc[0]
+        prem = np.nan
+        if elevation is not None and pd.notna(p_out) and pd.notna(b_mean):
+            from fantasy_quant.valuation.handcuff import handcuff_value
+            prem = float(handcuff_value(p_out, float(b_mean) / 17.0,
+                                        float(elevation)).option_premium)
+        rows.append({"starter": str(r["player_name"]), "nfl_team": nfl,
+                     "backup": str(backup["player_name"]),
+                     "held": str(backup["player_key"]) in held,
+                     "option_premium": prem})
+    frame = pd.DataFrame(rows, columns=cols)
+    if not frame.empty:
+        frame = frame.sort_values(["held", "option_premium"], ascending=[True, False],
+                                  na_position="last").reset_index(drop=True)
+    return {"handcuffs": frame, "n_handcuff_gaps": int((~frame["held"]).sum()) if len(frame) else 0}
 
 
 def explain_chain(board: pd.DataFrame, vi: pd.DataFrame, query: str,
@@ -734,7 +1179,285 @@ def drift_frames(st: DraftState, meta: dict, sm: SeatMap) -> dict:
                                  board_teams=meta["teams"], seed=meta["seed"])
     panel["seat_personality"] = panel["draft_slot"].map(lambda s: labels[s - 1])
     return {"profile": mock.reach_profile(panel), "elite": mock.elite_fall_profile(panel),
-            "seats": mock.seat_table(panel), "n_humans": len(sm.human_teams)}
+            "seats": mock.seat_table(panel), "n_humans": len(sm.human_teams), "panel": panel}
+
+
+def pick_drift_table(frames: dict, team: int | None = None) -> pd.DataFrame:
+    """Every pick as a reach or a steal — ``pick · round · who · player · pos · adp · reach_picks``.
+
+    ★ **Read off the drift panel, not recomputed as ``adp − overall_pick``.** The panel already
+    centres each draft on its own median slope and expresses drift in 10-team ADP picks, which is
+    the unit every T15/T18 bar is stated in. A page that subtracted two raw numbers instead would
+    produce a *third* definition of "reach" in a repo that has already had two (T18's ``avg_reach``
+    disagreed with itself by a sign), and it would disagree with the profile printed beside it.
+
+    ``reach_picks`` keeps the panel's sign: **positive = the seat reached**, negative = the player
+    fell to them. Sorted most-reached first, so the two ends of the frame are "biggest reach" and
+    "best value".
+    """
+    panel = frames.get("panel")
+    cols = ["pick_no", "round", "who", "player", "pos", "adp", "reach_picks"]
+    if panel is None or panel.empty:
+        return pd.DataFrame(columns=cols)
+    p = panel if team is None else panel[panel["draft_slot"].astype(int) == int(team) + 1]
+    if p.empty:
+        return pd.DataFrame(columns=cols)
+    out = pd.DataFrame({
+        "pick_no": p["pick_no"].astype(int), "round": p["round"].astype(int),
+        "who": p["seat_personality"].astype(str), "player": p["name"].astype(str),
+        "pos": p["pos"].astype(str), "adp": pd.to_numeric(p["adp"], errors="coerce"),
+        # `mock._picks` is private and called anyway: its docstring says it is "the only place
+        # TEAMS_REF is applied", so multiplying by TEAMS_REF here would create the second place.
+        "reach_picks": mock._picks(p["drift"]).astype(float),
+    })
+    return out.sort_values("reach_picks", ascending=False).reset_index(drop=True)
+
+
+# ------------------------------------------------------------------------------------------------
+# 14.I — the draft grade
+# ------------------------------------------------------------------------------------------------
+#: **The weights, and they are a presentation choice with nothing validating them.**
+#:
+#: ★ Every *input* below is read from frozen, separately-validated machinery; the act of combining
+#: them into one number is not. No backtest in this repo scores a weighted blend of odds, starter
+#: strength, draft-value capture and bye clustering against anything, so these four numbers are a
+#: house style, chosen by the user (2026-07-31) to lead with the component the season sim actually
+#: certified. They are declared here, printed beside every grade, and named in the tooltip for
+#: exactly that reason: an invented constant that is visible is a design decision, and the same
+#: constant buried inside a scoring function is a claim.
+#:
+#: The lockbox certified the *ordering* of title odds (Brier 0.088) — hence 50 on the component
+#: with evidence behind it. ``construction`` is the smallest because it is the noisiest: it is one
+#: count (see :func:`grade_components`), not a model output.
+GRADE_WEIGHTS: dict[str, float] = {
+    "odds": 50.0, "starters": 20.0, "value": 15.0, "construction": 15.0,
+}
+
+#: ``(floor, letter)`` from the top down, **anchored to this scale rather than to a school
+#: gradebook**: :func:`apply_grade` scores each component min–max across the ten teams, so a
+#: middling roster lands near **50 by construction** and the bands put ``C`` there.
+#:
+#: ★ This was a real defect caught by the first run rather than a taste question. On plain US bands
+#: (90/80/70/60) the median team in a ten-team room graded **D+**, and six of ten graded D or F —
+#: the app telling an average drafter he had drafted badly, because the letters assumed 50 % was a
+#: fail when on a curve 50 is the middle. *A scale and its labels have to be anchored to the same
+#: thing.* An ``F`` here means "last in this room", never "bad in the abstract".
+GRADE_BANDS: tuple[tuple[float, str], ...] = (
+    (92.0, "A+"), (85.0, "A"), (80.0, "A−"), (74.0, "B+"), (68.0, "B"), (62.0, "B−"),
+    (56.0, "C+"), (50.0, "C"), (44.0, "C−"), (38.0, "D+"), (32.0, "D"), (26.0, "D−"),
+)
+
+
+def grade_letter(total: float) -> str:
+    """The letter for a 0–100 score. Below the last band is an ``F``."""
+    if not np.isfinite(total):
+        return "—"
+    for floor, letter in GRADE_BANDS:
+        if float(total) >= floor:
+            return letter
+    return "F"
+
+
+def grade_components(st: DraftState, meta: dict, sm: SeatMap, *, odds: pd.DataFrame,
+                     vi: pd.DataFrame | None = None, byes: pd.Series | None = None,
+                     elevation: float | None = None) -> pd.DataFrame:
+    """The four **raw** component values for every team — measurement, before any curve.
+
+    One row per seat: ``team · who · human`` plus
+
+    * ``odds`` — the T29 title **fair-share multiple**, not the percentage. Immune to the sim's
+      documented −113 pts/team level bias, which the percentage is not.
+    * ``starters`` — ``STARTABLE`` from :func:`summary_table`, i.e. the best legal starting lineup's
+      ``base_value`` (T28's startable half, never the slot-blind capital).
+    * ``value`` — ``harvest_picks`` from the drift panel: picks of surplus against the corpus's own
+      reach scale, positive when the seat let value come to it.
+    * ``construction`` — **minus** the largest number of the seat's starters sharing one bye week,
+      from :func:`roster_construction_risk`. Negated so that, like the other three, more is better.
+
+    ⚠ **``construction`` is deliberately one count and not a blend of 14.F's three risks.** Team
+    concentration and handcuff gaps are reported on the page and stay out of the arithmetic:
+    combining three unvalidated risks into an unvalidated sub-score and feeding it to an unvalidated
+    weighting would put two invented layers under one number. One count is legible and it is
+    checkable against the bye table printed beside it.
+    """
+    summary = summary_table(st, sm, vi).set_index("team")
+    seats = drift_frames(st, meta, sm)["seats"]
+    harvest = {}
+    if not seats.empty and "draft_slot" in seats.columns:
+        harvest = {int(s): float(h) for s, h in zip(seats["draft_slot"],
+                                                    seats.get("harvest_picks", np.nan),
+                                                    strict=False)}
+    tf = {int(t): float(v) for t, v in zip(odds["team"], odds["title_fair"], strict=False)}
+    rows = []
+    for t in range(st.n_teams):
+        risk = roster_construction_risk(st, t, vi=vi, byes=byes, elevation=elevation)
+        rows.append({
+            "team": t + 1, "who": seat_label(t, sm), "human": t in sm.human_teams,
+            "odds": tf.get(t + 1, np.nan),
+            "starters": (float(summary.loc[t + 1, "startable"])
+                         if "startable" in summary else np.nan),
+            "value": harvest.get(t + 1, np.nan),
+            "construction": -float(risk["max_bye_starters"]),
+            "max_bye_starters": int(risk["max_bye_starters"]),
+            "max_team_players": int(risk["max_team_players"]),
+            "n_handcuff_gaps": int(risk["n_handcuff_gaps"]),
+        })
+    return pd.DataFrame(rows)
+
+
+def apply_grade(components: pd.DataFrame) -> pd.DataFrame:
+    """Score :func:`grade_components` on the room and add ``total`` + ``letter``.
+
+    ★ **One scoring rule for all four components: min–max across the ten teams.** Chosen because it
+    is the only convention that needs no per-component constant — a curve on the room, which is
+    what "grade the roster **vs the room**" means. A component the room does not separate on (every
+    team equal, or the column missing) scores **0.5 for everyone**, so a dimension carrying no
+    information cannot decide a grade.
+
+    ``total = Σ wᵢ·scoreᵢ`` with :data:`GRADE_WEIGHTS` summing to 100, and every ``points_*`` term
+    is returned beside it — bar B5 is that the total reproduces from the printed parts, which is the
+    only thing that keeps an invented weighting honest.
+    """
+    out = components.copy()
+    total = np.zeros(len(out))
+    for comp, w in GRADE_WEIGHTS.items():
+        raw = pd.to_numeric(out.get(comp, pd.Series(np.nan, index=out.index)), errors="coerce")
+        lo, hi = raw.min(), raw.max()
+        if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+            score = pd.Series(0.5, index=out.index)
+        else:
+            score = ((raw - lo) / (hi - lo)).fillna(0.5)
+        out[f"score_{comp}"] = score.to_numpy(float)
+        out[f"points_{comp}"] = (score * w).to_numpy(float)
+        total = total + out[f"points_{comp}"].to_numpy(float)
+    out["total"] = total
+    out["letter"] = [grade_letter(v) for v in total]
+    return out.sort_values("total", ascending=False).reset_index(drop=True)
+
+
+def draft_grade(st: DraftState, meta: dict, sm: SeatMap, *, odds: pd.DataFrame,
+                vi: pd.DataFrame | None = None, byes: pd.Series | None = None,
+                elevation: float | None = None) -> pd.DataFrame:
+    """:func:`grade_components` scored by :func:`apply_grade` — a row per seat, graded on the room.
+
+    ⚠ **There is no combined grade across your seats and there is nowhere to put one.** k human
+    teams in one draft are ONE observation (16.17): your picks depleted each other's pools, so their
+    grades are mechanically anti-correlated and averaging them would report the depletion as skill.
+    The frame carries a ``human`` flag and k rows.
+    """
+    return apply_grade(grade_components(st, meta, sm, odds=odds, vi=vi, byes=byes,
+                                        elevation=elevation))
+
+
+# ------------------------------------------------------------------------------------------------
+# 16.12(c) — the availability / reach-risk readout, rendered at last
+# ------------------------------------------------------------------------------------------------
+def reach_risk_view(st: DraftState, meta: dict, team: int | None = None, *, n: int = 25,
+                    model=None, n_sims: int = 200, seed: int = 0) -> pd.DataFrame:
+    """``P(this player is still there at your next pick)`` for the top of one seat's board.
+
+    ★ **The engine side of this shipped in Session G and has had no surface until now** — 16.12(c)
+    was built ``engine-side only`` because the app came strictly last. It is
+    :func:`~fantasy_quant.draft.drift.availability_readout` over 11.2's validated survival oracle,
+    with the pick window taken from :func:`~fantasy_quant.draft.optimizer._next_own_pick` rather
+    than counted here: the snake arithmetic already exists and a display layer re-deriving it is how
+    the K1.5 seat-map defect happened.
+
+    Returns the board rows with ``p_available``, ``p_available_baseline``, ``drift_picks`` and the
+    three-bucket ``reach_risk`` label. **Both probabilities are kept**: the drift adjustment is not
+    backtestable (16.11's forward-only constraint), so the honest presentation of it is the pair.
+    """
+    seat = st.your_team if team is None else int(team)
+    pool = st.draftable_pool(seat).head(int(n))
+    cols = ["player_key", "player_name", "pos", "adp", "drift_picks", "p_available",
+            "p_available_baseline", "p_available_delta", "reach_risk"]
+    if pool.empty:
+        return pd.DataFrame(columns=cols)
+
+    from fantasy_quant.draft import drift
+    from fantasy_quant.draft.optimizer import _next_own_pick
+
+    last = st.n_teams * st.rounds
+    nxt = _next_own_pick(st.overall_pick, seat, st.n_teams, last)
+    # ⚠ `_next_own_pick` answers *which* pick is next; the readout needs *how many opponents pick
+    # first*, and the two differ by whether the seat is on the clock right now. The optimizer's
+    # `window_end = nxt - 1` is a pick-number threshold on the ADP scale, a different
+    # parameterisation of the same fact — so the count is derived here rather than copied from
+    # there and quietly reinterpreted.
+    if nxt is None:
+        window = 0
+    elif st.team_on_clock() == seat:
+        window = max(0, int(nxt) - int(st.overall_pick) - 1)
+    else:
+        window = max(0, int(nxt) - int(st.overall_pick))
+    model = model if model is not None else mock.load_opponent_model()
+    out = drift.availability_readout(pool.reset_index(drop=True), model, window_picks=window,
+                                     season=int(meta.get("season", 2026)),
+                                     n_teams=int(st.n_teams), pick0=int(st.overall_pick),
+                                     n_sims=int(n_sims), seed=int(seed))
+    out.insert(1, "player_name", pool["player_name"].to_numpy())
+    out.attrs["window_picks"] = window
+    out.attrs["next_pick"] = nxt
+    return out[[c for c in cols if c in out.columns]]
+
+
+# ------------------------------------------------------------------------------------------------
+# the player card (PLAYER-VIEW §3/§4) — one player, everything the frozen stack knows
+# ------------------------------------------------------------------------------------------------
+def player_card(st: DraftState, board_index: int, *, vi: pd.DataFrame | None = None,
+                lam: float = 0.0, risk=None, reach: pd.DataFrame | None = None) -> dict:
+    """Everything the frozen stack holds about one player, arranged — the PLAYER-VIEW deep page.
+
+    ``{name, pos, team, adp, available, bars, chain, flags, cliff, reach}``. ``bars`` is the eight
+    PLAYER-VIEW readouts as ``{label, value, fmt, help}`` rows; ``chain`` is
+    :func:`explain_chain`'s T27 arithmetic for this player, unchanged.
+
+    ⚠ **Nothing here is computed for the card.** Every value is a lookup into a frame that already
+    existed — which is the difference between a deep page and a second model. The one arrangement
+    choice is which eight bars, and that is `docs/PLAYER-VIEW.md`'s list, not this function's.
+    """
+    row = st.board.loc[int(board_index)]
+    key = str(row["player_key"])
+    card: dict = {
+        "board_index": int(board_index), "name": str(row["player_name"]),
+        "pos": str(row["pos"]), "team": (str(row["team"]) if pd.notna(row.get("team")) else "—"),
+        "adp": float(row["adp"]), "available": int(board_index) in st.available,
+        "flags": str(range_flags(st.board.loc[[int(board_index)]]).iloc[0]),
+        "chain": [], "reach": None,
+    }
+    def _num(col):
+        v = row.get(col)
+        v = pd.to_numeric(pd.Series([v]), errors="coerce").iloc[0]
+        return float(v) if pd.notna(v) else None
+
+    card["bars"] = [
+        {"label": "PROJ", "value": _num("proj_points"), "fmt": "%.0f"},
+        {"label": "MEAN", "value": _num("mean"), "fmt": "%.0f"},
+        {"label": "AVAIL", "value": _num("games_played_mean"), "fmt": "%.1f"},
+        {"label": "Q10", "value": _num("q10"), "fmt": "%.0f"},
+        {"label": "MED", "value": _num("q50"), "fmt": "%.0f"},
+        {"label": "Q90", "value": _num("q90"), "fmt": "%.0f"},
+        {"label": "BOOM", "value": _num("boom_prob_live"), "fmt": "%.2f"},
+        {"label": "BUST", "value": _num("bust_prob_live"), "fmt": "%.2f"},
+    ]
+    for b in card["bars"]:
+        b["help"] = stat_help(b["label"])
+
+    cliffs = cliff_series(st, risk=risk)
+    if int(board_index) in cliffs.index:
+        card["cliff"] = float(cliffs.loc[int(board_index)])
+    else:
+        card["cliff"] = None
+
+    if vi is not None and not vi.empty:
+        hit = [e for e in explain_chain(st.board.loc[[int(board_index)]], vi,
+                                        str(row["player_name"]), lam)]
+        card["chain"] = hit[:1]
+    if reach is not None and not reach.empty and "player_key" in reach.columns:
+        m = reach[reach["player_key"].astype(str) == key]
+        if len(m):
+            card["reach"] = m.iloc[0].to_dict()
+    return card
 
 
 def parse_seats(raw: str | Sequence[int]) -> list[int]:

@@ -332,8 +332,42 @@ so in the same breath as the definition — not in a footnote.
 
 ---
 
-## 11. Deferred / open
+---
+
+## 11. What Session K2 actually built (2026-07-31) — and the one place it departs from §1
+
+**The hover card and the deep page are one surface.** §1 specs two tiers — a 5-bar hover overview and
+an 8-bar deep page — and **Streamlit has no hover event**, so `views.player_dialog` (an `st.dialog`
+opened by selecting a board row) serves both roles. That is a real departure, not an omission, and it
+costs less than it looks: the per-number explanation a hover would have carried is already on screen
+as the 14.O **column tooltips** (§10), which Streamlit *does* support. The two-tier model returns with
+the 14.3 frontend, where a hover exists.
+
+**The card is `session.player_card`, and it computes nothing.** Every value is a lookup into a frame
+that already existed — the eight bars off the enriched board, the T27 arithmetic chain from
+`explain_chain`, the 14.E cliff from `cliff_series`, the 16.12 reach risk from `reach_risk_view`, the
+confidence flags from `range_flags`. The one arrangement decision is *which eight bars*, and that is
+§2's list. A deep page that derived anything would be a second model wearing a card's clothes.
+
+**§8's data-readiness question is answered for the board, and it is not flattering.** Rendering the
+bars as *ranges* rather than ranks (14.G) put two facts on screen that the rank view had been hiding:
+on the live 2026 board **146 of 199 adjacent pairs overlap at 10–90 %**, and **~36 % of rows sit
+exactly on the `q10` censoring point**. The first means most of the board's order is presentation
+rather than finding; the second means those players have *no resolvable floor*, which the card shows
+as `censored floor` rather than as a floor of zero. Both belong in §6's honesty rules: **zero is not a
+floor** is the sibling of **blank is not zero**.
+
+**16.12's reach-risk readout ships with its baseline.** §9.1's `P(available at your pick)` contract is
+now rendered — with the **un-drifted** probability beside it, because the drift adjustment is not
+backtestable (FFC publishes one board a season) and the honest presentation of an unvalidated
+adjustment is the pair, never the adjusted number alone.
+
+---
+
+## 12. Deferred / open
 
 - Exact tier cutoffs (green/yellow/red percentile bands) — set at build time; likely tertiles, tunable.
 - Whether the deep page shows player-vs-player **comps** — nice-to-have, later.
 - Mobile/compact hover behavior (tap-to-preview before full navigate) — frontend detail, later.
+- **The two-tier hover/deep split itself** — waits for the 14.3 frontend; the Streamlit MVP has one
+  surface (§11).

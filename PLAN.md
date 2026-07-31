@@ -2549,3 +2549,47 @@ purpose, so it now asserts what it always meant (rendered without exception).
 **★ NEXT: user reviews + commits, then Session K2** = surfacing + **14.N** the post-draft page (which
 absorbs the standings/odds/draft-flow readouts currently parked on the room page) → **K3** league import
 → L+ the go-live tail. Stage-0 FFC chore last pulled 2026-07-30, next due after 08-05.
+
+## 2026-07-31 (session 2) — ★ SESSION K2 COMPLETE: surfacing + the post-draft page (14.N · 14.E · 14.F · 14.G · 14.I · 16.12)
+
+**Built straight through, no stop gate**, per the user's four up-front decisions:
+
+| decision | choice |
+|---|---|
+| cadence | straight run, one hard stop + report at the end (K1.5's shape) |
+| **14.I draft grade** | a **weighted composite**, 0–100 → letter. Weights **odds 50 · starters 20 · value 15 · construction 15** |
+| **14.N** | **always reachable**, live mid-draft with a banner; the sim waits for the last pick |
+| **16.6 Beta Lab** | **skipped this session** (the value-side track is an honest null; stays open in ROADMAP) |
+
+**726 tests (was 702), ruff clean. All eight pre-registered bars PASS** →
+`analysis/session_k2_app.json`, runner `steps/session_k2_app.py`. Nothing refits, no frozen contract
+moved, lockbox untouched. New: `app/post_draft.py`; `session.{cliff_series, cliff_table, range_flags,
+coin_flags, RANGE_VIEW_COLS, VIEW_MODES, slot_plan, lineup_choice, bye_weeks, elevation_ratio,
+roster_construction_risk, GRADE_WEIGHTS, GRADE_BANDS, grade_letter, grade_components, apply_grade,
+draft_grade, reach_risk_view, player_card, pick_drift_table}`; `views.{cliff_strip, range_note,
+construction_panel, grade_panel, reach_panel, player_card_body, player_dialog}`;
+`mock_draft.py board --view {slim,ranges,advanced}`.
+
+**★ Three defects the measurements caught, none of them in the spec.**
+1. **The grade called the average drafter a failure.** Min–max scoring across ten teams puts a middling
+   roster near 50 *by construction*; on plain US bands that is a **D+**, six of ten graded D or F. The
+   scoring was right, the labels were anchored to a different scale. `GRADE_BANDS` now put `C` at 50.
+2. **The handcuff readout had the depth chart upside down** — *Tyjae Spears → backup Tony Pollard*.
+   Only a backfield's **lead** back generates a row now. Its unit test was rewritten too: the first
+   version asserted over an empty frame and passed while proving nothing.
+3. **A latent crash in the CLI board** (`format("-", ">+7")`), exposed by deriving the header from the
+   same dict that formats the cells rather than hand-writing it.
+
+**One bar failed for the wrong reason and one test was amended, both disclosed.** B1 scraped
+`at.markdown`/`at.caption` for two honesty rules rendered with `st.warning`/`st.info`. K1's
+`board_view` column-equality assertion became a **superset** assertion plus equality on the rendered
+advanced view, because 14.G makes the frame the union of three projections.
+
+**Two things a later session must not undo.** (1) `session.lineup_choice` is now the single starters
+read for 14.F, 14.L and the rail — 17.1's `flex_groups` rule one altitude down. (2) The room page
+**gave up** the standings/odds/draft-flow readouts; do not restore copies of them there.
+
+**★ NEXT: user reviews + commits, then Session K3 = league import** (17.5 Sleeper → 17.6 ESPN; 17.7
+Yahoo deferred to 14.4) → **L+** the go-live tail. Still open in Phase 14/16: **16.6** the Beta Lab tab,
+**14.H** the playoff-SOS lens (specced for 14.3, not the Streamlit MVP). Stage-0 FFC chore last pulled
+2026-07-30, next due after 08-05.

@@ -118,15 +118,15 @@ def _room(d: dict) -> None:
     done = st_obj.is_done() or not st_obj.available
 
     if done and not st.session_state.get("_arrived_post_draft"):
-        # the last pick sends you where a finished draft is read (14.L). Once — after that the
-        # room stays reachable, because leaving a completed draft on screen is also a valid thing
-        # to want.
+        # ★ K2: the last pick now sends you to **14.N**, the page a finished draft is *for* — K1.5
+        # sent you to the room grid because 14.N did not exist. Once — after that the room stays
+        # reachable, because leaving a completed draft on screen is also a valid thing to want.
         st.session_state["_arrived_post_draft"] = True
-        nav.go("grid")
+        nav.go("post")
 
     top = st.columns([3, 1, 1])
     if done:
-        top[0].success("**Draft complete.** The room grid has every team.")
+        top[0].success("**Draft complete.** The post-draft page has your grade and every team.")
     else:
         team = st_obj.team_on_clock()
         who = session.seat_label(team, sm)
@@ -319,19 +319,30 @@ def _pick_controls(d: dict, team: int) -> None:
         _confirm_bar(d, team, int(pending), why="selected")
 
     st.markdown("**Best available**")
-    c1, c2, c3 = st.columns([2, 1, 1])
+    c1, c2, c3 = st.columns([2, 1, 2])
     pos = c1.multiselect("Position", ["QB", "RB", "WR", "TE", "K", "DST"],
                          key=f"pos_{st_obj.overall_pick}")
     n = c2.slider("Rows", 10, 100, 25, step=5, key=f"n_{st_obj.overall_pick}")
-    advanced = c3.toggle("Advanced", value=False, key=f"adv_{st_obj.overall_pick}",
-                         help="The full value/risk chain instead of the four drafting columns.")
+    # 14.G — a third projection of the same frame, never a third query. SLIM stays the default
+    # because it is the view a human drafts under a clock.
+    mode = c3.radio("View", ["SLIM", "RANGES", "ADVANCED"], horizontal=True,
+                    key=f"mode_{st_obj.overall_pick}",
+                    help="SLIM = the four drafting columns. RANGES = each player's 10–90 band and "
+                         "whether he is distinguishable from the man below him. ADVANCED = the "
+                         "full value/risk chain.")
+
+    # 14.E — where each position's next tier cliff falls, above the board it describes
+    views.cliff_strip(st_obj, team, d.get("risk"))
 
     view, selected = views.board_table(
-        st_obj, team=team, pos=",".join(pos) if pos else None, n=n, advanced=advanced,
-        key=f"board_{st_obj.overall_pick}", selectable=True)
+        st_obj, team=team, pos=",".join(pos) if pos else None, n=n, mode=mode.lower(),
+        key=f"board_{st_obj.overall_pick}", selectable=True, risk=d.get("risk"))
+    if mode == "RANGES":
+        views.range_note(view)
     if selected is not None:
         st.session_state["pending_pick"] = int(selected)
         _confirm_bar(d, team, int(selected), why="selected on the board")
+        _card_button(d, int(selected))
 
     # a literal button per row is fine for the top handful and gets slow past that (14.K spec), so
     # the quick row covers the picks a drafter actually makes at a glance and the table covers all.
@@ -348,6 +359,33 @@ def _pick_controls(d: dict, team: int) -> None:
         engine.autopick(st_obj, d["meta"], team, d.get("risk"))
         st.session_state.pop("pending_pick", None)
         st.rerun()
+
+    _reach_risk(d, team)
+
+
+def _reach_risk(d: dict, team: int) -> None:
+    """16.12(c) — ``P(available at your next pick)``, on screen for the first time.
+
+    The engine side has been built and validated since Session G and had no surface, because the
+    app came strictly last. It is cheap (~20 ms for 25 players) so it renders inline rather than
+    behind a button: a readout you have to ask for is a readout nobody asks for.
+    """
+    st_obj, meta = d["state"], d["meta"]
+    with st.expander("Who will still be there at your next pick?", expanded=False):
+        try:
+            frame = session.reach_risk_view(st_obj, meta, team, n=20)
+        except (LookupError, ValueError, FileNotFoundError) as exc:
+            st.caption(f"No availability readout: {exc}")
+            return
+        views.reach_panel(frame, frame.attrs.get("window_picks"))
+
+
+def _card_button(d: dict, board_index: int) -> None:
+    """Open the PLAYER-VIEW deep page for the selected row (14.N's sibling on the board)."""
+    if st.button("What do we know about him?", key=f"card_{d['state'].overall_pick}_{board_index}"):
+        views.player_dialog(session.player_card(
+            d["state"], int(board_index), vi=d.get("vi"),
+            lam=float(getattr(d.get("risk"), "lam", 0.0) or 0.0), risk=d.get("risk")))
 
 
 def _confirm_bar(d: dict, team: int, board_index: int, *, why: str) -> None:

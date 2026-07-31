@@ -143,7 +143,17 @@ def test_b1_a_draft_driven_through_the_app_reproduces_the_cli_frames(built):
     pd.testing.assert_frame_equal(session.summary_table(a, sm, None),
                                   session.summary_table(b, session.seat_map_from(meta_b), None))
     # the board frame the two surfaces render is one function, so the columns are one contract
-    assert list(session.board_view(a, 2).columns) == [lbl for _, lbl in session.BOARD_VIEW_COLS]
+    #
+    # ⚠ **Amended by Session K2, and the amendment is disclosed rather than quiet.** K1 asserted
+    # the frame's columns *equal* `BOARD_VIEW_COLS`, because there were two views and the advanced
+    # one was the frame itself. 14.G adds a third projection, so `board_view` now returns the
+    # **union** of what the three modes show and each mode is a named subset — which is the same
+    # property one level up, and is what keeps "the modes cannot disagree about who is available"
+    # true by construction. The equality that still has to hold is on the *rendered* advanced view.
+    frame = session.board_view(a, 2)
+    assert set(lbl for _, lbl in session.BOARD_VIEW_COLS) <= set(frame.columns)
+    assert list(session.project_view(frame, advanced=True).columns) == \
+        [lbl for _, lbl in session.BOARD_VIEW_COLS]
 
 
 def test_the_app_writes_a_state_the_cli_can_read(built, tmp_path):
@@ -568,3 +578,398 @@ def test_the_entry_point_imports_when_run_the_way_a_human_runs_it():
     out = (r.stdout or "") + (r.stderr or "")
     assert "ModuleNotFoundError" not in out, out[-1500:]
     assert r.returncode == 0, out[-1500:]
+
+
+# ================================================================================================
+# Session K2 — surfacing (14.E · 14.F · 14.G · 14.I) + 16.12 + the post-draft page (14.N)
+# ================================================================================================
+@pytest.fixture
+def k2_board(board) -> pd.DataFrame:
+    """The shared board plus the columns K2 renders — quantiles, rookie flags and real NFL teams.
+
+    A **separate** fixture rather than more columns on the shared one: the K1/K1.5 tests are
+    differenced against that board's exact content, and widening it to serve a later session is how
+    a fixture stops describing what any particular test meant.
+    """
+    rng = np.random.default_rng(7)
+    n = len(board)
+    mean = board["mean"].to_numpy(float)
+    teams = ["KC", "SF", "DET", "PHI", "BUF", "MIA", "DAL", "CIN"]
+    return board.assign(
+        q50=mean * 0.98,
+        q90=mean * 1.45,
+        # ★ a third of the board is left-censored, which is what the live board looks like: a
+        # season total cannot be negative and `enrichment.CENSOR_AT` piles those rows on 0.0.
+        q10=np.where(np.arange(n) % 3 == 0, 0.0, mean * 0.45),
+        rookie=np.where(np.arange(n) % 11 == 0, 1.0, 0.0),
+        team=[teams[i % len(teams)] for i in range(n)],
+        stdev=rng.uniform(1, 12, n),
+    )
+
+
+@pytest.fixture
+def k2_built(k2_board) -> dict:
+    """A build carrying a minimal value index, so ``STARTABLE`` and the slot solver have input."""
+    vi = pd.DataFrame({
+        "player_key": k2_board["gsis_id"].astype(str),
+        "pos": k2_board["position"],
+        "proj_points": k2_board["proj_points"],
+        "vbd": k2_board["vbd"],
+        "mean": k2_board["mean"],
+        "sd": k2_board["mean"] * 0.3,
+        "ce_value": k2_board["mean"] * 0.9,
+        "ce_vbd": k2_board["base_value"],
+        "base_value": k2_board["base_value"],
+        "team": k2_board["team"],
+        "role_rank": 1,
+    })
+    return {"board": k2_board, "value_index": vi, "risk": None, "source": "ffc",
+            "n_base_value": int(k2_board["base_value"].notna().sum()), "lam": 0.01}
+
+
+def _k2_draft(built, k: int = 1, *, finish: bool = True):
+    from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp
+
+    state, meta = app_engine.start_draft(
+        built, human_seats=list(range(k)), settings=LeagueSettings(),
+        season=2026, seed=3, room_seed=4, room_arg=behavioral_room(10 - k))
+    if finish:
+        while not state.is_done() and state.available:
+            t = state.team_on_clock()
+            _apply_pick(state, t, int(pick_by_adp(state, t, noise=0.0)))
+    return state, meta
+
+
+# ------------------------------------------------------------------------------------------------
+# 14.E — the cliff is read from the decision path, and it is about the pool not the screen
+# ------------------------------------------------------------------------------------------------
+def test_k2_the_cliff_column_is_positional_cliff_over_the_whole_pool(k2_built):
+    """★ The display must not re-derive what the greedy already computes (T27, one level down)."""
+    from fantasy_quant.draft.optimizer import positional_cliff
+
+    state, _ = _k2_draft(k2_built, finish=False)
+    pool = state.draftable_pool(0)
+    bv = dict(zip(pool["player_key"].astype(str),
+                  pd.to_numeric(pool["base_value"], errors="coerce"), strict=False))
+    want = positional_cliff(pool["player_key"], pool["pos"], bv)
+    got = session.board_view(state, 0)["CLIFF"].to_numpy(float)
+    assert np.allclose(want, got, equal_nan=True)
+
+
+def test_k2_the_cliff_does_not_move_when_the_board_is_truncated(k2_built):
+    """A cliff is a fact about what is left at a position, never about how many rows are shown."""
+    state, _ = _k2_draft(k2_built, finish=False)
+    full = session.board_view(state, 0)["CLIFF"]
+    small = session.board_view(state, 0, n=6)["CLIFF"]
+    assert np.allclose(small.to_numpy(float), full.reindex(small.index).to_numpy(float),
+                       equal_nan=True)
+    only_rb = session.board_view(state, 0, pos="RB")["CLIFF"]
+    assert np.allclose(only_rb.to_numpy(float), full.reindex(only_rb.index).to_numpy(float),
+                       equal_nan=True)
+
+
+def test_k2_the_cliff_strip_counts_the_players_above_the_drop(k2_built):
+    state, _ = _k2_draft(k2_built, finish=False)
+    tab = session.cliff_table(state, 0)
+    pool = state.draftable_pool(0)
+    cliffs = session.cliff_series(state, 0)
+    assert not tab.empty
+    for r in tab.itertuples(index=False):
+        grp = pool[pool["pos"] == r.pos]
+        assert list(grp.index).index(r.at_index) + 1 == r.n_before
+        assert float(cliffs.loc[r.at_index]) == pytest.approx(r.drop)
+
+
+# ------------------------------------------------------------------------------------------------
+# 14.G — three projections of one frame; a censored floor is flagged, never printed as zero
+# ------------------------------------------------------------------------------------------------
+def test_k2_slim_ranges_and_advanced_are_three_projections_of_one_frame(k2_built):
+    state, _ = _k2_draft(k2_built, finish=False)
+    view = session.board_view(state, 0, n=40)
+    frames = {m: session.project_view(view, mode=m) for m in session.VIEW_MODES}
+    for f in frames.values():
+        assert list(f.index) == list(view.index)
+    assert list(frames["slim"].columns) == list(session.SLIM_VIEW_COLS)
+    assert list(frames["ranges"].columns) == list(session.RANGE_VIEW_COLS)
+    assert list(frames["advanced"].columns) == [lbl for _, lbl in session.BOARD_VIEW_COLS]
+    # K1.5's two-state control is unchanged — its committed sheet differences against it
+    assert list(session.project_view(view).columns) == list(session.SLIM_VIEW_COLS)
+    assert list(session.project_view(view, advanced=True).columns) == \
+        [lbl for _, lbl in session.BOARD_VIEW_COLS]
+    with pytest.raises(ValueError):
+        session.project_view(view, mode="nonsense")
+
+
+def test_k2_a_censored_floor_is_flagged_rather_than_printed_as_a_floor_of_zero(k2_built):
+    """★ T22's rule with the other sign: ``q10 = 0`` does not mean *his downside is zero*."""
+    from fantasy_quant.draft.enrichment import CENSOR_AT
+
+    state, _ = _k2_draft(k2_built, finish=False)
+    view = session.project_view(session.board_view(state, 0, n=60), mode="ranges")
+    at_floor = view["Q10"].le(CENSOR_AT) & view["Q10"].notna()
+    assert at_floor.any(), "the fixture is meant to contain censored rows"
+    assert view.loc[at_floor, "FLAGS"].str.contains("censored floor").all()
+    assert not view.loc[~at_floor, "FLAGS"].str.contains("censored floor").any()
+
+
+def test_k2_a_player_with_no_distribution_is_flagged_and_not_called_censored():
+    """Two different disclosures: *we have no cloud* vs *the cloud is left-censored*."""
+    pool = pd.DataFrame({"mean": [np.nan, 200.0, 150.0], "q10": [np.nan, 0.0, 60.0],
+                         "rookie": [0.0, 0.0, 1.0]})
+    flags = session.range_flags(pool).tolist()
+    assert flags[0] == "no distribution"
+    assert flags[1] == "censored floor"
+    assert flags[2] == "rookie"
+
+
+def test_k2_coin_flags_mark_adjacent_overlapping_bands_only():
+    """Parameter-free by design: the only resolution claim the frozen contract supports."""
+    q10 = [100.0, 90.0, 10.0, np.nan]
+    q90 = [200.0, 150.0, 20.0, 30.0]
+    assert session.coin_flags(q10, q90).tolist() == [True, False, False, False]
+    assert session.coin_flags([1.0], [2.0]).tolist() == [False]
+    assert session.coin_flags([], []).tolist() == []
+
+
+# ------------------------------------------------------------------------------------------------
+# 14.F — bye clustering, concentration, handcuff gaps
+# ------------------------------------------------------------------------------------------------
+def test_k2_an_unknown_bye_stays_unknown_and_is_never_week_zero(k2_built):
+    """★ The store has no schedule table, so ~1 board row in 10 has no bye. A ``fillna(0)`` would
+    file those players under "week 0", which a human reads as *no bye at all*."""
+    state, _ = _k2_draft(k2_built)
+    roster = state.roster(0)
+    partial = pd.Series([7.0] * 2, index=[str(k) for k in roster["player_key"][:2]])
+    risk = session.roster_construction_risk(state, 0, vi=k2_built["value_index"], byes=partial)
+    slots, _ = session.lineup_choice(state, roster, k2_built["value_index"])
+    n_starters = len({i for i in slots.values() if i is not None})
+    counted = int(risk["byes"]["n"].sum()) if len(risk["byes"]) else 0
+    assert counted + risk["unknown_byes"] == n_starters
+    assert risk["unknown_byes"] > 0
+    if len(risk["byes"]):
+        assert (risk["byes"]["week"] != 0).all()
+
+
+def test_k2_bye_clustering_is_over_starters_not_the_whole_roster(k2_built):
+    """A bench player's bye costs nothing; counting him would make a deep roster look fragile."""
+    state, _ = _k2_draft(k2_built)
+    roster = state.roster(0)
+    everyone = pd.Series([11.0] * len(roster), index=[str(k) for k in roster["player_key"]])
+    risk = session.roster_construction_risk(state, 0, vi=k2_built["value_index"], byes=everyone)
+    slots, _ = session.lineup_choice(state, roster, k2_built["value_index"])
+    n_starters = len({i for i in slots.values() if i is not None})
+    assert risk["max_bye_starters"] == n_starters < len(roster)
+
+
+class _StubState:
+    """Just enough ``DraftState`` for :func:`session._handcuff_gaps` — it reads ``st.board``.
+
+    Written as a stub rather than driven through a full draft because the first version of this
+    test *was* driven through one, and the synthetic board happened to seat no lead back at all:
+    it asserted over an empty frame and passed while proving nothing. A test that cannot fail is
+    the same defect as a bar that cannot fail.
+    """
+
+    def __init__(self, board):
+        self.board = board
+
+
+def _backfield_board() -> pd.DataFrame:
+    """Two backfields in board order: ATL (Lead A, Backup A) and BUF (Lead B, Backup B)."""
+    return pd.DataFrame({
+        "player_key": ["a1", "a2", "b1", "b2"],
+        "player_name": ["Lead A", "Backup A", "Lead B", "Backup B"],
+        "pos": ["RB"] * 4,
+        "team": ["ATL", "ATL", "BUF", "BUF"],
+        "mean": [220.0, 90.0, 210.0, 80.0],
+        "games_played_mean": [13.0, 16.0, 14.0, 16.0],
+    })
+
+
+def test_k2_the_handcuff_is_the_backfields_rb2_never_its_rb1():
+    """★ The first live run had the depth chart upside down — it reported the RB2's "handcuff" as
+    the RB1, i.e. priced insurance on the wrong life. Holding the backup is not a gap; it *is* the
+    handcuff."""
+    board = _backfield_board()
+    roster = board[board["player_key"].isin(["a1", "b2"])].reset_index(drop=True)
+    out = session._handcuff_gaps(_StubState(board), roster, 1.8)
+    hc = out["handcuffs"]
+    assert len(hc) == 1, "only the lead back you hold generates a row"
+    assert hc.iloc[0]["starter"] == "Lead A" and hc.iloc[0]["backup"] == "Backup A"
+    assert hc.iloc[0]["held"] is False or not bool(hc.iloc[0]["held"])
+    assert out["n_handcuff_gaps"] == 1
+    assert hc.iloc[0]["option_premium"] > 0
+
+
+def test_k2_holding_both_halves_of_a_backfield_is_not_a_gap():
+    board = _backfield_board()
+    roster = board[board["player_key"].isin(["a1", "a2"])].reset_index(drop=True)
+    out = session._handcuff_gaps(_StubState(board), roster, 1.8)
+    assert len(out["handcuffs"]) == 1
+    assert bool(out["handcuffs"].iloc[0]["held"]) is True
+    assert out["n_handcuff_gaps"] == 0
+
+
+def test_k2_the_option_premium_is_absent_rather_than_invented_without_an_elevation_ratio():
+    board = _backfield_board()
+    roster = board[board["player_key"] == "a1"].reset_index(drop=True)
+    out = session._handcuff_gaps(_StubState(board), roster, None)
+    assert len(out["handcuffs"]) == 1
+    assert out["handcuffs"]["option_premium"].isna().all()
+
+
+def test_k2_construction_risk_and_the_room_grid_agree_about_who_starts(k2_built):
+    """17.1's rule, one altitude down: ``flex_groups`` is the single fill-order rule, and 14.F,
+    14.L and the rail all reach it through :func:`session.lineup_choice`."""
+    state, meta = _k2_draft(k2_built)
+    sm = session.seat_map_from(meta)
+    grid = session.room_grid(state, sm, by="slot", vi=k2_built["value_index"])
+    col = grid.columns[0]
+    from_grid = {c.rsplit(" (", 1)[0] for r, c in grid[col].items()
+                 if c and not str(r).startswith("BN")}
+    risk = session.roster_construction_risk(state, 0, vi=k2_built["value_index"])
+    assert from_grid == set(risk["starters"])
+
+
+# ------------------------------------------------------------------------------------------------
+# 14.I — the grade is exactly the sum of its printed parts
+# ------------------------------------------------------------------------------------------------
+def _fake_odds(n_teams: int = 10) -> pd.DataFrame:
+    fair = np.linspace(2.0, 0.2, n_teams)
+    return pd.DataFrame({"team": np.arange(1, n_teams + 1), "title_fair": fair,
+                         "playoff_fair": fair, "title": fair / n_teams,
+                         "playoff": np.clip(fair / 2, 0, 1)})
+
+
+def test_k2_the_grade_reproduces_from_the_components_printed_beside_it(k2_built):
+    """★ The blend is a presentation choice with nothing validating it, which is allowed only for
+    as long as a reader can re-add it by hand."""
+    state, meta = _k2_draft(k2_built)
+    sm = session.seat_map_from(meta)
+    grade = session.draft_grade(state, meta, sm, odds=_fake_odds(),
+                                vi=k2_built["value_index"])
+    assert sum(session.GRADE_WEIGHTS.values()) == pytest.approx(100.0)
+    parts = sum(grade[f"points_{c}"] for c in session.GRADE_WEIGHTS)
+    assert np.allclose(parts.to_numpy(float), grade["total"].to_numpy(float))
+    assert grade["total"].between(0.0, 100.0).all()
+    assert all(ltr == session.grade_letter(t)
+               for ltr, t in zip(grade["letter"], grade["total"], strict=False))
+
+
+def test_k2_the_bands_put_the_middle_of_the_room_at_c_not_at_d(k2_built):
+    """★ Caught by the first live run: on plain 90/80/70/60 bands the median team in a ten-team
+    room graded **D+**, because the letters assumed 50 % was a fail when on a curve 50 is the
+    middle. A scale and its labels have to be anchored to the same thing."""
+    assert session.grade_letter(50.0) == "C"
+    assert session.grade_letter(100.0) == "A+"
+    assert session.grade_letter(0.0) == "F"
+    assert session.grade_letter(float("nan")) == "—"
+
+
+def test_k2_a_component_the_room_does_not_separate_on_cannot_decide_a_grade():
+    comps = pd.DataFrame({"team": [1, 2], "who": ["a", "b"], "human": [True, False],
+                          "odds": [1.0, 1.0], "starters": [5.0, 9.0],
+                          "value": [np.nan, np.nan], "construction": [0.0, 0.0]})
+    out = session.apply_grade(comps)
+    assert (out["score_odds"] == 0.5).all()
+    assert (out["score_value"] == 0.5).all()
+    assert (out["score_construction"] == 0.5).all()
+    assert sorted(out["score_starters"]) == [0.0, 1.0]
+
+
+def test_k2_there_is_no_combined_grade_across_your_own_seats(k2_built):
+    """16.17: k human teams in one draft are ONE observation — their picks depleted each other's
+    pools, so averaging their grades would report the depletion as skill."""
+    state, meta = _k2_draft(k2_built, k=4)
+    sm = session.seat_map_from(meta)
+    grade = session.draft_grade(state, meta, sm, odds=_fake_odds(), vi=k2_built["value_index"])
+    assert len(grade) == 10
+    assert int(grade["human"].sum()) == 4
+    assert not any(str(c).startswith(("mean_", "avg_", "combined")) for c in grade.columns)
+
+
+# ------------------------------------------------------------------------------------------------
+# 16.12 + the player card + 14.N's wiring
+# ------------------------------------------------------------------------------------------------
+def test_k2_the_reach_risk_labels_are_the_engines_own(k2_built):
+    from fantasy_quant.draft import drift
+
+    state, meta = _k2_draft(k2_built, finish=False)
+    frame = session.reach_risk_view(state, meta, 0, n=12, n_sims=40)
+    assert {"p_available", "p_available_baseline"} <= set(frame.columns)
+    assert frame["p_available"].between(0.0, 1.0).all()
+    assert all(drift.reach_risk_label(p) == lbl
+               for p, lbl in zip(frame["p_available"], frame["reach_risk"], strict=False))
+
+
+def test_k2_the_player_card_reads_the_board_rather_than_recomputing_it(k2_built):
+    state, _ = _k2_draft(k2_built, finish=False)
+    idx = int(session.board_view(state, 0, n=1).index[0])
+    card = session.player_card(state, idx, vi=k2_built["value_index"], lam=0.01)
+    row = state.board.loc[idx]
+    assert card["name"] == row["player_name"] and card["pos"] == row["pos"]
+    assert len(card["bars"]) == 8
+    by_label = {b["label"]: b["value"] for b in card["bars"]}
+    assert by_label["PROJ"] == pytest.approx(float(row["proj_points"]))
+    assert by_label["Q90"] == pytest.approx(float(row["q90"]))
+    assert all(b["help"] for b in card["bars"])
+    assert card["cliff"] == pytest.approx(float(session.cliff_series(state).loc[idx]))
+
+
+def test_k2_pick_drift_keeps_the_panels_sign(k2_built):
+    """Positive = the seat reached. T18 is the standing reminder that a redefined reach column is
+    a silent defect, so this reads the panel rather than subtracting two raw numbers."""
+    state, meta = _k2_draft(k2_built)
+    sm = session.seat_map_from(meta)
+    frames = session.drift_frames(state, meta, sm)
+    everyone = session.pick_drift_table(frames)
+    mine = session.pick_drift_table(frames, 0)
+    assert len(everyone) >= len(mine) > 0
+    assert mine["reach_picks"].is_monotonic_decreasing
+    assert set(mine["player"]) <= set(state.roster(0)["player_name"])
+
+
+def test_k2_the_post_draft_page_is_registered_between_the_room_and_the_cost_page():
+    """14.N is a *place*, and the last pick navigates to it (14.K's model, K2's destination)."""
+    nav = pytest.importorskip("app.nav")
+    main = pytest.importorskip("app.main")
+    assert "post" in nav.ORDER
+    assert nav.ORDER.index("post") == nav.ORDER.index("grid") + 1
+    assert set(nav.ORDER) == set(main.PAGE_SPECS)
+    assert main.PAGE_SPECS["post"][3] == "post-draft"
+
+
+def test_k2_the_room_page_gave_the_analysis_readouts_to_14n_rather_than_copying_them():
+    """★ Moved, not duplicated. Two render paths for one table is how the K1 board and the CLI
+    board drifted apart; the room page keeps the grid and the log."""
+    room_grid = pytest.importorskip("app.room_grid")
+    assert room_grid.VIEWS == ("Room grid", "Log", "Stat dictionary")
+    src = Path(room_grid.__file__).read_text()
+    assert "odds_table" not in src and "summary_panel" not in src
+
+
+def test_k2_the_odds_cache_key_names_the_draft_it_describes():
+    """T32's lesson in miniature: a cache key that omits what changed serves a stale answer."""
+    post = pytest.importorskip("app.post_draft")
+
+    class _S:
+        def __init__(self, n):
+            self.log = list(range(n))
+
+    meta = {"seed": 1, "room_seed": 2}
+    assert post._odds_key(_S(150), meta) != post._odds_key(_S(149), meta)
+    assert post._odds_key(_S(150), meta) != post._odds_key(_S(150), {"seed": 9, "room_seed": 2})
+    assert post._odds_key(_S(150), meta) == post._odds_key(_S(150), dict(meta))
+
+
+def test_k2_the_stat_dictionary_covers_every_rendered_view():
+    """14.O's done-bar, widened by K2: a column documented only in the mode nobody opens is the
+    defect the dictionary exists to prevent."""
+    session.assert_stat_dict_covers_board()
+    rendered = ({lbl for _, lbl in session.BOARD_VIEW_COLS} | set(session.RANGE_VIEW_COLS)
+                | set(session.SLIM_VIEW_COLS))
+    for col in rendered:
+        e = session.stat_entry(col)
+        assert e["worked_example"].strip() and e["provenance"].strip()
+    examples = [e["worked_example"] for e in session.STAT_DICT.values()]
+    assert len(examples) == len(set(examples))

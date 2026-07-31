@@ -61,7 +61,66 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★★ Next-session pointer (2026-07-31 — ★ SESSION K1.5 ☑ COMPLETE: the draft room a human can use. READ THIS FIRST.)**
+> **★★★ Next-session pointer (2026-07-31 session 2 — ★ SESSION K2 ☑ COMPLETE: surfacing + the post-draft page. READ THIS FIRST.)**
+>
+> **State: 726 tests (was 702), ruff clean. UNCOMMITTED**, on top of `455fb8e` (K1.5). Nothing
+> refits, no frozen contract moved, the spent lockbox was not re-read, and **B0 re-runs both
+> committed sheets** — K1.5's, which nests K1's — because the rule that outranks the other seven is
+> still *if a display change moves a number, it is not a display change.*
+>
+> **Run it:** `uv sync --extra ui && uv run streamlit run app/main.py`
+> **Re-check it:** `uv run python steps/session_k2_app.py` → `analysis/session_k2_app.json`
+>
+> | bar | result |
+> |---|---|
+> | **B0** the K1 rule | K1.5's whole sheet re-runs passing, K1's nested inside it |
+> | **B1** 14.N | renders at k ∈ {0,1,4}, one page body, standings identical to `session.summary_table`, odds led by the multiple, both 16.17 honesty rules on screen |
+> | **B2** 14.E | the `CLIFF` column **is** `optimizer.positional_cliff(pool, risk.bv)`, and does not move when the board is truncated |
+> | **B3** 14.F | 9 starters accounted for once, **1 unknown bye stays unknown**, 0 week-0 rows, handcuffs lead-back-only |
+> | **B4** 14.G | one query / three projections; **70 of 200 rows censored, all flagged**; 146 of 199 adjacent pairs overlap |
+> | **B5** 14.I | weights sum to 100, the total re-adds from the printed parts, **median team = C**, k=4 → 4 rows, no combined column |
+> | **B6** 16.12 | labels are the engine's, both probabilities present, window == the optimizer's `_next_own_pick` |
+> | **FLOW** | a draft **finished by clicking** lands on 14.N; **all six pages render, zero exceptions** |
+>
+> **★ The finding to carry forward — a scale and its labels have to be anchored to the same thing.**
+> 14.I scores four components min–max across the ten teams, so a middling roster lands near **50 by
+> construction**. On plain US bands (90/80/70/60) that is a **D+**, and six of ten teams in an
+> ordinary room graded D or F — the app calling an average draft a failure. The scoring was never
+> wrong; the letters were anchored to a different scale. `GRADE_BANDS` now put `C` at 50. It was only
+> caught because the first run printed **all ten** letters instead of one: *a curve is only legible
+> next to the population it was drawn on.*
+>
+> **★★ Two more defects, and neither was in the spec.** (1) The handcuff readout had the depth chart
+> **upside down** — "the next RB on the same team" reported *Tyjae Spears → backup Tony Pollard*,
+> pricing insurance on the wrong life; only a backfield's **lead** back generates a row now. Its
+> first unit test drove a full draft on the synthetic board, which seated **no lead back at all**, so
+> it asserted over an empty frame and passed while proving nothing — *a test that cannot fail is the
+> same defect as a bar that cannot fail.* (2) Deriving the CLI board's header from the same dict that
+> formats its cells immediately raised *Sign not allowed in string format specifier* — a crash the
+> pre-K2 code would also have hit on the first NaN in the signed `BV` column and had simply never
+> met. **Two descriptions of one thing hide each other's bugs until you make one read the other.**
+>
+> **⚠ Two things a later session must not undo.** (1) **`session.lineup_choice` is the single
+> starters read** — 14.F, the 14.L grid and the roster rail all go through it, which is 17.1's
+> `flex_groups` rule one altitude down; a fourth display-layer fill order would be the copy nobody
+> thinks to test. (2) **The room page gave up the standings/odds/draft-flow readouts** to 14.N —
+> *moved, not copied*. Do not restore versions of them there.
+>
+> **★ Structure now:** `app/post_draft.py` is 14.N; `app/room_grid.py` keeps only the grid, the log
+> and the stat dictionary; the board page and the draft room both offer **SLIM / RANGES / ADVANCED**
+> over one `session.board_view` frame. K1's rule holds unchanged: `session.py` is the one derivation
+> site, `app/` only formats — every K2 readout is a new function *there*, not in `app/`.
+>
+> **★ NEXT: user reviews + commits, then Session K3 = league import** (17.5 Sleeper for the contract →
+> 17.6 ESPN, the one the user needs; 17.7 Yahoo deferred to 14.4) — `docs/BUILD_PLAN.md` §"Session K3"
+> + §"Phase 17 — league import". Then **L+** the go-live tail. **Still open in Phase 14/16: 16.6** the
+> Beta Lab tab (**skipped by user decision this session** — the value-side track is an honest null,
+> not a defect) and **14.H** the playoff-SOS lens (specced for the 14.3 frontend, not the Streamlit
+> MVP). Stage-0 FFC chore last pulled 2026-07-30, **next due after 08-05**.
+>
+> _(Session K1.5's pointer, still the authority on the draft room and its bars, follows.)_
+>
+> **★★★ Next-session pointer (2026-07-31 — ★ SESSION K1.5 ☑ COMPLETE: the draft room a human can use.)**
 >
 > **State: 702 tests (was 691), ruff clean. UNCOMMITTED**, on top of `3494ccc`. Nothing refits, no
 > frozen contract moved, the spent lockbox was not re-read, and **Session K1's own bar sheet re-runs

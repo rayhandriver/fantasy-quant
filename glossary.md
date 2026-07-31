@@ -2175,3 +2175,53 @@ live overrun notice. A measurement retires today's risk, not the mechanism; the 
 drafter hovers**, because a caveat a user has to find in `findings.md` is a caveat nobody reads. Its
 sibling rule: one dictionary serves every surface and the local copy is *deleted*, since a column's
 meaning does move (T22 is the proof) and two help texts are two chances to describe it differently.
+
+**a scale and its labels have to be anchored to the same thing** *(14.I, 2026-07-31)* — the draft grade
+scores four components min–max across the ten teams, so a middling roster lands near **50 by
+construction**. On plain US bands (90/80/70/60) that is a **D+**, and six of ten teams in an ordinary
+room graded D or F: the app calling an average draft a failure, because the letters assumed 50 % was a
+fail while the scale's own midpoint was 50. The scoring was never wrong. `GRADE_BANDS` now put `C` at
+50. Caught only because the first run printed all ten letters instead of one — *a curve is only legible
+next to the population it was drawn on.*
+
+**an invented constant that is visible is a design decision; the same constant buried in a function is
+a claim** *(14.I, 2026-07-31)* — the grade's 50/20/15/15 weighting is a presentation choice with nothing
+validating it, chosen by the user. Every *input* is frozen and separately validated; the *blend* is not.
+That is allowed for exactly as long as a reader can re-add it by hand, so the weights are one named
+constant summing to 100, each component's raw value / score / points print beside the letter, and a bar
+asserts the total reproduces from the printed parts. Cf. **derived-vs-curated**: the test is not whether
+a number is invented but whether the reader can see that it was.
+
+**zero is not a floor** *(14.G, 2026-07-31)* — T22's rule with the opposite sign. A season-points
+quantile cannot go below zero, so `enrichment.CENSOR_AT` piles ~36 % of the live board on `q10 = 0.0`.
+Printing that as a floor tells a drafter *his downside is zero* when what we have is *no resolvable
+downside* — T19's censoring finding arriving in the display layer, where a human actually reads it. The
+row reads `censored floor` instead. Sibling: **blank means never seen play, not never busts**.
+
+**a fact about the pool, not about the screen** *(14.E, 2026-07-31)* — the tier cliff is computed over a
+seat's whole available pool *before* any position filter or row cap, and a bar asserts it does not move
+when the board is truncated to 8 rows. A cliff measured inside the visible window would mean "the tier
+runs out on this screen", which is a statement about scrolling.
+
+**a test that cannot fail is the same defect as a bar that cannot fail** *(14.F, 2026-07-31)* — the first
+handcuff test drove a full draft on the synthetic board and asserted a property of every row returned.
+The board seated no lead back, so it asserted over an **empty frame** and passed while proving nothing.
+Rewritten against a four-row stub with a known answer. The live-board coverage stayed, in bar B3, where
+the frame is non-empty.
+
+**a bar failing for the wrong reason is a bar nobody trusts the next time it fails** *(B1, 2026-07-31)* —
+B1's first run reported the two 16.17 honesty rules missing from a page that renders them: the check
+scraped `at.markdown`/`at.caption`, and both are `st.warning`/`st.info`. The page was right and the
+instrument was wrong. A false negative costs more than a missing bar, because it teaches you to
+discount the next real one.
+
+**deriving the header turned a latent crash into an immediate one** *(14.G/CLI, 2026-07-31)* — the
+terminal board's column header was a hand-written literal beside a dict of format strings. Deriving it
+from that dict immediately raised *Sign not allowed in string format specifier* — a crash the pre-K2
+code would also have hit, on the first NaN in the signed `BV` column, and had simply never met. Two
+descriptions of one thing hide each other's bugs until you make one of them read the other.
+
+**moved, not copied** *(14.N, 2026-07-31)* — K1.5 parked the standings, season odds and draft-flow
+readouts on the room page because 14.N did not exist yet. K2 **moved** them and the room page kept only
+the grid and the log. Two render paths for one table is how the K1 board and the CLI board drifted
+apart; the fix is that there is one place, not two that agree today.

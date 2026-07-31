@@ -12,6 +12,7 @@ import streamlit as st
 
 from app import probe, state, views
 from app.settings_form import lockbox_banner, settings_form, validation_message
+from fantasy_quant.draft import session
 from fantasy_quant.draft.config import ARCHETYPES, DraftConfig
 from fantasy_quant.draft.simulator import _prepare_board
 from fantasy_quant.valuation.cost_report import personalization_cost
@@ -72,10 +73,20 @@ def page_board() -> None:
     # is exactly "nothing drafted yet", so the same `board_view` serves both cases.
     draft = state.draft()
     st_obj = draft["state"] if draft else _preview_state(built, settings, int(season))
-    advanced = st.toggle("Advanced columns", value=False, key="board_advanced",
-                         help="The full value/risk chain. Off by default: four columns are what "
-                              "a human drafts on.")
-    views.board_table(st_obj, pos=",".join(pos) if pos else None, n=n, advanced=advanced)
+    mode = st.radio("View", ["SLIM", "RANGES", "ADVANCED"], horizontal=True, key="board_mode",
+                    help="SLIM = the four columns a human drafts on. RANGES = each player's 10–90 "
+                         "band and whether he is distinguishable from the man below him (14.G). "
+                         "ADVANCED = the full value/risk chain.")
+    views.cliff_strip(st_obj, st_obj.your_team, built["risk"])
+    view, selected = views.board_table(st_obj, pos=",".join(pos) if pos else None, n=n,
+                                       mode=mode.lower(), risk=built["risk"],
+                                       key="board_page_table", selectable=True)
+    if mode == "RANGES":
+        views.range_note(view)
+    if selected is not None:
+        views.player_dialog(session.player_card(st_obj, int(selected),
+                                                vi=built["value_index"], lam=built["lam"],
+                                                risk=built["risk"]))
 
     st.divider()
     st.markdown("#### Why is this player worth that?")

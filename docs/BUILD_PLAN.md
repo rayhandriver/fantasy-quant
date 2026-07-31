@@ -2297,7 +2297,55 @@ change.* `analysis/session_k1_app.json`'s bars re-run unchanged at the close.
 
 ---
 
-## ★★ Session K2 — SURFACING + THE POST-DRAFT PAGE (14.N · 14.E · 14.F · 14.G · 14.I · 16.6 · 16.12)
+## ★★ Session K2 ☑ COMPLETE 2026-07-31 — SURFACING + THE POST-DRAFT PAGE (14.N · 14.E · 14.F · 14.G · 14.I · 16.12)
+
+> **Built 2026-07-31, straight through, no stop gate** (user authorised a straight run after
+> answering four decisions up front: **weighted composite grade** 0–100 → letter, weights
+> odds 50 · starters 20 · value 15 · construction 15 · **14.N always reachable**, live mid-draft ·
+> **16.6 skipped this session** · leave uncommitted).
+> **All eight pre-registered bars PASS** → `analysis/session_k2_app.json`; runner
+> `steps/session_k2_app.py`. **726 tests (was 702), ruff clean.** Nothing refits, no frozen contract
+> moved, the lockbox was not re-read, and **B0 re-runs both committed sheets** (K1.5's, which nests
+> K1's) — the rule that outranks the other seven is still *if a display change moves a number, it is
+> not a display change.*
+>
+> **Run it:** `uv sync --extra ui && uv run streamlit run app/main.py`
+> **Re-check it:** `uv run python steps/session_k2_app.py` → `analysis/session_k2_app.json`
+>
+> | bar | result |
+> |---|---|
+> | **B0** the K1 rule | K1.5's whole sheet re-runs passing, K1's nested inside it |
+> | **B1** 14.N | renders at k ∈ {0,1,4}, **one page body**, standings identical to `session.summary_table`, odds led by the multiple, both 16.17 honesty rules on screen |
+> | **B2** 14.E | the `CLIFF` column **is** `optimizer.positional_cliff(pool, risk.bv)` — the greedy's own call — and does not move when the board is truncated to 8 rows |
+> | **B3** 14.F | 9 starters accounted for exactly once, **1 unknown bye stays unknown**, 0 fabricated week-0 rows, handcuffs lead-back-only, elevation 1.765 |
+> | **B4** 14.G | slim/ranges/advanced are one query; bands are the frozen `q10`; **70 of 200 rows at the censoring point, all flagged**; 146 of 199 adjacent pairs overlap |
+> | **B5** 14.I | weights sum to 100, total re-adds from the printed parts, letters match the bands, **median team = C**, k=4 → 4 rows and no combined column |
+> | **B6** 16.12 | labels are `drift.reach_risk_label`'s, both probabilities present, window == the optimizer's own `_next_own_pick` |
+> | **FLOW** | a draft **finished by clicking** (145 → 150 picks) lands on 14.N; **all six pages render with zero exceptions** |
+>
+> **Departures from this spec, and why:**
+> - **16.6 was dropped from the session by user decision**, not by accident. The value-side situation
+>   track is an honest null and the tab's content is a negative result that does not help a drafter on
+>   draft day. It stays ☐ in the ROADMAP.
+> - **14.N is not gated on a completed draft.** The literal spec — move the readouts here, gate the
+>   page — would have deleted the running standings a drafter looks at mid-draft. It renders live
+>   state with a banner and defers only what costs a simulation, which is also the only thing that
+>   means nothing until the last pick.
+> - **The cliff is a strip above the board plus a column, not a rule drawn between two rows.** The
+>   board is an `st.dataframe` because that is what gives row selection, and its index *is* the board
+>   index `_apply_pick` consumes — a separator row would be a non-player in that frame.
+> - **The PLAYER-VIEW hover card and deep page are one `st.dialog`.** Streamlit has no hover event;
+>   the 14.O column tooltips already carry the per-number explanation a hover would have.
+> - **The CLI moved with the app** (`board --view {slim,ranges,advanced}`, a `CLIFF` column), because
+>   `stats` serves one dictionary to both surfaces.
+>
+> **★ Three defects the measurements caught, none of them in this spec:** the grade graded the median
+> team **D+** (labels anchored to a different scale than the curve) · the handcuff readout had the
+> depth chart **upside down** (and its first unit test asserted over an empty frame and passed) · a
+> **latent crash** in the CLI board's `">+7"` width, exposed by deriving the header instead of
+> hand-writing it. Full write-ups: `findings.md` §"Session K2", `glossary.md`.
+
+*(original spec follows, unchanged)*
 
 *(scoped 2026-07-30 s4; previously a one-line ROADMAP entry. It now has a **shape**, which it did not
 before: the user asked for "a finalized analysis page where I can see all opposing teams and all

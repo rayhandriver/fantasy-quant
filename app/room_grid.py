@@ -1,12 +1,14 @@
-"""14.L — every drafter's team on one page, and where a finished draft lands.
+"""14.L — every drafter's team on one page.
 
-Teams across the top, picks or slots down the side. This is also the new home of the readouts that
-were tabs *inside* the K1 draft tab (summary, season odds, draft flow, log): a nested ``st.tabs``
-has T35's defect too — every body runs on every rerun, and the draft-flow body calls
-``sim_drift_panel``. They sit behind a **radio** here, which renders one.
+Teams across the top, picks or slots down the side. **BY PICK** is the classic draft board; **BY
+SLOT** is every roster in starting order, filled by the frozen lineup solver.
 
-⚠ The full post-draft analysis page is **14.N (Session K2)**; this is its precursor, and the
-readouts move there when it exists rather than being duplicated into it.
+★ **K2 moved the analysis off this page.** K1.5 parked the standings, the season odds and the
+draft-flow profile here behind a radio, because 14.N did not exist yet and a nested ``st.tabs`` had
+T35's defect. 14.N exists now, so those four readouts **moved** rather than being copied: this page
+keeps the two things that are about *reading* the draft as it happens (the grid and the log), and
+the post-draft page takes everything that is about *judging* it. Two render paths for one table is
+how a display drifts away from what it displays.
 """
 
 from __future__ import annotations
@@ -14,10 +16,10 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from app import probe, state, views
+from app import nav, probe, state, views
 from fantasy_quant.draft import session
 
-VIEWS = ("Room grid", "Standings", "Season odds", "Draft flow", "Log", "Stat dictionary")
+VIEWS = ("Room grid", "Log", "Stat dictionary")
 
 
 def page_grid() -> None:
@@ -32,10 +34,11 @@ def page_grid() -> None:
 
     st_obj, meta = d["state"], d["meta"]
     sm = session.seat_map_from(meta)
-    n_humans = len(sm.human_teams)
     done = st_obj.is_done() or not st_obj.available
     st.caption(f"{len(st_obj.log)} picks · {'complete' if done else 'in progress'} · "
                f"pick seed {meta.get('seed')} · seating seed {meta.get('room_seed')}")
+    if done and st.button("Go to the post-draft analysis", type="primary"):
+        nav.go("post")
 
     choice = st.radio("View", VIEWS, horizontal=True, label_visibility="collapsed")
     if choice == "Room grid":
@@ -44,50 +47,13 @@ def page_grid() -> None:
                            "starting order, filled by the frozen lineup solver.")
         views.room_grid_panel(st_obj, sm, d.get("vi"),
                               by="pick" if by == "BY PICK" else "slot")
-    elif choice == "Standings":
-        views.summary_panel(st_obj, sm, d.get("vi"))
-        views.honesty_notes(n_humans)
-    elif choice == "Season odds":
-        _odds(st_obj, meta, sm)
-    elif choice == "Draft flow":
-        _drift(st_obj, meta, sm, n_humans)
     elif choice == "Log":
         _log(st_obj, sm)
     else:
         views.stat_dictionary_panel()
 
-
-def _odds(st_obj, meta, sm) -> None:
-    if not st_obj.is_done():
-        st.caption("Season odds are available once the draft is complete.")
-        return
-    sims = st.slider("Simulations", 100, 2000, 400, step=100,
-                     help="The sim is not interactive-speed; it runs on demand, never per rerun.")
-    if st.button("Run the season sim"):
-        with st.spinner(f"Simulating {sims} seasons…"):
-            tab, prov = session.odds_table(state.con(), st_obj, meta, sm, sims=int(sims))
-        st.session_state["odds"] = (tab, prov)
-    if "odds" in st.session_state:
-        tab, prov = st.session_state["odds"]
-        views.odds_panel(tab, prov)
-        if len(sm.human_teams) > 1:
-            st.warning("Your seats' probabilities are **not** independent and do not add up to "
-                       "your chance of winning — the sim runs one league in which they play each "
-                       "other.")
-
-
-def _drift(st_obj, meta, sm, n_humans: int) -> None:
-    if not st_obj.log:
-        st.caption("No picks yet.")
-        return
-    d = session.drift_frames(st_obj, meta, sm)
-    st.markdown("**Reach profile** — 10-team ADP picks")
-    st.dataframe(d["profile"].round(2), width="stretch", hide_index=True)
-    st.markdown("**Elite fall** (consensus top-12)")
-    st.json(d["elite"])
-    st.markdown("**Per seat**")
-    st.dataframe(d["seats"].round(2), width="stretch", hide_index=True)
-    views.honesty_notes(n_humans, drift=True)
+    st.caption("Standings, season odds, the draft-flow profile, your grade and your roster-"
+               "construction risk all live on the **Post-draft** page (14.N).")
 
 
 def _log(st_obj, sm) -> None:

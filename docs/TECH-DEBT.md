@@ -46,6 +46,7 @@ At a glance:
 | **T30** | ✅ | **`autopilot` is 1 of 10 seats against 0.2 % of realized seats — 50×**, and it is the seat that manufactures the spill the rest of the room harvests (walkthrough: mean `pool_rank` **1.77**, median **1.0**, harvest **+11.7 picks**, the largest in the room). 16.14R halved it from two seats *on this exact argument* and stopped there; bar 3 passes at +0.06 sd, so this is a **composition question that has never been argued explicitly**, not a known defect | Session H.5 step 4 — a cheap seating-marginalized A/B against a near-autopilot seat; **accept or change the mix, but state the argument** | ☑ 2026-07-30 — **argued and NOT changed**, under the pre-agreed rule (ship only if every bar holds or improves). The `chalk` swap closes **79 %** of the chalk-share gap (11.0 → 2.4 % vs a realized 0.2 %) and 63 % of the moderate-share gap, and costs **+0.0021** profile distance and **+0.97 pp** elite-past-10. Every gate passes both ways; bar 3 harvest is **0.00 in both**, so the spill the seat manufactures is not being harvested |
 | **T34** | ☑ | **every mock draft is the same mock draft.** `app/engine.start_draft` defaults `seed=7` and `room_seed=None`, which freezes *both* sources of variation — the pick RNG and the seating — so a user re-drafting his slot gets the identical room, the identical picks and the identical story every time. Reported by the user from the live app (seat 6 always opens Gibbs · Chase · Taylor · McCaffrey · Cook) and **reproduced exactly**: same seed twice is identical, `seed=8` gives Gibbs · Nacua · Jeanty · Bijan · Chase, `room_seed=3` gives McCaffrey first. The engine is fine and the personalities *are* sampling — **the human-facing default is the measurement default**, and practising against one frozen draft is worse than not practising | **now** — it defeats the purpose of the mock drafter, which is repeated practice. Session K1.5 step 0. ⚠ **`steps/` must not move**: T24's sweep, 16.17's mapping check and every committed bar sheet are differenced against `--seed 7` | ☑ 2026-07-31 |
 | **T35** | ☑ | **`st.tabs` executes every tab body on every rerun** — it hides inactive tabs client-side, it does not skip them. `app/main.py` calls `tab_settings()`, `tab_board()`, `tab_draft()` and `tab_cost()` unconditionally, so one keystroke in the draft room's player box also re-runs the cost tab's `_prepare_board` and its ADP-sorted option-label build over the entire board. Wasteful today; **a hard blocker on the 14.M pick clock**, which reruns on a timer and must rerun one fragment, not four tabs | with 14.K (Session K1.5 step 1) — the fix is `st.navigation`/`st.Page`, which the user asked for on ergonomic grounds independently | ☑ 2026-07-31 |
+| **T36** | 🟡 | **no automated bar covers the board's row-selection path, and therefore not the player modal.** `st.dataframe(on_select="rerun")` is a *client* event: `AppTest` can click a button and set a widget value, but it cannot make a selection in a dataframe. So the two things a K2 drafter does most on the board — select a row to load the confirm bar, select a row to open the PLAYER-VIEW card — are exercised only by the pieces around them (`session.player_card` is unit-tested for content, `resolve_pick` for the typed path, and FLOW proves every page renders). This is the same shape as the gap K1 shipped through: *an import bar and a use bar are different claims*, and here the use bar stops one layer short of the click | opportunistic. The honest options are a real browser driver (Playwright — a new dev dependency and a slow bar) or a selection-independent duplicate control that would exist only to be testable, which is worse. Revisit if row-select ever carries a number rather than a navigation | ☐ 2026-07-31 |
 | **T33** | 🟡 | **`make_value_hawk_pick_fn(n_teams=)` receives the ROOM size, not the league size** — both room builders pass `len(seats)`, so the *interactive* room (9 modelled seats) scales the value hawk's `_local_z` context weights by **9** and the *batch* room by **10**: the same seat prices step-3 context ~10 % apart depending on which harness it is sitting in. Pre-existing since 16.14R step 6, and 16.17 only made it visible — with k human seats the divisor becomes `10 − k`, so it now varies with the room shape rather than being one of two constants | with the next room measurement. **Deliberately preserved verbatim by 16.17**, whose entire done-bar is bit-identity against both builders; fixing it changes the shipped room's picks and needs the full T24 seating-marginalized before/after as its own sub-step | ☐ 2026-07-30 |
 
 ---
@@ -2238,3 +2239,32 @@ pages on later.
 **Done-when.** A rerun triggered on the draft page executes the draft page body **only** — asserted with
 a per-page probe counter under `AppTest`, not eyeballed — and K1's B1 identity (app == CLI at the same
 seed) still holds after the move.
+
+## 🟡 T36 — the row-selection path has no automated bar
+**Status ☐ · opened 2026-07-31 (Session K2) · opportunistic.**
+
+`st.dataframe(selection_mode="single-row", on_select="rerun")` is how a drafter picks a player and how
+the 14.N-era player card is opened. **`AppTest` cannot drive it** — selection is a client-side event
+with no scriptable equivalent, unlike `st.button.click()` or setting a widget value.
+
+**What is covered instead**, so the gap is stated at its real size rather than its scariest one:
+- `session.player_card` is unit-tested against the board row it reads (all eight bars, the T27 chain,
+  the cliff), so the modal's *content* is asserted.
+- `session.resolve_pick` and the quick-pick buttons cover the other two ways into a pick, and Session
+  K1.5's bar B2 asserts a row-select and a typed query resolve to the **same board index**.
+- K2's FLOW bar opens all six pages with a live draft and asserts zero exceptions, so a crash *on* the
+  board page would be caught even though the selection itself is not driven.
+
+**What is not covered:** that a selection produces the confirm bar, and that the confirm bar's button
+drafts the player it names.
+
+**Why it is 🟡 and not 🟠.** Nothing here computes a number — the selection resolves to a board index
+that `_apply_pick` already validates, and a wrong index would surface immediately as the wrong player
+in the confirm bar, which is exactly why the confirm bar exists (*never a one-click irreversible pick
+without the name in front of the user*).
+
+**The honest fix, and why it has not been taken.** A real browser driver (Playwright) would cover it
+and adds a dev dependency plus a slow, flaky-by-nature bar. The alternative — a second, selection-free
+control that exists only so a test can reach it — would be *testing a path the human does not use*,
+which is the T27/K1 failure mode inverted, and worse than the gap. Revisit if row-select ever carries a
+number rather than a navigation.

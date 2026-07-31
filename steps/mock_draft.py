@@ -145,8 +145,33 @@ def fmt_pick(r: dict, sm: SeatMap) -> str:
             f"(ADP {r['adp']:.1f})")
 
 
+#: Per-view column formats for the terminal board. The keys are the columns each view prints, in
+#: order — so adding a column to :data:`session.BOARD_VIEW_COLS` and forgetting the CLI shows up as
+#: a column the ``stats`` dictionary documents and the board never prints.
+_VIEW_FMT: dict[str, dict[str, str]] = {
+    "advanced": {"ADP": ">6.1f", "PROJ": ">6.0f", "MEAN": ">6.0f", "AVAIL": ">6.1f",
+                 "BV": ">+7.0f", "VBD": ">6.0f", "RK": ">5.0f", "UPSIDE": ">+7.2f",
+                 "FLOOR": ">+7.2f", "TAIL": ">+7.2f", "BOOM": ">6.2f", "BUST": ">6.2f",
+                 "CLIFF": ">6.0f"},
+    "slim": {"ADP": ">6.1f", "PROJ": ">6.0f"},
+    "ranges": {"ADP": ">6.1f", "PROJ": ">6.0f", "Q10": ">6.0f", "MED": ">6.0f", "Q90": ">6.0f"},
+}
+
+
+def _width(numeric_fmt: str) -> str:
+    """A numeric format like ``">+7.0f"`` -> the **string** format of the same width, ``">7"``.
+
+    ⚠ The ``+`` has to come off. ``format("-", ">+7")`` raises *Sign not allowed in string format
+    specifier* — which the pre-K2 code would also have hit, on the first NaN in the signed ``BV``
+    column, and which only stayed hidden because the header was a hand-written literal and no
+    printed row happened to have one. Deriving the header from the same dict that formats the cells
+    turned a latent crash into an immediate one, which is the argument for deriving it.
+    """
+    return ">" + numeric_fmt.split(".")[0].lstrip(">+")
+
+
 def show_available(st: DraftState, n: int = 18, pos: str | None = None,
-                   team: int | None = None) -> None:
+                   team: int | None = None, view: str = "advanced", risk=None) -> None:
     """The best-available table. Columns and their meaning: :data:`session.BOARD_VIEW_COLS`.
 
     ★ T27 — the value chain reads left to right in the order the arithmetic runs: ``PROJ`` the
@@ -157,18 +182,27 @@ def show_available(st: DraftState, n: int = 18, pos: str | None = None,
 
     ⚠ T22 — ``BOOM``/``BUST`` are the **live** pair, and a player we have never seen play prints
     ``-`` rather than a fabricated ``0.00`` (which reads as *never busts*).
+
+    ★ **K2 — ``--view ranges`` is the terminal's 14.G**, and ``CLIFF`` joins the advanced view. The
+    app gained a third projection and two columns; giving the CLI the same ones is not symmetry for
+    its own sake — ``stats`` serves one dictionary to both surfaces, so a column the app shows and
+    the CLI cannot is a documented column with no terminal behind it. ``FLAGS`` prints as a trailing
+    note rather than a fixed-width cell, because it is prose.
     """
-    view = session.board_view(st, team=team, pos=pos, n=n)
-    fmt = {"ADP": ">6.1f", "PROJ": ">6.0f", "MEAN": ">6.0f", "AVAIL": ">6.1f", "BV": ">+7.0f",
-           "VBD": ">6.0f", "RK": ">5.0f", "UPSIDE": ">+7.2f", "FLOOR": ">+7.2f",
-           "TAIL": ">+7.2f", "BOOM": ">6.2f", "BUST": ">6.2f"}
-    print(f"  {'#':<5}{'PLAYER':<22}{'POS':<4}{'ADP':>6}{'PROJ':>6}{'MEAN':>6}{'AVAIL':>6}"
-          f"{'BV':>7}{'VBD':>6}{'RK':>5}{'UPSIDE':>7}{'FLOOR':>7}{'TAIL':>7}{'BOOM':>6}{'BUST':>6}")
-    for idx, r in view.iterrows():
+    fmt = _VIEW_FMT[str(view)]
+    frame = session.board_view(st, team=team, pos=pos, n=n, risk=risk)
+    head = "".join(format(c, _width(f)) for c, f in fmt.items())
+    print(f"  {'#':<5}{'PLAYER':<22}{'POS':<4}{head}"
+          + ("  FLAGS" if view == "ranges" else ""))
+    for idx, r in frame.iterrows():
         cells = "".join(
-            format(r[c], f) if pd.notna(r[c]) else format("-", f">{f.split('.')[0][1:]}")
+            format(r[c], f) if pd.notna(r[c]) else format("-", _width(f))
             for c, f in fmt.items())
-        print(f"  {idx:<5}{str(r['PLAYER'])[:21]:<22}{str(r['POS']):<4}{cells}")
+        tail = ""
+        if view == "ranges":
+            marks = [m for m in (str(r["FLAGS"]), "coin flip" if bool(r["COIN"]) else "") if m]
+            tail = "  " + "; ".join(marks) if marks else ""
+        print(f"  {idx:<5}{str(r['PLAYER'])[:21]:<22}{str(r['POS']):<4}{cells}{tail}")
 
 
 def explain(board: pd.DataFrame, vi: pd.DataFrame, query: str, lam: float) -> None:
@@ -410,8 +444,9 @@ def _seat_arg(st: DraftState, team: int | None) -> int:
 
 
 def cmd_board(a) -> None:
-    st, _, _, _ = load()
-    show_available(st, n=a.n, pos=a.pos, team=_seat_arg(st, a.team))
+    st, _, _, risk = load()
+    show_available(st, n=a.n, pos=a.pos, team=_seat_arg(st, a.team),
+                   view=getattr(a, "view", "advanced"), risk=risk)
 
 
 def cmd_roster(a) -> None:
@@ -532,6 +567,11 @@ def main() -> None:
     b.add_argument("--team", type=int, default=None)
     b.add_argument("--n", type=int, default=18)
     b.add_argument("--pos", default=None)
+    b.add_argument("--view", choices=sorted(_VIEW_FMT), default="advanced",
+                   help="'advanced' (the full value/risk chain, default) | 'slim' (the four "
+                        "columns a human drafts on) | 'ranges' (14.G — each player's 10-90 band, "
+                        "his confidence flags, and whether he is distinguishable from the man "
+                        "below him)")
     b.set_defaults(fn=cmd_board)
 
     r = sub.add_parser("roster")

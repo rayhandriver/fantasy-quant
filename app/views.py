@@ -22,6 +22,9 @@ _BOARD_FMT: dict[str, str | None] = {
     "PLAYER": None, "POS": None, "ADP": "%.1f", "PROJ": "%.0f", "MEAN": "%.0f", "AVAIL": "%.1f",
     "BV": "%+.0f", "VBD": "%.0f", "RK": "%.0f", "UPSIDE": "%+.2f", "FLOOR": "%+.2f",
     "TAIL": "%+.2f", "BOOM": "%.2f", "BUST": "%.2f",
+    # K2: 14.E's cliff and 14.G's quantile block. COIN and FLAGS are not numbers and are
+    # configured separately in `_column_config`.
+    "CLIFF": "%.0f", "Q10": "%.0f", "MED": "%.0f", "Q90": "%.0f",
 }
 
 def _column_config() -> dict:
@@ -32,13 +35,16 @@ def _column_config() -> dict:
     meaning moved — as ``BOOM``/``BUST``'s did under T22 — there were two places to update and one
     of them would have been missed. One dictionary, every surface.
     """
-    return {c: st.column_config.NumberColumn(c, format=f, help=session.stat_help(c))
-            for c, f in _BOARD_FMT.items() if f is not None}
+    cfg: dict = {c: st.column_config.NumberColumn(c, format=f, help=session.stat_help(c))
+                 for c, f in _BOARD_FMT.items() if f is not None}
+    cfg["COIN"] = st.column_config.CheckboxColumn("COIN", help=session.stat_help("COIN"))
+    cfg["FLAGS"] = st.column_config.TextColumn("FLAGS", help=session.stat_help("FLAGS"))
+    return cfg
 
 
 def board_table(st_obj, team: int | None = None, *, pos: str | None = None, n: int = 40,
-                advanced: bool = False, key: str | None = None,
-                selectable: bool = False) -> tuple[pd.DataFrame, int | None]:
+                advanced: bool = False, mode: str | None = None, key: str | None = None,
+                selectable: bool = False, risk=None) -> tuple[pd.DataFrame, int | None]:
     """Render the best-available board; return ``(frame_rendered, selected_board_index)``.
 
     **Slim by default, advanced on a toggle, one query** — the frame is
@@ -54,8 +60,8 @@ def board_table(st_obj, team: int | None = None, *, pos: str | None = None, n: i
     pair leaves him NaN, and NaN must survive all the way to the screen — a ``fillna(0)`` anywhere
     in this file would silently restore the exact defect the column was rebuilt to fix.
     """
-    view = session.board_view(st_obj, team=team, pos=pos, n=n)
-    shown = session.project_view(view, advanced=advanced)
+    view = session.board_view(st_obj, team=team, pos=pos, n=n, risk=risk)
+    shown = session.project_view(view, advanced=advanced, mode=mode)
     extra = {"on_select": "rerun", "selection_mode": "single-row"} if selectable else {}
     event = st.dataframe(
         shown, width="stretch", height=min(620, 40 + 35 * min(len(shown), 16)),
@@ -227,6 +233,212 @@ def odds_panel(tab: pd.DataFrame, provenance: list[str]) -> None:
         "**Read the multiples, not the percentages.** `1.70x` = 1.7 times a fair share of titles. "
         "The absolute percentages inherit the sim's documented −113 pts/team level bias; the "
         "ratios do not, because the bias moves every team together. " + " ".join(provenance))
+
+
+# ------------------------------------------------------------------------------------------------
+# K2 — the surfacing panels
+# ------------------------------------------------------------------------------------------------
+def cliff_strip(st_obj, team: int, risk=None) -> pd.DataFrame:
+    """14.E — each position's next tier cliff, above the board it describes.
+
+    ⚠ **Rendered as a strip rather than as a rule drawn between two table rows.** The board is an
+    ``st.dataframe`` because that is what gives row selection, and a dataframe cannot carry a
+    separator row that is not also a player. Faking one (a blank row, a divider glyph in PLAYER)
+    would put a non-player in a frame whose index *is* the board index — the one column
+    ``_apply_pick`` consumes. So the cliff is stated above the board and marked in the ``CLIFF``
+    column beside each player, and the table stays a table.
+    """
+    tab = session.cliff_table(st_obj, team, risk=risk)
+    if tab.empty:
+        return tab
+    cols = st.columns(len(tab))
+    for c, (_, r) in zip(cols, tab.iterrows(), strict=False):
+        c.metric(f"{r['pos']} cliff", f"−{r['drop']:.0f}",
+                 f"{int(r['n_before'])} left", delta_color="off",
+                 help=f"The board falls {r['drop']:.0f} points of base_value at "
+                      f"{r['at_player']} — {int(r['n_before'])} {r['pos']}(s) at or above it, "
+                      f"{int(r['n_available'])} available in all. Read it against ADP: a steep "
+                      f"cliff nobody else is near is not urgent.")
+    return tab
+
+
+def range_note(view: pd.DataFrame) -> None:
+    """14.G's honest headline: how much of the order on screen the model can actually resolve."""
+    if "COIN" not in view.columns or view.empty:
+        return
+    n_pairs = max(len(view) - 1, 0)
+    n_coin = int(pd.Series(view["COIN"]).fillna(False).astype(bool).sum())
+    censored = int(view["FLAGS"].astype(str).str.contains("censored floor").sum()) \
+        if "FLAGS" in view.columns else 0
+    st.caption(
+        f"**{n_coin} of {n_pairs} adjacent pairs on this screen overlap at 10–90 %** — where COIN "
+        f"is ticked the two players are not distinguishable by this model and the row order is a "
+        f"presentation, not a finding. {censored} row(s) show `censored floor`: a season total "
+        f"cannot be negative, so their Q10 sits on the zero censoring point and their downside is "
+        f"**unresolvable, not zero** (T19).")
+
+
+def construction_panel(risk: dict) -> None:
+    """14.F — bye clustering, NFL-team concentration and handcuff gaps, reported separately.
+
+    ⚠ **No composite.** There is no evidence for a rate of exchange between "four starters idle in
+    week 11" and "you hold three Eagles", so the three are shown side by side and only the bye
+    count feeds the 14.I grade (where it is named as one count, not a blend).
+    """
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Starters sharing a bye", risk["max_bye_starters"],
+              help="The largest number of your starters idle in any single week.")
+    c2.metric("Most from one NFL team", risk["max_team_players"],
+              help="Same-team players move together — that is the Phase-8 covariance the "
+                   "optimizer already charges you for, shown as a count.")
+    c3.metric("Handcuff gaps", risk["n_handcuff_gaps"],
+              help="Lead backs you hold whose backup you do not. RB only: the elevation ratio "
+                   "that prices the option is measured on backfields.")
+
+    byes = risk["byes"]
+    if len(byes):
+        show = byes.rename(columns={"week": "WEEK", "n": "STARTERS", "who": "WHO"})
+        st.dataframe(show, width="stretch", hide_index=True)
+    if risk["unknown_byes"]:
+        st.caption(f"⚠ {risk['unknown_byes']} of your starters have **no bye week on file** — the "
+                   f"store has no schedule table, so byes come from the FantasyPros ECR snapshot "
+                   f"and about one row in ten has none. They are counted as unknown, never as "
+                   f"week 0.")
+    conc = risk["concentration"]
+    if len(conc):
+        top = conc[conc["n"] > 1]
+        if len(top):
+            st.markdown("**Team concentration**")
+            st.dataframe(top.rename(columns={"nfl_team": "TEAM", "n": "N",
+                                             "n_starters": "STARTING", "who": "WHO"}),
+                         width="stretch", hide_index=True)
+    hc = risk["handcuffs"]
+    if len(hc):
+        st.markdown("**Handcuffs**")
+        show = hc.rename(columns={"starter": "YOUR RB", "nfl_team": "TEAM", "backup": "HANDCUFF",
+                                  "held": "HELD", "option_premium": "OPTION"})
+        st.dataframe(show, width="stretch", hide_index=True,
+                     column_config={"OPTION": st.column_config.NumberColumn(
+                         "OPTION", format="%.0f",
+                         help="The insurance half of the backup's value: his season points with "
+                              "the starter healthy vs. folding in the starter's own measured "
+                              "absence risk, at the pooled Phase-8.5 elevation ratio.")})
+
+
+def grade_panel(grade: pd.DataFrame, team: int) -> None:
+    """14.I — one seat's grade, with the arithmetic that produced it and the weights named.
+
+    ★ **The weighting is printed, not hidden.** Every input is frozen and separately validated; the
+    act of blending them is a presentation choice this session made and nothing validates. A reader
+    who can see the four contributions can disagree with the weights; a reader shown only ``B+``
+    cannot.
+    """
+    row = grade[grade["team"] == team + 1]
+    if row.empty:
+        st.info("No grade for this seat.")
+        return
+    r = row.iloc[0]
+    left, right = st.columns([1, 3])
+    left.metric(f"{r['who']} (T{int(r['team'])})", str(r["letter"]), f"{r['total']:.0f} / 100",
+                delta_color="off")
+    parts = pd.DataFrame([{
+        "COMPONENT": name,
+        "WEIGHT": f"{w:.0f}",
+        "RAW": r[name],
+        "SCORE": r[f"score_{name}"],
+        "POINTS": r[f"points_{name}"],
+    } for name, w in session.GRADE_WEIGHTS.items()])
+    right.dataframe(parts, width="stretch", hide_index=True, column_config={
+        "RAW": st.column_config.NumberColumn("RAW", format="%.2f"),
+        "SCORE": st.column_config.NumberColumn("SCORE", format="%.2f"),
+        "POINTS": st.column_config.NumberColumn("POINTS", format="%.1f")})
+    st.caption(
+        f"**odds** = the T29 title fair-share multiple (immune to the sim's −113 pts/team level "
+        f"bias, which the percentage is not) · **starters** = STARTABLE, the best legal lineup's "
+        f"base_value · **value** = harvest picks against the corpus reach scale · "
+        f"**construction** = minus your worst bye-week starter count. Each is scored **min–max "
+        f"across the ten teams in this room**, so 50 is the middle of *this* room and a C means "
+        f"average here, not average in the abstract. "
+        f"⚠ **The weights {tuple(int(w) for w in session.GRADE_WEIGHTS.values())} are a "
+        f"presentation choice and nothing validates them** — the inputs are frozen, the blend is "
+        f"house style.")
+
+
+def reach_panel(frame: pd.DataFrame, window: int | None = None) -> None:
+    """16.12(c) — ``P(available at your next pick)``, with the un-drifted baseline beside it."""
+    if frame.empty:
+        st.caption("No availability readout — the draft has no further pick for this seat.")
+        return
+    show = frame.rename(columns={"player_name": "PLAYER", "pos": "POS", "adp": "ADP",
+                                 "p_available": "P(THERE)", "p_available_baseline": "BASELINE",
+                                 "drift_picks": "DRIFT", "reach_risk": "READ"})
+    cols = [c for c in ("PLAYER", "POS", "ADP", "P(THERE)", "BASELINE", "DRIFT", "READ")
+            if c in show.columns]
+    st.dataframe(show[cols], width="stretch", hide_index=True, column_config={
+        "ADP": st.column_config.NumberColumn("ADP", format="%.1f"),
+        "P(THERE)": st.column_config.ProgressColumn("P(THERE)", format="%.2f",
+                                                    min_value=0.0, max_value=1.0),
+        "BASELINE": st.column_config.NumberColumn("BASELINE", format="%.2f"),
+        "DRIFT": st.column_config.NumberColumn("DRIFT", format="%+.1f")})
+    st.caption(
+        f"P(still there when you pick again{f', {window} opponent picks away' if window else ''}) "
+        f"from the **validated** 11.2 survival oracle, not the crude ADP+noise placeholder. "
+        f"**BASELINE is the same number without the narrative-drift adjustment, and it is shown "
+        f"because the adjustment is not backtestable** — FFC gives one board a season, so 16.11's "
+        f"momentum could only ever be validated forward. Drift is opt-in and off by default, which "
+        f"is why the two columns usually agree.")
+
+
+def player_card_body(card: dict) -> None:
+    """The PLAYER-VIEW deep page for one player — bars, the T27 chain, flags, cliff, reach risk."""
+    st.markdown(f"### {card['name']} · {card['pos']} · {card['team']}")
+    st.caption(f"ADP {card['adp']:.1f} · board #{card['board_index']} · "
+               f"{'available' if card['available'] else 'already drafted'}")
+    if card["flags"]:
+        st.warning(f"**Confidence flags: {card['flags']}.** "
+                   f"{session.stat_entry('FLAGS')['how_to_read_it']}")
+
+    bars = [b for b in card["bars"] if b["value"] is not None]
+    for chunk in (bars[:4], bars[4:]):
+        if not chunk:
+            continue
+        cols = st.columns(len(chunk))
+        for c, b in zip(cols, chunk, strict=False):
+            c.metric(b["label"], f"{b['value']:{b['fmt'][1:]}}", help=b["help"])
+
+    line = []
+    if card.get("cliff") is not None:
+        line.append(f"**Tier cliff** {card['cliff']:.0f} pts")
+    if card.get("reach"):
+        rr = card["reach"]
+        line.append(f"**P(there at your next pick)** {float(rr['p_available']):.0%} "
+                    f"— _{rr['reach_risk']}_")
+    if line:
+        st.markdown(" · ".join(line))
+
+    if card["chain"]:
+        e = card["chain"][0]
+        st.markdown("**How his value is built** (T27 — every line is an identity, not a "
+                    "re-derivation)")
+        if not e["ok"]:
+            st.warning(e["reason"])
+        else:
+            st.dataframe(pd.DataFrame([{"": r["label"],
+                                        " ": "" if r["value"] is None else f"{r['value']:,.1f}",
+                                        "  ": r["note"]} for r in e["rows"]]),
+                         width="stretch", hide_index=True)
+
+
+@st.dialog("Player", width="large")
+def player_dialog(card: dict) -> None:
+    """The deep page as a modal, opened from a board row.
+
+    ⚠ **A modal, not a hover.** `docs/PLAYER-VIEW.md` §3 specs a hover overview card and §4 a deep
+    page; Streamlit has no hover event, so one surface serves both roles rather than the hover half
+    being faked with a tooltip that cannot hold eight bars and an arithmetic chain. The column
+    tooltips (14.O) already carry the per-number explanation a hover would have.
+    """
+    player_card_body(card)
 
 
 def honesty_notes(n_humans: int, *, drift: bool = False) -> None:

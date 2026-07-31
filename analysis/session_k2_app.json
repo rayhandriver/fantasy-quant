@@ -1,0 +1,225 @@
+{
+  "season": 2026,
+  "seat": 6,
+  "bar_sims": 120,
+  "app_arrival_sims": 400,
+  "all_pass": true,
+  "bars": {
+    "b2": {
+      "bar": "B2 \u2014 the CLIFF column IS optimizer.positional_cliff on risk.bv",
+      "pass": true,
+      "seats_checked": 2,
+      "mismatches": [],
+      "strip_problems": [],
+      "cliff_invariant_to_row_cap": true,
+      "positions": [
+        "QB",
+        "TE",
+        "WR",
+        "RB",
+        "K"
+      ],
+      "drops": [
+        52.8,
+        38.7,
+        25.0,
+        21.4,
+        13.5
+      ],
+      "note": "Also asserted: the cliff does not move when the board is truncated to 8 rows. A cliff is a statement about what is left at a position, so a screen-local one would mean 'the tier runs out on this screen'."
+    },
+    "b4": {
+      "bar": "B4 \u2014 slim/ranges/advanced are one query; bands frozen; censoring flagged",
+      "pass": true,
+      "filters_checked": 5,
+      "problems": [],
+      "k1_5_advanced_flag_unchanged": true,
+      "bands_are_frozen_q10": true,
+      "rows": 200,
+      "at_censoring_point": 70,
+      "all_censored_rows_flagged": true,
+      "no_distribution_rows": 31,
+      "adjacent_overlapping_pairs": 146,
+      "note": "A season total cannot be negative, so q10 piles up on zero. Printing a bare 0 there would read as 'his floor is zero' \u2014 the T22 defect (blank is not zero) with the other sign. It reads `censored floor` instead."
+    },
+    "b3": {
+      "bar": "B3 \u2014 bye / concentration / handcuff gaps compute; unknown stays unknown",
+      "pass": true,
+      "n_starters": 9,
+      "byes_counted": 8,
+      "unknown_byes": 1,
+      "starters_accounted_for": true,
+      "fabricated_week_zero_rows": 0,
+      "bye_source_rows_for_this_roster": 14,
+      "max_bye_starters": 3,
+      "max_team_players": 2,
+      "n_handcuff_gaps": 4,
+      "handcuff_problems": [],
+      "elevation_ratio": 1.765,
+      "degrades_without_byes": true,
+      "note": "The store has no schedule table: byes come from the FantasyPros ECR snapshots and ~1 row in 10 has none. A missing bye is counted as unknown and shown as unknown \u2014 an fillna(0) would file him under week 0, which reads as 'no bye'."
+    },
+    "b5": {
+      "bar": "B5 \u2014 the grade is exactly the sum of its printed parts, once per human seat",
+      "pass": true,
+      "weights": {
+        "odds": 50.0,
+        "starters": 20.0,
+        "value": 15.0,
+        "construction": 15.0
+      },
+      "weights_sum": 100.0,
+      "reproduces_from_components": true,
+      "totals_in_0_100": true,
+      "letters_match_bands": true,
+      "min_max_curve_on_the_room": true,
+      "median_team_letter": "C",
+      "k4_rows": 10,
+      "k4_human_rows": 4,
+      "no_combined_column": true,
+      "grades": {
+        "balanced": "D\u2212 31",
+        "value_hawk": "B 70",
+        "safe_floor": "B\u2212 66",
+        "chalk": "C+ 61",
+        "YOU": "C+ 59",
+        "autopilot": "C\u2212 44",
+        "reacher": "F 18",
+        "upside_chaser": "F 18"
+      },
+      "note": "\u2605 The bands are anchored to this scale, not to a school gradebook. On plain 90/80/70/60 bands the median team in a ten-team room graded D+ and six of ten graded D or F \u2014 the app calling an average draft a failure because the letters assumed 50 % was a fail when on a curve 50 is the middle."
+    },
+    "b6": {
+      "bar": "B6 \u2014 P(available) is drift.availability_readout, labelled by the engine",
+      "pass": true,
+      "labels_from_reach_risk_label": true,
+      "both_probabilities_present": true,
+      "probabilities_in_0_1": true,
+      "window_picks": 5,
+      "window_expected": 5,
+      "next_own_pick": 6,
+      "spearman_p_vs_adp": 0.954,
+      "buckets": {
+        "likely available": 21,
+        "coin flip": 3,
+        "likely gone": 1
+      },
+      "note": "Both columns ship because the drift adjustment is not backtestable \u2014 FFC publishes one board a season, so 16.11's momentum could only be validated forward. Drift is opt-in and off by default, so the two usually agree, and that agreement is a fact about the default rather than about the model."
+    },
+    "b1": {
+      "bar": "B1 \u2014 14.N renders at k\u2208{0,1,4}, one page body, showing session's own numbers",
+      "pass": true,
+      "runs": [
+        {
+          "k": 0,
+          "page_bodies": {
+            "post": 1
+          },
+          "n_dataframes": 5,
+          "standings_matches_session": true,
+          "capital_labelled": true,
+          "odds_lead_with_multiple": true,
+          "one_observation_rule_rendered": true,
+          "fully_simulated_scope_rendered": true,
+          "grade_rendered": false
+        },
+        {
+          "k": 1,
+          "page_bodies": {
+            "post": 1
+          },
+          "n_dataframes": 10,
+          "standings_matches_session": true,
+          "capital_labelled": true,
+          "odds_lead_with_multiple": true,
+          "one_observation_rule_rendered": true,
+          "fully_simulated_scope_rendered": true,
+          "grade_rendered": true
+        },
+        {
+          "k": 4,
+          "page_bodies": {
+            "post": 1
+          },
+          "n_dataframes": 25,
+          "standings_matches_session": true,
+          "capital_labelled": true,
+          "odds_lead_with_multiple": true,
+          "one_observation_rule_rendered": true,
+          "fully_simulated_scope_rendered": true,
+          "grade_rendered": true
+        }
+      ],
+      "n_exceptions": 0,
+      "exceptions": [],
+      "note": "The page body is counted, not timed (T35's instrument): 14.N must be one page, not a tab whose neighbours also run. The standings frame is compared against `session.summary_table` rather than against a second computation \u2014 there is one derivation and the page formats it."
+    },
+    "flow": {
+      "bar": "FLOW \u2014 the last pick lands on 14.N by clicking; every page renders",
+      "pass": true,
+      "pages_rendered": {
+        "settings": 0,
+        "board": 0,
+        "draft": 0,
+        "grid": 0,
+        "post": 0,
+        "cost": 0
+      },
+      "page_errors": [],
+      "picks_before": 145,
+      "picks_after": 150,
+      "draft_completed_by_click": true,
+      "navigated_to_post_draft": true,
+      "clicked": "Cameron Dicker",
+      "post_page_dataframes": 10,
+      "letters_seen": [
+        "A\u2212",
+        "B",
+        "B+",
+        "C+",
+        "D+",
+        "D\u2212",
+        "F"
+      ],
+      "card_player": "Blake Corum",
+      "card_bars": 8,
+      "card_chain_rows": 9,
+      "n_exceptions": 0,
+      "exceptions": [],
+      "modal_click_not_drivable": true
+    },
+    "b0": {
+      "bar": "B0 \u2014 Session K1's and K1.5's committed bar sheets still pass, unchanged",
+      "pass": true,
+      "k1_5": {
+        "returncode": 0,
+        "all_pass": true,
+        "per_bar": {
+          "b0": true,
+          "b1": true,
+          "b2": true,
+          "b3": true,
+          "b4": true,
+          "b5": true,
+          "flow": true,
+          "k1": true
+        },
+        "tail": ""
+      },
+      "k1_nested": {
+        "all_pass": true,
+        "per_bar": {
+          "b2": true,
+          "b3": true,
+          "b6": true,
+          "b5": true,
+          "b4": true,
+          "b1": true,
+          "apptest": true,
+          "imports": true,
+          "server": true
+        }
+      }
+    }
+  }
+}

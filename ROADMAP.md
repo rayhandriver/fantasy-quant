@@ -60,7 +60,7 @@ Done-bar: proposed trades **raise both teams' simulated playoff prob** in the Ph
 sides (maker +0.014→+0.021, partner +0.012→+0.021 win%; season-block CIs>0), vs a random-trade control that
 lifts both ~never; `inseason/trades.py`)* — **Phase 13 / S7 COMPLETE ← Session B done**
 **Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ◐ 14.1 **Streamlit MVP** *(**K1 ☑ 2026-07-30** — four tabs on the live board: Settings · Board+`why` · Draft room (any k of n) · Cost)* · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
-— **surfacing + UX substeps:** ☐ 14.E tier-cliff · ☐ 14.F roster risk · ☐ 14.G uncertainty board · ☐ 14.H playoff SOS · ☐ 14.I draft grade · ☑ 14.J multi-seat control · **☑ 14.K multipage shell** · **☑ 14.L room grid (every team, by pick or by slot)** · **☑ 14.M pick clock** · **☐ 14.N post-draft analysis page** · **☑ 14.O stat dictionary/tooltips** *(K–O added 2026-07-30 s4 from the user's first real use of the app)*
+— **surfacing + UX substeps:** ☑ 14.E tier-cliff · ☑ 14.F roster risk · ☑ 14.G uncertainty board · ☐ 14.H playoff SOS *(specced for the 14.3 frontend, not the Streamlit MVP)* · ☑ 14.I draft grade · ☑ 14.J multi-seat control · **☑ 14.K multipage shell** · **☑ 14.L room grid (every team, by pick or by slot)** · **☑ 14.M pick clock** · **☑ 14.N post-draft analysis page** · **☑ 14.O stat dictionary/tooltips** *(K–O added 2026-07-30 s4 from the user's first real use of the app; E/F/G/I/N built 2026-07-31 in Session K2)*
 **Phase 15 — Multi-format** *(⟳ stage 8; + auction draft support)* ✅ **CORE COMPLETE** *(2026-07-13, Session C
 — 15.2/15.3/15.4 built; 15.1 dynasty stays roadmap per user scope)* — ◔ **15.1 dynasty** *(deferred — user
 scoped Session C to auction+best-ball+DFS)* · ☑ **15.2 best-ball** *(`formats/bestball.py`: **variance is GOOD
@@ -539,12 +539,25 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
     view**, **pick buttons in the row** and **search results under the box** · **14.M** the pick clock
     (n seconds per modelled pick) · **14.L** the room grid (every team across the top, by pick or by
     slot) · the **roster rail** beside the board · **14.O** stat tooltips with worked examples.
-  - **Session K2 — surfacing + the post-draft page.** **14.N** the finalized analysis page (the user's
-    request, and the destination four of these readouts were always for) · 14.E tier-cliff · 14.F
-    roster-construction risk · 14.G uncertainty-aware board · 14.I draft grade (once **per human seat**,
-    never blended) · the 16.6 Beta Lab tab · the 16.12 availability/reach-risk readout · the
-    `PLAYER-VIEW.md` cards. All read **already-frozen** machinery; none of it blocks a draft. 14.N wants
-    14.L, so K1.5 lands first.
+  - **★ Session K2 ☑ COMPLETE 2026-07-31 — surfacing + the post-draft page.** All eight pre-registered
+    bars PASS (`analysis/session_k2_app.json`, runner `steps/session_k2_app.py`); **726 tests (+24),
+    ruff clean**; nothing refits and **B0 re-runs both committed sheets**. Shipped: **14.N** the
+    post-draft page (`app/post_draft.py` — reachable throughout, live mid-draft, auto-runs 400 sims
+    once on arrival at a finished draft; it **absorbed** the room page's standings/odds/draft-flow
+    readouts rather than copying them) · **14.E** the tier-cliff strip + `CLIFF` column, read from the
+    greedy's own `positional_cliff(pool, risk.bv)` · **14.G** a third board projection (`RANGES`:
+    `Q10/MED/Q90/COIN/FLAGS`) whose honest headline is that **146 of 199 adjacent pairs overlap** and
+    **70 of 200 rows sit on the `q10` censoring point**, flagged `censored floor` rather than printed
+    as a floor of zero · **14.F** bye clustering (over *starters*, unknown byes stay unknown — the
+    store has no schedule table) / NFL-team concentration / handcuff gaps priced with the frozen 8.5
+    elevation ratio · **14.I** the draft grade, 0–100 → letter on a **user-chosen** 50/20/15/15
+    weighting that is printed beside every grade because nothing validates it, once **per human seat**
+    and never blended · **16.12** the reach-risk readout, which had no surface since Session G, with
+    its un-drifted baseline beside it · the `PLAYER-VIEW.md` card as an `st.dialog`. The CLI moved
+    with it (`board --view {slim,ranges,advanced}`). **16.6 the Beta Lab tab was skipped by user
+    decision** (the value-side track is an honest null) and stays ☐. **14.H** stays ☐ — it is specced
+    for the 14.3 frontend, not the Streamlit MVP. Outcome + the three defects the measurements caught:
+    `docs/BUILD_PLAN.md` §"Session K2", `findings.md`, `PLAN.md` 2026-07-31 (session 2).
   - **Session K3 — league import (17.5 Sleeper · 17.6 ESPN; 17.7 Yahoo deferred to 14.4).** One function
     and two adapters: `import_league(...) -> LeagueSettings`, filling the 17.3 form for the user to
     confirm. Spec: `docs/BUILD_PLAN.md` §"Session K3" + §"Phase 17 — league import".

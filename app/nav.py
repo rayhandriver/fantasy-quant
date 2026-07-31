@@ -14,7 +14,8 @@ import streamlit as st
 PAGES: dict[str, object] = {}
 
 #: Registration order == the order the sidebar lists them, which is the order a drafter uses them.
-ORDER: tuple[str, ...] = ("settings", "board", "draft", "grid", "cost")
+#: ``post`` (14.N) sits after the room because that is where the last pick sends you.
+ORDER: tuple[str, ...] = ("settings", "board", "draft", "grid", "post", "cost")
 
 
 def register(pages: dict[str, object]) -> None:

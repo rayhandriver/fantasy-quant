@@ -42,6 +42,7 @@ import streamlit as st  # noqa: E402
 
 from app import nav  # noqa: E402
 from app.draft_room import page_draft  # noqa: E402
+from app.post_draft import page_post  # noqa: E402
 from app.room_grid import page_grid  # noqa: E402
 from app.screens import page_board, page_cost, page_settings  # noqa: E402
 
@@ -53,6 +54,7 @@ PAGE_SPECS: dict[str, tuple] = {
     "board": (page_board, "Board", "📋", "board"),
     "draft": (page_draft, "Draft room", "🎯", "draft"),
     "grid": (page_grid, "The room", "🧑‍🤝‍🧑", "room"),
+    "post": (page_post, "Post-draft", "🏁", "post-draft"),
     "cost": (page_cost, "Cost", "💸", "cost"),
 }
 

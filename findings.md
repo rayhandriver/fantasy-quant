@@ -5371,3 +5371,103 @@ count was only ever a proxy for *something rendered*; it now asserts that direct
 the page produced elements), and "one page body per rerun" is asserted properly by K1.5's B1. Every
 other K1 bar re-ran **unchanged and passing**, B1's 150-pick app-vs-CLI identity included — which is
 the rule that outranks the other six: *if a display change moves a number, it is not a display change.*
+
+## Session K2 (2026-07-31) — surfacing + the post-draft page (14.N · 14.E · 14.F · 14.G · 14.I · 16.12)
+
+**Eight pre-registered bars, all PASS** → `analysis/session_k2_app.json`; runner
+`steps/session_k2_app.py`. **726 tests (was 702), ruff clean.** Nothing refits, no frozen contract
+moved, the spent lockbox was not re-read, and **B0 re-runs both committed sheets** — K1.5's, which
+re-runs K1's inside itself — because the rule that outranks the other seven is still K1's: *if a
+display change moves a number, it is not a display change.*
+
+**16.6 (the Beta Lab tab) was dropped from the session by user decision**, not deferred by accident:
+the value-side situation track came back an honest null, and the tab's content is a negative result
+that does not help a drafter on draft day. It stays open in the ROADMAP.
+
+### What each substep taught
+
+- **14.E — the cliff on the board is the cliff the room drafts on (B2).** `session.cliff_series`
+  calls `optimizer.positional_cliff` with `risk.bv` — the *same* call `RiskModel.effective_rank`
+  makes to price 9.1 urgency — rather than re-deriving a display cliff. The bar asserts vector
+  equality, not agreement. It also asserts the cliff **does not move when the board is truncated or
+  filtered**: a cliff is a fact about what is left at a position, and a screen-local one would mean
+  "the tier runs out on this screen".
+- **14.G — the honest headline is how little of the order is resolvable (B4).** On the live 2026
+  board, **146 of 199 adjacent pairs in the top 200 overlap at 10–90 %**, and **70 rows sit exactly
+  on the `q10` censoring point**. Both are rendered: `COIN` marks the overlap, and a censored row
+  reads `censored floor` rather than printing a bare `0`. That last one is **T22's rule with the
+  other sign** — *blank is not zero* becomes *zero is not a floor* — and it is T19 arriving in the
+  display layer, where a human reads it.
+- **14.F — three risks, reported separately, and one of them is missing data.** Bye clustering is
+  measured over **starters** (a bench player's bye costs nothing) through the frozen
+  `session.lineup_choice`, so 14.F, 14.L and the roster rail cannot disagree about who starts. The
+  store has **no schedule table**: byes come from the ECR snapshots and ~1 board row in 10 has none,
+  so an unknown bye is *counted and shown as unknown*. A `fillna(0)` would file those players under
+  "week 0", which reads as *no bye*.
+- **14.I — the grade is the sum of its printed parts, or it is a claim wearing a number's clothes
+  (B5).** The user chose a weighted composite (odds 50 · starters 20 · value 15 · construction 15,
+  scored min–max across the room). Every **input** is frozen and separately validated; the **blend**
+  is a presentation choice and nothing validates it. That is fine as long as it is legible, so:
+  `GRADE_WEIGHTS` is one named constant summing to 100, every component's raw value / score /
+  points print beside the letter, and the bar asserts the total re-adds exactly.
+- **16.12 — the readout finally has a surface (B6).** The engine side shipped in Session G and had
+  none, because the app came strictly last. `P(available at your next pick)` renders with the
+  **un-drifted baseline beside it**, because the drift adjustment is not backtestable (FFC publishes
+  one board a season) and the honest presentation of an unvalidated adjustment is the pair.
+- **14.N — the page is reachable throughout, not gated on completion.** The literal spec (move the
+  readouts here, gate on a finished draft) would have deleted the running standings a drafter looks
+  at mid-draft. It renders live state with a banner while picks remain and everything that costs a
+  simulation waits for the last pick — which is also the only point at which those numbers mean
+  anything. The room page **gave** its four analysis readouts up rather than keeping copies.
+
+### Three defects the measurements caught, none of them in the spec
+
+1. **★ The grade called the average drafter a failure.** With four components scored min–max across
+   ten teams, a middling roster lands near **50 by construction** — and on plain US bands (90/80/70/60)
+   that is a **D+**, with six of ten teams graded D or F. The scoring was right and the *labels* were
+   anchored to a different scale. `GRADE_BANDS` now put `C` at 50. **A scale and its labels have to be
+   anchored to the same thing**, and the only reason this was caught is that the first run printed all
+   ten letters instead of one.
+2. **The handcuff readout had the depth chart upside down.** Taking "the next RB on the same NFL team
+   in board order" reported *Tyjae Spears → backup Tony Pollard*, i.e. it priced insurance on the
+   wrong life. Only a backfield's **lead** back generates a row now; holding the RB2 is not a gap, it
+   *is* the handcuff. **The unit test for this was rewritten too** — the first version drove a full
+   draft on the synthetic board, which seated no lead back at all, so it asserted over an empty frame
+   and passed while proving nothing. *A test that cannot fail is the same defect as a bar that cannot
+   fail.*
+3. **A latent crash in the CLI board, exposed by deriving its header.** `format("-", ">+7")` raises
+   *Sign not allowed in string format specifier*, so the pre-K2 board would have crashed on the first
+   NaN in the signed `BV` column. It stayed hidden because the header was a hand-written literal that
+   never met the format string. Deriving the header from the same dict that formats the cells turned a
+   latent crash into an immediate one — **which is the argument for deriving it.**
+
+### A bar that failed for the wrong reason, and an amended test
+
+**B1 failed its first run on a defect in the bar, not the page**: it scraped `at.markdown` and
+`at.caption` for the two 16.17 honesty rules, and both are rendered with `st.warning`/`st.info`. *A
+bar failing for the wrong reason is a bar nobody trusts the next time it fails.*
+
+**One test was amended and the amendment is disclosed** (K1.5 set the precedent). K1 asserted
+`board_view`'s columns *equal* `BOARD_VIEW_COLS`, because there were two views and the advanced one
+was the frame itself. 14.G adds a third projection, so the frame is now the **union** of what the
+three modes show and each mode is a named subset — the same "one query, N projections" property one
+level up. The equality that still has to hold, and does, is on the rendered advanced view.
+
+### The CLI moved with the app, on purpose
+
+`mock_draft.py board --view {slim,ranges,advanced}` and a `CLIFF` column, because `stats` serves
+**one** dictionary to both surfaces: a column the app shows and the terminal cannot is a documented
+column with no behaviour behind it.
+
+### One ticket opened
+
+**T36 🟡 — the board's row-selection path has no automated bar.**
+`st.dataframe(on_select="rerun")` is a *client* event and `AppTest` cannot drive it, so the two things a
+drafter does most on the board — select a row to load the confirm bar, select a row to open the player
+card — are covered only by the pieces around them (`player_card`'s content is unit-tested, `resolve_pick`
+covers the typed path, K1.5's B2 asserts a row-select and a typed query resolve to the same board index,
+and FLOW proves every page renders). It is 🟡 because nothing on that path computes a number: the
+selection resolves to a board index `_apply_pick` already validates, and a wrong one would show as the
+wrong name in the confirm bar — which is why the confirm bar exists. The honest fix is a real browser
+driver; the tempting one, a selection-free duplicate control that exists only so a test can reach it,
+would be **testing a path the human does not use**, which is worse than the gap.
