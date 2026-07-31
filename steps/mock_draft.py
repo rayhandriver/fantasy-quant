@@ -12,6 +12,7 @@
     uv run python steps/mock_draft.py drift          # your draft in the corpus's own units
     uv run python steps/mock_draft.py finish         # autodraft every remaining human pick by ADP
     uv run python steps/mock_draft.py summary [--odds]   # --odds -> Phase-10 season odds
+    uv run python steps/mock_draft.py stats [BUST]   # 14.O: what a column means, with examples
 
 Promoted from a session scratchpad, where it was written to let the user draft against the room one
 pick at a time — **and it immediately found a defect no automated gate had** (T15: the room's
@@ -343,9 +344,14 @@ def cmd_start(a) -> None:
         raise SystemExit(f"--auto {sorted(t + 1 for t in set(auto) - set(seats))} are not your "
                          f"seats; --auto hands one of YOUR seats to the ADP autopicker")
     primary = seats[0] if seats else 0
+    # ⚠ T34 — the CLI's defaults do NOT move. `--seed 7` and `--room-seed` unset are what T24's
+    # sweep, 16.17's 1,014-triple mapping check and every committed bar sheet are differenced
+    # against; the entropy default belongs to the app (`app/engine.draw_seeds`) and stops there.
+    # `room_seed` is recorded in `meta` on both surfaces so an exported draft carries the same keys
+    # either way — a key on one side and not the other is how a resumed draft changes rooms.
     meta = {"your_team": primary, "human_teams": seats, "auto": auto,
             "room": [p.name for p in sm.room()], "teams": a.teams, "rounds": a.rounds,
-            "fav": list(fav), "seed": a.seed, "season": a.season}
+            "fav": list(fav), "seed": a.seed, "room_seed": a.room_seed, "season": a.season}
     st = DraftState(board=b, n_teams=a.teams, rounds=a.rounds, slots=RosterSlots(),
                     your_team=primary, rng=np.random.default_rng(a.seed), noise=5.0,
                     available=set(b.index), rosters=[[] for _ in range(a.teams)],
@@ -443,6 +449,26 @@ def cmd_why(a) -> None:
     explain(st.board, vi, a.query, lam=DraftConfig().risk_lambda)
 
 
+def cmd_stats(a) -> None:
+    """14.O — the stat dictionary, in the terminal. Same entries the app's tooltips show.
+
+    One dictionary, every surface: a column explained two ways is a column explained differently
+    the first time one of the two is edited.
+    """
+    cols = [a.column.upper()] if a.column else [lbl for _, lbl in session.BOARD_VIEW_COLS]
+    for c in cols:
+        try:
+            e = session.stat_entry(c)
+        except LookupError as exc:
+            raise SystemExit(str(exc)) from None
+        print(f"\n=== {c} — {e['label']} ===")
+        print(f"  {e['one_line']}")
+        print(f"\n  {e['what_it_means']}")
+        print(f"\n  EXAMPLE   {e['worked_example']}")
+        print(f"  READING   {e['how_to_read_it']}")
+        print(f"  SOURCE    {e['provenance']}")
+
+
 def cmd_log(a) -> None:
     st, meta, _, _ = load()
     sm = seat_map_from(meta)
@@ -524,6 +550,10 @@ def main() -> None:
     sm.add_argument("--sims", type=int, default=400)
     sm.set_defaults(fn=cmd_summary)
     sub.add_parser("drift").set_defaults(fn=cmd_drift)
+
+    stt = sub.add_parser("stats", help="14.O: what every board column means, with examples")
+    stt.add_argument("column", nargs="?", default=None, help="one column, e.g. BUST")
+    stt.set_defaults(fn=cmd_stats)
 
     lg = sub.add_parser("log")
     lg.add_argument("--n", type=int, default=20)

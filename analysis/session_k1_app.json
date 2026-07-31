@@ -322,8 +322,8 @@
       "pass": true,
       "n_exceptions": 0,
       "exceptions": [],
-      "n_tabs": 4,
-      "n_dataframes": 1,
+      "n_elements_rendered": 6,
+      "n_dataframes": 0,
       "title": "\ud83c\udfc8 Fantasy-Quant"
     },
     "imports": {

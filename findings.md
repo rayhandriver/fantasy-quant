@@ -5267,3 +5267,107 @@ capability** — league import from ESPN/Yahoo/Sleeper, which narrowly reverses 
 
 All of it is specified in `docs/BUILD_PLAN.md` §"Session K1.5" (six pre-registered bars), §"Session K2",
 §"Session K3", §14.K–§14.O and §"Phase 17 — league import". Nothing was built.
+
+---
+
+## Session K1.5 — the draft room a human can use (2026-07-31)
+
+**Goal:** the six steps scoped from the app's first real use — T34's seeding default, 14.K pages-not-tabs
+(T35), the slim board with pick buttons and real search, 14.M's pick clock, 14.L's room grid, and the
+roster rail + 14.O stat dictionary. Display, navigation and timing only: **no refit, no frozen contract
+touched, the spent lockbox not re-read.** 702 tests (was 691), ruff clean.
+
+**User decisions taken up front** (all four at the recommended option): your own seat has **no clock** ·
+a failing bar is **recorded + ticketed + carried past**, never softened · the final pick lands on the
+**room grid** · the tree is left **uncommitted** for review.
+
+### The bug was reproduced before it was fixed, and it reproduced exactly
+
+Seat 6 on the live 2026 board, before any edit: `Jahmyr Gibbs · Ja'Marr Chase · Jonathan Taylor ·
+Christian McCaffrey · James Cook III`, twice, identical — the user's report to the player, and the
+register's recorded table to the row. `seed=8` and `room_seed=3` moved it exactly as the ticket said
+they would. **The engine was never broken and the personalities were sampling the whole time**; the app
+had inherited the CLI's measurement default because the CLI's was the only default that existed.
+
+After the fix: **20 app drafts from that seat gave 20 distinct openings**, a locked seed pair replays
+its own draft pick-for-pick *and* its seating, and the CLI at `--seed 7` still returns the reference
+sequence. The reference now lives as data in `app/engine.T34_REFERENCE`, so "`steps/` has not moved" is
+an assertion instead of a memory.
+
+### ★ The finding to carry forward — the pre-registered latency worry did not survive its own measurement
+
+14.M was specified around a real fear: *"`value_hawk` runs the Phase-9 greedy per pick — measure
+worst-case per-seat latency first, and refuse a clock interval below it, rather than shipping a
+'5-second' clock that takes 9."* Measured over a full 10-team draft on the live board:
+
+| seat | picks | mean | worst single pick |
+|---|---|---|---|
+| `value_hawk` (the Phase-9 greedy seat) | 15 | 5.5 ms | 9.4 ms |
+| `balanced` | 45 | 4.9 ms | 9.3 ms |
+| every other seat | 15 each | 4.7–5.5 ms | ≤ 9.8 ms |
+
+(Diagnostic run. The committed sheet's own B3 measurement, on its own draft, records a worst pick of
+**10.2 ms** at `upside_chaser` — run-to-run scatter of about a millisecond, and the same conclusion.)
+
+**The room is ~100× faster than the slowest clock a human would set.** The 8.5 s/pick figure that
+seeded the worry is `draft/mcts.py`'s *search*, dropped in Session D — not the greedy the room runs.
+Note that the slow seat is not even the one the spec named: on both runs `value_hawk`'s greedy is
+within a millisecond of the behavioural seats.
+
+The floor was **kept anyway**, at 1 s, and this is the part worth remembering: a measurement retires
+*today's* risk, not the mechanism. `MIN_CLOCK_SECONDS` carries its measurement and its date, and
+`_overrun_notice` reports the actual worst tick against the chosen interval, so the next slow seat
+announces itself instead of quietly landing picks late. *A constant justified by a measurement needs
+something that notices when the measurement goes stale.*
+
+### ★ The second finding — driving the widgets found a defect that six bars did not
+
+Every bar passed, and then the app was driven under `AppTest` the way a human drives it: click **Start
+draft**, click a player. The click surfaced `st.session_state.setdefault("clock_secs", …)` immediately
+above the slider that owns that key — Streamlit's documented anti-pattern, where the widget's `value=`
+and the pre-set state both claim to be the source of truth. It was a warning, not a crash, which is
+exactly why nothing else caught it.
+
+This is Session K1's lesson arriving one level up. K1's app shipped broken while nine bars said PASS,
+and the fix it added (`bar_imports`) proves the entry point **imports**. It does not prove the app
+**works**. So K1.5 ships `bar_flow`, which starts a draft with the button and makes a pick with the
+button and then checks the state those buttons were supposed to change: 5 picks → 14, "Bijan Robinson"
+on your roster, no exceptions. *An import bar and a use bar are different claims, and a session that
+adds UI needs the second one.*
+
+(`bar_flow` drives the pick on a **pre-seeded** draft rather than continuing from the started one.
+`AppTest` replays widget states across a rerun even when the page's widget set has changed shape — the
+setup form giving way to the room — and raises a `KeyError` in its own bookkeeping. A browser posts only
+the widgets it currently shows. The limitation is the harness's; both halves are still driven by clicks.)
+
+### The other four steps, briefly
+
+- **14.K (T35) — counted, not timed.** `app/probe.py` is a page-body counter that ships in the app
+  rather than being patched in by the test, because a probe that only exists under the test measures the
+  test. First run `{settings: 1}`, rerun `{settings: 1}`, rerun on the draft page `{draft: 1}`; under
+  `st.tabs` all three read 4. The nested `st.tabs` *inside* the old draft tab had the same defect and is
+  now a radio on the room page.
+- **The board (B2) — one query, two projections.** `session.SLIM_VIEW_COLS` + `project_view` mean the
+  slim and advanced boards cannot show different rows in a different order; asserted across five
+  position filters and 40 rows. The `#` handle survives into the slim view, and a row-select resolves to
+  the same board index a typed query does.
+- **14.L (B4) — the grid is checked against the number it illustrates.** BY SLOT fills through
+  `inseason.lineup.optimal_lineup`; the bar asserts the assigned starters' `base_value` sums to
+  `optimizer.starter_value`, which reaches the same fill order through a **different** solver
+  (`lineup_points_matrix`). Worst gap over k∈{1,4} × 10 teams: **0.0**. Both solvers consume 17.1's
+  `RosterSlots.flex_groups()`, so the display did not become a fourth fill order.
+- **14.O (B5) — one dictionary, every surface.** `session.STAT_DICT` (14 entries, each with a worked
+  example off the live board) serves the board tooltips, the room page and a new `mock_draft.py stats`
+  command. `views._BOARD_HELP` is **deleted**, not kept in sync: T22 is the proof that a column's
+  meaning moves, and two help texts are two chances to describe it differently. `BOOM`/`BUST` carry
+  *blank ≠ zero* and `MEAN` carries T31's cap **in the tooltip**, because a limitation a user has to
+  find in `findings.md` is a limitation nobody reads.
+
+### One bar was amended, and the amendment is disclosed
+
+Session K1's `bar_apptest` required `at.get("tab")` to be non-empty. 14.K deleted the tabs **on
+purpose**, so the old condition would have failed for the exact reason the session succeeded. The tab
+count was only ever a proxy for *something rendered*; it now asserts that directly (no exception, and
+the page produced elements), and "one page body per rerun" is asserted properly by K1.5's B1. Every
+other K1 bar re-ran **unchanged and passing**, B1's 150-pick app-vs-CLI identity included — which is
+the rule that outranks the other six: *if a display change moves a number, it is not a display change.*

@@ -2157,7 +2157,31 @@ multi-seat UI is *trusted*, since k makes the value hawk's divisor vary). Not T2
 
 ---
 
-## ★★ Session K1.5 — THE DRAFT ROOM A HUMAN CAN USE (T34 · T35 · 14.K · 14.L · 14.M · 14.O)
+## ★★ Session K1.5 ☑ COMPLETE 2026-07-31 — THE DRAFT ROOM A HUMAN CAN USE (T34 · T35 · 14.K · 14.L · 14.M · 14.O)
+
+> **Built 2026-07-31, all six steps, no stop gate (user authorised a straight run after answering the
+> four decisions up front: no clock on your seat · a failing bar is recorded + ticketed + carried past ·
+> the final pick lands on the room grid · leave uncommitted).**
+> **All eight bars PASS** → `analysis/session_k1_5_app.json`; `steps/session_k1_5_app.py` is the runner.
+> **702 tests (was 691), ruff clean.** New: `app/{probe,state,nav,screens,draft_room,room_grid}.py`;
+> `session.{SLIM_VIEW_COLS, project_view, advance_one, room_pick_fn, room_grid, STAT_DICT, stat_entry,
+> stat_help, assert_stat_dict_covers_board}`; `app/engine.{draw_seeds, T34_REFERENCE}`;
+> `mock_draft.py stats`. `views._BOARD_HELP` deleted.
+>
+> **Departures from this spec, and why:**
+> - **The latency guard is not what it was written to be.** Measured worst modelled pick on the live
+>   board: **~10 ms**, `value_hawk`'s greedy within a millisecond of the behavioural seats. The 8.5
+>   s/pick figure behind the worry is Session D's dropped MCTS *search*. The floor ships anyway (1 s)
+>   with a live overrun notice, because a measurement retires today's risk, not the mechanism.
+> - **A new bar was added: `bar_flow`.** Six bars passed and then driving the widgets found a
+>   `session_state.setdefault` on a widget key. K1's `bar_imports` proves the entry point imports;
+>   nothing proved the app *works*.
+> - **K1's `bar_apptest` was amended and the amendment disclosed** — it required a tab to exist, and
+>   14.K deleted the tabs on purpose.
+> - **The standings/odds/draft-flow/log readouts moved to the room page behind a radio.** The nested
+>   `st.tabs` inside the old draft tab had T35's defect too; **14.N (K2) absorbs them.**
+
+*(original spec follows, unchanged)*
 
 *(written 2026-07-30 session 4, docs-only, after the user drove the K1 app for the first time. **Inserted
 ahead of Session K2**: everything here is between the drafter and the board on draft day, and K2's

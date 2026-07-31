@@ -2504,3 +2504,48 @@ ergonomic grounds (*"everything should be on a completely separate designated dr
 **★ NEXT: Session K1.5, steps 0→5, gate after each** (`docs/BUILD_PLAN.md` §"Session K1.5"). Then K2
 (surfacing + 14.N the post-draft page) → K3 (league import) → L+ the go-live tail. Still owed: review +
 commit the K1 tree. Stage-0 FFC chore last pulled 2026-07-30, next due after 08-05.
+
+---
+
+## 2026-07-31 — ★ SESSION K1.5 COMPLETE: the draft room a human can use
+
+All six steps built and their bars run; **702 tests (was 691), ruff clean; UNCOMMITTED** on top of
+`3494ccc`. Display, navigation and timing only — nothing refits, no frozen contract moved, the spent
+lockbox was not re-read, and Session K1's own bar sheet re-runs passing (B1's 150-pick app-vs-CLI
+identity included). User answered four decisions up front: **no clock on your seat** · a failing bar is
+**recorded + ticketed + carried past** · the final pick lands on the **room grid** · leave uncommitted.
+
+- **Step 0 — T34 ☑.** Reproduced first, exactly (seat 6: Gibbs · Chase · Taylor · McCaffrey · Cook,
+  twice). `app/engine.draw_seeds()`; `start_draft(seed=None, room_seed=None)` draws from OS entropy and
+  records both in `meta`; the app offers *Randomize (default) / lock to a seed*. **`steps/` did not
+  move** — the reference sequence is stored as `engine.T34_REFERENCE` so B0 asserts it. 20 drafts → 20
+  distinct openings.
+- **Step 1 — 14.K / T35 ☑.** `app/main.py` is a router over five `st.Page`s; page bodies live in
+  `screens.py`, `draft_room.py`, `room_grid.py`. B1 counts bodies with `app/probe.py`: 1 per rerun, and
+  the right one. The nested `st.tabs` inside the old draft tab had the same defect → a radio.
+- **Step 2 — the board.** `SLIM_VIEW_COLS` + `project_view`: one query, two projections, `#` handle
+  kept. Row-select → confirm bar; search matches render **under** the box as buttons (Enter never
+  drafts); quick-pick buttons on the top six.
+- **Step 3 — 14.M the clock.** `st.fragment(run_every=…)` calling `session.advance_one`, of which
+  `advance` is now the loop — so B3's "clocked ≡ stepped" holds by construction and was confirmed on
+  150 picks. **Latency measured: worst modelled pick 9.4 ms (`value_hawk`), not seconds** — the
+  pre-registered worry is retired, the floor kept with a live overrun notice.
+- **Step 4 — 14.L the grid.** `session.room_grid(by="pick"|"slot")`. BY SLOT fills through the frozen
+  `optimal_lineup`; B4 asserts its starters sum to `starter_value` (a *different* solver): gap **0.0**
+  at k∈{1,4}.
+- **Step 5 — the rail + 14.O.** Persistent roster rail in slot order (open slots are rows);
+  `session.STAT_DICT` = 14 entries with worked examples off the live board, served to tooltips, the
+  room page and a new `mock_draft.py stats`. `views._BOARD_HELP` deleted.
+
+**★ Two findings.** (1) The 14.M latency worry did not survive its own measurement — the 8.5 s/pick
+number that seeded it was Session D's dropped MCTS *search*, not the greedy the room runs. (2) Driving
+the widgets under `AppTest` found a `session_state.setdefault` on a widget key that all six bars had
+missed → new **`bar_flow`** (start a draft by clicking, make a pick by clicking, check the state):
+*an import bar and a use bar are different claims.*
+
+**One bar amended and disclosed:** K1's `bar_apptest` required a tab to exist; 14.K deleted the tabs on
+purpose, so it now asserts what it always meant (rendered without exception).
+
+**★ NEXT: user reviews + commits, then Session K2** = surfacing + **14.N** the post-draft page (which
+absorbs the standings/odds/draft-flow readouts currently parked on the room page) → **K3** league import
+→ L+ the go-live tail. Stage-0 FFC chore last pulled 2026-07-30, next due after 08-05.

@@ -309,19 +309,27 @@ def bar_b5(con, season: int, n_players: int = 40) -> dict:
 # the app actually runs — twice, two ways
 # ------------------------------------------------------------------------------------------------
 def bar_apptest() -> dict:
-    """Run the app script under Streamlit's own test runtime and assert on what rendered."""
+    """Run the app script under Streamlit's own test runtime and assert on what rendered.
+
+    ⚠ **Amended in Session K1.5, and the amendment is disclosed rather than quiet.** This bar used
+    to require ``at.get("tab")`` to be non-empty. 14.K **deleted the tabs on purpose** — they were
+    T35, executing every body on every rerun — so the old condition would now fail for the exact
+    reason the session succeeded. The tab count was only ever a proxy for *something rendered*, and
+    the replacement says that directly: no uncaught exception, and the page produced elements.
+    ``steps/session_k1_5_app.py::bar_b1`` is where "one page body per rerun" is asserted.
+    """
     try:
         from streamlit.testing.v1 import AppTest
     except ImportError as exc:
         return {"bar": "APP — renders under AppTest", "pass": False, "reason": str(exc)}
     at = AppTest.from_file(str(APP), default_timeout=600)
     at.run()
-    tabs = [t for t in at.get("tab")]
+    rendered = len(at.get("dataframe")) + len(at.get("markdown")) + len(at.button)
     return {"bar": "APP — the script renders with no uncaught exception",
-            "pass": bool(not at.exception and tabs),
+            "pass": bool(not at.exception and rendered),
             "n_exceptions": len(at.exception),
             "exceptions": [str(e.value)[:400] for e in at.exception][:4],
-            "n_tabs": len(tabs),
+            "n_elements_rendered": rendered,
             "n_dataframes": len(at.get("dataframe")),
             "title": at.title[0].value if at.title else None}
 

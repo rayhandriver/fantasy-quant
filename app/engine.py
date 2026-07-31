@@ -13,6 +13,7 @@ the one thing it could not show. :func:`live_season` reads what the store actual
 from __future__ import annotations
 
 import pickle
+import secrets
 from pathlib import Path
 
 import numpy as np
@@ -90,8 +91,38 @@ def config_from(settings: LeagueSettings) -> DraftConfig:
 # ------------------------------------------------------------------------------------------------
 # draft lifecycle — the same DraftState the CLI pickles
 # ------------------------------------------------------------------------------------------------
+#: The seat the T34 report was made from, and the sequence the frozen defaults produced on the
+#: 2026-07-30 board — kept as data so :mod:`steps.session_k1_5_app` can assert the *measurement*
+#: default still means what every committed bar sheet assumes it means.
+T34_REFERENCE = {
+    "seat": 6, "seed": 7, "room_seed": None, "board": "2026 FFC (07-30)",
+    "first_five": ["Jahmyr Gibbs", "Ja'Marr Chase", "Jonathan Taylor", "Christian McCaffrey",
+                   "James Cook III"],
+}
+
+
+def draw_seeds() -> tuple[int, int]:
+    """A fresh ``(seed, room_seed)`` from OS entropy — **the app's default, and only the app's**.
+
+    ★ **T34 — a measurement default and a human default are different objects.** ``seed=7`` with
+    ``room_seed=None`` froze *both* sources of variation at once: the pick RNG
+    (``DraftState.rng``) and the seating (``room_seed=None`` keeps ``REALISTIC_ROOM``'s listed
+    order, so the same personality sat in the same chair every time). A user re-drafting his slot
+    got the identical room, the identical picks and the identical story — and practising against
+    one frozen draft is worse than not practising.
+
+    The fix is not to make the engine random; the engine was never the problem, and the
+    personalities were sampling correctly the whole time. It is that **the app inherited the CLI's
+    default because the CLI's was the only one that existed.** ``steps/`` keeps ``--seed 7``: T24's
+    sweep, 16.17's 1,014-triple mapping check and every committed bar sheet are differenced against
+    it. So the entropy draw lives here, on the app's side of the seam, and the drawn values are
+    returned in ``meta`` so any draft can still be replayed exactly.
+    """
+    return secrets.randbelow(1_000_000), secrets.randbelow(1_000_000)
+
+
 def start_draft(built: dict, *, human_seats: list[int], room_arg: str | None = "realistic",
-                settings: LeagueSettings | None = None, seed: int = 7,
+                settings: LeagueSettings | None = None, seed: int | None = None,
                 room_seed: int | None = None, auto: list[int] | None = None,
                 fav: tuple[str, ...] = (), season: int = 2026) -> tuple[DraftState, dict]:
     """``(state, meta)`` for a fresh draft — the app's equivalent of ``mock_draft.py start``.
@@ -99,8 +130,17 @@ def start_draft(built: dict, *, human_seats: list[int], room_arg: str | None = "
     Identical construction to the CLI's, deliberately down to ``noise=5.0`` and the ``meta`` keys,
     because the two surfaces write and read the *same* state file. A field added on one side and
     not the other is how a resumed draft would quietly change rooms.
+
+    ⚠ **T34 — ``seed=None`` and ``room_seed=None`` mean "draw one" here, and the drawn values go
+    into ``meta``.** Both are always concrete by the time a draft exists, so "randomize" and "lock
+    to a seed" are the same code path with a different source for two integers, and the app can
+    show a user the seeds his draft actually ran on. Pass them explicitly to reproduce a draft; a
+    caller that wants the measurement defaults asks for them by number (see :data:`T34_REFERENCE`).
     """
     settings = settings or LeagueSettings()
+    drawn_seed, drawn_room = draw_seeds()
+    seed = drawn_seed if seed is None else int(seed)
+    room_seed = drawn_room if room_seed is None else int(room_seed)
     n_teams, rounds = int(settings.n_teams), int(settings.rounds)
     auto = sorted(set(auto or []))
     if set(auto) - set(human_seats):
@@ -110,7 +150,11 @@ def start_draft(built: dict, *, human_seats: list[int], room_arg: str | None = "
     primary = human_seats[0] if human_seats else 0
     meta = {"your_team": primary, "human_teams": list(human_seats), "auto": auto,
             "room": [p.name for p in sm.room()], "teams": n_teams, "rounds": rounds,
-            "fav": list(fav), "seed": int(seed), "season": int(season),
+            "fav": list(fav), "seed": int(seed),
+            # T34 — the seating draw, stored beside the pick draw because a draft is only
+            # replayable if BOTH are recorded. `seat_map_from` rebuilds the room from the *names*
+            # in seat order, so this key is for display and for starting the same draft again.
+            "room_seed": int(room_seed), "season": int(season),
             # 17.3 — carried so the odds tab simulates the user's bracket, not the default one
             "league_format": settings.league_format(), "ruleset": settings.ruleset()}
     b = _prepare_board(built["board"])

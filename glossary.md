@@ -2141,3 +2141,37 @@ cookies; Yahoo needs OAuth2 and a hosted redirect. The user plays on ESPN/Yahoo.
 anyway — for the **contract**, tested against something we own — and say in the report that its
 user-facing value is the contract, not the platform. Overselling the cheap one is how a session
 delivers nothing.
+
+**a measurement default and a human default are different objects** *(T34, Session K1.5, 2026-07-31)* —
+`seed=7` is *correct* for `steps/`, where every committed bar sheet is differenced against it, and
+*wrong* for a drafter whose whole use case is drafting one slot twenty times to see twenty rooms. The
+K1 port carried the CLI's into the app because the CLI's was the only one that existed, and the result
+was a mock drafter that dealt the same draft every time. The fix is two defaults, not one behaviour —
+entropy on the app's side of the seam, `--seed 7` untouched on the other — plus the drawn values
+recorded in `meta` so *randomized* does not cost *replayable*.
+
+**count the calls, don't time them** *(T35 / bar B1, 2026-07-31)* — the claim "`st.tabs` executes every
+tab body on every rerun" is about **how many times a function runs**, so the instrument is a counter
+(`app/probe.py`), not a stopwatch. A timing bar would have passed on any day the expensive page was
+cheap, and would have said nothing about the case that mattered: a clock ticking every second. Related:
+the probe ships in the app rather than being patched in by the test, because *a probe that only exists
+under the test measures the test.*
+
+**an import bar and a use bar are different claims** *(bar_flow, 2026-07-31)* — Session K1 shipped a
+broken app with nine PASSes and answered it with `bar_imports`, which proves the entry point *imports*.
+It does not prove the app *works*. Driving the actual widgets — start a draft with the button, pick a
+player with the button, then check the state those buttons were supposed to change — found a
+`session_state.setdefault` on a widget key that six pre-registered bars had missed. Any session that
+adds UI owes the second bar.
+
+**a constant justified by a measurement needs something that notices when the measurement goes stale**
+*(14.M, 2026-07-31)* — the clock floor was set from a real measurement (worst modelled pick 10 ms, i.e.
+the pre-registered latency worry did not survive contact with data) and **kept anyway**, paired with a
+live overrun notice. A measurement retires today's risk, not the mechanism; the floor is what stops the
+*next* slow seat landing picks late in silence.
+
+**a limitation belongs in the tooltip, not in the doc** *(14.O, 2026-07-31)* — `BOOM`/`BUST` carry T22's
+*blank means never seen play, not never busts* and `MEAN` carries T31's level cap **in the text a
+drafter hovers**, because a caveat a user has to find in `findings.md` is a caveat nobody reads. Its
+sibling rule: one dictionary serves every surface and the local copy is *deleted*, since a column's
+meaning does move (T22 is the proof) and two help texts are two chances to describe it differently.

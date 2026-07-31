@@ -24,21 +24,29 @@ _BOARD_FMT: dict[str, str | None] = {
     "TAIL": "%+.2f", "BOOM": "%.2f", "BUST": "%.2f",
 }
 
-_BOARD_HELP = {
-    "PROJ": "Consensus projection, re-scored to your league's rules. The number a human trusts.",
-    "MEAN": "Phase-5 season mean = PROJ x projected availability. The level correction.",
-    "AVAIL": "Projected games played, of 17 — the column that explains the PROJ→MEAN gap.",
-    "BV": "base_value: (MEAN − λ·Var) − positional replacement. What each seat optimizes.",
-    "UPSIDE": "Relative q90 headroom.", "FLOOR": "Relative q10 floor.",
-    "TAIL": "Relative q90−q10 spread — the honest boom-or-bust read.",
-    "BOOM": "Live boom rate, measured on last season. Blank = never seen play.",
-    "BUST": "Live bust rate, measured on last season. Blank = never seen play.",
-}
+def _column_config() -> dict:
+    """Number formats + the 14.O tooltip for every board column.
+
+    The help text is :data:`~fantasy_quant.draft.session.STAT_DICT`'s, not a local copy. The local
+    copy (``_BOARD_HELP``) is **deleted**: it was terse, app-only, and the moment a column's
+    meaning moved — as ``BOOM``/``BUST``'s did under T22 — there were two places to update and one
+    of them would have been missed. One dictionary, every surface.
+    """
+    return {c: st.column_config.NumberColumn(c, format=f, help=session.stat_help(c))
+            for c, f in _BOARD_FMT.items() if f is not None}
 
 
-def board_table(st_obj, team: int | None = None, *, pos: str | None = None,
-                n: int = 40) -> pd.DataFrame:
-    """Render the best-available board and return the frame that was rendered.
+def board_table(st_obj, team: int | None = None, *, pos: str | None = None, n: int = 40,
+                advanced: bool = False, key: str | None = None,
+                selectable: bool = False) -> tuple[pd.DataFrame, int | None]:
+    """Render the best-available board; return ``(frame_rendered, selected_board_index)``.
+
+    **Slim by default, advanced on a toggle, one query** — the frame is
+    :func:`~fantasy_quant.draft.session.board_view` and the two views are
+    :func:`~fantasy_quant.draft.session.project_view` applied to it, so they cannot show different
+    rows in a different order (bar B2). Building a second, narrower query for the slim view is the
+    obvious shortcut and it is the one that ends with two boards disagreeing about who is
+    available.
 
     ⚠ **T22 — an unseen player's BOOM/BUST renders blank, never ``0.00``.** The frozen Phase-5 pair
     is measured at ``max(train_seasons)``; on a live board that is 2022, so a player who was not in
@@ -47,13 +55,20 @@ def board_table(st_obj, team: int | None = None, *, pos: str | None = None,
     in this file would silently restore the exact defect the column was rebuilt to fix.
     """
     view = session.board_view(st_obj, team=team, pos=pos, n=n)
-    st.dataframe(
-        view, width="stretch", height=min(620, 40 + 35 * min(len(view), 16)),
-        column_config={
-            c: st.column_config.NumberColumn(c, format=f, help=_BOARD_HELP.get(c))
-            for c, f in _BOARD_FMT.items() if f is not None},
+    shown = session.project_view(view, advanced=advanced)
+    extra = {"on_select": "rerun", "selection_mode": "single-row"} if selectable else {}
+    event = st.dataframe(
+        shown, width="stretch", height=min(620, 40 + 35 * min(len(shown), 16)),
+        column_config=_column_config(), key=key, **extra,
     )
-    return view
+    picked = None
+    if selectable:
+        rows = list(getattr(getattr(event, "selection", None), "rows", []) or [])
+        if rows and rows[0] < len(view):
+            # the frame's index IS the board index — the `#` a CLI user types and the label
+            # `_apply_pick` wants. Never re-derive it from the row position of a filtered view.
+            picked = int(view.index[rows[0]])
+    return view, picked
 
 
 def why_panel(board: pd.DataFrame, vi: pd.DataFrame, query: str, lam: float) -> list[dict]:
@@ -99,6 +114,67 @@ def roster_panel(st_obj, team: int, label: str = "") -> pd.DataFrame:
                                 "PROJ": st.column_config.NumberColumn("PROJ", format="%.0f")})
     st.caption(f"Total consensus projection: **{session.roster_total(r):,.0f}** pts")
     return r
+
+
+def roster_rail(st_obj, team: int, sm=None, vi: pd.DataFrame | None = None) -> pd.DataFrame:
+    """The persistent rail beside the board: your roster in slot order, open slots shown as open.
+
+    ★ **An empty slot is a row, not an absence.** The K1 roster panel listed what you had, which
+    answers "who did I draft" and not "what do I still need" — and on draft day the second question
+    is the one with a clock on it. Rows come from the frozen ``flex_groups`` slot plan via
+    :func:`~fantasy_quant.draft.session.room_grid`, so the rail and the room grid cannot disagree
+    about which of your players is starting.
+
+    ⚠ 16.17: with more than one human seat this renders **one seat at a time**, selected by the
+    caller. There is deliberately nowhere to put a combined total — k teams in one draft are one
+    observation.
+    """
+    grid = session.room_grid(st_obj, sm, by="slot", vi=vi) if sm is not None else None
+    label = session.seat_label(team, sm) if sm is not None else f"T{team + 1}"
+    st.markdown(f"**Your roster — T{team + 1} · {label}**")
+    if grid is not None:
+        col = grid.columns[team]
+        show = pd.DataFrame({"SLOT": grid.index, "PLAYER": grid[col].to_numpy()})
+        show["PLAYER"] = show["PLAYER"].replace("", "—")
+        st.dataframe(show, width="stretch", hide_index=True, height=min(560, 40 + 28 * len(show)))
+    r = session.roster_view(st_obj, team)
+    needs = st_obj.starter_needs(team)
+    short = ", ".join(f"{k} {v}" for k, v in needs.items() if v)
+    st.caption(f"Starter needs: **{short or 'none — starters filled'}**")
+    st.caption(f"Running consensus projection: **{session.roster_total(r):,.0f}** pts "
+               f"· {len(r)} of {st_obj.rounds} picks made")
+    return r
+
+
+def room_grid_panel(st_obj, sm, vi: pd.DataFrame | None = None, *,
+                    by: str = "pick") -> pd.DataFrame:
+    """14.L — every drafter's team on one page, teams across the top."""
+    grid = session.room_grid(st_obj, sm, by=by, vi=vi)
+    st.dataframe(grid, width="stretch", height=min(760, 40 + 32 * len(grid)))
+    if by == "pick":
+        st.caption("Each cell is that seat's pick in that round, handled `round.pick`. The snake "
+                   "is in the handles: round 1 runs 1.01 → 1.10 left to right, round 2 runs "
+                   "2.01 → 2.10 right to left. Columns never move, so a team stays in one place.")
+    else:
+        st.caption("Slots are filled by the frozen lineup solver (`RosterSlots.flex_groups`), the "
+                   "same one the season sim scores every week with — not a display-layer fill "
+                   "order. Bench rows are best remaining value first; there is no optimal bench.")
+    return grid
+
+
+def stat_dictionary_panel(columns=None) -> None:
+    """14.O — every column, with a worked example. One dictionary, served here and by the CLI."""
+    cols = list(columns or [lbl for _, lbl in session.BOARD_VIEW_COLS])
+    st.caption("Every number on the board, in the order it appears — what it is, an example off "
+               "the live board, and how to read it.")
+    for c in cols:
+        e = session.STAT_DICT.get(c)
+        if not e:
+            continue
+        with st.expander(f"**{c}** — {e['label']}: {e['one_line']}"):
+            st.markdown(f"{e['what_it_means']}\n\n**Example.** {e['worked_example']}\n\n"
+                        f"**Reading it.** {e['how_to_read_it']}")
+            st.caption(f"Source: {e['provenance']}")
 
 
 def summary_panel(st_obj, sm, vi: pd.DataFrame | None) -> pd.DataFrame:

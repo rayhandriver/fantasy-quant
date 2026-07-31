@@ -60,7 +60,7 @@ Done-bar: proposed trades **raise both teams' simulated playoff prob** in the Ph
 sides (maker +0.014→+0.021, partner +0.012→+0.021 win%; season-block CIs>0), vs a random-trade control that
 lifts both ~never; `inseason/trades.py`)* — **Phase 13 / S7 COMPLETE ← Session B done**
 **Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ◐ 14.1 **Streamlit MVP** *(**K1 ☑ 2026-07-30** — four tabs on the live board: Settings · Board+`why` · Draft room (any k of n) · Cost)* · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
-— **surfacing + UX substeps:** ☐ 14.E tier-cliff · ☐ 14.F roster risk · ☐ 14.G uncertainty board · ☐ 14.H playoff SOS · ☐ 14.I draft grade · ☑ 14.J multi-seat control · **☐ 14.K multipage shell** · **☐ 14.L room grid (every team, by pick or by slot)** · **☐ 14.M pick clock** · **☐ 14.N post-draft analysis page** · **☐ 14.O stat dictionary/tooltips** *(K–O added 2026-07-30 s4 from the user's first real use of the app)*
+— **surfacing + UX substeps:** ☐ 14.E tier-cliff · ☐ 14.F roster risk · ☐ 14.G uncertainty board · ☐ 14.H playoff SOS · ☐ 14.I draft grade · ☑ 14.J multi-seat control · **☑ 14.K multipage shell** · **☑ 14.L room grid (every team, by pick or by slot)** · **☑ 14.M pick clock** · **☐ 14.N post-draft analysis page** · **☑ 14.O stat dictionary/tooltips** *(K–O added 2026-07-30 s4 from the user's first real use of the app)*
 **Phase 15 — Multi-format** *(⟳ stage 8; + auction draft support)* ✅ **CORE COMPLETE** *(2026-07-13, Session C
 — 15.2/15.3/15.4 built; 15.1 dynasty stays roadmap per user scope)* — ◔ **15.1 dynasty** *(deferred — user
 scoped Session C to auction+best-ball+DFS)* · ☑ **15.2 best-ball** *(`formats/bestball.py`: **variance is GOOD
@@ -515,7 +515,17 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
     the result worth carrying: every derived frame moved into `draft/session.py` and **both**
     `steps/mock_draft.py` and the new top-level `app/` render it, so B1 (app == CLI) holds by
     construction — the CLI's output is byte-identical across seven commands before and after.
-  - **★ Session K1.5 — the draft room a human can use. INSERTED 2026-07-30 s4, ahead of K2**, from the
+  - **★ Session K1.5 ☑ COMPLETE 2026-07-31 — the draft room a human can use.** All six steps built,
+    **all eight bars PASS** (`analysis/session_k1_5_app.json`: B0 20/20 distinct openings · B1 one page
+    body per rerun · B2 slim ≡ advanced · B3 clocked ≡ stepped over 150 picks · B4 slot grid == the
+    frozen startable lineup, gap 0.0 · B5 14 documented columns · **FLOW** a draft started and a pick
+    made by clicking · **K1** Session K1's sheet re-run passing). **T34 ☑ · T35 ☑ · 14.K/14.L/14.M/14.O
+    ☑.** 702 tests (was 691), ruff clean; nothing refits, no frozen contract moved, the lockbox not
+    re-read. **Two findings:** the 14.M latency worry did not survive its own measurement (worst modelled
+    pick **10 ms**, not seconds — the 8.5 s/pick number was Session D's dropped MCTS *search*), and
+    driving the widgets found a defect six bars missed → the new `bar_flow` (*an import bar and a use bar
+    are different claims*). Scoped 2026-07-30 s4 as:
+  - *(original scope, kept for the record)* **INSERTED ahead of K2**, from the
     user's notes after driving the K1 app for the first time. Everything in it sits between the drafter
     and the board on draft day; K2's surfacing does not, so this goes first. Full spec + six
     pre-registered bars: `docs/BUILD_PLAN.md` §"Session K1.5". **Step 0 = T34**, the one real bug —

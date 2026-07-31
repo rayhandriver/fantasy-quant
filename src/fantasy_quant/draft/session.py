@@ -69,6 +69,226 @@ BOARD_VIEW_COLS: tuple[tuple[str, str], ...] = (
     ("boom_prob_live", "BOOM"), ("bust_prob_live", "BUST"),
 )
 
+#: The four columns a human actually drafts on, plus the ``#`` pick handle carried by the index.
+#: **Slim is a projection of :func:`board_view`, never a second query** — one derivation, two
+#: column subsets, which is why :data:`BOARD_VIEW_COLS` and this tuple cannot describe different
+#: rows. (K1.5 step 2. The advanced view is simply :data:`BOARD_VIEW_COLS` in full.)
+SLIM_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "ADP", "PROJ")
+
+
+#: **14.O — one stat dictionary, served to every surface.** Board tooltips, the room grid, the
+#: post-draft page and the CLI's ``stats`` command all read this; ``views._BOARD_HELP`` (a terse,
+#: app-only copy) is deleted rather than kept in sync, because two help texts for one column are
+#: two chances to describe it differently.
+#:
+#: ★ **Every entry carries a worked example off the live board**, which is what the request was
+#: actually about: a column is not explained by a definition a drafter has to translate. The
+#: numbers below are the 2026 FFC board (07-30 snapshot) and are asserted to be *real* nowhere —
+#: they are illustrative text, and the test that guards this dictionary checks **coverage**
+#: (``BOARD_VIEW_COLS`` ⊆ ``STAT_DICT``), not equality with today's board.
+#:
+#: ⚠ **Two entries carry their known limitation in the tooltip, not in a doc** — ``BOOM``/``BUST``
+#: (T22: blank means *never seen play*, not *never busts*) and ``MEAN``/``AVAIL`` (T31: the level
+#: correction was extrapolating below its own support for deep players until it was capped). A
+#: limitation a user has to find in `findings.md` is a limitation nobody reads.
+STAT_DICT: dict[str, dict[str, str]] = {
+    "PLAYER": {
+        "label": "Player",
+        "one_line": "The player, as the ADP board names him.",
+        "what_it_means": "Names come from the FFC board and are crosswalked to nflverse gsis ids; "
+                         "team defenses key on their name because they carry no gsis.",
+        "worked_example": "“James Cook III” is one player, not three.",
+        "how_to_read_it": "Type any part of it into the pick box — matching is case-insensitive "
+                          "and substring-based.",
+        "provenance": "adp_snapshots (FFC) → simulator.board_player_key",
+    },
+    "POS": {
+        "label": "Position",
+        "one_line": "Canonical position: QB, RB, WR, TE, K or DST.",
+        "what_it_means": "Every source position is mapped to these six; anything that maps to "
+                         "none of them is not draftable and never reaches the board.",
+        "worked_example": "A player listed 'FB' on one feed and 'RB' on another is RB here, once.",
+        "how_to_read_it": "It drives the roster caps, the starter slots and the replacement level "
+                          "your value is measured against.",
+        "provenance": "simulator.canon_pos",
+    },
+    "ADP": {
+        "label": "Average draft position",
+        "one_line": "Where this player actually goes, in leagues shaped like yours.",
+        "what_it_means": "The FFC consensus ADP for your team count and scoring, from the most "
+                         "recent snapshot in the store. It is the availability signal — what the "
+                         "room will do — and it is deliberately NOT the value signal.",
+        "worked_example": "Jahmyr Gibbs 1.7 means he is typically gone by the second pick.",
+        "how_to_read_it": "Compare it to RK. A player whose RK is far better than his ADP is the "
+                          "board saying you can wait; the reverse is the board saying he is "
+                          "priced past his value.",
+        "provenance": "adp_snapshots, source 'ffc' (Stage-0 chore keeps it fresh)",
+    },
+    "PROJ": {
+        "label": "Consensus projection",
+        "one_line": "Season points the consensus expects, re-scored to your league's rules.",
+        "what_it_means": "The number a human trusts, and the start of the value chain. Scraped "
+                         "from FantasyPros and re-scored through our own RuleSet, so a half-PPR "
+                         "or TE-premium league moves it rather than being labelled onto it.",
+        "worked_example": "Gibbs 372 · Jayden Daniels 313 — both full seasons, as projected.",
+        "how_to_read_it": "It is a healthy-season number. The gap between PROJ and MEAN is the "
+                          "availability haircut, and it is often large.",
+        "provenance": "projections/consensus.py → backtest/scoring.RuleSet",
+    },
+    "MEAN": {
+        "label": "Season mean",
+        "one_line": "PROJ × projected availability — the level the engine actually believes.",
+        "what_it_means": "The Phase-5 distribution's mean. It prices the games a player is "
+                         "expected to miss, which the consensus projection does not.",
+        "worked_example": "Drake Maye 316 PROJ → 261 MEAN (14.4 games). Daniels 313 PROJ → 137 "
+                          "MEAN (7.7 games). Three points apart on the projection, 124 apart here.",
+        "how_to_read_it": "⚠ Known limitation (T31): for players the consensus prices as backups, "
+                          "this correction was extrapolating below the data it was fitted on and "
+                          "is now capped. Deep-board MEANs are the least trustworthy numbers on "
+                          "this screen.",
+        "provenance": "projections/distribution.py (Phase 5), level-capped by quantile.py (T31)",
+    },
+    "AVAIL": {
+        "label": "Projected games played",
+        "one_line": "Games of 17 — the column that explains the PROJ → MEAN gap.",
+        "what_it_means": "A discrete-time hazard model plus a cohort prior for players with too "
+                         "little history, and a role-washout term for established players the "
+                         "board projects deep (T3).",
+        "worked_example": "Maye 14.4 vs Daniels 7.7 is the whole of their 124-point MEAN gap.",
+        "how_to_read_it": "Anything under ~12 is the model saying it expects real missed time, "
+                          "not a rounding of 17.",
+        "provenance": "projections/injury.py (Phase 5.4 + T3)",
+    },
+    "BV": {
+        "label": "base_value",
+        "one_line": "(MEAN − λ·Var) − positional replacement. What every seat optimizes.",
+        "what_it_means": "The end of the value chain: risk-adjust the mean by your λ dial, then "
+                         "subtract what a waiver claim at that position would have given you. It "
+                         "is the only column any drafting policy in this engine reads.",
+        "worked_example": "Maye +68.5, Daniels −101.6 — three ADP rounds apart and 170 points "
+                          "apart in what they are worth to a roster.",
+        "how_to_read_it": "Negative is not a typo: it means a freely available player at that "
+                          "position projects better. Use `why` to see the arithmetic.",
+        "provenance": "valuation/value_board.py + utility.py (Phase 4/5.5)",
+    },
+    "VBD": {
+        "label": "Frozen Phase-4 VBD",
+        "one_line": "Value over replacement before the risk dial — kept for reference.",
+        "what_it_means": "The pre-Phase-5 value board: projection minus replacement, no "
+                         "distribution and no λ. Shown because it is the number the lockbox "
+                         "evaluation was run against.",
+        "worked_example": "Gibbs 170.6 VBD against 91.4 BV — the risk dial and the availability "
+                          "haircut are the difference.",
+        "how_to_read_it": "If VBD and BV disagree sharply, the disagreement is about health and "
+                          "variance, not about talent.",
+        "provenance": "valuation/value_board.py (frozen contract)",
+    },
+    "RK": {
+        "label": "Overall value rank",
+        "one_line": "This player's rank on the value board, 1 = best.",
+        "what_it_means": "The board sorted by value rather than by what the room will do. It is "
+                         "computed against YOUR roster slots, so it moves with your settings.",
+        "worked_example": "In a superflex league the best QB moves from overall rank 15 to 3, "
+                          "because the QB replacement level shifts from QB10 to QB20.",
+        "how_to_read_it": "RK vs ADP is the whole draft-day decision: value against availability.",
+        "provenance": "valuation/value_board.py, recomputed per LeagueSettings",
+    },
+    "UPSIDE": {
+        "label": "Relative ceiling",
+        "one_line": "More ceiling than a player projected this high usually has.",
+        "what_it_means": "q90 ÷ MEAN, then the projected level regressed out within position by "
+                         "rank. The residual is the point: raw q90 correlates 0.98+ with the mean, "
+                         "so an uncorrected 'upside' column is a quality tilt in disguise (16.14).",
+        "worked_example": "Jayden Daniels +0.46 — his ceiling is unusually high *for his level*, "
+                          "which is a different claim from being good.",
+        "how_to_read_it": "Centred on 0, roughly −0.5 … +0.5. Positive = more headroom than his "
+                          "peers; it says nothing about whether he is a better player.",
+        "provenance": "draft/enrichment.py residual_shape (16.13)",
+    },
+    "FLOOR": {
+        "label": "Relative floor",
+        "one_line": "More floor than a player projected this high usually has.",
+        "what_it_means": "q10 ÷ MEAN, level-residualized within position by **rank** rather than "
+                         "by OLS — 42.9 % of the 2026 board has q10 exactly 0, and a line fitted "
+                         "through that floor rewarded replacement-level players (T19).",
+        "worked_example": "Jaxon Smith-Njigba +0.48 floor against Drake London −0.20.",
+        "how_to_read_it": "Centred on 0. It is the mirror of UPSIDE by construction "
+                          "(corr ≈ −0.71), so a player rarely has both.",
+        "provenance": "draft/enrichment.py residual_shape (16.13, T19 rank method)",
+    },
+    "TAIL": {
+        "label": "Boom-or-bust spread",
+        "one_line": "(q90 − q10) ÷ MEAN, level-controlled — total relative spread.",
+        "what_it_means": "The honest variance read, and the column that replaces the broken "
+                         "boom/bust pair for anyone who wants one number.",
+        "worked_example": "Daniels +0.46 (wide) against Jaxon Smith-Njigba −0.48 (tight).",
+        "how_to_read_it": "High = the outcome is genuinely uncertain, in both directions. Whether "
+                          "you want that depends on your format: managed lineups punish it, "
+                          "best-ball rewards it.",
+        "provenance": "draft/enrichment.py residual_shape (16.13)",
+    },
+    "BOOM": {
+        "label": "Live boom rate",
+        "one_line": "Share of last season's weeks above 1.5× his own average.",
+        "what_it_means": "Measured on season − 1, refreshed every year (T22). The frozen Phase-5 "
+                         "boom column is stuck at 2022 and reads 0.000 for anyone who was not in "
+                         "the league that year, which is why this one exists.",
+        "worked_example": "Christian McCaffrey 0.71 · Justin Jefferson 0.06 — same tier, opposite "
+                          "week-to-week shapes.",
+        "how_to_read_it": "⚠ **Blank means never seen play, not never booms.** Rookies are blank "
+                          "and must stay blank; 27 % of the 2026 board has no reading at all.",
+        "provenance": "draft/enrichment.py live_volatility (T22)",
+    },
+    "BUST": {
+        "label": "Live bust rate",
+        "one_line": "Share of last season's weeks under half his own average.",
+        "what_it_means": "The mirror of BOOM, on the same season − 1 window and with the same "
+                          "blank-is-not-zero rule.",
+        "worked_example": "Jaylen Waddle 0.19 — about one week in five came in under half his own "
+                          "average.",
+        "how_to_read_it": "⚠ **Blank means never seen play, not never busts.** Fixing that "
+                          "misreading took the exact-zero share from 56 % to 8 % (T22).",
+        "provenance": "draft/enrichment.py live_volatility (T22)",
+    },
+}
+
+
+def stat_entry(column: str) -> dict[str, str]:
+    """One :data:`STAT_DICT` entry, or a :class:`LookupError` naming the column."""
+    try:
+        return STAT_DICT[str(column).upper()]
+    except KeyError:
+        raise LookupError(f"no stat-dictionary entry for {column!r}") from None
+
+
+def stat_help(column: str) -> str:
+    """The tooltip string a table column shows — one line, then how to read it."""
+    e = STAT_DICT.get(str(column).upper())
+    if not e:
+        return ""
+    return f"**{e['label']}** — {e['one_line']}\n\n{e['how_to_read_it']}"
+
+
+def assert_stat_dict_covers_board() -> None:
+    """Every rendered board column has a dictionary entry. A new column without documentation is
+    a test failure, which is the only way a dictionary stays complete (14.O's done-bar)."""
+    missing = [lbl for _, lbl in BOARD_VIEW_COLS if lbl not in STAT_DICT]
+    if missing:
+        raise AssertionError(f"BOARD_VIEW_COLS with no STAT_DICT entry: {missing}")
+
+
+def project_view(view: pd.DataFrame, advanced: bool = False) -> pd.DataFrame:
+    """The rendered column subset of a :func:`board_view` frame.
+
+    Takes the *frame*, not the state, precisely so a caller cannot accidentally re-query for the
+    slim view: both views are this function applied to one object, so "the slim board and the
+    advanced board show the same rows in the same order" is true by construction rather than by
+    test (bar B2).
+    """
+    if advanced:
+        return view
+    return view[[c for c in SLIM_VIEW_COLS if c in view.columns]]
+
 
 # ------------------------------------------------------------------------------------------------
 # the board a human reads and the value every seat optimizes — built together, once
@@ -183,6 +403,38 @@ def auto_teams(meta: dict) -> frozenset[int]:
     return frozenset(int(t) for t in meta.get("auto", ()))
 
 
+def room_pick_fn(meta: dict, risk=None):
+    """The room's ``(state, team) -> board_index`` function for this draft.
+
+    Built once and passed around because :func:`~fantasy_quant.draft.mock.load_opponent_model`
+    re-reads the fitted-β artifact from disk on every call, and the pick clock (14.M) would
+    otherwise do that once per tick.
+    """
+    return seat_map_from(meta).pick_fn(mock.load_opponent_model(), risk=risk)
+
+
+def advance_one(st: DraftState, meta: dict, risk=None, opp=None) -> dict | None:
+    """Make **exactly one** modelled (or autopicked) pick; ``None`` if it is your turn or the
+    draft is over.
+
+    ★ **This is the clock's step, and :func:`advance` is the loop over it** (14.M). Written this
+    way round rather than as a second, clock-shaped copy of the same loop: bar B3 says a clocked
+    draft must produce the identical ``state.log`` to an un-clocked run of the same seed, and two
+    loops that agree today are two loops that can disagree tomorrow — the T18/F.5/T27 rule, one
+    more altitude down. Because both paths consume ``DraftState.rng`` through the same call in the
+    same order, the clock changes *when* picks happen and cannot change *which*.
+    """
+    if st.is_done() or not st.available:
+        return None
+    team = st.team_on_clock()
+    if team in st.human_teams and team not in auto_teams(meta):
+        return None
+    opp = opp if opp is not None else room_pick_fn(meta, risk)
+    idx = pick_by_adp(st, team, noise=0.0) if team in auto_teams(meta) else int(opp(st, team))
+    _apply_pick(st, team, idx)
+    return st.log[-1]
+
+
 def advance(st: DraftState, meta: dict, risk=None) -> list[dict]:
     """Run modelled (and autopicked) picks until a seat **you** drive is on the clock.
 
@@ -192,17 +444,10 @@ def advance(st: DraftState, meta: dict, risk=None) -> list[dict]:
     ★ **16.17 — the stop condition is membership, not equality.** It was ``team == st.your_team``,
     which is why a second human seat would have been drafted *for* you by the room.
     """
-    sm = seat_map_from(meta)
-    opp = sm.pick_fn(mock.load_opponent_model(), risk=risk)
-    auto = auto_teams(meta)
+    opp = room_pick_fn(meta, risk)
     made: list[dict] = []
-    while not st.is_done() and st.available:
-        team = st.team_on_clock()
-        if team in st.human_teams and team not in auto:
-            break
-        idx = pick_by_adp(st, team, noise=0.0) if team in auto else int(opp(st, team))
-        _apply_pick(st, team, idx)
-        made.append(st.log[-1])
+    while (entry := advance_one(st, meta, risk, opp)) is not None:
+        made.append(entry)
     return made
 
 
@@ -266,6 +511,81 @@ def roster_total(roster: pd.DataFrame) -> float:
     if roster.empty or "proj_points" not in roster.columns:
         return 0.0
     return float(pd.to_numeric(roster["proj_points"], errors="coerce").fillna(0.0).sum())
+
+
+def _slot_scores(roster: pd.DataFrame, vi: pd.DataFrame | None) -> np.ndarray:
+    """The per-player number the slot grid fills on — ``base_value``, exactly as
+    :func:`~fantasy_quant.draft.optimizer.starter_value` reads it (unvalued rows count 0.0)."""
+    if vi is not None and not vi.empty and "player_key" in vi.columns:
+        from fantasy_quant.draft.optimizer import _bv_map
+        return roster["player_key"].map(_bv_map(vi)).fillna(0.0).to_numpy(float)
+    col = roster["base_value"] if "base_value" in roster.columns else pd.Series(
+        np.nan, index=roster.index)
+    return pd.to_numeric(col, errors="coerce").fillna(0.0).to_numpy(float)
+
+
+def room_grid(st: DraftState, sm: SeatMap, *, by: str = "pick",
+              vi: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Every drafter's team on one frame — teams across the top (14.L).
+
+    ``by="pick"`` is the classic draft board: one row per round, one column per seat in table
+    order, each cell the pick that seat made in that round. The **snake is visible in the cell
+    handles** — round 1 runs ``1.01`` at T1 to ``1.10`` at T10 and round 2 runs ``2.01`` at T10
+    back to ``2.10`` at T1, so a row read left to right shows the direction reverse without the
+    columns having to move (moving them would make the same team appear in two places).
+
+    ``by="slot"`` is the roster grid: one row per starting slot, then the bench. ★ **The slot
+    assignment is the frozen solver's, not a fill order re-derived for display** —
+    :func:`~fantasy_quant.inseason.lineup.optimal_lineup` on the same ``base_value`` vector
+    :func:`~fantasy_quant.draft.optimizer.starter_value` scores, which reaches the fill order
+    through :meth:`RosterSlots.flex_groups`. 17.1's rule is that ``flex_groups`` is the *single*
+    fill-order rule, after three solvers had each re-derived it once; a fourth copy living in a
+    display layer would be the same mistake wearing a different hat, and it would be the copy
+    nobody thought to test. Bar B4 closes the loop by asserting the assigned starters' values sum
+    to ``starter_value`` — one grid, checked against the headline number it illustrates.
+
+    The **bench** rows are display arrangement rather than a rule: whoever the solver did not
+    start, best value first. There is no "optimal bench".
+    """
+    labels = seat_labels(sm, st.n_teams)
+    cols = [f"T{t + 1} · {labels[t]}" for t in range(st.n_teams)]
+    if by == "pick":
+        grid = pd.DataFrame("", index=[f"R{r}" for r in range(1, st.rounds + 1)], columns=cols)
+        for p in st.log:
+            grid.iat[int(p["round"]) - 1, int(p["team"])] = (
+                f"{int(p['round'])}.{int(p['pick_in_round']):02d}  {p['player_name']} "
+                f"({p['pos']})")
+        return grid
+    if by != "slot":
+        raise ValueError(f"room_grid takes by='pick' or by='slot', got {by!r}")
+
+    from fantasy_quant.inseason.lineup import _slot_plan, optimal_lineup
+
+    plan = [label for label, _ in _slot_plan(st.slots)]
+    rows = plan + [f"BN{i + 1}" for i in range(max(0, st.rounds - len(plan)))]
+    grid = pd.DataFrame("", index=rows, columns=cols)
+    for t in range(st.n_teams):
+        roster = st.roster(t)
+        if roster.empty:
+            continue
+        scores = _slot_scores(roster, vi)
+        # a degenerate one-draw "week": `optimal_lineup` reduces to its greedy mean-max fill, which
+        # is the frozen `flex_groups` order. Nothing here chooses a lineup; it reads one.
+        choice = optimal_lineup(scores[:, None], roster["pos"].tolist(), st.slots)
+        started = set()
+        for label, i in choice.slots.items():
+            if i is None or label not in grid.index:
+                continue
+            started.add(int(i))
+            r = roster.iloc[int(i)]
+            grid.at[label, cols[t]] = f"{r['player_name']} ({r['pos']})"
+        bench = sorted((i for i in range(len(roster)) if i not in started),
+                       key=lambda i: -scores[i])
+        for k, i in enumerate(bench):
+            if k < len(rows) - len(plan):
+                r = roster.iloc[int(i)]
+                grid.at[f"BN{k + 1}", cols[t]] = f"{r['player_name']} ({r['pos']})"
+    return grid
 
 
 def explain_chain(board: pd.DataFrame, vi: pd.DataFrame, query: str,

@@ -61,7 +61,65 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★★ Next-session pointer (2026-07-30, session 8 — the app's FIRST REAL USE → SESSION K1.5 SCOPED. docs-only, no code. READ THIS FIRST.)**
+> **★★★ Next-session pointer (2026-07-31 — ★ SESSION K1.5 ☑ COMPLETE: the draft room a human can use. READ THIS FIRST.)**
+>
+> **State: 702 tests (was 691), ruff clean. UNCOMMITTED**, on top of `3494ccc`. Nothing refits, no
+> frozen contract moved, the spent lockbox was not re-read, and **Session K1's own bar sheet re-runs
+> passing** — B1's 150-pick app-vs-CLI identity included. That is the rule that outranks the six:
+> *if a display change moves a number, it is not a display change.*
+>
+> **Run it:** `uv sync --extra ui && uv run streamlit run app/main.py`
+> **Re-check it:** `uv run python steps/session_k1_5_app.py` → `analysis/session_k1_5_app.json`
+>
+> | bar | result |
+> |---|---|
+> | **B0** T34 the seeding default | 20 app drafts from seat 6 → **20 distinct** openings (was 1); a locked seed pair replays picks *and* seating; the CLI still returns `engine.T34_REFERENCE`, identical twice |
+> | **B1** 14.K one page body per rerun | `{settings: 1}` · `{settings: 1}` · `{draft: 1}` — under `st.tabs` all three read 4 |
+> | **B2** slim ≡ advanced | 5 position filters, 40 rows, one query and two projections; `#` handle kept |
+> | **B3** clocked ≡ stepped | identical logs over 150 picks; worst modelled pick **10.2 ms** |
+> | **B4** both grids | BY PICK re-reads the log exactly; BY SLOT sums to `starter_value`, **gap 0.0**, k ∈ {1,4} |
+> | **B5** 14.O | 14 columns documented with worked examples; rail == `starter_needs`; CLI `stats` serves the same dict |
+> | **FLOW** *(new)* | a draft **started by clicking** and a pick **made by clicking**: 5 picks → 14, Bijan Robinson on the roster |
+> | **K1** | Session K1's whole sheet re-run, all PASS |
+>
+> **★ The finding to carry forward — a pre-registered worry can be retired by its own measurement, and
+> the guard should survive anyway.** 14.M was built around the fear that `value_hawk`'s Phase-9 greedy
+> would be too slow for a 5-second clock. Measured on a full live draft: **worst single modelled pick
+> ~10 ms**, with `value_hawk` within a millisecond of the behavioural seats. The 8.5 s/pick number that
+> seeded the worry is `draft/mcts.py`'s *search*, dropped in Session D — a figure that travelled to a
+> place it did not describe. The floor (`MIN_CLOCK_SECONDS = 1`) ships anyway, carrying its measurement
+> and its date, plus `_overrun_notice`, which reports the actual worst tick against the chosen interval:
+> *a constant justified by a measurement needs something that notices when the measurement goes stale.*
+>
+> **★★ The second finding, and it is K1's lesson one level up.** All six bars passed; then the app was
+> driven under `AppTest` the way a human drives it — click **Start draft**, click a player — and the
+> click surfaced `st.session_state.setdefault("clock_secs", …)` sitting directly above the slider that
+> owns that key (Streamlit's documented anti-pattern; a warning, not a crash, which is why nothing else
+> caught it). K1 answered its own broken launch with `bar_imports`, which proves the entry point
+> **imports**. It does not prove the app **works**. Hence the new **`bar_flow`**. *An import bar and a
+> use bar are different claims, and any session that adds UI owes the second one.*
+>
+> **⚠ Two things a later session must not undo.** (1) **`steps/` keeps `--seed 7` and an unset
+> `--room-seed`** — T24's sweep, 16.17's 1,014-triple check and every committed bar sheet are
+> differenced against them; the entropy default is the app's and stops at `app/engine.draw_seeds`, and
+> `engine.T34_REFERENCE` exists so a bar can *assert* that rather than a comment claiming it.
+> (2) **`app/probe.py` ships in the app**, not in the test — a probe that only exists under the test
+> measures the test.
+>
+> **★ Structure now:** `app/main.py` is a **router** (`st.navigation`, five `st.Page`s); bodies live in
+> `screens.py` (Settings · Board · Cost), `draft_room.py` (the room, the clock, the pick controls, the
+> rail) and `room_grid.py` (14.L + the standings/odds/draft-flow/log readouts behind a **radio** — the
+> nested `st.tabs` had T35's defect too). `state.py` holds the cached engine seam, `nav.py` the page
+> registry. **K1's rule holds: `session.py` is the one derivation site, `app/` only formats.**
+>
+> **★ NEXT: user reviews + commits, then Session K2 = surfacing + 14.N the post-draft page**
+> (`docs/BUILD_PLAN.md` §"Session K2"). **14.N absorbs the standings/odds/draft-flow readouts currently
+> parked on the room page** — move them, do not duplicate them. Then **K3** league import (17.5–17.7)
+> → **L+** the go-live tail. Stage-0 FFC chore last pulled 2026-07-30, **next due after 08-05**.
+>
+> _(Session 8's scoping pointer, which is where all of this came from, follows.)_
+>
+> **★★★ Next-session pointer (2026-07-30, session 8 — the app's FIRST REAL USE → SESSION K1.5 SCOPED. docs-only, no code.)**
 >
 > **State: unchanged — 691 tests, ruff clean, still UNCOMMITTED** on top of `945e302`. Nothing ran, no
 > `src/` change, no test-count change. Edited: `docs/BUILD_PLAN.md` (§14.K–§14.O, §"Phase 17 — league

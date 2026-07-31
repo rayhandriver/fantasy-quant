@@ -1,0 +1,171 @@
+{
+  "season": 2026,
+  "seat": 6,
+  "all_pass": true,
+  "bars": {
+    "b0": {
+      "bar": "B0 \u2014 no two app drafts alike \u00b7 a locked seed replays \u00b7 the CLI has not moved",
+      "pass": true,
+      "n_drafts": 20,
+      "distinct_openings": 20,
+      "example_openings": [
+        "Bijan Robinson \u00b7 Jahmyr Gibbs \u00b7 Ja'Marr Chase \u00b7 Jaxon Smith-Njigba \u00b7 Puka Nacua",
+        "Bijan Robinson \u00b7 Jahmyr Gibbs \u00b7 Puka Nacua \u00b7 Ja'Marr Chase \u00b7 Christian McCaffrey",
+        "Bijan Robinson \u00b7 Puka Nacua \u00b7 Ja'Marr Chase \u00b7 Drake London \u00b7 Amon-Ra St. Brown"
+      ],
+      "locked_seeds_replay": true,
+      "replayed_seed": 667310,
+      "replayed_room_seed": 394984,
+      "cli_first_five": [
+        "Jahmyr Gibbs",
+        "Ja'Marr Chase",
+        "Jonathan Taylor",
+        "Christian McCaffrey",
+        "James Cook III"
+      ],
+      "cli_reference": [
+        "Jahmyr Gibbs",
+        "Ja'Marr Chase",
+        "Jonathan Taylor",
+        "Christian McCaffrey",
+        "James Cook III"
+      ],
+      "cli_matches_reference": true,
+      "cli_identical_twice": true,
+      "note": "The app draws both seeds from OS entropy; the CLI keeps --seed 7 and an unset --room-seed. A measurement default and a human default are different objects, and this repo was shipping one of them twice."
+    },
+    "b1": {
+      "bar": "B1 \u2014 a rerun executes ONE page body (T35), with no uncaught exception",
+      "pass": true,
+      "first_run": {
+        "settings": 1
+      },
+      "rerun_default_page": {
+        "settings": 1
+      },
+      "rerun_draft_page": {
+        "draft": 1
+      },
+      "n_exceptions": 0,
+      "exceptions": [],
+      "note": "Under st.tabs every one of these would read 4. The counter lives in the shipped code, not in the test: a probe that only exists under the test measures the test."
+    },
+    "b2": {
+      "bar": "B2 \u2014 slim \u2261 advanced rows/order; row-select \u2261 typed pick",
+      "pass": true,
+      "filters_checked": 5,
+      "rows_checked": 40,
+      "problems": [],
+      "mismatched": [],
+      "slim_columns": [
+        "PLAYER",
+        "POS",
+        "ADP",
+        "PROJ"
+      ],
+      "advanced_columns": [
+        "PLAYER",
+        "POS",
+        "ADP",
+        "PROJ",
+        "MEAN",
+        "AVAIL",
+        "BV",
+        "VBD",
+        "RK",
+        "UPSIDE",
+        "FLOOR",
+        "TAIL",
+        "BOOM",
+        "BUST"
+      ]
+    },
+    "b3": {
+      "bar": "B3 \u2014 a clocked draft and a stepped draft are the same draft; latency reported",
+      "pass": true,
+      "logs_identical": true,
+      "n_picks": 150,
+      "worst_pick_ms_by_seat": {
+        "autopilot": 5.7,
+        "balanced": 8.2,
+        "chalk": 7.0,
+        "reacher": 9.3,
+        "safe_floor": 8.2,
+        "upside_chaser": 10.2,
+        "value_hawk": 5.6
+      },
+      "worst_seat": "upside_chaser",
+      "worst_ms": 10.2,
+      "clock_floor_s": 1,
+      "note": "\u2605 The pre-registered worry does not survive the measurement: 14.M expected `value_hawk`'s Phase-9 greedy to be too slow for a 5s clock, and the slowest single pick in a full draft is ~10 ms. The floor stays as a floor \u2014 it is what stops the NEXT slow seat overrunning silently \u2014 and the app reports actual tick cost so the constant cannot go stale unnoticed."
+    },
+    "b4": {
+      "bar": "B4 \u2014 BY PICK re-reads the log exactly; BY SLOT == the frozen startable lineup",
+      "pass": true,
+      "runs": [
+        {
+          "k": 1,
+          "n_picks": 150,
+          "cells_filled": 150,
+          "misplaced": [],
+          "n_misplaced": 0,
+          "duplicate_cells": 0,
+          "worst_startable_gap": 0.0
+        },
+        {
+          "k": 4,
+          "n_picks": 150,
+          "cells_filled": 150,
+          "misplaced": [],
+          "n_misplaced": 0,
+          "duplicate_cells": 0,
+          "worst_startable_gap": 0.0
+        }
+      ],
+      "note": "The slot grid is checked against `starter_value`, which reaches the same fill order through a DIFFERENT solver (vectorized `lineup_points_matrix` vs the labelled `inseason.lineup` fill). Both consume RosterSlots.flex_groups, which is 17.1's single fill-order rule."
+    },
+    "b5": {
+      "bar": "B5 \u2014 every column documented with a worked example; rail == starter_needs",
+      "pass": true,
+      "n_entries": 14,
+      "empty_fields": [],
+      "duplicate_examples": [],
+      "rail_disagreements": [],
+      "cli_stats_ok": true,
+      "note": "The dictionary is served to the board tooltips, the room grid page and the CLI's `stats` command from one object; the app-only `_BOARD_HELP` copy is deleted rather than kept in sync."
+    },
+    "flow": {
+      "bar": "FLOW \u2014 a human can start a draft and make a pick by clicking",
+      "pass": true,
+      "start_button_started_a_draft": true,
+      "randomized_seed": 816578,
+      "randomized_room_seed": 697694,
+      "quick_pick_buttons": 6,
+      "clicked": "Bijan Robinson",
+      "your_picks": [
+        "Bijan Robinson"
+      ],
+      "picks_before": 5,
+      "picks_after": 14,
+      "n_exceptions": 0,
+      "exceptions": []
+    },
+    "k1": {
+      "bar": "K1 \u2014 Session K1's bars still pass unchanged after a display-only session",
+      "pass": true,
+      "all_pass": true,
+      "per_bar": {
+        "b2": true,
+        "b3": true,
+        "b6": true,
+        "b5": true,
+        "b4": true,
+        "b1": true,
+        "apptest": true,
+        "imports": true,
+        "server": true
+      },
+      "tail": ""
+    }
+  }
+}
