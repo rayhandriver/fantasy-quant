@@ -121,6 +121,32 @@ def load_opponent_model(path: Path | str = COEF_JSON) -> OpponentModel:
     return model
 
 
+def board_vintage(raw: pd.DataFrame, source: str = "") -> str:
+    """*Which snapshot* answered — the cache-key component T32 was missing.
+
+    ★ **The date is the identity, and it is sufficient because of how the board is selected.**
+    :func:`~fantasy_quant.adp.boards._ffc_board` closes with ``QUALIFY snapshot_date =
+    MAX(snapshot_date) OVER ()``, so a resolved board is drawn from exactly **one** snapshot date;
+    the ECR path does the same on ``as_of``. There is therefore no such thing as a board that mixes
+    vintages, and one date names the content completely for a given
+    ``(season, scoring, teams, include_dst)`` cell.
+
+    ``source`` is carried too, and not for cosmetics: an FFC board and an ECR board for the same
+    season are *different measurements* (``adp/boards.py``: never pool the two into a headline), and
+    2025 flips between them depending on ``allow_ecr``. Two measurements must not share a filename.
+
+    An undated board returns ``"nodate"`` rather than raising — the caller's row-count guard is what
+    catches staleness in that case, and a board with no date is a reportable oddity, not a crash.
+    """
+    if raw.empty:
+        return "empty"
+    src = str(source or "na")
+    if "snapshot_date" not in raw.columns:
+        return f"{src}-nodate"
+    d = pd.to_datetime(raw["snapshot_date"], errors="coerce").max()
+    return f"{src}-{'nodate' if pd.isna(d) else pd.Timestamp(d).strftime('%Y%m%d')}"
+
+
 def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF,
                allow_ecr: bool = False, enrich: bool = True, include_dst: bool = True,
                cache_dir: Path | str | None = None) -> tuple[pd.DataFrame, str]:
@@ -148,11 +174,24 @@ def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF
     ``adp/panel.py`` filters to ``OFFENSE`` before the drift panel is built, so the added rows are
     dropped again on the measurement side.
 
-    ``cache_dir`` memoizes the enriched board per ``(season, scoring, teams, include_dst)`` — the
-    flag is part of the key because it changes the rows, and a cache hit on a board built under the
-    other setting is exactly the silent-stale-input failure this repo keeps finding. The Phase-5
-    cloud behind :func:`~fantasy_quant.draft.enrichment.enrich_board` costs ~10 s warm and was
-    measured at ~6 min cold, which is fine once and intolerable once per batch.
+    ``cache_dir`` memoizes the enriched board per ``(season, scoring, teams, include_dst,
+    ENRICH_VERSION, vintage)`` — the flag is part of the key because it changes the rows, and a
+    cache hit on a board built under the other setting is exactly the silent-stale-input failure
+    this repo keeps finding. The Phase-5 cloud behind
+    :func:`~fantasy_quant.draft.enrichment.enrich_board` costs ~10 s warm and was measured at
+    ~6 min cold, which is fine once and intolerable once per batch.
+
+    ★ **T32 (fixed 2026-07-30): the vintage is in the key.** It was not, and the omission had a
+    standing chore pointed straight at it — ``CLAUDE.md`` §2 mandates a Stage-0 FFC pull whenever
+    the latest snapshot is >6 days old, and *that pull could not invalidate this cache*.
+    ``ENRICH_VERSION`` covers the enrichment but not its **input**, so a fresh board and a stale
+    one were the same filename. Measured live on 2026-07-30, immediately after running the chore:
+    :func:`~fantasy_quant.adp.boards.resolve_board` returned **244** rows and this function served
+    the cached **223**, with 25 players on the fresh board invisible to every caller. See
+    :func:`board_vintage` for what identifies a snapshot, and note the guard below: enrichment is a
+    pure column attach (``attach_enrichment`` opens with ``board.copy()``), so a cached board whose
+    row count differs from the raw one is stale *by construction* and is rebuilt rather than served.
+    That makes the cache self-healing even against an in-place edit that leaves the date alone.
     """
     raw, src = boards.resolve_board(con, int(season), str(scoring), int(teams),
                                     allow_ecr=allow_ecr, include_dst=include_dst)
@@ -165,10 +204,12 @@ def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF
     if cache_dir is not None:
         tag = "_dst" if include_dst else ""
         cache = (Path(cache_dir) /
-                 f"board_{season}_{scoring}_{teams}{tag}_{enrichment.ENRICH_VERSION}.parquet")
+                 f"board_{season}_{scoring}_{teams}{tag}_{enrichment.ENRICH_VERSION}"
+                 f"_{board_vintage(raw, src)}.parquet")
         if cache.exists():
-            return attach_proj_points(con, int(season), pd.read_parquet(cache),
-                                      n_teams=int(teams)), src
+            cached = pd.read_parquet(cache)
+            if len(cached) == len(raw):
+                return attach_proj_points(con, int(season), cached, n_teams=int(teams)), src
     board = enrich_board(con, int(season), raw, n_teams=int(teams))
     if cache is not None:
         cache.parent.mkdir(parents=True, exist_ok=True)

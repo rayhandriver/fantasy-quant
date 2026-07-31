@@ -717,19 +717,53 @@ production web stack.*
 > Next.js + live-draft sync + widget become a later **"I have users and want polish"** step. **Own the
 > contracts, delegate the interiors.**
 
-### 14.1 — Backend → `app/backend/`
-- **Do:** **FastAPI** service over DuckDB/Postgres exposing projections, boards, sim, valuations; auth for
-  league-mates. Create the **app** package. **Include the per-player endpoint** that powers the
-  `PLAYER-VIEW.md` cards: returns the 8 bar values + **overall & within-position percentiles** + the
-  confidence flag (`source`/`no_prior`), read straight from the frozen contracts.
-- **Out:** `app/backend/` (`main.py`, routers); **Done:** endpoints return model outputs; the per-player
-  bar endpoint returns dual-baseline percentiles; auth works. **Reuse:** all model packages.
+### 14.1 — The Streamlit MVP → `app/`
+*(⟳ **rewritten 2026-07-30.** This substep used to describe the FastAPI backend, which the 2026-07-04
+reframe demoted without renumbering — so "14.1" meant the backend here while `ROADMAP.md`, `CLAUDE.md`
+and this file's own 14.E/F/G/J all meant the Streamlit app. **14.1 is the Streamlit MVP**; the backend
+moved verbatim to **§14.3a**, where the go-live tail already groups it.)*
+
+- **Do:** the shareable front door, as a **UI over a path that already works**. `steps/mock_draft.py` is
+  a complete human-in-the-loop draft driver on the **live** board — "thin over the real engine, there is
+  no modelling here" — and every hard fix of the T17/T22/T27/T31/16.14R/16.17 arc is already reachable
+  from it. The app ports that surface; it does not re-derive it.
+- **⚠ This is not an extension of `app/streamlit_app.py`.** That file is a *different, older*
+  application (155 lines, built on `personalization_cost` over `DEV_SEASONS`, sharing essentially no
+  code path with the CLI, and unable to select the live season at all). K1 builds a new `app/` module
+  set and **retires** the old file once its cost-report tab is ported — the T18 rule: delete rather than
+  silently redefine, so nobody reads stale numbers out of a half-ported file.
+- **Ships in two sessions, split by the draft calendar, not by module:** **K1** = the draft-day-critical
+  half (live board · the value chain + `why` · the room with 14.J · the 17.3 settings form · the cost
+  tab). **K2** = surfacing (14.E/F/G/I, the 16.6 Beta Lab tab, the 16.12 availability/reach-risk
+  readout, the `PLAYER-VIEW.md` cards). Full K1 spec + pre-registered bars: **§"Session K1"** below.
+- **Out:** a new `app/` module set (K1) + the surfacing tabs (K2); **Done (K1):** you can enter your
+  league's real settings, read the live board with the value chain visible, draft any k of n seats
+  against the calibrated room, and see what your preferences cost — with the app and the CLI producing
+  **identical numbers** from the same seed. **Reuse:** `steps/mock_draft.py` (the whole surface),
+  `draft/mock.py`, `draft/personalities.py` (`SeatMap`), `draft/config.py` (`LeagueSettings`),
+  `valuation/cost_report.py`, `simulation/season.py`.
 
 ### 14.2 — Personalization layer → `app/backend/personalization.py`
 - **Do:** per-user **archetype prefs, per-factor over/under-weights, draft style, anchor picks** → a
   personalized board from the same model; **always show vs the pure baseline** (anti-bias guardrail).
 - **Out:** `app/backend/personalization.py`; **Done:** different user configs yield sensibly different boards.
   **Reuse:** 2.x, 9.x.
+
+### 14.3a — FastAPI backend (feeds 14.3 / 14.4) → `app/backend/`
+*(⟳ **relocated verbatim from §14.1, 2026-07-30** — body unchanged, number changed. It sits here because
+it exists to serve the Next.js frontend (14.3) and the live-draft sync (14.4), which is exactly how
+`ROADMAP.md`'s Session L+ already groups it. **The Streamlit MVP does not depend on it** and must not
+grow one. One phrase below is now stale and is kept anyway rather than quietly reworded: "Create the
+**app** package" — §14.1/K1 creates `app/`, so this substep adds `app/backend/` to an existing package.)*
+- **Do:** **FastAPI** service over DuckDB/Postgres exposing projections, boards, sim, valuations; auth for
+  league-mates. Create the **app** package. **Include the per-player endpoint** that powers the
+  `PLAYER-VIEW.md` cards: returns the 8 bar values + **overall & within-position percentiles** + the
+  confidence flag (`source`/`no_prior`), read straight from the frozen contracts.
+- **Out:** `app/backend/` (`main.py`, routers); **Done:** endpoints return model outputs; the per-player
+  bar endpoint returns dual-baseline percentiles; auth works. **Reuse:** all model packages.
+- **⚠ Stale cross-references, flagged not fixed (2026-07-30):** `PROJECT.md` §219 and
+  `docs/PLAYER-VIEW.md` lines 134/174/175 still call this backend "14.1". They mean **14.3a**. Left for
+  the next docs pass — the 2026-07-30 pass was scoped to `BUILD_PLAN.md` + `ROADMAP.md`.
 
 ### 14.3 — Frontend → `app/frontend/`
 - **Do:** **Next.js + TypeScript** UI — board, **the interactive player card + per-player deep page (full
@@ -741,8 +775,8 @@ production web stack.*
   baseline** (overall primary + within-position secondary), Phase-16 bar walled-off & visually distinct,
   a confidence flag on rookie/`no_prior`/`proxy` rows.
 - **Out:** `app/frontend/`; **Done:** renders a live board + hover cards + deep pages from the API.
-  **Reuse:** 14.1 API (per-player endpoint returns 8 bar values + overall/positional percentiles + the
-  confidence flag), all frozen contracts, `docs/PLAYER-VIEW.md`. (Installs Node.) **Dep:** bar #6
+  **Reuse:** the **14.3a** API (per-player endpoint returns 8 bar values + overall/positional percentiles
+  + the confidence flag), all frozen contracts, `docs/PLAYER-VIEW.md`. (Installs Node.) **Dep:** bar #6
   needs Phase 16 (its only new-signal dependency; all other bars already frozen).
 
 ### 14.4 — Sleeper live-draft sync → `app/backend/live_draft.py`
@@ -1865,6 +1899,161 @@ the point: it is the last thing standing between a correct simulator and a board
 and its residuals are documented and accepted), not a refit (T26 stays deferred to the next 11.1
 refit), and not app work (Phase 14 stays strictly last — every fix here lands in the engine and the
 CLI, and Phase 14's board view inherits it for free).
+
+---
+
+## ★★ Session K1 — THE APP, DRAFT-DAY HALF ✅ **DONE 2026-07-30** (Phase 14.1 · T32 · 14.J · 17.3 wiring)
+
+*(written 2026-07-30, docs-only. The engine is finished — Sessions A→I.5 all complete, **669 tests**,
+ruff clean, `main == origin/main`. This is the first half of ROADMAP's Session K, split by the draft
+calendar. **K2 = surfacing** follows it. Nothing here refits β, touches the frozen value stack, or
+spends the lockbox.)*
+
+**Why this session exists.** Every capability built since 2026-07-19 is currently reachable only from a
+CLI. `steps/mock_draft.py` (693 lines) is a complete human-in-the-loop draft driver on the live board —
+board · `pick` · `why` · `roster` · `summary --odds` · `drift` · `finish` · `--seats k` — and its own
+docstring is the argument for this session: *"thin over the real engine — there is no modelling here."*
+Meanwhile `app/streamlit_app.py` is a **different, older application** that cannot select the live
+season, does not know the value chain exists, and has never met a personality. The gap between them is
+the entire product.
+
+So K1 is a **port of a working surface**, not new modelling — which is why a full app half fits in one
+session. The measure of success is correspondingly blunt: *the app and the CLI must agree to the digit.*
+
+Two things found while scoping that are real work, not glue:
+- **`LeagueSettings` (17.3) is orphaned.** Outside its own gate `steps/phase17_formats.py`, nothing
+  imports it — `mock_draft.build_board` runs `DraftConfig()` defaults, `room_board(teams=10)`,
+  `LeagueFormat(n_teams=st.n_teams)`. Phase 17 is correctness-tested and wired to nothing a user touches.
+- **T32 is still open** and bites the app first: `mock.room_board`'s cache key omits the board vintage,
+  so the mandated Stage-0 chore does not invalidate it (measured 2026-07-30: `resolve_board` **244** rows
+  vs the cached **223**). An app whose whole job is rendering the live board must not serve a stale one.
+
+**Stop and report after each step** (CLAUDE.md rule 7 — **not waived**; step 4 contains user decisions
+about their own league, and step 0 invalidates every board cache).
+
+### Step 0 — T32: put the board vintage in the cache key → `draft/mock.py`, `data/validate.py`
+`room_board` caches on `(season, scoring, teams, include_dst, ENRICH_VERSION)` — nothing about *which
+snapshot* `resolve_board` answered with (`src/fantasy_quant/draft/mock.py:168`). Add the vintage; rebuild
+the nine season caches (~6 min/season cold, a cost T31's `ENRICH_VERSION` bump already paid once).
+- **Bar B2.** `room_board` row count **==** `resolve_board` row count on the live season, and the 25
+  currently-invisible players appear. Assert it, don't eyeball it.
+
+### Step 1 — the app skeleton on the live path → new `app/` module set
+- Season selector reads the **live** season. The current `DEV_SEASONS`-only selector
+  (`app/streamlit_app.py:78`) is the single line that makes today's app useless for drafting.
+- **One** cached `(board, value_index, risk)` build, ported from `mock_draft.build_board` — which exists
+  in that shape precisely because T27 proved the display path and the decision path must not be
+  constructed separately. `@st.cache_resource` for the connection, `@st.cache_data` for the build.
+- **Draft state.** The CLI pickles to `data/interim/mock/draft_state.pkl` between shell invocations;
+  Streamlit reruns top-to-bottom per interaction, so state moves to `st.session_state` — with the pickle
+  kept as an explicit **export/resume**, so a CLI draft and an app draft are the same object and B1 is
+  checkable at all.
+
+### Step 2 — the board and the `why` panel → `app/`
+- Port `show_available`'s columns: `ADP · PROJ · MEAN · AVAIL · BV · VBD · RK · UPSIDE · FLOOR · TAIL ·
+  BOOM · BUST`, sortable and position-filterable. `boom`/`bust` are the **live** pair
+  (`boom_prob_live`/`bust_prob_live`); a player we have never seen play renders **`-`, never `0.00`** —
+  the T22 rule, which is the whole reason that column was rebuilt.
+- Click a player → `explain`'s chain, rendered. **Every line is an identity read from the frozen
+  contracts, not a re-derivation** (`λ·Var` is printed as `mean − ce_value`, replacement as
+  `ce_value − ce_vbd`). That property *is* the command; a display layer that recomputes the chain can
+  drift away from the stack it claims to explain.
+
+### Step 3 — the draft room → `app/` *(the UI half of 16.17; full spec at §14.J, not restated here)*
+- 16.15 personality selector + **14.J**'s per-seat YOU toggle over the 16.17 `SeatMap`; any k of n.
+  The engine call is identical for every k — that was 16.17's done-bar.
+- Clock routing ("T3 is on the clock"), autopick-this-seat, live roster + needs.
+- Post-draft `summary` printing **`STARTABLE` and `CAPITAL` both, labelled** (T28: they disagreed by
+  −122 on one QB2 line), and season odds **led by the fair-share multiple** — `1.70x`, never a bare
+  `17.0 %` (T29: the weakest number in the stack wearing the most authoritative costume).
+- **The two honesty rules must RENDER, not merely be true.** k human seats get k blocks with **nowhere
+  to put a combined number** (k teams in one draft are ONE observation — their picks deplete each
+  other's pools), and the T15 realism bars print their scope (they describe a *fully-simulated* room).
+
+### Step 4 — the settings form (17.3) + the cost tab → `app/`, retire `app/streamlit_app.py`
+- `LeagueSettings` as a real form → `ruleset()` / `roster_slots()` / `league_format()` / `LeagueSetup`
+  threaded through the board build, the room and the sim. This is what un-orphans Phase 17.
+- **`lockbox_validated()` rendered as a visible banner.** It is an honesty method, not a feature flag:
+  non-default formats are supported and correctness-tested and carry **no** out-of-sample claim.
+- Then `personalization_cost` as one tab — your team beside the pure-value benchmark, the per-preference
+  leave-one-out cost — now on the **live** board. This is the direct-indexing deliverable the whole
+  2026-07-04 reframe was built around, and it is currently the *only* thing the old app does.
+- **Retire `app/streamlit_app.py` here**, once its tab is ported. Delete, don't rename.
+
+### Pre-registered bars
+- **B1 (hard).** App and CLI, same season / seat / room / seed → **identical** board rows, pick sequence
+  and summary numbers. *A display port that moves a number is not a display port.*
+- **B2.** Step 0's row-count identity (above).
+- **B3.** Settings round-trip: the lockbox case rebuilds `RosterSlots()` / `LeagueFormat()` /
+  `DEFAULT_RULESET` **exactly** — reuse the existing assertion at `steps/phase17_formats.py:126-129` —
+  and `lockbox_validated()` renders true; a superflex change renders the banner.
+- **B4.** A k-of-n mock runs end-to-end in the app for k ∈ {0,1,4,9,10}, reusing 16.17's legality bar.
+- **B5.** Every rendered `why` line equals `explain()`'s number for the same player.
+- **B6.** Changing the scoring preset requires **explicit confirmation**, and a test asserts the default
+  preset returns `RuleSet()` *itself*. (Session I: `RuleSet` is serialized into `cached_distribution`'s
+  cache key, so a cosmetic name difference splits the cache and forces a silent nine-season rebuild —
+  a dropdown must not be able to trigger that quietly.)
+
+**Named risks.** (1) *Cache invalidation via scoring* — B6 exists for it. (2) *Cold-start latency* —
+`assemble_value` + `build_risk_model` + a 400-sim `league_odds` are not interactive-speed cold; odds
+compute on demand, never per rerun.
+
+**Sizing.** ~600–900 lines, ~6 files, ~10–15 tests. Larger than Session I.5, smaller than Session I.
+Done-bar `steps/session_k1_app.py` → `analysis/session_k1_app.json`.
+
+### ✅ OUTCOME (2026-07-30) — all six bars + two live-boot checks PASS
+`analysis/session_k1_app.json` · `steps/session_k1_app.py` · **690 tests** (was 669), ruff clean.
+
+**★ The design decision that made B1 free: one computation, two renderers.** The port could have
+re-derived the board table, the `why` chain, the summary and the odds inside the app and then been
+*tested* against the CLI. This repo has that failure on file three times under three names — T18
+(`avg_reach`), F.5 (the hardcoded `scoring`), T27 (the display path and the decision path built
+separately, so the interactive room was never the shipped room) — and `mock.py`'s own docstring
+already states the rule: *if the two sides of a comparison are computed by different code, the
+comparison measures the code.* So every derived frame moved into a new
+`src/fantasy_quant/draft/session.py`, and `steps/mock_draft.py` became a **renderer** over it.
+Verified by banking the CLI's output before the refactor and diffing after: **byte-identical across
+seven commands.** B1 is then not a coincidence to be re-checked each session — it is the shape of
+the code.
+
+| bar | result |
+|---|---|
+| **B1** app == CLI, same seed | **150/150 picks identical**, 10/10 teams, 0 differing summary numbers. CLI run as a *subprocess* and parsed off stdout; app run in-process — two entry points, one engine |
+| **B2** T32 row identity | `resolve_board` **244** == `room_board` **244**, 0 missing |
+| **B3** settings round-trip | lockbox case rebuilds `RosterSlots()`/`LeagueFormat()`/`DEFAULT_RULESET` exactly; superflex renders unvalidated; an 11-team league is refused with a reason |
+| **B4** k of n | k ∈ {0,1,4,9,10} complete, **0 avoidable** unfilled starting slots |
+| **B5** `why` identities | **40/40** players on the live board, 0 mismatched |
+| **B6** cache-key safety | `ruleset_from_preset("full_ppr") is RuleSet()`-equal incl. `name`; scoring change gated behind explicit confirmation |
+| **APP** AppTest | 4 tabs, **0 exceptions** |
+| **APP** headless server | health 200, page 200, no traceback |
+
+**★★ THE FINDING TO CARRY FORWARD — the two bugs both surfaces shared were found by *booting the
+app*, not by the test suite.** `explain_chain` and the cost tab's player picker both need the
+**prepared** board (`_prepare_board` is where `player_key`/`player_name`/`pos` come from; the raw
+frame carries `gsis_id`/`name`/`position`). B5 caught the first on the live board and the AppTest
+run caught the second, and **17 offline unit tests had passed through both** — because the fixture
+board was hand-built with every column the code happened to want. *A column set is part of a
+function's contract even when nothing declares it, and a fixture rich enough to satisfy every
+consumer cannot detect that one of them is being handed the wrong frame.* This is T22's lesson
+("the display layer is a consumer") arriving at the layer below it.
+
+**Shipped:** `src/fantasy_quant/draft/session.py` (the shared core) · `app/` = `engine.py` ·
+`views.py` · `settings_form.py` · `main.py` (top-level package, per user decision — the engine is a
+library that knows nothing about how it is displayed) · `steps/session_k1_app.py` ·
+`tests/test_app.py` (17) + 4 T32 tests in `test_mock.py`. **Retired:** `src/fantasy_quant/app/`
+deleted entirely (the T18 rule — delete rather than leave a half-ported file someone reads stale
+numbers out of). `pyproject.toml` gained `pythonpath = ["src", "."]` and `app` in ruff's `src`.
+
+**Open, deliberately:** the app has no **auction** surface (15.4 exists in the engine), no keeper
+entry (17.4 exists), and `draft_type` is not offered in the form — all three are Session K2/L
+questions, not defects. The season selector lists every boarded season, not just the live one, so
+DEV seasons remain reachable for inspection; the *default* is the live board.
+
+**★ What this session is NOT.** Not K2 (14.E tier-cliff · 14.F roster risk · 14.G uncertainty board ·
+14.I draft grade · 16.6 Beta Lab · 16.12 reach-risk · PLAYER-VIEW deep pages — none of them block a
+draft). Not T33 (its own seating-marginalized measurement session; it should land before 14.J's
+multi-seat UI is *trusted*, since k makes the value hawk's divisor vary). Not T26 (deferred to the next
+11.1 refit by design). Not FastAPI or Next.js — that is §14.3a and Session L+.
 
 # Phase 17 — League-Format Fidelity & Custom Settings *(new 2026-07-23; correct advice for ANY league)*
 *Goal: the engine hard-codes vanilla 10-team full-PPR 1-QB (`RosterSlots.qb=1`, `flex=1`, `season.py` raises

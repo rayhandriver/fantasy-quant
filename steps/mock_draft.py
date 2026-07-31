@@ -26,6 +26,13 @@ Thin over the real engine — there is no modelling here:
   mechanics  ``DraftState``/``_apply_pick``, one pick at a time instead of ``run_to_completion``
   drift      ``mock.sim_drift_panel`` — the same frame ``steps/t15_0_baseline.py`` measures
 
+★ **Session K1 — this file is now a RENDERER.** Every derived frame it prints comes from
+:mod:`fantasy_quant.draft.session`, which the Streamlit app reads too. The functions here decide
+column widths and where the arrows point; they do not decide what a number is. That is deliberate
+and it is the T18/F.5/T27 rule applied before the fact: two surfaces computing the same quantity is
+how the two drift apart, so *there is one computation and two renderers*. If you are about to
+compute something in this file, it belongs in ``session.py``.
+
 State is pickled between invocations so a draft survives across shell calls (and chat turns); the
 opponents' rng lives in ``DraftState``, so the room stays reproducible from ``--seed``.
 
@@ -48,21 +55,24 @@ from __future__ import annotations
 
 import argparse
 import pickle
-from dataclasses import replace
 from pathlib import Path
 
 import duckdb
 import numpy as np
 import pandas as pd
 
-from fantasy_quant.draft import mock, optimizer
+from fantasy_quant.draft import mock, session
 from fantasy_quant.draft.config import DraftConfig
-from fantasy_quant.draft.personalities import (
-    DEFAULT_ROOM,
-    HUMAN,
-    REALISTIC_ROOM,
-    SeatMap,
-    personalities,
+from fantasy_quant.draft.personalities import SeatMap
+from fantasy_quant.draft.session import (
+    REALISTIC_NINE,
+    advance,
+    auto_teams,
+    realistic_mix,
+    room_from,
+    room_mix,
+    seat_label,
+    seat_map_from,
 )
 from fantasy_quant.draft.simulator import (
     DraftState,
@@ -72,6 +82,9 @@ from fantasy_quant.draft.simulator import (
     pick_by_adp,
     run_to_completion,
 )
+
+__all__ = ["REALISTIC_NINE", "advance", "auto_teams", "realistic_mix", "room_from", "room_mix",
+           "seat_label", "seat_map_from"]
 
 DB = Path("data/fantasy_quant.duckdb")
 STATE = Path("data/interim/mock/draft_state.pkl")
@@ -83,31 +96,22 @@ def _con():
 
 
 def build_board(season: int = 2026, teams: int = 10) -> tuple[pd.DataFrame, pd.DataFrame, object]:
-    """``(board, value_index, risk)`` — the board a human reads **and** the value every seat
-    optimizes, built from one call so they cannot disagree about which season they describe.
+    """``(board, value_index, risk)`` — :func:`session.build_board`, opened and announced.
 
-    ★ **T27 — this used to return the board alone, and that was the ticket.** ``proj_points`` (the
-    consensus number printed at every turn) rode in on a hand-rolled re-attach, ``base_value`` (the
-    risk-adjusted VOR that actually drives utility, the value hawk's objective and every seat's
-    priority rank) was never attached at all, and with no ``risk`` model the room's ``value_hawk``
-    seat silently fell back to the behavioral softmax — i.e. the *interactive* mock ran a different
-    room from every batch measurement in the repo. All three are the same defect: the display path
-    and the decision path were built separately.
+    The build itself moved to ``session.py`` (Session K1) so the app gets the *same* board, value
+    index and risk model rather than an independently-assembled lookalike. What stays here is the
+    connection and the one printed line.
     """
     con = _con()
-    board, src = mock.room_board(con, season, teams=teams, cache_dir=CACHE)
-    if board.empty:
-        raise SystemExit(f"no {season} board at teams={teams}")
-    config = DraftConfig()
-    vi = optimizer.assemble_value(con, season, config)
-    board = optimizer.attach_value(board, vi)
-    risk = optimizer.build_risk_model(board, vi, optimizer.assemble_correlation(con, season),
-                                      lam=config.risk_lambda)
-    con.close()
-    have = int(board["base_value"].notna().sum())
-    print(f"  board: {len(board)} players ({src} ADP + frozen Phase-4/5 context) · "
-          f"{have} carry base_value · λ={config.risk_lambda}")
-    return board, vi, risk
+    try:
+        built = session.build_board(season=season, teams=teams, con=con, cache_dir=CACHE)
+    except LookupError as exc:
+        raise SystemExit(str(exc)) from None
+    finally:
+        con.close()
+    print(f"  board: {len(built['board'])} players ({built['source']} ADP + frozen Phase-4/5 "
+          f"context) · {built['n_base_value']} carry base_value · λ={built['lam']}")
+    return built["board"], built["value_index"], built["risk"]
 
 
 # ---------------------------------------------------------------------------------- state io
@@ -127,74 +131,13 @@ def load() -> tuple[DraftState, dict, pd.DataFrame | None, object]:
     return d["state"], d["meta"], d.get("vi"), d.get("risk")
 
 
-#: The nine opponents a human faces, from the ten-seat shipped room. One ``balanced`` seat is the
-#: one dropped, because **you** are taking a seat and ``balanced`` is the modal manager — removing
-#: any character seat instead would change the composition 16.14R step 7 validated.
-#:
-#: ★ **16.17 generalizes the same rule to k seats:** :func:`realistic_mix` drops **one ``balanced``
-#: per human seat**, for exactly the argument above, and refuses once there are no ``balanced``
-#: seats left to give up rather than silently deleting a character seat and quietly changing the
-#: composition step 7 validated.
-REALISTIC_NINE: tuple[str, ...] = tuple(
-    [n for i, n in enumerate(REALISTIC_ROOM) if not (n == "balanced" and i == REALISTIC_ROOM.index(
-        "balanced"))])
-
-
-def realistic_mix(n_humans: int, n_teams: int = 10) -> tuple[str, ...]:
-    """The shipped room with ``n_humans`` seats taken out of it — one ``balanced`` per human."""
-    names = list(REALISTIC_ROOM)
-    if n_teams != len(REALISTIC_ROOM):
-        raise SystemExit(f"--room realistic is the {len(REALISTIC_ROOM)}-seat shipped room; "
-                         f"pass an explicit --room for a {n_teams}-team draft")
-    if n_humans >= n_teams:               # k = n: you drive the whole table, there is no room
-        return ()
-    for _ in range(n_humans):
-        if "balanced" not in names:
-            raise SystemExit(
-                f"the shipped room has only {REALISTIC_ROOM.count('balanced')} `balanced` seats to "
-                f"give up; for {n_humans} human seats pass an explicit --room of "
-                f"{n_teams - n_humans} names")
-        names.remove("balanced")
-    return tuple(names)
-
-
-def room_mix(arg: str | None, n_humans: int = 1, n_teams: int = 10) -> tuple[str, ...]:
-    """``--room`` -> the modelled-seat mix. Default is the **shipped** room, not the pre-16.14R
-    one; it must be exactly ``n_teams - n_humans`` long, which :meth:`SeatMap.of` re-checks."""
-    if arg in (None, "", "realistic"):
-        return realistic_mix(n_humans, n_teams)
-    if arg == "default":
-        return tuple(DEFAULT_ROOM)
-    return tuple(x.strip() for x in arg.split(","))
-
-
-def room_from(meta: dict):
-    lib = personalities()
-    return tuple(replace(lib[n], fav_teams=tuple(meta.get("fav", ())))
-                 if (meta.get("fav") and n == "homer") else lib[n]
-                 for n in meta["room"])
-
-
-def seat_map_from(meta: dict) -> SeatMap:
-    """Rebuild the draft's :class:`SeatMap` from the pickled ``meta``.
-
-    ``meta["human_teams"]`` is 16.17's; a draft started before it falls back to ``{your_team}``,
-    which is what that draft was. Rebuilding rather than pickling the map itself keeps the state
-    file readable across a code change to :class:`Personality` — the same reason ``meta`` stores
-    personality *names* and not objects.
-    """
-    humans = meta.get("human_teams", [meta["your_team"]])
-    return SeatMap.of(meta["teams"], human_teams=humans, room=room_from(meta))
-
-
-def seat_label(team: int, sm: SeatMap) -> str:
-    """``YOU (T3)`` for a human seat in a multi-seat draft, ``YOU`` when you drive only one."""
-    if sm.seats[team] != HUMAN:
-        return sm.seats[team].name
-    return "YOU" if len(sm.human_teams) == 1 else f"YOU (T{team + 1})"
-
-
 # ---------------------------------------------------------------------------------- display
+# `REALISTIC_NINE`, `realistic_mix`, `room_mix`, `room_from`, `seat_map_from`, `seat_label`,
+# `auto_teams` and `advance` moved to `draft/session.py` in Session K1 and are re-exported above:
+# the app drives the same room through the same SeatMap, and a second copy of the room-composition
+# rule is precisely how the shipped mix and the interactive mix would come apart (T27, one level
+# up).
+# The only adaptation is at the boundary — `session` raises `ValueError`, this CLI exits.
 def fmt_pick(r: dict, sm: SeatMap) -> str:
     return (f"  {r['round']:>2}.{r['pick_in_round']:02d}  {'T' + str(r['team'] + 1):<4}"
             f"{seat_label(r['team'], sm):<15}{r['player_name'][:23]:<24}{r['pos']:<4}"
@@ -203,35 +146,28 @@ def fmt_pick(r: dict, sm: SeatMap) -> str:
 
 def show_available(st: DraftState, n: int = 18, pos: str | None = None,
                    team: int | None = None) -> None:
-    pool = st.draftable_pool(st.your_team if team is None else team)
-    if pos:
-        pool = pool[pool["pos"].isin([p.strip().upper() for p in pos.split(",")])]
-    # BOOM/BUST are the **live** pair (T22): the frozen Phase-5 columns are
-    # `weekly_volatility(max(train_seasons))`, which on a live board is 2022, and a player who was
-    # not in the league that season reads 0.00 — i.e. *never busts*. `boom_prob_live`/
-    # `bust_prob_live` are the same rates on season − 1, and a player we have never seen play
-    # prints "-" rather than a fabricated zero. TAIL is `tail_risk`, the relative q90−q10 spread —
-    # the column 16.14R shipped as the honest boom-or-bust read.
-    # ★ T27 — the value chain first, in the order the arithmetic runs:
-    #   PROJ   consensus projection, re-scored full-PPR. The number a human trusts.
-    #   MEAN   the Phase-5 season mean = PROJ x projected availability. The level correction.
-    #   AVAIL  games_played_mean — **the column that explains the gap between the first two.**
-    #   BV     base_value = ce_vbd = (MEAN - lambda*Var) - positional replacement. What every
-    #          seat's utility, the value hawk's objective and the priority rank actually run on.
-    # Before this, the board printed PROJ and the room optimized BV, and on the 2026 board those
-    # disagree by up to 179 points (Drake Maye +68.5 vs Jayden Daniels -101.6, 3 points apart on
-    # screen). `why "<player>"` prints the whole chain for one player.
+    """The best-available table. Columns and their meaning: :data:`session.BOARD_VIEW_COLS`.
+
+    ★ T27 — the value chain reads left to right in the order the arithmetic runs: ``PROJ`` the
+    consensus projection a human trusts, ``MEAN`` the Phase-5 season mean (PROJ x availability),
+    ``AVAIL`` the games-played read that explains the gap, ``BV`` the ``base_value`` every seat's
+    utility actually runs on. On the 2026 board PROJ and BV disagree by up to 179 points (Drake
+    Maye +68.5 vs Jayden Daniels −101.6, three points apart on screen); ``why`` prints the chain.
+
+    ⚠ T22 — ``BOOM``/``BUST`` are the **live** pair, and a player we have never seen play prints
+    ``-`` rather than a fabricated ``0.00`` (which reads as *never busts*).
+    """
+    view = session.board_view(st, team=team, pos=pos, n=n)
+    fmt = {"ADP": ">6.1f", "PROJ": ">6.0f", "MEAN": ">6.0f", "AVAIL": ">6.1f", "BV": ">+7.0f",
+           "VBD": ">6.0f", "RK": ">5.0f", "UPSIDE": ">+7.2f", "FLOOR": ">+7.2f",
+           "TAIL": ">+7.2f", "BOOM": ">6.2f", "BUST": ">6.2f"}
     print(f"  {'#':<5}{'PLAYER':<22}{'POS':<4}{'ADP':>6}{'PROJ':>6}{'MEAN':>6}{'AVAIL':>6}"
           f"{'BV':>7}{'VBD':>6}{'RK':>5}{'UPSIDE':>7}{'FLOOR':>7}{'TAIL':>7}{'BOOM':>6}{'BUST':>6}")
-    for idx, r in pool.head(n).iterrows():
-        def g(c, fmt=".2f", row=r):
-            v = row.get(c, np.nan)
-            return format(v, fmt) if pd.notna(v) else "-"
-        print(f"  {idx:<5}{r['player_name'][:21]:<22}{r['pos']:<4}{r['adp']:>6.1f}"
-              f"{g('proj_points', '.0f'):>6}{g('mean', '.0f'):>6}{g('games_played_mean', '.1f'):>6}"
-              f"{g('base_value', '+.0f'):>7}{g('vbd', '.0f'):>6}{g('overall_rank', '.0f'):>5}"
-              f"{g('upside', '+.2f'):>7}{g('floor', '+.2f'):>7}{g('tail_risk', '+.2f'):>7}"
-              f"{g('boom_prob_live', '.2f'):>6}{g('bust_prob_live', '.2f'):>6}")
+    for idx, r in view.iterrows():
+        cells = "".join(
+            format(r[c], f) if pd.notna(r[c]) else format("-", f">{f.split('.')[0][1:]}")
+            for c, f in fmt.items())
+        print(f"  {idx:<5}{str(r['PLAYER'])[:21]:<22}{str(r['POS']):<4}{cells}")
 
 
 def explain(board: pd.DataFrame, vi: pd.DataFrame, query: str, lam: float) -> None:
@@ -243,90 +179,34 @@ def explain(board: pd.DataFrame, vi: pd.DataFrame, query: str, lam: float) -> No
     Phase-4/5 stack actually computed rather than a display-layer reimplementation of it that could
     drift away from it. That is the whole point of the command — an auditable path, not a caption.
     """
-    q = query.strip().lower()
-    hit = board[board["player_name"].str.lower().str.contains(q, regex=False)]
-    if hit.empty:
+    entries = session.explain_chain(board, vi, query, lam)
+    if not entries:
         print(f"no player on the board matching {query!r}")
         return
-    if len(hit) > 6:
-        print(f"{len(hit)} matches — be more specific")
+    if len(entries) > 6:
+        print(f"{len(entries)} matches — be more specific")
         return
-    idx = vi.drop_duplicates("player_key").set_index(vi["player_key"].astype(str))
-    for _, r in hit.iterrows():
-        v = idx.loc[str(r["player_key"])] if str(r["player_key"]) in idx.index else None
-        print(f"\n=== {r['player_name']} ({r['pos']}, ADP {r['adp']:.1f}) ===")
-        if v is None or pd.isna(v.get("mean")):
-            print("  no Phase-5 distribution — this player drafts on ADP fallback "
-                  "(base_value is NaN, so no seat's value objective can see him).")
+    for e in entries:
+        print(f"\n=== {e['name']} ({e['pos']}, ADP {e['adp']:.1f}) ===")
+        if not e["ok"]:
+            print(f"  {e['reason']}")
             continue
-        proj, mean = float(v["proj_points"]), float(v["mean"])
-        ce, ce_vbd = float(v["ce_value"]), float(v["ce_vbd"])
-        gp = r.get("games_played_mean", np.nan)
-        lam_var, repl = mean - ce, ce - ce_vbd
-        w, pos = 36, str(r["pos"])
-        avail = f"games_played_mean {gp:.1f} of 17" if pd.notna(gp) else "(no availability read)"
-        haircut = f"haircut {1 - mean / proj:+.1%}" if proj else "(no consensus projection)"
-
-        def row(label: str, value: float | None, note: str = "", width: int = w) -> None:
-            shown = "" if value is None else format(value, ">10.1f")
-            print(f"  {label:<{width}}{shown:>10}   {note}".rstrip())
-
-        row("consensus projection (PROJ)", proj, "full-PPR, re-scored by our RuleSet")
-        row("x projected availability", None, avail)
-        row("= Phase-5 season mean (MEAN)", mean, haircut)
-        row("  sd", float(v["sd"]))
-        row(f"- lambda*Var   (lambda = {lam:.3g})", -lam_var)
-        row("= certainty equivalent (ce_value)", ce, "the risk dial's output")
-        row(f"- replacement CE at {pos}", -repl, f"the {pos} a waiver claim gets you")
-        row("= BASE_VALUE — what seats optimize", ce_vbd)
-        row("(frozen Phase-4 VBD, for reference)", float(v["vbd"]))
+        for r in e["rows"]:
+            shown = "" if r["value"] is None else format(r["value"], ">10.1f")
+            print(f"  {r['label']:<36}{shown:>10}   {r['note']}".rstrip())
 
 
 def show_roster(st: DraftState, team: int) -> None:
-    r = st.roster(team)
+    r = session.roster_view(st, team)
     if r.empty:
         print("  (empty)")
         return
-    order = {"QB": 0, "RB": 1, "WR": 2, "TE": 3, "K": 4, "DST": 5}
-    r = r.assign(_o=r["pos"].map(order)).sort_values(["_o", "adp"])
-    tot = 0.0
     for _, p in r.iterrows():
-        pp = p.get("proj_points", np.nan)
-        tot += float(pp) if pd.notna(pp) else 0.0
+        pp = p["proj_points"]
         shown = f"{pp:.0f}" if pd.notna(pp) else "-"
-        print(f"  {p['pos']:<4}{p['player_name'][:24]:<26}ADP {p['adp']:>6.1f}"
+        print(f"  {p['pos']:<4}{str(p['player_name'])[:24]:<26}ADP {p['adp']:>6.1f}"
               f"  proj {shown:>4}")
-    print(f"  {'':<4}{'TOTAL (consensus proj pts)':<26}{'':>10}  {tot:>9.0f}")
-
-
-def auto_teams(meta: dict) -> frozenset[int]:
-    """Human seats the caller handed to the ADP autopicker (``--auto``) — still *yours*, just not
-    typed by hand. The same seam 9.5's rollout uses on your own seat internally."""
-    return frozenset(int(t) for t in meta.get("auto", ()))
-
-
-def advance(st: DraftState, meta: dict, risk=None) -> list[dict]:
-    """Run modelled (and ``--auto``) picks until a seat **you** drive is on the clock.
-
-    ``risk`` is what routes the room's ``value_hawk`` seat to the Phase-9 greedy instead of the
-    behavioral softmax (T27). Omitting it now **raises** rather than silently seating a second
-    ``balanced`` — see :func:`~fantasy_quant.draft.personalities.assert_room_objectives`.
-
-    ★ **16.17 — the stop condition is membership, not equality.** It was ``team == st.your_team``,
-    which is why a second human seat would have been drafted *for* you by the room.
-    """
-    sm = seat_map_from(meta)
-    opp = sm.pick_fn(mock.load_opponent_model(), risk=risk)
-    auto = auto_teams(meta)
-    made: list[dict] = []
-    while not st.is_done() and st.available:
-        team = st.team_on_clock()
-        if team in st.human_teams and team not in auto:
-            break
-        idx = pick_by_adp(st, team, noise=0.0) if team in auto else int(opp(st, team))
-        _apply_pick(st, team, idx)
-        made.append(st.log[-1])
-    return made
+    print(f"  {'':<4}{'TOTAL (consensus proj pts)':<26}{'':>10}  {session.roster_total(r):>9.0f}")
 
 
 def report_turn(st: DraftState, meta: dict, made: list[dict], n: int = 18,
@@ -374,25 +254,14 @@ def summary(st: DraftState, meta: dict, vi: pd.DataFrame | None = None) -> None:
     """
     sm = seat_map_from(meta)
     print("\n=== FINAL ROSTERS ===")
-    slots = st.slots
-    rows = []
-    for t in range(st.n_teams):
-        roster = st.roster(t)
-        pp = pd.to_numeric(roster.get("proj_points"), errors="coerce").fillna(0.0)
-        row = {"team": t + 1, "who": seat_label(t, sm), "human": t in sm.human_teams,
-               "proj": float(pp.sum()), "starters": float(pp.nlargest(9).sum())}
-        if vi is not None:
-            row["startable"] = optimizer.starter_value(roster, vi, slots)
-            row["capital"] = optimizer.team_value(roster, vi)
-        rows.append(row)
-    tab = pd.DataFrame(rows).sort_values("starters", ascending=False)
+    tab = session.summary_table(st, sm, vi)
     has_bv = "startable" in tab.columns
     head = f"  {'RANK':<6}{'TEAM':<6}{'PERSONALITY':<16}{'TOP-9 PROJ':>12}{'FULL ROSTER':>13}"
     print(head + (f"{'STARTABLE':>11}{'CAPITAL':>10}" if has_bv else ""))
-    for i, (_, r) in enumerate(tab.iterrows(), 1):
+    for _, r in tab.iterrows():
         star = "  <-- you" if r["human"] else ""
         extra = f"{r['startable']:>11.0f}{r['capital']:>10.0f}" if has_bv else ""
-        print(f"  {i:<6}{'T' + str(int(r['team'])):<6}{r['who']:<16}"
+        print(f"  {int(r['rank']):<6}{'T' + str(int(r['team'])):<6}{r['who']:<16}"
               f"{r['starters']:>12.0f}{r['proj']:>13.0f}{extra}{star}")
     print("\n  (Top-9 proj = the 9 best consensus projections on the roster — a rough")
     print("   team-strength readout, not the Phase-10 season sim. Projected-points rankings")
@@ -420,35 +289,20 @@ def league_odds(st: DraftState, meta: dict, sims: int = 400) -> None:
     −113 pts/team level bias. A ratio to the uniform is immune to that bias because it moves all
     ten teams together, so ``1.70x`` is a claim the evidence supports and ``17.0 %`` is not.
     """
-    from fantasy_quant.simulation.season import (
-        LeagueFormat,
-        assert_probability_sums,
-        fair_share,
-        league_probabilities,
-        playoff_fair_share,
-        provenance_lines,
-    )
-    from fantasy_quant.simulation.weekly import build_weekly_model
-
-    con = _con()
-    fmt = LeagueFormat(n_teams=st.n_teams)
-    wm = build_weekly_model(con, meta.get("season", 2026), DraftConfig().league.ruleset, seed=0)
-    con.close()
-    rosters = [st.roster(t) for t in range(st.n_teams)]
-    pp, tp = league_probabilities(rosters, wm, fmt, st.slots, np.random.default_rng(0), sims=sims)
-    assert_probability_sums(pp, tp, fmt)                      # 3c — a structural identity
-    pf, tf = playoff_fair_share(pp, fmt), fair_share(tp, fmt.n_teams)
-
     sm = seat_map_from(meta)
+    con = _con()
+    try:
+        tab, prov = session.odds_table(con, st, meta, sm, sims=sims)
+    finally:
+        con.close()
     print("\n=== SEASON ODDS (Phase-10 sim) ===")
-    print("\n".join(provenance_lines(sims, fmt)))
-    order = np.argsort(-tf)
+    print("\n".join(prov))
     print(f"\n  {'TEAM':<6}{'PERSONALITY':<16}{'PLAYOFF':>9}{'vs FAIR':>9}"
           f"{'TITLE':>9}{'vs FAIR':>9}")
-    for t in order:
-        star = "  <-- you" if t in sm.human_teams else ""
-        print(f"  {'T' + str(t + 1):<6}{seat_label(t, sm):<16}{pp[t]:>8.1%}{pf[t]:>8.2f}x"
-              f"{tp[t]:>9.1%}{tf[t]:>8.2f}x{star}")
+    for _, r in tab.iterrows():
+        star = "  <-- you" if r["human"] else ""
+        print(f"  {'T' + str(int(r['team'])):<6}{r['who']:<16}{r['playoff']:>8.1%}"
+              f"{r['playoff_fair']:>8.2f}x{r['title']:>9.1%}{r['title_fair']:>8.2f}x{star}")
     if len(sm.human_teams) > 1:
         print("\n  (Your seats' probabilities are NOT independent and do not add up to your")
         print("   chance of winning the league — the sim runs one league in which they play each")
@@ -465,13 +319,11 @@ def human_seats(a) -> list[int]:
     """
     raw = a.seats if getattr(a, "seats", None) else str(a.seat)
     try:
-        seats = [int(x.strip()) - 1 for x in str(raw).split(",") if x.strip()]
-    except ValueError:
-        raise SystemExit(f"--seats wants comma-separated seat numbers, got {raw!r}") from None
+        seats = session.parse_seats(str(raw))
+    except ValueError as exc:
+        raise SystemExit(str(exc).replace("seats wants", "--seats wants")) from None
     if not seats:
         raise SystemExit("--seats needs at least one seat (or use --seats '' for a 0-human room)")
-    if len(set(seats)) != len(seats):
-        raise SystemExit(f"--seats has a repeat: {raw!r}")
     return seats
 
 
@@ -522,21 +374,17 @@ def cmd_pick(a) -> None:
                          f"({', '.join('T' + str(t + 1) for t in sorted(st.human_teams))})")
     if team != st.team_on_clock():
         raise SystemExit(f"T{team + 1} is not on the clock — T{st.team_on_clock() + 1} is")
-    pool = st.draftable_pool(team)
     q = a.query.strip()
-    if q.isdigit() and int(q) in pool.index:
-        idx = int(q)
-    else:
-        hit = pool[pool["player_name"].str.lower().str.contains(q.lower(), regex=False)]
-        if hit.empty:
+    found = session.resolve_pick(st, team, q)
+    if isinstance(found, list):
+        if not found:
             print(f"no available player matching {q!r}")
             return
-        if len(hit) > 1:
-            print(f"{len(hit)} matches — be more specific or use the # column:")
-            for i, r in hit.head(10).iterrows():
-                print(f"  {i:<5}{r['player_name']:<24}{r['pos']:<4}ADP {r['adp']:.1f}")
-            return
-        idx = int(hit.index[0])
+        print(f"{len(found)} matches — be more specific or use the # column:")
+        for m in found[:10]:
+            print(f"  {m['index']:<5}{m['player_name']:<24}{m['pos']:<4}ADP {m['adp']:.1f}")
+        return
+    idx = found
     row = st.board.loc[idx]
     _apply_pick(st, team, idx)
     print(f"\n>>> T{team + 1} picks {row['player_name']} ({row['pos']}, "
@@ -606,19 +454,15 @@ def cmd_drift(a) -> None:
     """This draft in the corpus's own units — the eyeball bar, quantified."""
     st, meta, _, _ = load()
     # 16.17: the panel wants one label per team, and `SeatMap` is where that mapping lives now.
-    sm = seat_map_from(meta)
-    labels = [seat_label(t, sm) for t in range(st.n_teams)]
-    panel = mock.sim_drift_panel(st, season=meta.get("season", 2026), draft_id="interactive",
-                                 board_teams=meta["teams"], seed=meta["seed"])
-    panel["seat_personality"] = panel["draft_slot"].map(lambda s: labels[s - 1])
+    d = session.drift_frames(st, meta, seat_map_from(meta))
     print("\n=== REACH PROFILE — 10-team ADP picks (compare to analysis/t15_baseline.json) ===")
-    print(mock.reach_profile(panel).round(2).to_string(index=False))
+    print(d["profile"].round(2).to_string(index=False))
     print("\n=== ELITE FALL (consensus top-12) ===")
-    print("  " + str(mock.elite_fall_profile(panel)))
+    print("  " + str(d["elite"]))
     print("\n=== PER SEAT ===")
-    print(mock.seat_table(panel).round(2).to_string(index=False))
+    print(d["seats"].round(2).to_string(index=False))
     # 16.17 honesty rule 2 — state the bars' scope rather than re-measuring them here.
-    n_h = len(sm.human_teams)
+    n_h = d["n_humans"]
     print("\n  (SCOPE: the committed T15 realism bars — profile distance, dispersion, chalk")
     print("   share, elite-fall landing — were measured on a **fully simulated** ten-seat room.")
     print(f"   This draft has {n_h} human seat(s), so these numbers describe THIS draft and are")

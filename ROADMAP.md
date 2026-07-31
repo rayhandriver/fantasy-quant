@@ -487,10 +487,24 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   → `analysis/phase16_17_seat_map.json`. UI half still ships in Session K as **14.J**.
 - **Session J — (optional) Phase 15.1 dynasty.** Multi-year asset pricing; deferred/optional per user scope —
   a short session or skipped. Keeper (17.4) already covers the nearer-term need.
-- **Session K — Phase 14.1 Streamlit MVP + all surfacing (do NOT bundle — the largest phase).** The app shell +
-  the 17.3 custom-settings form + PLAYER-VIEW cards + surfacing E/F/G/I/**J** + the 16.6 Beta Lab tab + the
-  16.12 availability/reach-risk readout + the 16.15 personality selector **with 14.J's per-seat YOU toggle on
-  it**. **Multiple-session-sized on its own.**
+- **Session K — Phase 14.1 the Streamlit MVP (do NOT bundle — the largest phase). SPLIT IN TWO 2026-07-30**,
+  by the draft calendar rather than by module: Session K was scoped as "multiple-session-sized on its own",
+  and the 2026 draft is ~4–6 weeks out, so the half a drafter actually needs ships first. Full spec + the
+  six pre-registered bars: `docs/BUILD_PLAN.md` §"Session K1". **Premise: the app is a UI over
+  `steps/mock_draft.py`, which is already a complete human-in-the-loop driver on the live board** — so K1
+  is a port of a working surface, not new modelling, and its hard bar is that **the app and the CLI agree
+  to the digit** from the same seed.
+  - **Session K1 — the draft-day half. ✅ DONE 2026-07-30.** T32 ☑ (the board-vintage cache key) → the
+    app on the **live** season → the board + the `why` value chain → the room with 14.J's per-seat YOU
+    toggle over the 16.17 `SeatMap` → the 17.3 settings form (`LeagueSettings` is no longer orphaned) +
+    the cost tab; `src/fantasy_quant/app/` deleted. **All six pre-registered bars PASS** plus two
+    live-boot checks (`analysis/session_k1_app.json`); **690 tests**, ruff clean. The port's shape is
+    the result worth carrying: every derived frame moved into `draft/session.py` and **both**
+    `steps/mock_draft.py` and the new top-level `app/` render it, so B1 (app == CLI) holds by
+    construction — the CLI's output is byte-identical across seven commands before and after.
+  - **Session K2 — surfacing.** 14.E tier-cliff · 14.F roster-construction risk · 14.G uncertainty-aware
+    board · 14.I draft grade · the 16.6 Beta Lab tab · the 16.12 availability/reach-risk readout · the
+    `PLAYER-VIEW.md` cards. All read **already-frozen** machinery; none of it blocks a draft.
 - **Session L+ — Phase 14 go-live tail (14.2–14.7).** Personalization tiers, explain, FastAPI backend, Next.js
   frontend (PLAYER-VIEW deep pages + 14.H playoff-SOS lens), Sleeper live-draft sync (+ 16.16 run-detection
   alert, item D), widget, mock-draft sim. **Expect multiple sessions**, each ≥ a single past phase.

@@ -50,8 +50,8 @@ bayes = [
   "pymc>=5.16",
   "arviz>=0.19",
 ]
-# The MVP draft app (personalization spine · step 4). Streamlit-first per PERSONALIZATION §8.
-# Install + run:  uv sync --extra ui  &&  uv run streamlit run src/fantasy_quant/app/streamlit_app.py
+# The draft app (Phase 14.1 / Session K1). Streamlit-first per PERSONALIZATION §8.
+# Install + run:  uv sync --extra ui  &&  uv run streamlit run app/main.py
 ui = [
   "streamlit>=1.38",
 ]
@@ -73,11 +73,13 @@ packages = ["src/fantasy_quant"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["src", "steps", "tests"]
+src = ["src", "steps", "tests", "app"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# "." puts the top-level `app` package on the path: the app is a renderer over the
+# engine, deliberately outside the installed library, and its tests import it.
+pythonpath = ["src", "."]

@@ -486,3 +486,99 @@ def test_narrative_shock_refuses_a_model_it_was_not_calibrated_against():
         shock.assert_transportable(new)
     # an explicitly uncalibrated shock is a placeholder, not a claim — it must not raise
     NarrativeShock().assert_transportable(new)
+
+
+# ------------------------------------------------------------------------------------------------
+# T32 — the board vintage belongs in the cache key
+# ------------------------------------------------------------------------------------------------
+def _dated_board(n: int, date: str) -> pd.DataFrame:
+    """A raw board of ``n`` rows on one snapshot date — what FFC's ``QUALIFY`` always returns."""
+    return pd.DataFrame({
+        "gsis_id": [f"00-{i:07d}" for i in range(n)],
+        "name": [f"Player {i}" for i in range(n)],
+        "position": ["RB"] * n,
+        "team": ["FA"] * n,
+        "adp": np.arange(1, n + 1, dtype=float),
+        "stdev": np.ones(n),
+        "pos_rank": np.arange(1, n + 1),
+        "snapshot_date": pd.Timestamp(date),
+    })
+
+
+@pytest.fixture
+def cached_room_board(monkeypatch, tmp_path):
+    """``room_board`` with its two expensive edges stubbed — returns ``(call, calls)``.
+
+    ``calls`` counts how many times the ~6-minute enrichment actually ran, which is the only way to
+    tell a cache *hit* from a cache *miss* that produced the same frame. Both stubs are set on the
+    ``mock`` module namespace, so the real ``boards``/``enrichment`` modules are untouched.
+    """
+    calls: list[str] = []
+
+    def fake_enrich(con, season, raw, **kw):
+        calls.append("enrich")
+        return raw.assign(mean=1.0)
+
+    monkeypatch.setattr(mock, "enrich_board", fake_enrich)
+    monkeypatch.setattr(mock, "attach_proj_points", lambda con, season, board, **kw: board)
+
+    def call(board: pd.DataFrame, source: str = "ffc") -> pd.DataFrame:
+        monkeypatch.setattr(mock.boards, "resolve_board",
+                            lambda *a, **k: (board, source))
+        return mock.room_board(None, 2026, cache_dir=tmp_path)[0]
+
+    return call, calls
+
+
+def test_board_vintage_names_the_snapshot_that_answered():
+    """The date identifies the board; the source rides along because they are different rulers."""
+    a = _dated_board(3, "2026-07-24")
+    b = _dated_board(3, "2026-07-30")
+    assert mock.board_vintage(a, "ffc") == "ffc-20260724"
+    assert mock.board_vintage(a, "ffc") != mock.board_vintage(b, "ffc")
+    # an FFC board and an ECR board are different measurements and must not share a filename
+    assert mock.board_vintage(a, "ffc") != mock.board_vintage(a, "ecr")
+    # degenerate inputs are reportable, never raising
+    assert mock.board_vintage(pd.DataFrame()) == "empty"
+    assert mock.board_vintage(a.drop(columns="snapshot_date"), "ffc") == "ffc-nodate"
+
+
+def test_a_fresh_board_is_not_served_from_a_stale_cache(cached_room_board):
+    """★ T32 itself: the Stage-0 chore banks a new board, and the next read must SEE it.
+
+    This is the defect as measured live on 2026-07-30 — 244 rows resolved, 223 served, 25 players
+    invisible to every caller — reproduced at test scale. Under the old key both boards wrote and
+    read ``board_2026_ppr_10_dst_<ENRICH_VERSION>.parquet``, so the second call was a cache hit on
+    the first board and the fresh players simply did not exist downstream.
+    """
+    call, calls = cached_room_board
+    stale = call(_dated_board(223, "2026-07-24"))
+    assert len(stale) == 223 and len(calls) == 1
+
+    fresh = call(_dated_board(244, "2026-07-30"))
+    assert len(fresh) == 244, "the newly banked board was served from the stale cache"
+    assert len(calls) == 2, "a new vintage must miss the cache, not hit it"
+
+
+def test_an_unchanged_vintage_still_hits_the_cache(cached_room_board):
+    """The fix must not cost a ~6-minute rebuild per call — same snapshot, same file, one build."""
+    call, calls = cached_room_board
+    board = _dated_board(244, "2026-07-30")
+    first, second = call(board), call(board)
+    assert len(first) == len(second) == 244
+    assert len(calls) == 1, "an unchanged board rebuilt anyway — the key is over-specified"
+
+
+def test_a_snapshot_edited_under_its_own_date_is_rebuilt_not_served(cached_room_board):
+    """The row-count guard: self-healing even when the date cannot report the change.
+
+    Stage-0 is idempotent and self-healing, so a same-day re-run can legitimately repair rows
+    without moving ``snapshot_date``. The date alone would then name two different boards, which is
+    precisely the failure mode this ticket is about — one level down. Enrichment is a pure column
+    attach, so a row-count difference is proof of staleness rather than a heuristic.
+    """
+    call, calls = cached_room_board
+    call(_dated_board(223, "2026-07-30"))
+    assert len(calls) == 1
+    healed = call(_dated_board(244, "2026-07-30"))       # same date, more rows
+    assert len(healed) == 244 and len(calls) == 2

@@ -2040,3 +2040,45 @@ because ADP is a *rank on the remaining board*, so dropping the kept player from
 whole adjustment. Adding a separate "keeper ADP shift" on top would double-count it. The other half
 is the price: the owning team forfeits that round's pick (`skipped_picks`), so keeping three studs
 means drafting three fewer times — 147 picks instead of 150.
+
+## Session K1 — the app (2026-07-30)
+
+**one computation, two renderers** — the shape a UI port should take. When a second surface needs
+the same numbers as an existing one, do not re-derive them there and then test the two against each
+other; move the derivation into one module and make **both** surfaces render it. Testing two
+implementations proves they agree *on the case tested*; sharing one proves they cannot disagree.
+`draft/session.py` is that module for the draft surface; `steps/mock_draft.py` and `app/` are its
+renderers. Generalizes T18/F.5/T27, which are the same defect at three altitudes, and it is
+`draft/mock.py`'s own rule turned into a layout: *if the two sides of a comparison are computed by
+different code, the comparison measures the code.*
+
+**a renderer formats, it does not derive** — the working test for whether code belongs in a
+surface or in the shared core. Formatting a float, choosing a column order, deciding a NaN prints
+as `-`: formatting. Subtracting two model outputs: derivation, and it has escaped.
+
+**the fixture was too rich to fail** — why 17 passing unit tests missed two `KeyError`s that a
+single real click would have raised. The test board was hand-built carrying every column any
+consumer wanted, so a function being handed the *wrong frame* (raw board vs `_prepare_board`'s)
+still found what it needed. **A column set is part of a function's contract even when nothing
+declares it, and a fixture that satisfies every consumer at once cannot detect that one of them is
+being handed the wrong one.** The corollary is a build rule: a UI's done-bar must include *running
+it* — here `AppTest` and a real headless server were the only things that caught the second bug.
+Sits directly below T22's "a column's consumers are not only the models that weight it".
+
+**board vintage** (T32) — *which snapshot* a resolved board came from: `source` + its single
+`snapshot_date`. Sufficient as an identity because `_ffc_board` closes with `QUALIFY snapshot_date
+= MAX(snapshot_date) OVER ()`, so a board never mixes vintages. Belongs in any cache key derived
+from a board, because `ENRICH_VERSION` covers the enrichment but **not its input** — which is how a
+mandated freshness chore could run weekly and invalidate nothing.
+
+**a coincidence that makes a bar pass is not a fix** — T32's gate already read 244/244 before the
+key was changed, because an unrelated `ENRICH_VERSION` bump had rebuilt the cache after the last
+Stage-0 pull. The defect was real and the pass was accidental. Distinguishing them needs a
+**control**: revert the change, re-run the tests, confirm they fail for the stated reason. Same
+discipline as 16.17's "the control can fail" bar and H.5's pre-change baseline.
+
+**`lockbox_validated()` is an honesty method, not a feature flag** *(Phase 17, rendered in K1)* —
+both branches describe **supported, correctness-tested** leagues. What differs is the *evidence*: one
+configuration has a held-out result behind it and every other one has unit tests and no
+out-of-sample claim. A UI must render the distinction rather than let a user assume the calibration
+travels.

@@ -61,6 +61,71 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
+> **★★★ Next-session pointer (2026-07-30, session 7 — ★ SESSION K1 ☑ COMPLETE: THE APP EXISTS. READ THIS FIRST.)**
+>
+> **State: 690 tests (was 669), ruff clean. UNCOMMITTED**, on top of `945e302` (Session I.5, pushed).
+> Nothing in the engine moved: no fitted β, no frozen contract, the spent lockbox not re-read.
+>
+> **Run it:** `uv sync --extra ui && uv run streamlit run app/main.py`
+> **Re-check it:** `uv run python steps/session_k1_app.py` → `analysis/session_k1_app.json`
+>
+> **★ Phase 14.1 — four tabs on the LIVE board.** Settings (17.3) · Board + `why` · Draft room
+> (any k of n, 14.J) · Cost. Plus **T32 ☑**. Write-ups: `findings.md` §"Session K1",
+> `PLAN.md` §2026-07-30 (session 7), `docs/BUILD_PLAN.md` §"Session K1" ✅ OUTCOME,
+> `docs/TECH-DEBT.md` T32 ☑, `ROADMAP.md`, `glossary.md`.
+>
+> | bar | result |
+> |---|---|
+> | **B1** app == CLI, same seed | **150/150 picks identical**, 10/10 teams, 0 differing numbers |
+> | **B2** T32 row identity | `resolve_board` 244 == `room_board` 244, 0 missing |
+> | **B3** settings round-trip | lockbox case rebuilds the engine defaults exactly; 11 teams refused |
+> | **B4** k of n ∈ {0,1,4,9,10} | all complete, **0 avoidable** unfilled slots |
+> | **B5** `why` identities | 40/40 on the live board, 0 mismatched |
+> | **B6** cache-key safety | `full_ppr` returns `RuleSet()` itself; scoring change gated |
+> | **APP** AppTest / server | 4 tabs 0 exceptions · health 200, page 200, no traceback |
+>
+> **★★ THE ONE THING TO CARRY FORWARD — the fixture was too rich to fail.** Two real bugs
+> (`explain_chain` and the cost picker were handed the **raw** board, not `_prepare_board`'s) shipped
+> past **17 passing unit tests**, because the test fixture was hand-built with every column any
+> consumer wanted. B5 on the live board caught one; **booting the app under `AppTest` caught the
+> other**. *A column set is part of a function's contract even when nothing declares it, and a
+> fixture that satisfies every consumer at once cannot detect that one is being handed the wrong
+> frame.* T22 one level down. **Keep the live-boot bars in every future app session.**
+>
+> **⚠ Do not re-derive / do not "fix":**
+> - **`draft/session.py` is the ONLY place a derived draft frame is computed.** `steps/mock_draft.py`
+>   and `app/` are **renderers** — they choose column widths, not what a number is. If you are about
+>   to compute something in either, it belongs in `session.py`. B1 holds *by construction*; a second
+>   copy is how T18/F.5/T27 happened. The CLI's output was banked before the refactor and is
+>   **byte-identical across seven commands** — re-bank and re-diff if you touch it.
+> - **`app/` is top-level, outside `src/`** (user decision). `pyproject.toml` carries
+>   `pythonpath = ["src", "."]` for pytest and `app` in ruff's `src`. Do not move it into the package
+>   — the engine is a library that knows nothing about how it is displayed.
+> - **`src/fantasy_quant/app/` is deleted, not renamed** (the T18 rule). Do not resurrect it; stale
+>   references to `app/streamlit_app.py` survive in `PROJECT.md`, `docs/BUILD_PLAN.md` §16.6/§16.12
+>   and older `CLAUDE.md`/`PLAN.md` entries — they mean **`app/main.py`** now, and are left rather
+>   than rewritten because those sections are historical.
+> - **T32's pass was accidental before the fix** — `ENRICH_VERSION`'s bump had rebuilt the 2026 cache
+>   after the Stage-0 pull, so the gate read 244/244 anyway. The v2/v3 parquets still hold **223**
+>   rows. The claim rests on the **control** (revert the key → both mechanism tests fail correctly),
+>   not on the gate. *A coincidence that makes a bar pass is not a fix.*
+> - **The honesty surfaces must keep rendering, not merely be true**: `lockbox_validated()` as a
+>   banner (both branches are *supported* leagues — the difference is evidence, not capability), the
+>   T28 `STARTABLE`/`CAPITAL` pair labelled, T29's fair-share multiple **leading** the percentage, and
+>   the two 16.17 rules with the actual k in them.
+> - **The scoring dropdown needs explicit confirmation** and that is not UI politeness: `RuleSet` is
+>   serialized into `cached_distribution`'s key, so a cosmetic change forces a silent nine-season
+>   rebuild (B6).
+>
+> **★ NEXT: user reviews + commits, then Session K2 = surfacing** — 14.E tier-cliff · 14.F roster
+> risk · 14.G uncertainty board · 14.I draft grade · the 16.6 Beta Lab tab · the 16.12
+> availability/reach-risk readout · the `PLAYER-VIEW.md` cards. All read already-frozen machinery.
+> **Not in the app yet, deliberately:** auction (15.4), keeper entry (17.4), `draft_type` — engine-
+> complete, K2/L questions. Open against the mock drafter: **T33** · **T26**. Stage-0 FFC chore last
+> pulled **2026-07-30**, next due after 08-05.
+>
+> _(Session I.5's pointer, still the authority on the seat map, follows.)_
+>
 > **★★★ Next-session pointer (2026-07-30, session 5 — ★ SESSION I.5 ☑ COMPLETE. READ THIS FIRST.)**
 >
 > **State: 668 tests (was 658), ruff clean. UNCOMMITTED**, sitting on top of Session I (`63fc304`).
@@ -363,6 +428,8 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > moves every T15/T24 width bar for a 0.83 pp feature shift; do it with the next 11.1 refit ·
 > `build_tendencies`'s `avg_reach` keeps the T18 defect by design (labelled POC; use `redraft_reach`)
 > · `app/streamlit_app.py`'s season selector is DEV-only — Phase-14 work, noted not fixed.
+>   **(RESOLVED 2026-07-30, Session K1: that file is deleted; `app/main.py` defaults to the
+>   live season and lists every boarded season.)**
 >
 > **★ NEXT: review + commit (sessions 6 + 7 + this one, one tree), then Session I = Phase 17
 > formats.** No register entry is open against the mock drafter. **Stage-0 FFC chore: last pulled

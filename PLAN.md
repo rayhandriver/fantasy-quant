@@ -2411,3 +2411,34 @@ against the mock drafter: **T33** (new, needs a seating-marginalized before/afte
 the next 11.1 refit), **T32** (with the next batch measurement). Stage-0 FFC chore last pulled
 **2026-07-30** (verified in-DB this session — the 07-30 board is what the caches now hold), next due
 after 08-05.
+
+## 2026-07-30 (session 7) — SESSION K1: the app, draft-day half
+
+**Ran straight through, no stop gate** (user pre-answered seven decisions up front: lockbox-default
+league · record+ticket+chase on a failing bar · warm only the live board after T32 · **top-level
+`app/`** · launch headless and drive it · leave uncommitted · delete the old app package).
+
+**Result: all six pre-registered bars PASS + two live-boot checks. 690 tests (was 669), ruff clean.
+Nothing in the engine moved** — no fitted β, no frozen contract, the spent lockbox not re-read.
+
+- **Step 0 — T32 ☑.** `mock.board_vintage(raw, src)` in the enriched-board cache key + a row-count
+  self-heal guard; `validate.board_vintage_gate` wired into the health report; 4 tests. Verified by
+  a **control** (revert the key → both mechanism tests fail correctly), because the gate already
+  passed on its own before the fix — T31's `ENRICH_VERSION` bump had accidentally repaired it.
+- **Steps 1–4 — the app.** New `src/fantasy_quant/draft/session.py` holds every derived frame;
+  `steps/mock_draft.py` refactored into a **renderer** over it (**CLI output byte-identical across
+  seven commands, banked before and diffed after**); top-level `app/` = `engine.py` · `views.py` ·
+  `settings_form.py` · `main.py`. Live-season selector, the T27 value chain + `why`, the k-of-n
+  room with 14.J's per-seat YOU toggle, the 17.3 settings form (**`LeagueSettings` is no longer
+  orphaned**), and the cost report on the live board. `src/fantasy_quant/app/` **deleted**.
+- **Two bugs found by booting the app, not by tests** — `explain_chain` and the cost picker were
+  handed the raw board instead of `_prepare_board`'s. Both would have raised on a user's first
+  click; 17 unit tests passed through both because the fixture carried every column. Written up in
+  `findings.md` + `glossary.md` as *the fixture was too rich to fail*.
+
+**★ NEXT: user reviews + commits, then Session K2 = surfacing** (14.E tier-cliff · 14.F roster
+risk · 14.G uncertainty board · 14.I draft grade · 16.6 Beta Lab tab · 16.12 reach-risk readout ·
+`PLAYER-VIEW.md` cards) — all read already-frozen machinery, none of it blocks a draft. Open
+against the mock drafter: **T33** (value-hawk divisor; needs a seating-marginalized before/after) ·
+**T26** (next 11.1 refit). **T32 is now ☑.** Stage-0 FFC chore last pulled 2026-07-30, next due
+after 08-05.

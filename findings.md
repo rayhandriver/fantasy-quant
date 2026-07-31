@@ -5061,3 +5061,99 @@ against both builders is this substep's entire done-bar and changing it is a beh
 wearing a plumbing change's clothes. 16.17 does make it worse in a specific way, which is the
 argument for fixing it soon: with k human seats the divisor is `10 − k`, so it now varies with the
 room shape rather than being one of two constants. See `docs/TECH-DEBT.md` **T33**.
+
+## Session K1 — the app, draft-day half (2026-07-30)
+
+**Phase 14.1 + T32 + 14.J + the 17.3 wiring. All six pre-registered bars PASS, plus two live-boot
+checks. 690 tests (was 669), ruff clean. The engine is untouched: no fitted β moved, no frozen
+contract changed, the spent lockbox not re-read.** Artifacts: `analysis/session_k1_app.json`,
+`steps/session_k1_app.py`.
+
+### The decision the session turned on: one computation, two renderers
+
+The brief was a *port* — `steps/mock_draft.py` is already a complete human-in-the-loop draft driver
+on the live board, and the app was to render the same surface. The obvious way to do that is to
+write the board table, the `why` chain, the summary and the odds into the app, and then **test** the
+app against the CLI. Bar B1 was even written that way ("app and CLI, same seed → identical
+numbers").
+
+That is the wrong shape, and this repo knows it three times over: **T18** (`avg_reach` recomputed
+against a different board), **F.5** (a hardcoded `scoring` that pooled formats), **T27** (the
+display path and the decision path constructed separately, so the *interactive* room was never the
+shipped room). `draft/mock.py`'s own docstring states the rule: *if the two sides of a comparison
+are computed by different code, the comparison measures the code.*
+
+So every derived frame moved into a new **`src/fantasy_quant/draft/session.py`** — `build_board`,
+`board_view`, `explain_chain`, `roster_view`, `summary_table`, `odds_table`, `drift_frames`, plus
+the room/seat plumbing (`realistic_mix`, `room_mix`, `seat_map_from`, `seat_label`, `advance`,
+`resolve_pick`). `steps/mock_draft.py` became a **renderer** over it: it decides column widths, not
+what a number is. The app is the second renderer.
+
+**The refactor was verified the way H.5 verified its own:** the CLI's output was banked *before*
+any change (`start --seats 3,7 --seed 7 --room-seed 1`, `board`, `why`, `roster`, `finish`,
+`drift`, `log`) and diffed after. **Byte-identical across all seven commands.**
+
+B1 is therefore not a property to re-establish each session — it is the shape of the code. The
+unit test asserts the *structure* (`cli.session.board_view is session.board_view`, and the same for
+the app), and the done-bar asserts the *behaviour* the structure buys, by running the CLI as a
+**subprocess** and the app **in-process**: 150/150 picks identical, 10/10 teams, zero differing
+summary numbers.
+
+### ★★ The finding to carry forward — the fixture was too rich to fail
+
+Two real bugs shipped into the app and **17 offline unit tests passed straight through both**:
+`explain_chain` and the cost tab's player picker were being handed the **raw** board, while both
+need the **prepared** one (`_prepare_board` is where `player_key`/`player_name`/`pos` come from;
+the raw frame carries `gsis_id`/`name`/`position`). Either would have raised `KeyError` on a user's
+first click.
+
+Neither was found by a test. **B5 caught the first by running on the live board; the Streamlit
+`AppTest` run caught the second by actually executing the script.** The reason the unit tests
+missed them is exact and worth stating: the fixture board was hand-built with every column any
+consumer wanted, so it satisfied both contracts at once and the mismatch had nowhere to show.
+
+> **A column set is part of a function's contract even when nothing declares it — and a fixture
+> rich enough to satisfy every consumer cannot detect that one of them is being handed the wrong
+> frame.**
+
+This is T22's lesson ("a column's consumers are not only the models that weight it — the display
+layer is a consumer") arriving one level down: *the frame handed to a display function is part of
+the interface, and only a real input can check it.* It is also the argument for the live-boot bars
+being in the done-bar rather than optional: `AppTest` and a real headless server both ran, and one
+of them was the only thing standing between this session and a broken tab.
+
+### T32 — fixed, and honestly reported
+
+`mock.room_board` cached on `(season, scoring, teams, include_dst, ENRICH_VERSION)` — nothing about
+*which snapshot* `resolve_board` answered with, so the mandated Stage-0 chore could not invalidate
+it. The fix is `mock.board_vintage(raw, src)` in the filename: `source` + the board's single
+`snapshot_date`, which names it completely because `_ffc_board` closes with
+`QUALIFY snapshot_date = MAX(snapshot_date) OVER ()` — there is no such thing as a board that mixes
+vintages. A row-count guard rebuilds rather than serves when a snapshot is edited under its own
+date (enrichment is a pure column attach, so a count difference is proof of staleness). New
+`validate.board_vintage_gate` in the health report.
+
+**The honest part: the bar already passed before the fix.** The register recorded 244 resolved vs
+223 served with 25 players invisible — but T31's `ENRICH_VERSION` bump had rebuilt the 2026 cache
+*hours after* the Stage-0 pull, so the defect had been repaired by accident. The v2 and v3 parquets
+still hold **223** rows and v4 holds **244**: the bug and its accidental repair, both on disk. So
+the fix was verified by **reverting the cache key and re-running the tests** — both mechanism tests
+fail on pre-T32 code with exactly the right error ("the newly banked board was served from the
+stale cache"). *A coincidence that makes a bar pass is not a fix; the control is what tells them
+apart.*
+
+### What shipped
+
+`src/fantasy_quant/draft/session.py` · top-level `app/` (`engine.py` · `views.py` ·
+`settings_form.py` · `main.py`) · `steps/session_k1_app.py` · `tests/test_app.py` (17) + 4 T32
+tests. `src/fantasy_quant/app/` **deleted** — the T18 rule: delete rather than leave a half-ported
+file someone reads stale numbers out of.
+
+The honesty surfaces are rendered, not merely true: `lockbox_validated()` is a banner on three
+tabs (and both branches describe *supported* leagues — the distinction is evidence, not
+capability); the T28 pair prints as `STARTABLE` **and** `CAPITAL`, labelled; T29's odds lead with
+the fair-share multiple and demote the percentage; and the two 16.17 rules (k seats are ONE
+observation; the T15 bars describe a fully-simulated room) render with the actual k in them.
+
+**Deliberately not in the app:** auction (15.4), keeper entry (17.4), `draft_type` — all present in
+the engine, all Session K2/L questions.

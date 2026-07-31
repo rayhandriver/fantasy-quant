@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from collections.abc import Sequence
 
 import pandas as pd
 
@@ -133,6 +134,27 @@ def manager_reach_gate(name: str, mean_abs_reach_rounds, n_managers: int,
     return _gate(name, ok, n_managers=int(n_managers), max_rounds=max_rounds,
                  mean_abs_reach_rounds=(None if mean_abs_reach_rounds is None
                                         else round(float(mean_abs_reach_rounds), 3)))
+
+
+def board_vintage_gate(name: str, *, n_served: int, n_resolved: int,
+                       missing: Sequence[str] = ()) -> dict:
+    """Gate: the enriched board a caller is served covers the board the store resolved (T32).
+
+    ★ **The gate exists because the failure is silent by construction.** Enrichment is a pure
+    column attach — :func:`~fantasy_quant.draft.enrichment.attach_enrichment` opens with
+    ``board.copy()`` and never filters — so a correct cache has *exactly* the resolved board's rows.
+    Any shortfall is a stale artifact being served, and nothing downstream can tell: a player who is
+    absent from the board is not wrong anywhere, he is simply undraftable, which reads as a thin
+    board rather than as a bug. Measured on 2026-07-30 before the fix: 244 resolved, 223 served.
+
+    This is the ``adp_freshness_gate`` pattern one layer down. That gate promotes the Stage-0 chore
+    to an assertion — *did we pull a fresh board?* — and passed happily the whole time this one
+    would have failed, because pulling a fresh board and **serving** it are different claims.
+    """
+    ok = int(n_served) >= int(n_resolved)
+    return _gate(name, ok, n_served=int(n_served), n_resolved=int(n_resolved),
+                 n_missing=max(0, int(n_resolved) - int(n_served)),
+                 missing_examples=[str(m) for m in list(missing)[:8]])
 
 
 def _round_stats(s: dict) -> dict:
@@ -495,11 +517,40 @@ def _value_scale_gates(con, season: int | None = None) -> list[dict]:
     return [g]
 
 
+def _board_vintage_gates(con, season: int | None = None) -> list[dict]:
+    """The T32 gate for the live board — is the board we serve the board the store resolved?
+
+    Deferred import for the same reason :func:`value_scale_frame` defers: this reaches up into the
+    ``draft`` layer, and the data layer must not depend at module scope on the modelling layers it
+    validates. Any failure to assemble is reported as not-applicable rather than raised — a partial
+    store is not a vintage defect.
+    """
+    from fantasy_quant.adp import boards
+    from fantasy_quant.draft import mock
+    from fantasy_quant.draft.simulator import board_player_key
+
+    season = int(season or max(FANTASY_SEASONS))
+    name = f"board_vintage_{season}"
+    try:
+        raw, _ = boards.resolve_board(con, season, "ppr", 10, allow_ecr=False, include_dst=True)
+        if raw.empty:
+            return [_gate(name, True, applicable=False, reason="no board for season")]
+        served, _ = mock.room_board(con, season, teams=10,
+                                    cache_dir=PROJECT_ROOT / "analysis" / "cache")
+    except Exception as exc:                                    # noqa: BLE001 — report, never raise
+        return [_gate(name, True, applicable=False, reason=str(exc)[:200])]
+    have = set(board_player_key(served).astype(str)) if not served.empty else set()
+    missing = [n for k, n in zip(board_player_key(raw).astype(str), raw["name"].astype(str),
+                                 strict=False) if k not in have]
+    return [board_vintage_gate(name, n_served=len(served), n_resolved=len(raw), missing=missing)]
+
+
 def data_health_report(con, write: bool = True, value_scale_season: int | None = None) -> dict:
     """Assemble the store-wide health report; write ``analysis/results/data_health.json``."""
     gates = (_range_gates(con) + _dup_gates(con) + _join_rate_gates(con)
              + _scrape_gates(con) + _sleeper_gates(con)
-             + _value_scale_gates(con, value_scale_season))
+             + _value_scale_gates(con, value_scale_season)
+             + _board_vintage_gates(con, value_scale_season))
     tables = {t: db.row_count(con, t) for t in db.list_tables(con)}
     report = {
         "generated_at": dt.datetime.now(dt.UTC).isoformat(),

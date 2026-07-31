@@ -19,8 +19,9 @@ correlations + shrinkage, handcuff copula, roster risk, and the covariance-aware
 (`stage0_adp_snapshot`: the recurring FFC 2026 snapshot — idempotent, run weekly until the season starts;
 `stage0_sleeper_probe`: the read-only Sleeper API de-risk probe), plus the **personalization spine**
 (`spine_1_config` · `spine_2_optimizer` · `spine_3_cost_report` · `spine_4_validate` — the realized-PAR
-validation of the cost number). The spine's UI is the Streamlit app, launched differently:
+validation of the cost number). The spine's UI is the Streamlit app (Phase 14.1 / Session K1 — the cost report is its
+**Cost** tab), launched differently:
 ```bash
 uv sync --extra ui
-uv run streamlit run src/fantasy_quant/app/streamlit_app.py
+uv run streamlit run app/main.py
 ```
