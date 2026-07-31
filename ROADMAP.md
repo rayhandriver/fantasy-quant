@@ -59,7 +59,8 @@ ranked by the worse-off side's gain (`min(mine, theirs)`) with a sell-high/buy-l
 Done-bar: proposed trades **raise both teams' simulated playoff prob** in the Phase-10 sim — **6/6 DEV** both
 sides (maker +0.014→+0.021, partner +0.012→+0.021 win%; season-block CIs>0), vs a random-trade control that
 lifts both ~never; `inseason/trades.py`)* — **Phase 13 / S7 COMPLETE ← Session B done**
-**Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ☐ 14.1 **Streamlit MVP hardening** (autopilot+co-pilot, constraint-object UI, league sync, cost+risk+softness readouts, sim views, in-season dashboard, news feed, format toggles) · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
+**Phase 14 — App** *(⟳ 2026-07-09: **LAST** — built only after the full engine incl. Phases 12/15 and the lockbox eval; ships with every factor embedded)* ◐ 14.1 **Streamlit MVP** *(**K1 ☑ 2026-07-30** — four tabs on the live board: Settings · Board+`why` · Draft room (any k of n) · Cost)* · ☐ 14.2 personalization tiers · ☐ 14.3 explain · ☐ 14.4 backend/Next.js/live-draft/widget *(the go-live tail)*
+— **surfacing + UX substeps:** ☐ 14.E tier-cliff · ☐ 14.F roster risk · ☐ 14.G uncertainty board · ☐ 14.H playoff SOS · ☐ 14.I draft grade · ☑ 14.J multi-seat control · **☐ 14.K multipage shell** · **☐ 14.L room grid (every team, by pick or by slot)** · **☐ 14.M pick clock** · **☐ 14.N post-draft analysis page** · **☐ 14.O stat dictionary/tooltips** *(K–O added 2026-07-30 s4 from the user's first real use of the app)*
 **Phase 15 — Multi-format** *(⟳ stage 8; + auction draft support)* ✅ **CORE COMPLETE** *(2026-07-13, Session C
 — 15.2/15.3/15.4 built; 15.1 dynasty stays roadmap per user scope)* — ◔ **15.1 dynasty** *(deferred — user
 scoped Session C to auction+best-ball+DFS)* · ☑ **15.2 best-ball** *(`formats/bestball.py`: **variance is GOOD
@@ -130,8 +131,20 @@ roster + lineup generalization (superflex/multi-flex/OP/no-K; remove the `season
 presets; `backtest/scoring.py`) · ☐ **17.3** generic **platform-agnostic** league-settings input contract
 (`LeagueSettings` builder — presets or full custom; the Phase-14 form binds to it; `draft/config.py`) · ☐
 **17.4** keeper support (remove kept players + re-inflate effective ADP; `draft/simulator.py`, `adp/`).
-Decisions (user 2026-07-23): platform-agnostic manual form (not Sleeper auto-import) · IDP deferred (data gap)
-· optional platform auto-import is a secondary future convenience. **Awaiting go-ahead.**
+**17.1–17.4 ☑ COMPLETE 2026-07-30 (Session I).** Decisions (user 2026-07-23): platform-agnostic manual form
+(not Sleeper auto-import) · IDP deferred (data gap) · optional platform auto-import is a secondary future
+convenience.
+**★ LEAGUE IMPORT ADDED 2026-07-30 s4 (user request — "import personal leagues straight from
+ESPN/Yahoo/Sleeper for max efficiency"), which narrowly reverses the 07-23 "not auto-import" decision:**
+the manual form stays and stays primary; import is an **alternative constructor for `LeagueSettings`**
+(`import_league(platform, ident, creds)`), so nothing downstream changes and every imported field lands in
+the 17.3 form for the user to **confirm** before a board is built from it. ☐ **17.5** the contract +
+**Sleeper** *(free, keyless, client already built, offline fixture — its value is the contract, not the
+platform)* · ☐ **17.6** **ESPN** *(undocumented JSON API; public leagues keyless, private ones need pasted
+`espn_s2`+`SWID` cookies — ships labelled fragile, caches last-good, never logs the cookies; **the one the
+user actually needs**)* · ☐ **17.7** **Yahoo — deferred to 14.4**: OAuth2 needs a registered app and a
+hosted redirect the Streamlit MVP does not have. Spec: `docs/BUILD_PLAN.md` §"Phase 17 — league import";
+session slot = **Session K3**.
 
 **★ Personalization spine** *(the reframe's new MVP-critical track — cross-phase; spec in `docs/PERSONALIZATION.md`)*
 ✅ **S1** preference-spec layer (`DraftConfig` + Streamlit Autopilot/Co-pilot UI) · ✅ **S2** constrained greedy optimizer (max risk-adjusted-VBD/CE s.t. constraints/archetype, plan around ADP availability; **covariance-aware since 2026-07-09** — marginal portfolio CE per pick) · ✅ **S3** cost-of-personalization report (vs the value-optimal team, + per-constraint leave-one-out; headline = **portfolio CE** + risk profile + Phase-6 softness credit) — **+ realized-PAR validation** *(2026-07-08, re-run 2026-07-09 under the covariance-aware greedy: archetype sweep on 2017–22; projected cost tiny & realized cost noise-dominated; late_qb a real ~65 pt/szn gain, elite_te marginally so; projected↔realized Spearman ≈ 0 ⇒ projected cost is a draft-day aid, not a season forecast; availability Brier deferred — needs real pick logs)* · ✅ **S4** behavioral opponent model → availability forecasts *(2026-07-11 — fit + availability Brier both beat ADP+noise; the availability oracle promotes from opt-in to the S4 default)* · ✅ **S5** per-round risk dial (Phase-5 λ/CE, wired into S2) · ✅ **S6** adaptive archetypes *(2026-07-12 — a fade-melt wrapper on a static parent, keyed to how far a candidate has slid off ADP; **does no harm on an ADP board, banks team-value when the board breaks** — the realistic Phase-11 behavioral room: adaptive(zero_rb) +2.0, adaptive(hero_rb) +15.6; `draft/config.py` + `steps/spine_5_adaptive.py`)* · ✅ **S7** in-season weekly-edge harvester *(= Phase 13, **COMPLETE 2026-07-12**; 13.1 re-project + 13.2 start/sit, then Session B: **13.3 waivers + 13.4 streaming + 13.5 trades** all DONE — every done-bar PASS on DEV)*
@@ -498,13 +511,33 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
     app on the **live** season → the board + the `why` value chain → the room with 14.J's per-seat YOU
     toggle over the 16.17 `SeatMap` → the 17.3 settings form (`LeagueSettings` is no longer orphaned) +
     the cost tab; `src/fantasy_quant/app/` deleted. **All six pre-registered bars PASS** plus two
-    live-boot checks (`analysis/session_k1_app.json`); **690 tests**, ruff clean. The port's shape is
+    live-run checks (`analysis/session_k1_app.json`); **691 tests**, ruff clean. The port's shape is
     the result worth carrying: every derived frame moved into `draft/session.py` and **both**
     `steps/mock_draft.py` and the new top-level `app/` render it, so B1 (app == CLI) holds by
     construction — the CLI's output is byte-identical across seven commands before and after.
-  - **Session K2 — surfacing.** 14.E tier-cliff · 14.F roster-construction risk · 14.G uncertainty-aware
-    board · 14.I draft grade · the 16.6 Beta Lab tab · the 16.12 availability/reach-risk readout · the
-    `PLAYER-VIEW.md` cards. All read **already-frozen** machinery; none of it blocks a draft.
+  - **★ Session K1.5 — the draft room a human can use. INSERTED 2026-07-30 s4, ahead of K2**, from the
+    user's notes after driving the K1 app for the first time. Everything in it sits between the drafter
+    and the board on draft day; K2's surfacing does not, so this goes first. Full spec + six
+    pre-registered bars: `docs/BUILD_PLAN.md` §"Session K1.5". **Step 0 = T34**, the one real bug —
+    `app/engine.start_draft` defaults `seed=7` **and** `room_seed=None`, freezing both sources of
+    variation, so **every mock is the same mock** (reproduced exactly: seat 6 always opens Gibbs · Chase ·
+    Taylor · McCaffrey · Cook; `seed=8` opens Gibbs · Nacua · Jeanty · Bijan · Chase). The app default
+    becomes entropy with a **lock-the-seed** option; **`steps/` keeps `--seed 7`** because every committed
+    bar sheet is differenced against it — *a measurement default and a human default are different
+    objects.* Then **14.K** pages-not-tabs (**T35**: `st.tabs` runs every tab body on every rerun — the
+    hard blocker on the clock) · a **slim board** (`# · PLAYER · POS · ADP · PROJ`) with an **advanced
+    view**, **pick buttons in the row** and **search results under the box** · **14.M** the pick clock
+    (n seconds per modelled pick) · **14.L** the room grid (every team across the top, by pick or by
+    slot) · the **roster rail** beside the board · **14.O** stat tooltips with worked examples.
+  - **Session K2 — surfacing + the post-draft page.** **14.N** the finalized analysis page (the user's
+    request, and the destination four of these readouts were always for) · 14.E tier-cliff · 14.F
+    roster-construction risk · 14.G uncertainty-aware board · 14.I draft grade (once **per human seat**,
+    never blended) · the 16.6 Beta Lab tab · the 16.12 availability/reach-risk readout · the
+    `PLAYER-VIEW.md` cards. All read **already-frozen** machinery; none of it blocks a draft. 14.N wants
+    14.L, so K1.5 lands first.
+  - **Session K3 — league import (17.5 Sleeper · 17.6 ESPN; 17.7 Yahoo deferred to 14.4).** One function
+    and two adapters: `import_league(...) -> LeagueSettings`, filling the 17.3 form for the user to
+    confirm. Spec: `docs/BUILD_PLAN.md` §"Session K3" + §"Phase 17 — league import".
 - **Session L+ — Phase 14 go-live tail (14.2–14.7).** Personalization tiers, explain, FastAPI backend, Next.js
   frontend (PLAYER-VIEW deep pages + 14.H playoff-SOS lens), Sleeper live-draft sync (+ 16.16 run-detection
   alert, item D), widget, mock-draft sim. **Expect multiple sessions**, each ≥ a single past phase.

@@ -44,6 +44,8 @@ At a glance:
 | **T28** | ✅ | **`team_value`/`portfolio_value` are slot-blind, so a bench QB2 is priced as if he starts.** `team_value` sums `base_value` over all 15 roster rows and nothing in `draft/optimizer.py` references starters. On the 2026 walkthrough the second QB alone moves a team's headline value by **−101.6** (T1 Caleb Williams), **−92.1** (T4 Kyler Murray) and **+51.0** (T3 Hurts), against a room total of 1,938 — the QB2 line nets **−122**. Consequence, measured over the same ten teams: Spearman(portfolio CE, title) **+0.758** and Spearman(VBD, title) **+0.685** against Spearman(starting-nine Phase-5 mean, title) **+0.915**; T4 is **9th of 10 on VBD and 3rd on starting-lineup projection**. It is not only a reporting artifact — `value_hawk` *maximizes* this quantity, and took Jaxson Dart (`base_value` +33.1) as a second QB at 9.09 | Session H.5 step 2 — **a decision, not a patch**: the frozen cost-report headline must not move, so a starter-aware metric ships **beside** it | ☑ 2026-07-30 — **closed as a LABELLING FIX, as pre-registered.** `starter_value` ships beside `team_value` and every surface prints both. **B5 failed** (−0.0230, CI[−0.0407,−0.0055] over 200 drafts): the slot-blind sum predicts title probability *better*, because bench value alone scores +0.711 in a sim that draws injuries. `value_hawk` keeps `objective=portfolio_ce` |
 | **T29** | ✅ | **absolute probabilities are printed from a sim whose level bias is documented as −113 pts/team.** Any driver that calls `league_probabilities` prints `playoff_prob`/`title_prob` as bare percentages. The lockbox recorded title Brier **0.088** with reliability on-diagonal (ordering and championship calibration hold) but playoff Brier **0.240** as *marginal*, unconditional coverage **72–77 %**. So the weakest number in the stack is the one a user reads as fact | Session H.5 step 3 — labelling + a fair-share ratio | ☑ 2026-07-30 — `PROB_PROVENANCE` + `fair_share`/`playoff_fair_share` + `assert_probability_sums`; every driver leads with the multiple (0.170 → **1.70x**) |
 | **T30** | ✅ | **`autopilot` is 1 of 10 seats against 0.2 % of realized seats — 50×**, and it is the seat that manufactures the spill the rest of the room harvests (walkthrough: mean `pool_rank` **1.77**, median **1.0**, harvest **+11.7 picks**, the largest in the room). 16.14R halved it from two seats *on this exact argument* and stopped there; bar 3 passes at +0.06 sd, so this is a **composition question that has never been argued explicitly**, not a known defect | Session H.5 step 4 — a cheap seating-marginalized A/B against a near-autopilot seat; **accept or change the mix, but state the argument** | ☑ 2026-07-30 — **argued and NOT changed**, under the pre-agreed rule (ship only if every bar holds or improves). The `chalk` swap closes **79 %** of the chalk-share gap (11.0 → 2.4 % vs a realized 0.2 %) and 63 % of the moderate-share gap, and costs **+0.0021** profile distance and **+0.97 pp** elite-past-10. Every gate passes both ways; bar 3 harvest is **0.00 in both**, so the spill the seat manufactures is not being harvested |
+| **T34** | 🔴 | **every mock draft is the same mock draft.** `app/engine.start_draft` defaults `seed=7` and `room_seed=None`, which freezes *both* sources of variation — the pick RNG and the seating — so a user re-drafting his slot gets the identical room, the identical picks and the identical story every time. Reported by the user from the live app (seat 6 always opens Gibbs · Chase · Taylor · McCaffrey · Cook) and **reproduced exactly**: same seed twice is identical, `seed=8` gives Gibbs · Nacua · Jeanty · Bijan · Chase, `room_seed=3` gives McCaffrey first. The engine is fine and the personalities *are* sampling — **the human-facing default is the measurement default**, and practising against one frozen draft is worse than not practising | **now** — it defeats the purpose of the mock drafter, which is repeated practice. Session K1.5 step 0. ⚠ **`steps/` must not move**: T24's sweep, 16.17's mapping check and every committed bar sheet are differenced against `--seed 7` | ☐ 2026-07-30 |
+| **T35** | 🟠 | **`st.tabs` executes every tab body on every rerun** — it hides inactive tabs client-side, it does not skip them. `app/main.py` calls `tab_settings()`, `tab_board()`, `tab_draft()` and `tab_cost()` unconditionally, so one keystroke in the draft room's player box also re-runs the cost tab's `_prepare_board` and its ADP-sorted option-label build over the entire board. Wasteful today; **a hard blocker on the 14.M pick clock**, which reruns on a timer and must rerun one fragment, not four tabs | with 14.K (Session K1.5 step 1) — the fix is `st.navigation`/`st.Page`, which the user asked for on ergonomic grounds independently | ☐ 2026-07-30 |
 | **T33** | 🟡 | **`make_value_hawk_pick_fn(n_teams=)` receives the ROOM size, not the league size** — both room builders pass `len(seats)`, so the *interactive* room (9 modelled seats) scales the value hawk's `_local_z` context weights by **9** and the *batch* room by **10**: the same seat prices step-3 context ~10 % apart depending on which harness it is sitting in. Pre-existing since 16.14R step 6, and 16.17 only made it visible — with k human seats the divisor becomes `10 − k`, so it now varies with the room shape rather than being one of two constants | with the next room measurement. **Deliberately preserved verbatim by 16.17**, whose entire done-bar is bit-identity against both builders; fixing it changes the shipped room's picks and needs the full T24 seating-marginalized before/after as its own sub-step | ☐ 2026-07-30 |
 
 ---
@@ -2131,3 +2133,77 @@ seating-marginalized (`steps/mock_room_bars.py --shuffle-room`), before/after, e
 run — the hawk is 1 of 10 seats so the effect should be small, but "should be small" is what the
 harness is for. **Done-when:** one sheet each way, the difference stated, and whichever divisor
 ships is the one both builders use.
+
+---
+
+## 🔴 T34 — Every mock draft is the same mock draft
+**Status ☐ · opened 2026-07-30 (session 4, from the user's first real use of the K1 app) · fix in Session K1.5 step 0.**
+
+**Symptom (the user's words).** *"The log shows that the previous personality picks are the exact same
+every single time I run from the same slot (running from p6: Gibbs 1, Chase 2, Taylor 3, McCaffrey 4,
+Cook 5). This is a bug. Every time I run a draft, the picks should re-run according to the drafter like
+intended and be different draft after draft according to what we've developed."*
+
+**Reproduced, exactly, before it was written down.** On the live 2026 board, seat 6, `REALISTIC_ROOM`:
+
+| run | first five picks |
+|---|---|
+| `seed=7, room_seed=None` — **the shipped app default** | Gibbs · Chase · Taylor · McCaffrey · Cook |
+| the same call again | **identical** — the user's report, to the player |
+| `seed=8, room_seed=None` | Gibbs · **Nacua · Jeanty · Bijan · Chase** |
+| `seed=7, room_seed=3` | **McCaffrey** · Gibbs · Taylor · Chase · Cook |
+| `seed=12345, room_seed=99` | Chase · Bijan · Gibbs · Nacua · McCaffrey |
+
+**Cause — two defaults, both frozen, neither an accident.**
+1. `app/engine.start_draft(..., seed: int = 7)` → `DraftState.rng = np.random.default_rng(7)`. Every
+   personality that samples (all of them except `autopilot` and `chalk`, which carry `sample=False`)
+   draws from that one generator, so the entire pick sequence is a pure function of the seed.
+2. `room_seed=None` → `SeatMap.of` **keeps `REALISTIC_ROOM`'s listed order** rather than shuffling, so the
+   same personality occupies the same chair in every draft. The shuffle exists (`personalities.py:1134`)
+   and the app never asks for it.
+
+**★ The lesson, and it is why this is 🔴 rather than a one-line default change: a measurement default and
+a human default are different objects, and this repo has been shipping one of them twice.** Fixed seeds
+are *correct* for `steps/` — T24's seating-marginalized sweep, 16.17's bit-identity bars,
+`mock_room_bars.py`, every committed artifact is differenced against `--seed 7`. They are *wrong* for a
+drafter, whose entire use case is drafting the same slot twenty times to see twenty rooms. The K1 port
+carried the CLI's default into the app because the CLI's default was the only one that existed.
+
+**Fix.**
+1. `app/engine.start_draft` gains `seed: int | None = None` meaning **draw from OS entropy**, and draws a
+   `room_seed` the same way. **Display both** on the draft page, so any draft is replayable.
+2. The app's setup control becomes **Randomize (default) / lock to a seed**. Locking reproduces a draft
+   pick-for-pick — reproducibility stays available, it stops being compulsory.
+3. **`steps/mock_draft.py` keeps `--seed 7` and `--room-seed None`.** Do not "make them consistent".
+4. Shuffling the seating per draft is also *more faithful to how the room was measured* — T24's third
+   method failure was measuring on **one fixed seating**, which flatters by 5–7 pp and is a **bias** that
+   more seeds do not remove. The app has been showing the user exactly that fixed seating.
+
+**Done-when.** Twenty app-started drafts from one seat share no identical first-five sequence; a locked
+seed + room seed replays its own draft exactly; and `steps/mock_draft.py`'s committed output is
+**byte-identical** to its pre-change self.
+
+---
+
+## 🟠 T35 — `st.tabs` runs every tab body on every rerun
+**Status ☐ · opened 2026-07-30 (session 4) · fix with 14.K in Session K1.5 step 1.**
+
+**Symptom.** `app/main.py`'s `main()` calls `tab_settings()`, `tab_board()`, `tab_draft()` and
+`tab_cost()` unconditionally inside `with tabs[i]:` blocks. Streamlit renders **all** tab contents and
+hides the inactive ones in the browser — it does not skip their script bodies. So a single keystroke in
+the draft room's player search also re-runs `tab_cost`'s `_prepare_board(built["board"])` and its
+ADP-sorted `{label: player_key}` build over every row of the board, plus `tab_board`'s own render.
+
+**Why it is 🟠 and not 🟡.** It is a **hard blocker on 14.M**, the pick clock. A clock that reruns on a
+timer must rerun *one fragment*; on `st.tabs` it reruns four tab bodies including the cost tab's
+whole-board work, several times a second. The feature cannot be built correctly on this structure.
+
+**Fix.** `st.navigation` / `st.Page` — one page body per rerun, real URLs, and the draft room gets the
+screen to itself. This is **14.K**, which the user asked for independently on ergonomic grounds
+(*"everything should be on a completely separate designated draft room page"*): the ergonomic request and
+the performance defect have the same fix, which is the argument for doing it first rather than bolting
+pages on later.
+
+**Done-when.** A rerun triggered on the draft page executes the draft page body **only** — asserted with
+a per-page probe counter under `AppTest`, not eyeballed — and K1's B1 identity (app == CLI at the same
+seed) still holds after the move.

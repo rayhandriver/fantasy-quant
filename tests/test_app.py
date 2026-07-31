@@ -14,6 +14,8 @@ draft driven through the app's own entry points reproduces the CLI's frames exac
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -279,3 +281,34 @@ def test_a_player_with_no_distribution_is_reported_not_hidden():
         {"player_key": [], "proj_points": [], "mean": [], "sd": [], "ce_value": [],
          "ce_vbd": [], "vbd": []}), "Ghost", lam=0.01)
     assert entry["ok"] is False and "ADP fallback" in entry["reason"]
+
+
+def test_the_entry_point_imports_when_run_the_way_a_human_runs_it():
+    """★ The regression test for the bug that shipped: `streamlit run app/main.py` must work.
+
+    Streamlit executes the target file with **its own directory** on ``sys.path``, not the repo
+    root — so ``app/main.py``'s ``from app import engine, views`` raised ``ModuleNotFoundError``
+    for the first person who opened it, while every check in this session said PASS:
+
+    * these unit tests import ``app.engine`` under pytest's ``pythonpath = ["src", "."]``;
+    * ``AppTest`` runs in a process where the done-bar had already inserted the repo root;
+    * the headless-server bar fetched ``/`` — but Streamlit does not execute the script until a
+      browser opens a **websocket session**, so an HTTP GET returns the same HTML shell either way.
+
+    Every layer shared one assumption — that the repo root is importable — and it was false in
+    exactly the configuration a human uses. So this runs the entry point as a bare script, from a
+    different directory, with ``PYTHONPATH`` scrubbed: the harshest honest version of the question.
+    """
+    import os
+    import subprocess
+    import sys
+    import tempfile
+
+    root = Path(__file__).resolve().parents[1]
+    r = subprocess.run([sys.executable, str(root / "app" / "main.py")],
+                       cwd=tempfile.gettempdir(),
+                       env={k: v for k, v in os.environ.items() if k != "PYTHONPATH"},
+                       capture_output=True, text=True, timeout=900)
+    out = (r.stdout or "") + (r.stderr or "")
+    assert "ModuleNotFoundError" not in out, out[-1500:]
+    assert r.returncode == 0, out[-1500:]

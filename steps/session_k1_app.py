@@ -21,10 +21,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -330,12 +332,76 @@ def _free_port() -> int:
         return int(s.getsockname()[1])
 
 
+#: How the app can be launched. **The console script is FIRST because it is what the README, the
+#: module docstring and `PROJECT.md` tell a human to type**, and the first version of this bar ran
+#: only `python -m streamlit` — which puts the cwd on `sys.path` and therefore made the app's own
+#: `from app import ...` work when the documented command did not. The app shipped broken and this
+#: bar reported PASS. *A guard that does not run on the path a human uses is not a guard* (T27);
+#: here the "path" was literally `sys.path`. Both are checked now, and neither is optional.
+LAUNCHERS: tuple[tuple[str, list[str]], ...] = (
+    ("console_script", ["streamlit"]),                      # uv run streamlit run app/main.py
+    ("python_m", [sys.executable, "-m", "streamlit"]),      # python -m streamlit run app/main.py
+)
+
+
+def bar_imports() -> dict:
+    """★ Does the entry point **import** when run as a bare script from an arbitrary directory?
+
+    **This bar exists because the app shipped broken and every other bar said PASS** (2026-07-30).
+    ``streamlit run app/main.py`` executes the file with ``app/`` on ``sys.path`` — not the repo
+    root — so ``from app import engine, views`` raised ``ModuleNotFoundError`` for the first human
+    who opened it. Three checks had missed it:
+
+    * the **unit tests** import ``app.engine`` under pytest's ``pythonpath = ["src", "."]``;
+    * ``AppTest`` runs in *this* process, where the done-bar has already inserted the repo root;
+    * :func:`bar_server` booted a server and fetched ``/`` — but **Streamlit does not run the
+      script until a browser opens a websocket session**, so ``curl`` gets the same 6.6 kB HTML
+      shell whether the script imports or not. That bar was measuring "the server starts", while
+      its name claimed "the app runs".
+
+    So the harshest honest check is the cheapest one: run the file as a plain script, from a
+    directory that is not the repo, with ``PYTHONPATH`` scrubbed. If the imports resolve, Streamlit
+    prints its bare-mode warning and exits 0; if they do not, this fails the way the user did.
+
+    *Every layer of the test pyramid shared one assumption — that the repo root is importable — and
+    the assumption was false in exactly the configuration a human uses.*
+    """
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    root = Path(__file__).resolve().parents[1]
+    r = subprocess.run([sys.executable, str((root / APP).resolve())],
+                       cwd=tempfile.gettempdir(), env=env, capture_output=True, text=True,
+                       timeout=600)
+    out = (r.stdout or "") + (r.stderr or "")
+    return {"bar": "APP — the entry point imports as a bare script from an arbitrary cwd",
+            "pass": bool(r.returncode == 0 and "ModuleNotFoundError" not in out),
+            "returncode": r.returncode,
+            "module_not_found": "ModuleNotFoundError" in out,
+            "cwd_used": tempfile.gettempdir(), "pythonpath_scrubbed": True,
+            "output_tail": out[-800:] if r.returncode else ""}
+
+
 def bar_server(timeout_s: int = 240) -> dict:
-    """Boot a real headless Streamlit server and drive it over HTTP."""
+    """Boot a real headless server **the documented way**, and again via ``-m``; drive both.
+
+    ⚠ **Scope, stated because this bar over-claimed once and let a broken app ship:** it proves the
+    server process starts, binds, and serves the HTML shell. It does **not** prove the script runs —
+    Streamlit executes the script per *session*, on websocket connect, and an HTTP GET of ``/``
+    never opens one. :func:`bar_imports` and :func:`bar_apptest` are what cover script execution.
+    """
+    runs = {name: _serve(cmd, timeout_s) for name, cmd in LAUNCHERS}
+    return {"bar": "APP — a headless server boots and serves, however it is launched "
+                   "(does NOT execute the script — see bar_imports)",
+            "pass": all(r["pass"] for r in runs.values()),
+            **{f"{name}_{k}": v for name, r in runs.items() for k, v in r.items()
+               if k != "log_tail"},
+            "logs": {name: r["log_tail"] for name, r in runs.items() if r["log_tail"]}}
+
+
+def _serve(launcher: list[str], timeout_s: int) -> dict:
     port = _free_port()
     root = Path(__file__).resolve().parents[1]
     proc = subprocess.Popen(
-        [sys.executable, "-m", "streamlit", "run", str(APP),
+        [*launcher, "run", str(APP),
          "--server.headless", "true", "--server.port", str(port),
          "--server.address", "127.0.0.1", "--browser.gatherUsageStats", "false"],
         cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -349,7 +415,9 @@ def bar_server(timeout_s: int = 240) -> dict:
                         f"http://127.0.0.1:{port}/_stcore/health", timeout=5) as r:
                     health = r.status
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=15) as r:
-                    page = (r.status, len(r.read()))
+                    body = r.read().decode("utf-8", "replace")
+                page = (r.status, len(body),
+                        any(m in body for m in ("ModuleNotFoundError", "Traceback")))
                 break
             except (urllib.error.URLError, ConnectionError, TimeoutError, OSError):
                 time.sleep(2)
@@ -360,12 +428,15 @@ def bar_server(timeout_s: int = 240) -> dict:
         except subprocess.TimeoutExpired:
             proc.kill()
             log = proc.communicate()[0] or ""
-    tb = "Traceback (most recent call last)" in log
-    return {"bar": "APP — a real headless server boots and serves the page",
-            "pass": bool(health == 200 and page and page[0] == 200 and not tb),
+    # ⚠ the import error this bar exists to catch appears in the SERVED PAGE, not the exit code:
+    # Streamlit catches the script's exception, keeps serving, and renders the traceback. So a
+    # health check and a 200 are not enough — the page body has to be clean too.
+    tb = ("Traceback (most recent call last)" in log or "ModuleNotFoundError" in log
+          or (page is not None and page[2]))
+    return {"pass": bool(health == 200 and page and page[0] == 200 and not tb),
             "health_status": health, "page_status": page[0] if page else None,
-            "page_bytes": page[1] if page else None, "traceback_in_log": tb,
-            "log_tail": log[-1200:] if (tb or health != 200) else ""}
+            "page_bytes": page[1] if page else None, "error_on_page_or_log": bool(tb),
+            "log_tail": log[-1500:] if (tb or health != 200) else ""}
 
 
 # ------------------------------------------------------------------------------------------------
@@ -388,6 +459,7 @@ def main() -> None:
         "b4": lambda: bar_b4(con, season),
         "b1": lambda: bar_b1(con, season),
         "apptest": bar_apptest,
+        "imports": bar_imports,
         "server": bar_server,
     }
     if a.only:

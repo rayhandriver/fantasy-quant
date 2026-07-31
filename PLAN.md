@@ -2418,7 +2418,7 @@ after 08-05.
 league · record+ticket+chase on a failing bar · warm only the live board after T32 · **top-level
 `app/`** · launch headless and drive it · leave uncommitted · delete the old app package).
 
-**Result: all six pre-registered bars PASS + two live-boot checks. 690 tests (was 669), ruff clean.
+**Result: all six pre-registered bars PASS + three live-run checks. 691 tests (was 669), ruff clean.
 Nothing in the engine moved** — no fitted β, no frozen contract, the spent lockbox not re-read.
 
 - **Step 0 — T32 ☑.** `mock.board_vintage(raw, src)` in the enriched-board cache key + a row-count
@@ -2442,3 +2442,65 @@ risk · 14.G uncertainty board · 14.I draft grade · 16.6 Beta Lab tab · 16.12
 against the mock drafter: **T33** (value-hawk divisor; needs a seating-marginalized before/after) ·
 **T26** (next 11.1 refit). **T32 is now ☑.** Stage-0 FFC chore last pulled 2026-07-30, next due
 after 08-05.
+
+## 2026-07-30 (session 8) — the K1 app's first real use → Session K1.5 scoped + T34/T35 (docs-only, no code)
+
+**What happened.** The user drove the Session-K1 app and came back with eleven notes. Ten are UX; one is a
+bug. Nothing was built this session — this entry, `docs/BUILD_PLAN.md` §"Session K1.5"/§"Session K2"/
+§"Session K3"/§14.K–14.O/§"Phase 17 — league import", `docs/TECH-DEBT.md` **T34**/**T35**, `ROADMAP.md`,
+`PROJECT.md` §5, `docs/PLAYER-VIEW.md` §10 and `glossary.md` are the whole of it.
+
+**★ The bug, reproduced before it was written down** (`$CLAUDE_JOB_DIR/tmp/repro_seed.py`, live 2026 board,
+seat 6, `REALISTIC_ROOM`): `seed=7, room_seed=None` — the shipped app default — opens **Gibbs · Chase ·
+Taylor · McCaffrey · Cook** and does so **every time**, which is the user's report to the player. `seed=8`
+opens Gibbs · Nacua · Jeanty · Bijan · Chase; `room_seed=3` opens McCaffrey first. So the engine is fine
+and the personalities *are* sampling — `app/engine.start_draft` simply defaults **both** sources of
+variation to frozen: the pick RNG (`seed=7`) and the seating (`room_seed=None` keeps `REALISTIC_ROOM`'s
+listed order instead of shuffling). **T34**, and its fix is constrained: `steps/` must keep `--seed 7`,
+because T24's sweep, 16.17's mapping check and every committed bar sheet are differenced against it.
+*A measurement default and a human default are different objects, and the K1 port carried the CLI's into
+the app because the CLI's was the only one that existed.*
+
+**★ A second defect found while reading the notes, which the user's own first request happens to fix.**
+`st.tabs` executes **every** tab body on every rerun (it hides the inactive ones client-side), so one
+keystroke in the draft room re-runs `tab_cost`'s `_prepare_board` + whole-board option build. That is
+**T35**, 🟠 not 🟡 because it is the hard blocker on the pick clock: a timer-driven rerun must rerun one
+fragment, not four tabs. The fix is `st.navigation`/`st.Page` — i.e. **14.K**, which he asked for on
+ergonomic grounds (*"everything should be on a completely separate designated draft room page"*).
+*The ergonomic request and the performance defect have the same fix.*
+
+**Decisions taken while scoping (record, do not re-litigate):**
+1. **K1.5 is inserted ahead of K2.** Everything in it sits between the drafter and the board on draft day;
+   K2's surfacing does not. The 2026 draft is weeks out.
+2. **The slim board is a projection, not a second frame.** `session.board_view` stays the one derivation
+   site; slim (`# · PLAYER · POS · ADP · PROJ`) and advanced (today's twelve) are two column subsets of
+   one query. A second derivation is how T18/F.5/T27 happened.
+3. **Row-select + a named confirm, not a bare one-click pick.** `st.dataframe(selection_mode=…)` is the
+   primitive that scales; per-row buttons are fine for the visible top rows and get slow past ~50. A
+   mis-click costs a round, so the player's name is in front of the user before it commits.
+4. **Enter selects, a second Enter confirms.** Streamlit has no keypress hook — `st.text_input` fires on
+   Enter — so "Enter drafts the top hit" makes a stray Enter draft a player. `session.resolve_pick`
+   already returns the ranked candidate list the search box should render; the CLI has been throwing it
+   into a warning string.
+5. **The room grid reads the frozen lineup solver.** BY SLOT gets its fill order from
+   `RosterSlots.flex_groups()`, never a re-derivation — 17.1's whole finding was that three solvers had
+   each re-derived it once.
+6. **League import reverses 2026-07-23's "not auto-import", narrowly.** The manual form stays primary;
+   import is an **alternative constructor for `LeagueSettings`**, so nothing downstream changes, and an
+   import always lands in the form for the user to confirm — a wrong scoring setting does not fail
+   loudly, it silently re-ranks every player. Order: **Sleeper first for the contract** (free, keyless,
+   client already built, offline fixture — and its user-facing value is the contract, not the platform,
+   since he is not on Sleeper), **ESPN second** (the one he needs; pasted `espn_s2`+`SWID` for private
+   leagues, labelled fragile, last-good cached, cookies never logged), **Yahoo deferred to 14.4**
+   (OAuth2 needs a hosted redirect the Streamlit MVP does not have; Yahoo users type their settings once).
+
+**★ Two things flagged as user decisions that must be asked, not defaulted:**
+- **Your own pick clock** — (a) no clock on your seat and the room waits, (b) auto-pick best available at
+  0, (c) pause at 0. The room's clock is a setting; yours is a philosophy.
+- **What the clock may promise.** `value_hawk` runs the Phase-9 greedy per pick, not a softmax draw, so
+  worst-case per-seat latency must be **measured on the live board** before an interval is offered. A
+  "5-second" clock that takes 9 is the same class of defect as a bar that cannot fail.
+
+**★ NEXT: Session K1.5, steps 0→5, gate after each** (`docs/BUILD_PLAN.md` §"Session K1.5"). Then K2
+(surfacing + 14.N the post-draft page) → K3 (league import) → L+ the go-live tail. Still owed: review +
+commit the K1 tree. Stage-0 FFC chore last pulled 2026-07-30, next due after 08-05.

@@ -2082,3 +2082,62 @@ both branches describe **supported, correctness-tested** leagues. What differs i
 configuration has a held-out result behind it and every other one has unit tests and no
 out-of-sample claim. A UI must render the distinction rather than let a user assume the calibration
 travels.
+
+**a bar's name is a claim** — `bar_server` was called "a real headless server boots and serves the
+page" and was read as "the app works". It proved the process starts and binds; Streamlit does not
+execute the script until a websocket session opens, so an HTTP GET could not see a broken import.
+An over-broad name is worse than a missing bar, because a missing bar is visibly missing. State
+what a check does **not** cover in the check itself.
+
+**when a control does not fail, suspect the instrument** — reverting the `sys.path` fix left the
+server bar still passing, which looked like evidence the fix was unnecessary. It was evidence the
+bar was blind. A control that fails to fail is a measurement result about the *measurement*.
+
+**run it the way the docs say** — for anything with an entry point, one bar must launch it exactly
+as the README instructs, from outside the repo, with `PYTHONPATH` scrubbed. Import resolution is
+configuration, not code: it is invisible to every test that has already configured itself
+correctly (pytest's `pythonpath`, an in-process `sys.path.insert`, a `-m` invocation that adds the
+cwd). Session K1 shipped a `ModuleNotFoundError` past 18 unit tests, an `AppTest` and a live server
+boot for exactly this reason.
+
+**a measurement default and a human default are different objects** *(T34, 2026-07-30)* — fixed seeds
+are correct for `steps/`, where every committed artifact is differenced against `--seed 7`, and wrong
+for a drafter, whose whole use case is drafting one slot twenty times to see twenty rooms. The K1 app
+inherited the CLI's `seed=7` (and `room_seed=None`, which keeps the personalities in their listed
+chairs) because the CLI's was the only default that existed, so **every mock draft was the same mock
+draft** — reproduced exactly: seat 6 opened Gibbs · Chase · Taylor · McCaffrey · Cook every time.
+The fix is two defaults, not one behaviour: entropy in the app with a **lock-the-seed** replay
+option, `--seed 7` untouched in `steps/`. Cf. **the seating error is a bias** (T24): the app had also
+been showing one fixed seating, which is exactly the thing T24 found flatters by 5–7 pp.
+
+**a hidden tab is still an executed tab** *(T35, 2026-07-30)* — `st.tabs` renders **every** tab's body
+on every rerun and hides the inactive ones in the browser. Four tabs meant one keystroke in the draft
+room also re-ran the cost tab's whole-board build. It reads as a performance nit until a feature needs
+timer-driven reruns (the 14.M pick clock), at which point it is a structural blocker. Related: *the
+ergonomic request and the performance defect had the same fix* — the user asked for real pages on
+usability grounds and that is also T35's remedy.
+
+**the clock must not lie** *(14.M, 2026-07-30)* — a mock-draft timer that offers "5 seconds per pick"
+while the `value_hawk` seat's Phase-9 greedy takes longer is presenting a promise it cannot keep.
+Measure worst-case per-seat latency on the live board **before** offering an interval, and refuse or
+warn below it. Same family as *a bar's name is a claim*: a UI control is a claim about the system.
+
+**slim vs advanced is a projection, not a second frame** *(14.K/K1.5, 2026-07-30)* — two audiences want
+different column counts off the *same* query. The temptation is a second derived frame; the rule is one
+derivation site (`session.board_view`) and two column subsets chosen in the renderer. A second
+derivation of a shipped frame is how T18, F.5 and T27 each happened.
+
+**import is an alternative constructor, not an integration** *(17.5–17.7, 2026-07-30)* — a league
+importer's whole job is `import_league(platform, ident, creds) -> LeagueSettings`. Because Phase 17
+already parameterized the board, replacement levels, lineup solver, sim bracket and cost report on that
+object, a correct import changes zero lines downstream. Two contracts travel with it: the imported
+settings **land in the form for the user to confirm** (a wrong scoring rule does not fail loudly — it
+silently re-ranks every player), and anything the platform did not say is left at the engine default
+and **labelled inferred**, never guessed.
+
+**the platform you can test is not the platform you need** *(Session K3, 2026-07-30)* — Sleeper is
+free, keyless, already-clienting and has an offline fixture; ESPN is undocumented and needs the user's
+cookies; Yahoo needs OAuth2 and a hosted redirect. The user plays on ESPN/Yahoo. Build Sleeper first
+anyway — for the **contract**, tested against something we own — and say in the report that its
+user-facing value is the contract, not the platform. Overselling the cheap one is how a session
+delivers nothing.

@@ -16,16 +16,31 @@ by testing two implementations against each other and hoping.
 
 from __future__ import annotations
 
-import pandas as pd
-import streamlit as st
+import sys
+from pathlib import Path
 
-from app import engine, views
-from app.settings_form import lockbox_banner, settings_form, validation_message
-from fantasy_quant.draft import session
-from fantasy_quant.draft.config import ARCHETYPES, DraftConfig, LeagueSettings
-from fantasy_quant.draft.personalities import REALISTIC_ROOM, personalities
-from fantasy_quant.draft.simulator import _prepare_board
-from fantasy_quant.valuation.cost_report import personalization_cost
+# ⚠ **This must run before `from app import ...`, and it is not boilerplate.**
+# `streamlit run app/main.py` executes this file with **`app/` on `sys.path`, not the repo root**,
+# so the `app` *package* is not importable from inside its own entry point. (`python -m streamlit`
+# happens to work, because `-m` puts the cwd on the path — which is exactly how this shipped
+# broken: the done-bar launched it that way while the README told a human to use the console
+# script. *A guard that does not run on the path a human uses is not a guard* — T27's rule, and
+# this session's own finding, arriving one level up.) Bootstrapping here makes every invocation
+# work: the console script, `python -m streamlit`, `AppTest`, and any working directory.
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+import pandas as pd  # noqa: E402
+import streamlit as st  # noqa: E402
+
+from app import engine, views  # noqa: E402
+from app.settings_form import lockbox_banner, settings_form, validation_message  # noqa: E402
+from fantasy_quant.draft import session  # noqa: E402
+from fantasy_quant.draft.config import ARCHETYPES, DraftConfig, LeagueSettings  # noqa: E402
+from fantasy_quant.draft.personalities import REALISTIC_ROOM, personalities  # noqa: E402
+from fantasy_quant.draft.simulator import _prepare_board  # noqa: E402
+from fantasy_quant.valuation.cost_report import personalization_cost  # noqa: E402
 
 
 @st.cache_resource(show_spinner=False)

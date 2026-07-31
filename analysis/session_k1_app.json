@@ -326,14 +326,29 @@
       "n_dataframes": 1,
       "title": "\ud83c\udfc8 Fantasy-Quant"
     },
-    "server": {
-      "bar": "APP \u2014 a real headless server boots and serves the page",
+    "imports": {
+      "bar": "APP \u2014 the entry point imports as a bare script from an arbitrary cwd",
       "pass": true,
-      "health_status": 200,
-      "page_status": 200,
-      "page_bytes": 6602,
-      "traceback_in_log": false,
-      "log_tail": ""
+      "returncode": 0,
+      "module_not_found": false,
+      "cwd_used": "/tmp",
+      "pythonpath_scrubbed": true,
+      "output_tail": ""
+    },
+    "server": {
+      "bar": "APP \u2014 a headless server boots and serves, however it is launched (does NOT execute the script \u2014 see bar_imports)",
+      "pass": true,
+      "console_script_pass": true,
+      "console_script_health_status": 200,
+      "console_script_page_status": 200,
+      "console_script_page_bytes": 6602,
+      "console_script_error_on_page_or_log": false,
+      "python_m_pass": true,
+      "python_m_health_status": 200,
+      "python_m_page_status": 200,
+      "python_m_page_bytes": 6602,
+      "python_m_error_on_page_or_log": false,
+      "logs": {}
     }
   }
 }

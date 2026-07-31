@@ -5157,3 +5157,113 @@ observation; the T15 bars describe a fully-simulated room) render with the actua
 
 **Deliberately not in the app:** auction (15.4), keeper entry (17.4), `draft_type` — all present in
 the engine, all Session K2/L questions.
+
+### ★★★ The app shipped broken and every bar said PASS (2026-07-30, found by the user on first run)
+
+`uv run streamlit run app/main.py` → **`ModuleNotFoundError: No module named 'app'`**, at
+`app/main.py` line 22, `from app import engine, views`. The first human to open the app hit it
+immediately. Nine bars had just reported PASS.
+
+**The cause.** Streamlit executes the target file with **the file's own directory** on `sys.path`,
+not the repo root. So from inside `app/main.py`, the `app` *package* is not importable. The fix is
+three lines at the top of the entry point, before its own imports: put the repo root on `sys.path`.
+
+**Why nothing caught it — the interesting part. Every layer of the pyramid shared one false
+assumption, and each layer had a *different* reason for sharing it:**
+
+| check | why it passed anyway |
+|---|---|
+| 18 unit tests | pytest's `pythonpath = ["src", "."]` puts the repo root on the path |
+| `AppTest` | runs **in this process**, where the done-bar had already done `sys.path.insert(0, root)` |
+| headless server bar | **Streamlit does not run the script until a browser opens a websocket session** — an HTTP GET of `/` returns the same 6,602-byte HTML shell whether the script imports or not |
+| the `python -m streamlit` launcher | `-m` puts the **cwd** on `sys.path`, so the app worked under the invocation the bar used and failed under the one the README documents |
+
+The last row is this session's own finding turned on its author: *a guard that does not run on the
+path a human uses is not a guard* (T27). Here "the path" was literally `sys.path`, and the bar
+launched the app one way while every document told the user to launch it another.
+
+The third row is the one worth remembering longest, because the bar was not merely weak — **it was
+over-claiming**. It was named "a real headless server boots and serves the page" and read as "the
+app works". It proved the server process starts and binds. Those are different sentences, and the
+gap between them is a whole application. *A bar's name is a claim, and an over-broad name is worse
+than a missing bar — a missing bar is visibly missing.*
+
+**The first control failed to fail, and that was informative.** Reverting the `sys.path` fix and
+re-running the server bar still returned PASS — which initially looked like the fix being
+unnecessary. It was the bar being blind: with no websocket session the script never executed, so
+there was nothing to fail. *When a control does not fail, suspect the instrument before the
+hypothesis.*
+
+**The fix, and the new bar.** `bar_imports` runs the entry point as a **bare script, from
+`/tmp`, with `PYTHONPATH` scrubbed** — the harshest honest version of "does this import?" — and it
+reproduces the user's exact traceback on the unfixed file and passes on the fixed one. Mirrored as
+a unit test (`test_the_entry_point_imports_when_run_the_way_a_human_runs_it`). `bar_server` now
+launches **both** ways, console script first, and its name states what it does not prove.
+
+**The durable rule:** *for anything with an entry point, one bar must run it the way the
+documentation says to run it, from outside the repo, with the environment scrubbed.* Import
+resolution is configuration, not code, and it is invisible to every test that has already
+configured itself correctly.
+
+---
+
+## The app's first real use (2026-07-30, session 8) — one bug behind ten UX notes
+
+Docs-only session. The user drove the Session-K1 app and returned eleven notes; the value of the
+session was **separating the one defect from the ten preferences before writing any of them down**.
+
+### The defect: every mock draft is the same mock draft (T34)
+
+Reported as *"the previous personality picks are the exact same every single time I run from the same
+slot (from p6: Gibbs 1, Chase 2, Taylor 3, McCaffrey 4, Cook 5)"*. Reproduced on the live 2026 board,
+seat 6, `REALISTIC_ROOM`, before anything was concluded:
+
+| run | first five picks |
+|---|---|
+| `seed=7, room_seed=None` — **the shipped app default** | Gibbs · Chase · Taylor · McCaffrey · Cook |
+| the same call again | **identical**, i.e. exactly the user's report |
+| `seed=8, room_seed=None` | Gibbs · **Nacua · Jeanty · Bijan · Chase** |
+| `seed=7, room_seed=3` | **McCaffrey** · Gibbs · Taylor · Chase · Cook |
+| `seed=12345, room_seed=99` | Chase · Bijan · Gibbs · Nacua · McCaffrey |
+
+**The engine is not broken and the personalities are sampling** — `app/engine.start_draft` defaults
+`seed=7` (freezing `DraftState.rng`, from which every sampling seat draws) *and* `room_seed=None`
+(which makes `SeatMap.of` keep `REALISTIC_ROOM`'s listed order instead of shuffling, so the same
+personality occupies the same chair in every draft). Two independent knobs, both defaulted to frozen.
+
+**★ The lesson: a measurement default and a human default are different objects, and this repo had
+been shipping one of them twice.** `--seed 7` is *correct* in `steps/` — T24's seating-marginalized
+sweep, 16.17's bit-identity bars and every committed artifact are differenced against it. It is
+*wrong* for a drafter, whose entire use case is drafting one slot twenty times to see twenty rooms.
+The K1 port carried the CLI's default into the app because the CLI's default was the only one that
+existed. The fix is two defaults, not one behaviour.
+
+**A second reading of the same fact:** the app has been showing the user **one fixed seating** — which
+is precisely T24's third method failure, where measuring on a fixed seating flattered the elite-fall
+bar by 5–7 pp and was a **bias** that more seeds could not remove. Randomizing the seating per draft
+is not only better UX, it is more faithful to how the room was calibrated.
+
+### The defect found while reading the notes (T35)
+
+`st.tabs` **executes every tab body on every rerun** — it hides the inactive ones in the browser. So a
+keystroke in the draft room's player box also re-runs `tab_cost`'s `_prepare_board` and its
+ADP-sorted option-label build over the whole board. It reads as a performance nit until 14.M: a pick
+clock reruns on a timer and must rerun one fragment, not four tabs.
+
+**★ The user asked for separate pages on ergonomic grounds** (*"once you start a draft, everything
+should be on a completely separate designated draft room page"*), **and that is also T35's fix.** Worth
+recording as a pattern: *when a usability complaint and a structural defect have the same remedy, the
+complaint is evidence about the structure* — and it argues for doing the restructure first rather than
+bolting pages on after three more features have been built into tabs.
+
+### What the notes were, sorted
+
+**One bug** (T34). **One defect nobody had reported** (T35). **Nine ergonomics** — pages not tabs, a
+pick button in the row, the room grid, slim board + advanced view, the pick clock, the roster rail,
+search results under the box, column tooltips with examples, the post-draft page. **One new
+capability** — league import from ESPN/Yahoo/Sleeper, which narrowly reverses the 2026-07-23
+"hand-enter, not auto-import" decision and is scoped as an *alternative constructor for
+`LeagueSettings`* so that nothing downstream changes.
+
+All of it is specified in `docs/BUILD_PLAN.md` §"Session K1.5" (six pre-registered bars), §"Session K2",
+§"Session K3", §14.K–§14.O and §"Phase 17 — league import". Nothing was built.

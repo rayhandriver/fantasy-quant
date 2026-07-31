@@ -61,10 +61,94 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★★ Next-session pointer (2026-07-30, session 7 — ★ SESSION K1 ☑ COMPLETE: THE APP EXISTS. READ THIS FIRST.)**
+> **★★★ Next-session pointer (2026-07-30, session 8 — the app's FIRST REAL USE → SESSION K1.5 SCOPED. docs-only, no code. READ THIS FIRST.)**
 >
-> **State: 690 tests (was 669), ruff clean. UNCOMMITTED**, on top of `945e302` (Session I.5, pushed).
+> **State: unchanged — 691 tests, ruff clean, still UNCOMMITTED** on top of `945e302`. Nothing ran, no
+> `src/` change, no test-count change. Edited: `docs/BUILD_PLAN.md` (§14.K–§14.O, §"Phase 17 — league
+> import", §"Session K1.5", §"Session K2", §"Session K3"), `docs/TECH-DEBT.md` (**T34**, **T35**),
+> `ROADMAP.md`, `PROJECT.md` §5, `docs/PLAYER-VIEW.md` §10, `PLAN.md` §2026-07-30 (session 8), `glossary.md`.
+>
+> **What happened.** The user drove the K1 app and came back with eleven notes. **Ten are UX. One is a bug,
+> and it was reproduced before it was written down.**
+>
+> **★ T34 🔴 — every mock draft is the same mock draft.** He reported that from seat 6 the room always opens
+> Gibbs · Chase · Taylor · McCaffrey · Cook. It does. `app/engine.start_draft` defaults **`seed=7`** and
+> **`room_seed=None`**, which freezes *both* sources of variation — the pick RNG (`DraftState.rng =
+> default_rng(7)`) and the seating (`room_seed=None` keeps `REALISTIC_ROOM`'s listed order instead of
+> shuffling, so the same personality sits in the same chair every draft). Measured on the live 2026 board:
+>
+> | run | first five picks |
+> |---|---|
+> | `seed=7, room=None` — **the shipped default** | Gibbs · Chase · Taylor · McCaffrey · Cook |
+> | the same call again | **identical** — his report, to the player |
+> | `seed=8, room=None` | Gibbs · **Nacua · Jeanty · Bijan · Chase** |
+> | `seed=7, room=3` | **McCaffrey** · Gibbs · Taylor · Chase · Cook |
+>
+> So **the engine is fine and the personalities are sampling** — the human-facing default is the measurement
+> default. **⚠ The fix is two defaults, not one behaviour: `steps/` must keep `--seed 7`**, because T24's
+> sweep, 16.17's 1,014-triple mapping check and every committed bar sheet are differenced against it.
+> *A measurement default and a human default are different objects, and the K1 port carried the CLI's into
+> the app because the CLI's was the only one that existed.* Bonus: shuffling the seating per draft is also
+> **more faithful to how the room was measured** — T24's third method failure was measuring on one fixed
+> seating, which flatters by 5–7 pp and is a *bias* more seeds cannot remove. The app has been showing him
+> exactly that seating.
+>
+> **★ T35 🟠 — found while reading the notes, and his own first request is its fix.** `st.tabs` executes
+> **every** tab body on every rerun (it hides the inactive ones client-side), so one keystroke in the draft
+> room also re-runs `tab_cost`'s `_prepare_board` + whole-board option build. 🟠 rather than 🟡 because it is
+> the **hard blocker on the 14.M pick clock**: a timer-driven rerun must rerun one fragment, not four tabs.
+> The remedy is `st.navigation`/`st.Page` = **14.K**, which he asked for on ergonomic grounds. *The
+> ergonomic request and the performance defect have the same fix.*
+>
+> **★ NEXT: Session K1.5 — the draft room a human can use** (`docs/BUILD_PLAN.md` §"Session K1.5", six
+> pre-registered bars, **rule-7 gate NOT waived**). Steps: **0** T34 the seeding default · **1** 14.K pages
+> not tabs (T35) · **2** the slim board (`# · PLAYER · POS · ADP · PROJ`) + advanced toggle, **pick buttons
+> in the row**, **search results under the box** · **3** 14.M the pick clock · **4** 14.L the room grid
+> (every team across the top, by pick or by slot) · **5** the roster rail + 14.O tooltips.
+> Then **K2** (surfacing + **14.N** the post-draft page) → **K3** (league import) → L+.
+>
+> **⚠ Two user decisions must be ASKED at their step, not defaulted:** (a) **your own pick clock** — no
+> clock on your seat / auto-pick at 0 / pause at 0; (b) nothing may promise a clock interval the room
+> cannot meet — `value_hawk` runs the Phase-9 greedy per pick, so **measure worst-case per-seat latency on
+> the live board first**.
+>
+> **⚠ Do not:** put a derivation in `app/` (K1's rule — `session.py` is the one derivation site, which is
+> why B1 holds by construction) · build a second board frame for the slim view (it is a **projection** of
+> `board_view`, two column subsets of one query) · make the CLI's `--seed` random to match the app · let the
+> slim board drop the `#` pick handle · re-derive the roster-slot fill order in the 14.L grid (17.1:
+> `flex_groups()` is the **single** fill-order rule, and three solvers had each re-derived it once).
+>
+> **★ League import (17.5–17.7, Session K3) narrowly reverses the 2026-07-23 "not auto-import" decision.**
+> The manual form stays primary; import is an **alternative constructor for `LeagueSettings`**, so nothing
+> downstream changes. Order and honest cost: **Sleeper first for the contract** (free, keyless, client
+> already built, offline fixture — say plainly that its user value is the contract, since he is not on
+> Sleeper) → **ESPN** (the one he needs; pasted `espn_s2`+`SWID` for private leagues, labelled fragile,
+> last-good cached, **cookies never logged**) → **Yahoo deferred to 14.4** (OAuth2 needs a hosted redirect
+> the Streamlit MVP does not have). An import always lands in the 17.3 form for the user to **confirm**: a
+> wrong scoring setting does not fail loudly, it silently re-ranks every player.
+>
+> _(Session K1's pointer, still the authority on the app's structure and its bars, follows.)_
+>
+> **★★★ Next-session pointer (2026-07-30, session 7 — ★ SESSION K1 ☑ COMPLETE: THE APP EXISTS.)**
+>
+> **State: 691 tests (was 669), ruff clean. UNCOMMITTED**, on top of `945e302` (Session I.5, pushed).
 > Nothing in the engine moved: no fitted β, no frozen contract, the spent lockbox not re-read.
+>
+> **⚠ READ THIS BEFORE TRUSTING ANY BAR IN THIS SESSION.** The app **shipped broken** —
+> `uv run streamlit run app/main.py` raised `ModuleNotFoundError: No module named 'app'` for the
+> user on first run — while **nine bars reported PASS**. Streamlit puts the *script's* directory on
+> `sys.path`, not the repo root. Fixed by a `sys.path` bootstrap at the top of `app/main.py`
+> (**do not delete it**; it is load-bearing, not boilerplate). Why nothing caught it: the unit tests
+> ran under pytest's `pythonpath = ["src", "."]`; `AppTest` ran in a process that had already
+> inserted the root; and the server bar fetched `/` — but **Streamlit does not execute the script
+> until a browser opens a websocket session**, so an HTTP GET returns the same HTML shell either
+> way, *and the bar's own launcher used `python -m streamlit`, which adds the cwd, while every doc
+> tells a human to use the console script.* New **`bar_imports`** runs the entry point as a bare
+> script from `/tmp` with `PYTHONPATH` scrubbed and reproduces the user's traceback exactly on the
+> unfixed file; `bar_server` now launches **both** ways and its name says what it does not prove.
+> Full write-up: `findings.md` §"The app shipped broken and every bar said PASS". **Durable rule:
+> for anything with an entry point, one bar must run it the way the documentation says to run it,
+> from outside the repo, with the environment scrubbed.**
 >
 > **Run it:** `uv sync --extra ui && uv run streamlit run app/main.py`
 > **Re-check it:** `uv run python steps/session_k1_app.py` → `analysis/session_k1_app.json`
@@ -82,7 +166,7 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > | **B4** k of n ∈ {0,1,4,9,10} | all complete, **0 avoidable** unfilled slots |
 > | **B5** `why` identities | 40/40 on the live board, 0 mismatched |
 > | **B6** cache-key safety | `full_ppr` returns `RuleSet()` itself; scoring change gated |
-> | **APP** AppTest / server | 4 tabs 0 exceptions · health 200, page 200, no traceback |
+> | **APP** AppTest / imports / server | 4 tabs 0 exceptions · bare-script import from `/tmp` OK · both launchers serve 200 |
 >
 > **★★ THE ONE THING TO CARRY FORWARD — the fixture was too rich to fail.** Two real bugs
 > (`explain_chain` and the cost picker were handed the **raw** board, not `_prepare_board`'s) shipped

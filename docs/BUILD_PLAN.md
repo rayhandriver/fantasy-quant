@@ -846,6 +846,95 @@ win for novice and sharp alike. Done-bar for all: **renders correctly reading fr
 - **Reuse:** 16.17 `SeatMap` + `human_teams` (the engine call is identical for every k), `docs/PLAYER-VIEW.md`
   §9 + §9.5, 14.I, 14.7.
 
+### 14.K — The multipage shell: a draft room is a *place*, not a tab → `app/` *(added 2026-07-30 s4, user request)*
+*The user's first note after using K1: "most of these features should be on separate tabs, not one after
+the other — once you start a draft, everything should be on a completely separate designated draft room
+page."* He is describing a navigation model, and the current one is wrong for two independent reasons.
+- **Do:** replace `st.tabs` with `st.navigation` / `st.Page` — real pages, real URLs, one script body
+  executed per page. Pages: **Settings · Board · Draft room · Room grid (14.L) · Post-draft (14.N) · Cost**.
+  Starting a draft **navigates** to the draft room; the draft room is full-width and owns the screen.
+- **★ This is not cosmetic — `st.tabs` executes every tab's body on every rerun** (it hides the inactive
+  ones client-side). Today one keystroke in the draft room's player box re-runs `tab_settings`,
+  `tab_board`, `tab_draft` **and** `tab_cost`, including `tab_cost`'s `_prepare_board` + its ADP-sorted
+  option-label build over the whole board. That is **T35**, and it is also the hard blocker on 14.M: a
+  clock that reruns every second must rerun *one* fragment, not four tabs.
+- **Out:** `app/main.py` becomes a router; each page its own module. **Done:** a rerun on the draft page
+  executes the draft page only (assert by counting a probe counter per page body under `AppTest`).
+- **Reuse:** everything — the pages are the K1 tab functions moved, not rewritten. `session.py` stays the
+  one derivation site (the K1 rule: *renderers format, they do not derive*).
+
+### 14.L — The room grid: every drafter's team on one page → `app/` *(added 2026-07-30 s4, user request)*
+*"See the exact team (optionally by pick or roster) of every bot drafter on a separate internal page you can
+click onto, always with teams across the top and picks or slots every row."*
+- **Do:** one page, two grids over the same draft, a toggle between them — **teams across the top in seat
+  order** in both:
+  - **BY PICK** — the classic draft board: one row per round, cell = the pick that seat made that round,
+    laid out so the **snake is visible** (round 2 reads right-to-left). This is `state.log` pivoted; the
+    only judgement is the serpentine column order.
+  - **BY SLOT** — one row per roster slot (`QB · RB1 · RB2 · WR1 · WR2 · WR3 · TE · FLEX · K · DST ·
+    BN1…`), cell = the player filling it. **The slot assignment must come from the frozen lineup solver**
+    (`RosterSlots.flex_groups()` / `optimal_lineup`), never from a re-derived fill order — 17.1's rule is
+    that `flex_groups()` is the **single** fill-order rule and three solvers had each re-derived it once.
+- Colour by position; the human seat(s) highlighted; a cell click opens that player's `why` chain (14.O).
+- **Out:** `session.room_grid(st, sm, by="pick"|"slot")` → a wide frame, plus its renderer. **Done:** the
+  `by="pick"` grid re-reads `state.log` exactly (every pick appears exactly once, in the right cell for
+  its seat and round) and the `by="slot"` grid's starters agree with `optimal_lineup` player-for-player.
+- **Reuse:** `state.log`, `session.roster_view`, `session.seat_labels`, 17.1 `flex_groups`, `simulation/season.py`'s
+  lineup fill. **No new modelling — it is a pivot.**
+
+### 14.M — The pick clock: the room drafts in real time → `app/` *(added 2026-07-30 s4, user request)*
+*"A pick timer where each individual bot picks every n (choosable) seconds instead of making it almost
+instant."* Right call — it is the difference between reading a finished draft and **practising** one.
+- **Do:** a `st.fragment(run_every=…)` clock on the draft-room page. Setting: **seconds per modelled pick**
+  (default ~5, range 0–30; **0 = the current instant "Advance"**, which must stay reachable). Between your
+  turns the room picks one seat at a time on the clock, the log grows live, and the board shrinks under you.
+- **Your own clock is a separate decision and must be asked explicitly.** Options, in the order they should
+  be offered: (a) **your seat has no clock** — the room waits for you (default, and the honest one for
+  practice); (b) a countdown that **auto-picks your best available** at 0 (realistic, ruthless); (c) a
+  countdown that **pauses** at 0. This is a user decision, not a default to invent.
+- **★ The clock must not lie.** `value_hawk` runs the Phase-9 greedy per pick (`objective="portfolio_ce"`,
+  T28) — not a softmax draw. **Measure worst-case per-seat pick latency on the live board first**, and
+  refuse (or warn on) a `run_every` below it, rather than shipping a "5-second" clock that takes 9. A
+  timer that silently overruns is the same class of defect as a bar that cannot fail.
+- **Out:** the clock fragment + the two settings. **Done:** a full 15-round k=1 draft completes under the
+  clock with the **same pick sequence** a step-through of the same seed produces — *the clock changes
+  when picks happen, never which picks happen* (bar: identical `state.log` vs. the un-clocked run).
+- **Reuse:** `session.advance` (already "run the room until a human seat is up" — the clock calls it one
+  seat at a time), 14.K's per-page rerun isolation.
+
+### 14.N — The post-draft page: where a finished draft goes → `app/` *(added 2026-07-30 s4, user request)*
+*"After the draft is done, I want to be in a finalized analysis page where I can see all opposing teams and
+all post-draft analytics."* This is the home Session K2's surfacing never had, and it should be built as
+the **destination the draft room navigates to** on the last pick.
+- **Do:** one page, assembled from parts that already exist plus K2's new ones: the 14.L **BY SLOT** grid for
+  all ten teams · `summary_table` with **`STARTABLE` and `CAPITAL` both, labelled** (T28) · season odds **led
+  by the fair-share multiple** (T29, `1.70x` never a bare `17.0 %`) · the drift/reach profile with its
+  **scope note** (T15 bars describe a *fully-simulated* room) · **14.I draft grade per human seat** · **14.F
+  roster-construction risk** (bye clustering, team concentration, handcuff gaps) · biggest reach & best value.
+- **The two 16.17 honesty rules render here or the page is wrong:** k human seats get **k blocks with nowhere
+  to put a combined number**, and the odds for your own seats are **not independent** (they play each other).
+- **Out:** the page + its navigation from the final pick. **Done:** every panel renders for a completed k-of-n
+  draft at k ∈ {0,1,4}, and each number is identical to the CLI's `summary --odds` / `drift` for that state.
+- **Reuse:** 14.I, 14.F, 14.L, `session.summary_table`/`odds_table`/`drift_frames`.
+
+### 14.O — The stat dictionary: a column that explains itself → `app/`, `draft/session.py` *(added 2026-07-30 s4, user request)*
+*"The stats in each column of the draft board are just numbers to those who don't know what they are, so
+hovering over the 'upside' or 'bust' box of the column should show an overlay explaining the stat with
+examples."*
+- **Do:** promote `views._BOARD_HELP` (terse, app-only) into **one stat dictionary** — id → `{label, one_line,
+  what_it_means, worked_example, how_to_read_it, provenance}` — and serve it to **every** surface: the board
+  column tooltips, the 14.L grid, the PLAYER-VIEW cards, the post-draft page, and the CLI's `--help`.
+- **Every entry carries a worked example off the live board**, because that is what the request actually asks
+  for: *"BUST 0.31 = in the last season we have measured him, 31 % of his weeks came in under half his own
+  average. Jaylen Waddle is 0.12; a boom-or-bust deep WR is 0.45."*
+- **Two entries must carry their known limitation in the tooltip, not in a doc:** `BOOM`/`BUST` are **live**
+  (season − 1) and **blank means never seen play, not never busts** (T22 — the exact misreading that ticket
+  exists to prevent), and `MEAN`/`AVAIL` carry T31's level-cap note for deep players.
+- **Out:** `draft/session.py::STAT_DICT` (data, not Streamlit) + a renderer. **Done:** every column in
+  `BOARD_VIEW_COLS` has an entry (asserted — a new column without documentation fails a test), and no entry
+  duplicates text held anywhere else.
+- **Reuse:** `_BOARD_HELP` as the seed text, `glossary.md` for the long form.
+
 ---
 
 # Phase 15 — Multi-format (roadmap) → ✅ **CORE COMPLETE** *(2026-07-13, Session C: 15.2/15.3/15.4; dynasty deferred)*
@@ -2002,7 +2091,7 @@ compute on demand, never per rerun.
 Done-bar `steps/session_k1_app.py` → `analysis/session_k1_app.json`.
 
 ### ✅ OUTCOME (2026-07-30) — all six bars + two live-boot checks PASS
-`analysis/session_k1_app.json` · `steps/session_k1_app.py` · **690 tests** (was 669), ruff clean.
+`analysis/session_k1_app.json` · `steps/session_k1_app.py` · **691 tests** (was 669), ruff clean.
 
 **★ The design decision that made B1 free: one computation, two renderers.** The port could have
 re-derived the board table, the `why` chain, the summary and the odds inside the app and then been
@@ -2025,7 +2114,18 @@ the code.
 | **B5** `why` identities | **40/40** players on the live board, 0 mismatched |
 | **B6** cache-key safety | `ruleset_from_preset("full_ppr") is RuleSet()`-equal incl. `name`; scoring change gated behind explicit confirmation |
 | **APP** AppTest | 4 tabs, **0 exceptions** |
-| **APP** headless server | health 200, page 200, no traceback |
+| **APP** bare-script import | runs from `/tmp` with `PYTHONPATH` scrubbed, exit 0 |
+| **APP** headless server | both launchers (console script + `-m`): health 200, page 200 |
+
+**⚠ The bar sheet above is the state AFTER a fix the bars did not catch.** On first run the user hit
+`ModuleNotFoundError: No module named 'app'` — Streamlit puts the script's directory on `sys.path`,
+not the repo root — with nine bars green. The unit tests had pytest's `pythonpath`, `AppTest` ran
+in an already-bootstrapped process, and the server bar fetched `/` without ever opening the
+websocket session that makes Streamlit *execute the script*; its launcher also used
+`python -m streamlit` (which adds the cwd) while every doc says to use the console script. Fixed by
+a `sys.path` bootstrap in `app/main.py` and by adding **`bar_imports`**, which runs the entry point
+as a bare script from `/tmp` with the environment scrubbed and reproduces the traceback on the
+unfixed file. See `findings.md` §"The app shipped broken and every bar said PASS".
 
 **★★ THE FINDING TO CARRY FORWARD — the two bugs both surfaces shared were found by *booting the
 app*, not by the test suite.** `explain_chain` and the cost tab's player picker both need the
@@ -2054,6 +2154,163 @@ DEV seasons remain reachable for inspection; the *default* is the live board.
 draft). Not T33 (its own seating-marginalized measurement session; it should land before 14.J's
 multi-seat UI is *trusted*, since k makes the value hawk's divisor vary). Not T26 (deferred to the next
 11.1 refit by design). Not FastAPI or Next.js — that is §14.3a and Session L+.
+
+---
+
+## ★★ Session K1.5 — THE DRAFT ROOM A HUMAN CAN USE (T34 · T35 · 14.K · 14.L · 14.M · 14.O)
+
+*(written 2026-07-30 session 4, docs-only, after the user drove the K1 app for the first time. **Inserted
+ahead of Session K2**: everything here is between the drafter and the board on draft day, and K2's
+surfacing is not. Nothing refits β, touches the frozen value stack, or spends the lockbox — this session
+is display, navigation, timing and one seeding default.)*
+
+**Why this session exists.** K1's bar was *the app and the CLI agree to the digit*, and it held. But that
+bar is about **numbers**, and every note the user came back with is about **using the thing**: the draft
+room is a tab among four rather than a room; picking means retyping a name you can already see; the board
+is twelve columns wide when four would do; the room drafts instantly instead of on a clock; there is
+nowhere to look at the other nine teams; and — the one real bug — **every draft is the same draft.**
+
+**★ The bug, reproduced exactly before anything was written down.** The user reported that from seat 6
+the room always opens Gibbs · Chase · Taylor · McCaffrey · Cook. It does, and here is why:
+`app/engine.start_draft(seed=7)` with `room_seed=None`. Those two defaults freeze both sources of
+variation — the pick RNG (`DraftState.rng = default_rng(7)`) and the seating (`room_seed=None` means
+`SeatMap.of` keeps `REALISTIC_ROOM`'s listed order, so the same personality sits in the same chair every
+time). Verified on the live 2026 board:
+
+| run | first five picks |
+|---|---|
+| `seed=7, room=None` (the shipped default) | Gibbs · Chase · Taylor · McCaffrey · Cook |
+| `seed=7, room=None` **again** | *identical* — the user's report, to the player |
+| `seed=8, room=None` | Gibbs · **Nacua · Jeanty · Bijan · Chase** |
+| `seed=7, room=3` | **McCaffrey** · Gibbs · Taylor · Chase · Cook |
+
+So the engine is **not** broken and the personalities **are** sampling; the human-facing default is simply
+the measurement default. That is **T34**, and its fix has a real constraint attached — see the register.
+
+**Stop and report after each step** (CLAUDE.md rule 7 — **not waived**; steps 3 and 4 each contain a
+decision that is the user's, and step 0 changes what "run a mock" means).
+
+### Step 0 — T34: a mock draft must be a *new* draft → `app/engine.py`, `steps/mock_draft.py`
+- The app's seed control becomes **"Randomize (default) / lock to a seed"**: a fresh draft draws
+  `seed` from OS entropy *and* draws a `room_seed`, then **displays both** so any draft can be replayed.
+  Re-drafting the same slot must produce a different room, different picks, and a different story.
+- **★ The constraint that makes this a ticket and not a one-liner: `steps/` must not move.** Every
+  bit-identity bar in the repo — T24's sweep, 16.17's 1,014-triple mapping check, `mock_room_bars.py`,
+  `phase16_17_seat_map.py` — depends on `--seed 7` meaning what it has always meant. The CLI default
+  stays 7; the *app* default becomes entropy. **A measurement default and a human default are different
+  objects and this repo has been shipping one of them twice.**
+- **Bar B0.** Twenty app-started drafts from the same seat share **no** identical first-five sequence;
+  the CLI at `--seed 7 --room-seed <none>` is **byte-identical** to its committed output; and a locked
+  seed + room seed in the app reproduces its own draft pick-for-pick.
+
+### Step 1 — 14.K: pages, not tabs → `app/`
+Full spec at §14.K. The measurable half: **T35** — `st.tabs` executes every tab body on every rerun, so a
+keystroke in the draft room currently re-runs the cost tab's whole-board option build. Convert to
+`st.navigation`/`st.Page`; starting a draft navigates into the room.
+- **Bar B1.** A rerun triggered on the draft page executes the draft page body **only** (per-page probe
+  counters under `AppTest`), and the K1 B1 identity (app == CLI, same seed) still holds after the move.
+
+### Step 2 — the board a drafter reads → `app/`, `draft/session.py`
+- **Slim by default, advanced on a toggle.** Default columns **`# · PLAYER · POS · ADP · PROJ`** — the four
+  a human drafts on, plus the pick handle. **Advanced view** = today's full `BOARD_VIEW_COLS`
+  (`MEAN · AVAIL · BV · VBD · RK · UPSIDE · FLOOR · TAIL · BOOM · BUST`). ⚠ **One frame, two column
+  subsets — do not build a second derivation.** `session.board_view` stays the single derivation site;
+  slim is a projection of it, chosen in the renderer. The K1 rule holds: *renderers format, they do not derive.*
+- **A pick button in the row** (user request). `st.dataframe(selection_mode="single-row",
+  on_select="rerun")` is the primitive that scales; a literal `st.button` per row is fine for the **top
+  ~15** and gets slow past that, so: row-select anywhere → a confirm bar naming the player, plus inline
+  buttons on the visible top rows. **Never a one-click irreversible pick without the name in front of
+  the user** — a mis-click costs a round.
+- **Search that behaves like search** (user request): matches render **under** the box, clickable, ranked
+  by ADP. `session.resolve_pick` **already returns exactly that list** on an ambiguous query — the CLI has
+  been throwing it away into a warning. Enter selects the top hit; **a second Enter or a click confirms**.
+  ⚠ Streamlit has no keypress hook: `st.text_input` fires on Enter, so "Enter drafts the top hit" would
+  make a stray Enter draft a player. Two-step, deliberately.
+- **Bar B2.** The slim and advanced views return the **same rows in the same order** for every filter
+  (one query, two projections), and a pick made by row-select lands the identical `board_index` a typed
+  query resolves to.
+
+### Step 3 — 14.M: the pick clock → `app/`
+Full spec at §14.M. **User decision required before building: what happens on your own clock** — (a) no
+clock on your seat, (b) auto-pick best available at 0, (c) pause at 0.
+- **Bar B3.** A clocked 15-round draft produces a `state.log` **identical** to the un-clocked run of the
+  same seed — *the clock changes when picks happen, never which picks happen* — and the measured
+  worst-case per-seat latency (the `value_hawk` greedy is the slow seat) is **reported**, with the clock
+  refusing to promise an interval below it.
+
+### Step 4 — 14.L: the room grid → `app/`, `draft/session.py`
+Full spec at §14.L. Teams across the top; **BY PICK** (the snake board) and **BY SLOT** (the roster grid)
+on a toggle. Slot assignment reads the frozen `flex_groups()` solver; it is **not** re-derived.
+- **Bar B4.** Every pick in `state.log` appears exactly once in the BY PICK grid in the right cell, and
+  the BY SLOT grid's starters agree with `optimal_lineup` player-for-player on all ten teams.
+
+### Step 5 — the roster rail + 14.O tooltips → `app/`
+- **Board left, your roster right** (user request): a persistent rail on the draft page — your roster in
+  slot order, filled slots vs. open, starter needs, running projection. With k > 1 human seats the rail
+  gains a seat selector and, per 16.17, **has nowhere to put a combined total** (k teams in one draft are
+  one observation).
+- **14.O stat dictionary** with worked examples per column, including T22's *blank ≠ zero* and T31's
+  level-cap note. A column without an entry fails a test.
+- **Bar B5.** Every column in `BOARD_VIEW_COLS` resolves to a dictionary entry with a worked example
+  (asserted), and the rail's slot state agrees with `state.starter_needs(team)`.
+
+### Pre-registered bars (all five, plus the K1 carry-over)
+**B0** no two app drafts alike / CLI byte-identical / a locked seed replays · **B1** one page body per
+rerun + K1's app==CLI identity survives · **B2** slim ≡ advanced rows, row-select ≡ typed pick ·
+**B3** clocked ≡ un-clocked log, latency reported · **B4** both grids agree with the state and the frozen
+solver · **B5** every column documented, rail agrees with `starter_needs`.
+**And the K1 rule that outranks all of them:** *if a display change moves a number, it is not a display
+change.* `analysis/session_k1_app.json`'s bars re-run unchanged at the close.
+
+### ⚠ Do not
+- Do **not** put a derivation in `app/` (the K1 finding: `session.py` is the one place a derived draft
+  frame is computed, and B1 holds *by construction* because of it).
+- Do **not** make the CLI's `--seed` default random to match the app — the committed artifacts are
+  differenced against it.
+- Do **not** let the slim board drop the pick handle (`#`) — it is the CLI's typed handle, the app's row
+  key, and the board index `_apply_pick` wants.
+- Do **not** ship a clock interval the room cannot meet.
+
+---
+
+## ★★ Session K2 — SURFACING + THE POST-DRAFT PAGE (14.N · 14.E · 14.F · 14.G · 14.I · 16.6 · 16.12)
+
+*(scoped 2026-07-30 s4; previously a one-line ROADMAP entry. It now has a **shape**, which it did not
+before: the user asked for "a finalized analysis page where I can see all opposing teams and all
+post-draft analytics", and that page is the destination four of these five readouts were always for.)*
+
+Everything here reads **already-frozen** machinery — no modelling, no refit, no lockbox. Done-bar for all:
+*renders correctly from frozen outputs + unit-tested wiring.*
+
+- **14.N — the post-draft page** (§14.N): the destination the draft room navigates to on the final pick.
+  All ten teams (the 14.L BY SLOT grid) · `STARTABLE`/`CAPITAL` both labelled (T28) · odds led by the
+  fair-share multiple (T29) · drift with its scope note (T15) · the two 16.17 honesty rules rendered.
+- **14.I draft grade**, once **per human seat**, never blended · **14.F roster-construction risk** (bye
+  clustering, team concentration, handcuff gaps) · **14.E tier cliffs** on the board · **14.G** ranges
+  instead of false-precise ranks · **16.12** availability/reach-risk readout · the **16.6 Beta Lab** tab
+  (walled-off, labelled unvalidated) · the `PLAYER-VIEW.md` cards.
+- **Sequencing note:** 14.N wants 14.L, so K1.5 lands first. Everything else here is independent.
+
+---
+
+## ★★ Session K3 — LEAGUE IMPORT (17.5 Sleeper · 17.6 ESPN; 17.7 Yahoo deferred)
+
+*(scoped 2026-07-30 s4, user request. Full substep specs at §"Phase 17 — league import".)*
+
+**The whole session is one function and two adapters**: `import_league(platform, ident, creds) ->
+LeagueSettings`, filling the 17.3 form for the user to confirm. Nothing downstream changes, because Phase
+17 already parameterized everything on that object.
+
+- **Step 1 — 17.5 the contract + Sleeper.** Free, keyless, already-built client, offline fixture. Its
+  user-facing value is the **contract**; say so rather than overselling a platform he does not play on.
+- **Step 2 — 17.6 ESPN.** The one he needs. Public leagues keyless; private leagues take pasted `espn_s2`
+  + `SWID` cookies. Ships **labelled fragile**, caches the last good import, never logs the cookies.
+- **17.7 Yahoo is explicitly deferred to 14.4** — OAuth2 needs a hosted redirect the Streamlit MVP does
+  not have. Yahoo users type their settings once; they are not blocked.
+- **Bars.** An imported league round-trips to the same `roster_slots()`/`ruleset()`/`league_format()` the
+  platform describes (asserted offline from a fixture for Sleeper; user-confirmed for ESPN); every field
+  shows `platform | default | inferred`; an unsupported league surfaces `LeagueSettings`' raise as a
+  **form error naming the field**, never a default silently applied.
 
 # Phase 17 — League-Format Fidelity & Custom Settings *(new 2026-07-23; correct advice for ANY league)*
 *Goal: the engine hard-codes vanilla 10-team full-PPR 1-QB (`RosterSlots.qb=1`, `flex=1`, `season.py` raises
@@ -2100,6 +2357,65 @@ future convenience. Full scoping: `PLAN.md`, 2026-07-23 (formats) entry.*
   custom-scoring board re-ranks; the settings contract round-trips presets + full-custom; keeper league removes
   players + shifts ADP — all with correctness/face-validity unit tests; non-default formats labeled
   **not-lockbox-validated**.
+
+## ★ Phase 17 — league import (17.5–17.7) *(added 2026-07-30 s4, user request: "import personal leagues straight from ESPN/Yahoo/Sleeper for max efficiency")*
+
+**★ This reverses a recorded decision, deliberately, and the reversal is narrow.** 2026-07-23 chose a
+**platform-agnostic manual settings form** and *"NOT Sleeper auto-import"* — on the reasoning that the user
+plays on ESPN/Yahoo, so a Sleeper importer would serve nobody. That reasoning was about **which platform**,
+never about whether importing is worth doing, and the user has now asked for all three. The manual form
+(17.3) **stays and stays primary**; import is added beside it.
+
+**★ The design rule that makes this cheap: an import is an alternative CONSTRUCTOR for `LeagueSettings`,
+nothing more.** `import_league(platform, ident, credentials) -> LeagueSettings`. Everything downstream —
+board build, replacement levels, lineup solver, sim bracket, cost report — is already parameterized on that
+object by Phase 17, so a correct import changes **zero** lines outside the adapter. Two consequences that
+are contracts, not preferences:
+1. **An import always lands in the 17.3 form for the user to confirm before anything is built from it.**
+   Never silently. A wrong scoring setting does not fail loudly — it quietly re-ranks every player in the
+   app, and the user has no way to see that it happened. Import fills the form; the human presses Apply.
+2. **Whatever a platform does not tell us is left at the engine default and *labelled as inferred*, never
+   guessed.** `LeagueSettings` refuses invalid leagues already (odd `n_teams`, unconstructible brackets) —
+   an importer must surface that raise as a form error naming the field, not fall back to a default.
+
+**Honest per-platform cost, which is why they are three substeps and not one:**
+
+### 17.5 — The import contract + Sleeper → `data/sources/sleeper.py`, `draft/config.py`
+- **Sleeper is nearly free and already built.** `data/sources/sleeper.py` is a keyless public-API client
+  with the `sleeper_id → gsis` crosswalk solved (99.0 % of the draftable top-300) and a 7,699-draft corpus
+  crawled through it. `GET /v1/user/{name}` → `/v1/user/{id}/leagues/nfl/{season}` → the league object's
+  `scoring_settings` + `roster_positions` + `settings` is the whole of a redraft league's shape.
+- **Do it first even though the user is not on Sleeper** — it is the only platform where we can write the
+  contract against a **free, offline-testable fixture** (`tests/fixtures/sleeper/` exists), so 17.6 and
+  17.7 inherit a tested contract instead of inventing one under a cookie jar. Say so plainly in the
+  session report: 17.5's user-facing value is the *contract*, not the platform.
+- **Out:** `import_league("sleeper", username_or_league_id)` → `LeagueSettings` + an `ImportReport`
+  (field, value, `source ∈ {platform, default, inferred}`). **Done:** a real public league round-trips
+  into settings whose `roster_slots()`/`ruleset()` reproduce that league, offline from a fixture.
+
+### 17.6 — ESPN → `data/sources/espn.py` *(the one the user actually needs)*
+- ESPN's fantasy API is **undocumented but stable and JSON**:
+  `lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/{season}/segments/0/leagues/{id}` with
+  `?view=mSettings` carrying `scoringSettings` + `rosterSettings` + `scheduleSettings`. **Public leagues
+  need no auth; private ones need the user's own `espn_s2` and `SWID` cookies**, pasted into the form.
+- **Ship it labelled fragile and make failure legible**: it is a private endpoint that can change without
+  notice, and a cookie expires. **Cache the last successful import** so a broken pull degrades to "we used
+  your settings from 07-30", never to silently different numbers. Cookies are the user's credentials —
+  session-scoped, never written to `analysis/` or a log, `.env` at most.
+- **Out:** the ESPN adapter + the cookie-paste field with a "where do I find these" note. **Done:** the
+  user's own league imports and he confirms the form matches what ESPN shows him — the only real bar here,
+  since there is no fixture we own.
+
+### 17.7 — Yahoo → deferred to the 14.4 backend, and the reason is structural
+- Yahoo is **OAuth2 with a registered application**: a consent redirect, an authorization code exchange, a
+  refresh-token lifecycle. A redirect URI needs a **hosted callback**, which the Streamlit MVP does not
+  have and should not grow one for. This belongs with the FastAPI backend (14.4), where a callback route
+  is one endpoint among many.
+- **Do not** attempt it inside Session K3 — the honest sequencing is: manual form (works for Yahoo today) →
+  Sleeper (free) → ESPN (cookies) → Yahoo (when there is a backend). Yahoo users are never blocked; they
+  type their settings once, which takes about ninety seconds.
+- **Done-when (17.5–17.7):** an imported league is indistinguishable downstream from a typed one — same
+  `LeagueSettings`, same board, same numbers — and every imported field's provenance is on screen.
 
 ---
 

@@ -291,7 +291,48 @@ of your seats can be driven differently — which is also the `--auto <seat>` se
 
 ---
 
-## 10. Deferred / open
+## 10. The stat dictionary (14.O) — one source of truth for what a column *means*
+
+*(added 2026-07-30 session 8, user request: "the stats in each column of the draft board are just numbers
+to those who don't know what they are, so hovering over the 'upside' or 'bust' box of the column should
+show an overhead explaining the stat with examples". Build spec: `docs/BUILD_PLAN.md` §14.O.)*
+
+The eight bars in §2 already map to frozen contracts. What has never existed is the **prose** — and it is
+currently duplicated and thin: `app/views.py::_BOARD_HELP` holds one terse line per column, the CLI holds
+none, `glossary.md` holds the long form, and the PLAYER-VIEW cards would have needed a third copy.
+
+**The contract.** One table, `draft/session.py::STAT_DICT`, **data not Streamlit**, keyed by the column id:
+
+| field | what it holds |
+|---|---|
+| `label` | the column header (`UPSIDE`) |
+| `one_line` | the tooltip's first line — what it is, in a sentence |
+| `what_it_means` | two or three sentences a first-time drafter can act on |
+| `worked_example` | **a real player off the live board**, with the number and its reading |
+| `how_to_read_it` | the direction (higher = ?) and the scale (z-score? probability? points?) |
+| `provenance` | which frozen contract it comes from, and any limitation that changes the reading |
+
+Served to **every** surface: the board column tooltips (slim and advanced), the 14.L room grid, these
+cards, the 14.N post-draft page, and the CLI's `--help`. **A column in `BOARD_VIEW_COLS` without an entry
+fails a test** — that assertion is what keeps the dictionary from rotting the first time a column is added.
+
+**Two entries must carry their limitation in the tooltip itself, not in a doc nobody opens:**
+- **`BOOM`/`BUST`** — these are the **live** pair (season − 1) and **blank means "we have never seen him
+  play", not "he never busts"**. That exact misreading is what T22 exists to prevent: the frozen column
+  read `fillna(0.0)` at `max(train_seasons)` = 2022, so the live board told the user that Bijan Robinson
+  and Puka Nacua never boom. A tooltip that omits this re-creates the defect in prose.
+- **`MEAN`/`AVAIL`** — the PROJ→MEAN gap is the *intended* availability haircut, and on a live board it is
+  additionally capped by T31's `consensus_level_cap` for deep players. The honest one-liner is *"we expect
+  him to play 14.4 games, not 17"* — which is what made Maye +68.5 vs Daniels −101.6 legible in the first
+  place (T27).
+
+**Style rule inherited from §5 and §6:** the tooltip explains the number, it never *argues* for a player.
+Where a stat is descriptive-only or unvalidated (the Phase-16 situation bar, playoff SOS), the tooltip says
+so in the same breath as the definition — not in a footnote.
+
+---
+
+## 11. Deferred / open
 
 - Exact tier cutoffs (green/yellow/red percentile bands) — set at build time; likely tertiles, tunable.
 - Whether the deep page shows player-vs-player **comps** — nice-to-have, later.

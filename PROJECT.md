@@ -244,6 +244,29 @@ broadly-useful **surfacing readouts (E–I)** that read already-frozen machinery
   correct wiring (no new modeling gate); H lands in the frontend (14.3); D's live run-detection alert (16.16)
   surfaces in the live-draft view (14.4).
 
+*★ **UX substeps K–O, added 2026-07-30 (session 8)** from the user's notes after driving the K1 app for the
+first time. These are not surfacing — they sit between the drafter and the board on draft day, which is why
+they ship in **Session K1.5, ahead of K2**. Spec: `docs/BUILD_PLAN.md` §14.K–§14.O + §"Session K1.5".*
+- 14.K **Multipage shell** — `st.navigation`/`st.Page` instead of `st.tabs`; the draft room becomes its own
+  full-width page that starting a draft navigates into. Also fixes **T35** (`st.tabs` executes every tab body
+  on every rerun), which is the hard blocker on 14.M.
+- 14.L **Room grid** — every drafter's team on one page, **teams across the top**, on a toggle between **BY
+  PICK** (the snake board, `state.log` pivoted) and **BY SLOT** (the roster grid, filled by the frozen
+  `flex_groups()` solver — never re-derived).
+- 14.M **Pick clock** — the room drafts on a timer, *n* seconds per modelled pick (0 = today's instant
+  Advance). Your own clock is a separate, explicit decision. The clock changes *when* picks happen, never
+  *which* picks happen.
+- 14.N **Post-draft analysis page** — the destination the draft room navigates to on the final pick, and the
+  home four of the E–I readouts were always for. Ships in **K2**.
+- 14.O **Stat dictionary** — one `id → {label, meaning, worked example, provenance}` table serving the board
+  tooltips, the grid, the PLAYER-VIEW cards and the CLI. Carries T22's *blank ≠ zero* and T31's level cap in
+  the tooltip, where the misreading actually happens.
+- *Draft-room ergonomics shipped alongside them in K1.5 (no substep letter — they are edits to existing
+  surfaces): a **slim board** (`# · PLAYER · POS · ADP · PROJ`) with an **advanced view** toggle over the
+  full twelve columns; a **pick button in the row**; **search results rendered under the box**, clickable,
+  Enter-selects-then-confirms; the **roster rail** beside the board. Plus **T34**, the one real bug — the app
+  defaulted `seed=7` and `room_seed=None`, so every mock draft was the same mock draft.*
+
 ### Phase 17 — League-Format Fidelity & Custom Settings *(new 2026-07-23; makes the engine give **correct**
 advice for ANY league, not just 10-team full-PPR 1-QB — a broad, all-users correctness track, not a personal
 preference)*
@@ -276,7 +299,17 @@ honestly.*
   brute-force optimum on random multi-flex rosters (17.1), a custom-scoring board re-ranks sensibly (17.2), the
   settings contract round-trips presets + a fully-custom league (17.3), and a keeper league removes kept players
   + shifts ADP (17.4) — each with face-validity / correctness unit tests; non-default formats labeled
-  **not-lockbox-validated**.
+  **not-lockbox-validated**. *(17.1–17.4 ☑ COMPLETE 2026-07-30, Session I.)*
+- **★ 17.5–17.7 league import** *(added 2026-07-30 session 8, user request: "import personal leagues straight
+  from ESPN/Yahoo/Sleeper for max efficiency")* — narrowly reverses the 07-23 "hand-enter, not auto-import"
+  decision: the manual form **stays primary**, and import is an **alternative constructor for
+  `LeagueSettings`** (`import_league(platform, ident, creds)`), so nothing downstream changes and every
+  imported field lands in the 17.3 form for the user to **confirm** first (a wrong scoring rule does not fail
+  loudly — it silently re-ranks every player). 17.5 the contract + **Sleeper** (free/keyless/already-built
+  client + offline fixture; its value is the contract, not the platform) · 17.6 **ESPN** (undocumented JSON
+  API; public keyless, private needs pasted `espn_s2`+`SWID` — labelled fragile, last-good cached, cookies
+  never logged) · 17.7 **Yahoo deferred to 14.4** (OAuth2 needs a hosted redirect the Streamlit MVP does not
+  have). Session slot = **K3**.
 
 ### Phase 15 — Multi-format (roadmap)
 - 15.1 Dynasty/keeper multi-year asset pricing · 15.2 Best-ball · 15.3 DFS GPP (ownership/leverage) → `formats/`
