@@ -16,7 +16,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from app import nav, probe, state, views
+from app import nav, palette, probe, state, views
 from fantasy_quant.draft import session
 
 VIEWS = ("Room grid", "Log", "Stat dictionary")
@@ -35,8 +35,13 @@ def page_grid() -> None:
     st_obj, meta = d["state"], d["meta"]
     sm = session.seat_map_from(meta)
     done = st_obj.is_done() or not st_obj.available
-    st.caption(f"{len(st_obj.log)} picks · {'complete' if done else 'in progress'} · "
-               f"pick seed {meta.get('seed')} · seating seed {meta.get('room_seed')}")
+    chips = st.columns([1, 1, 1, 3])
+    chips[0].badge(f"{len(st_obj.log)} picks", color="gray")
+    chips[1].badge("complete" if done else "in progress",
+                   color="green" if done else "blue")
+    chips[2].badge(f"seeds {meta.get('seed')} / {meta.get('room_seed')}", color="gray",
+                   help="Pick seed and seating seed (T34). Lock both on a new draft to replay this "
+                        "exact room, pick for pick.")
     if done and st.button("Go to the post-draft analysis", type="primary"):
         nav.go("post")
 
@@ -52,15 +57,14 @@ def page_grid() -> None:
     else:
         views.stat_dictionary_panel()
 
-    st.caption("Standings, season odds, the draft-flow profile, your grade and your roster-"
-               "construction risk all live on the **Post-draft** page (14.N).")
-
 
 def _log(st_obj, sm) -> None:
     log = pd.DataFrame(st_obj.log)
     if log.empty:
-        st.caption("No picks yet.")
+        views.no_picks_yet()
         return
     log = log.assign(WHO=[session.seat_label(int(t), sm) for t in log["team"]])
-    st.dataframe(log[["round", "pick_in_round", "team", "WHO", "player_name", "pos",
-                      "adp"]].iloc[::-1], width="stretch", hide_index=True)
+    show = log[["round", "pick_in_round", "team", "WHO", "player_name", "pos",
+                "adp"]].iloc[::-1]
+    st.dataframe(palette.style_pos_columns(show, surface="log"), width="stretch",
+                 hide_index=True)

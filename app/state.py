@@ -61,6 +61,28 @@ def built_for(s: LeagueSettings, season: int) -> dict:
 
 
 # ------------------------------------------------------------------------------------------------
+# UI-2 — the two season facts the RISKS column needs, cached once for every page that shows a board
+# ------------------------------------------------------------------------------------------------
+@st.cache_data(show_spinner=False)
+def byes(season: int):
+    """Bye weeks. A property of the season, not of the draft — so it is cached on the season.
+
+    ⚠ **It lives here, not on the post-draft page.** ``post_draft._byes`` had exactly this body and
+    was private to that module; the board now needs the same table at pick time, and *two cached
+    readers of one table is how the two surfaces end up disagreeing about a bye week.*
+    """
+    from fantasy_quant.draft import session
+    return session.bye_weeks(con(), int(season))
+
+
+@st.cache_data(show_spinner=False)
+def elevation() -> float:
+    """The frozen 8.5 handcuff elevation ratio — one read of the store, reused by every board."""
+    from fantasy_quant.draft import session
+    return session.elevation_ratio(con())
+
+
+# ------------------------------------------------------------------------------------------------
 # the draft in progress
 # ------------------------------------------------------------------------------------------------
 def draft() -> dict | None:

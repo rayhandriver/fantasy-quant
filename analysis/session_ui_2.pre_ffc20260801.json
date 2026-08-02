@@ -1,0 +1,416 @@
+{
+  "season": 2026,
+  "seat": 6,
+  "new_columns": [
+    "\u0394",
+    "BARGAIN",
+    "RISKS"
+  ],
+  "view_modes": [
+    "slim",
+    "ranges",
+    "value",
+    "risk",
+    "advanced"
+  ],
+  "app_view_modes": [
+    "slim",
+    "ranges",
+    "value",
+    "risk"
+  ],
+  "tier_feature_shipped": false,
+  "all_pass": true,
+  "bars": {
+    "b1": {
+      "bar": "B1 \u2014 the overlap tier rule reproduces COIN exactly, and cuts nothing (NULL)",
+      "pass": true,
+      "feature_shipped": false,
+      "rule_reproduces_coin_flags": true,
+      "ids_stable_under_truncation_and_filter": true,
+      "no_tier_column_on_any_rendered_view": true,
+      "published_figure_reproduced": {
+        "adjacent_pairs": 199,
+        "coin_flags_true": 146,
+        "quoted_as": "146 of 199 adjacent pairs overlap"
+      },
+      "the_decomposition_the_figure_hides": {
+        "pairs_with_both_bands": 147,
+        "of_those_overlapping": 146,
+        "genuine_non_overlaps": 1,
+        "pairs_with_a_band_missing": 52,
+        "rows_with_no_band": 31,
+        "honest_statement": "of the adjacent pairs we can evaluate at all, 99.3% overlap"
+      },
+      "pool_scope_vs_screen_recompute": {
+        "top_8": {
+          "pool_scope": [
+            "T1",
+            "T1",
+            "T1",
+            "T1",
+            "T1",
+            "T1"
+          ],
+          "recomputed_on_screen": [
+            "T1",
+            "T1",
+            "T1",
+            "T1",
+            "T1",
+            "T1"
+          ]
+        },
+        "top_25": {
+          "pool_scope": [
+            "T1",
+            "T1",
+            "T1",
+            "T1",
+            "T1",
+            "T1"
+          ],
+          "recomputed_on_screen": [
+            "T1",
+            "T1",
+            "T1",
+            "T1",
+            "T1",
+            "T1"
+          ]
+        }
+      },
+      "tiers_within_position": {
+        "RB": 1,
+        "WR": 1,
+        "QB": 1,
+        "TE": 1,
+        "DST": 0,
+        "K": 0
+      },
+      "banded_players_per_position": {
+        "RB": 62,
+        "WR": 83,
+        "QB": 29,
+        "TE": 24,
+        "DST": 0,
+        "K": 0
+      },
+      "tiers_over_whole_board": 2,
+      "band_width_over_adjacent_gap": {
+        "RB": 14.0,
+        "WR": 11.4,
+        "QB": 8.2,
+        "TE": 9.8
+      },
+      "note": "The mechanism is scale, not football: a season-total 80 % band is ~14x the gap between neighbouring players, so every adjacent within-position pair overlaps by construction. And the premise was a category error \u2014 Boris Chen clusters expert rank DISPERSION (disagreement about where a player belongs); this is a PREDICTIVE INTERVAL for a season total. Two quantities, one name. Ticketed as T39; the rule ships runnable and unwired."
+    },
+    "b2": {
+      "bar": "B2 \u2014 \u0394 is the engine's counter; BARGAIN is the card's bar #5, every player",
+      "pass": true,
+      "delta_is_adp_minus_overall_pick": true,
+      "delta_recomputes_per_pick": true,
+      "delta_step_per_pick": 1.0,
+      "rows_checked_against_the_card": 112,
+      "mismatched": [],
+      "bargain_identity_holds": true,
+      "bargain_is_static": true,
+      "sign_convention": "adp_rank - overall_rank; POSITIVE = value the market has not charged for. BUILD_PLAN writes the expression the other way round (overall_rank - adp_rank), which contradicts PLAYER-VIEW \u00a75's 'green = good for the drafter, always' and its own worked example '+1.5 rounds of value'. The plan states no polarity in words, so the words win and the discrepancy is recorded rather than hidden."
+    },
+    "b3": {
+      "bar": "B3 \u2014 the live construction glyph == roster_construction_risk on (roster + him)",
+      "pass": true,
+      "rows_checked": 40,
+      "mismatched": [],
+      "glyphs_that_fired": {
+        "bye": 6,
+        "stack": 8,
+        "handcuff": 1
+      },
+      "every_glyph_fired_at_least_once": true,
+      "unknown_byes_stay_unknown": true,
+      "fabricated_week_zero_rows": 0,
+      "censored_and_thin_encode_FLAGS_exactly": true,
+      "FLAGS_string_byte_identical": true,
+      "cost_ms_for_40_rows": 553.7,
+      "note": "Scoped to the rendered rows, deliberately: a tier is a fact about the pool so scoping it to the screen would change its meaning, but a construction flag is a fact about the pair (your roster, this player). Each row is one lineup solve, which is what makes the scope worth stating."
+    },
+    "b4": {
+      "bar": "B4 \u2014 one query, N projections; the split covers the fifteen and is narrower",
+      "pass": true,
+      "modes": [
+        "slim",
+        "ranges",
+        "value",
+        "risk",
+        "advanced"
+      ],
+      "app_modes": [
+        "slim",
+        "ranges",
+        "value",
+        "risk"
+      ],
+      "columns_per_mode": {
+        "slim": 5,
+        "ranges": 9,
+        "value": 12,
+        "risk": 9,
+        "advanced": 15
+      },
+      "value_cols": [
+        "PLAYER",
+        "POS",
+        "ADP",
+        "PROJ",
+        "MEAN",
+        "AVAIL",
+        "BV",
+        "VBD",
+        "RK",
+        "\u0394",
+        "BARGAIN",
+        "CLIFF"
+      ],
+      "risk_cols": [
+        "PLAYER",
+        "POS",
+        "UPSIDE",
+        "FLOOR",
+        "TAIL",
+        "BOOM",
+        "BUST",
+        "RISKS",
+        "FLAGS"
+      ],
+      "slim_cols": [
+        "PLAYER",
+        "POS",
+        "ADP",
+        "PROJ",
+        "\u0394"
+      ],
+      "advanced_unchanged_at_fifteen": true,
+      "split_covers_advanced": true,
+      "every_app_mode_narrower_than_fifteen": true,
+      "index_handle_survives": true,
+      "problems": [],
+      "note": "`advanced` stays in `session.py` and comes off the app's control. Two committed bar sheets difference against `project_view(advanced=True)` returning exactly BOARD_VIEW_COLS, and a bar sheet that has to be edited to keep passing is not a bar sheet."
+    },
+    "b5": {
+      "bar": "B5 \u2014 every new column is documented with an example and prints in the CLI",
+      "pass": true,
+      "new_columns": [
+        "\u0394",
+        "BARGAIN",
+        "RISKS"
+      ],
+      "has_worked_example": {
+        "\u0394": true,
+        "BARGAIN": true,
+        "RISKS": true
+      },
+      "prints_in_cli_board": {
+        "\u0394": true,
+        "BARGAIN": true,
+        "RISKS": true
+      },
+      "explained_by_cli_stats": true,
+      "cli_returncodes": {
+        "start": 0,
+        "board --view value": 0,
+        "board --view risk": 0,
+        "board --view slim": 0,
+        "stats": 0
+      },
+      "stat_dict_entries": 24,
+      "cli_value_header": "  #    PLAYER                POS    ADP  PROJ  MEAN AVAIL     BV   VBD   RK      \u0394 BARGAIN CLIFF",
+      "cli_risk_header": "  #    PLAYER                POS  UPSIDE  FLOOR   TAIL  BOOM  BUST  RISKS / FLAGS"
+    },
+    "b6": {
+      "bar": "B6 \u2014 A6's positional strength is starters-only, room-relative, and legible",
+      "pass": true,
+      "rows": 60,
+      "teams": 10,
+      "median_is_the_rooms_own": true,
+      "delta_is_value_minus_median": true,
+      "equals_starter_value_exactly": true,
+      "startable_minus_capital_per_team": {
+        "1": 138.4,
+        "2": 0.8,
+        "3": 130.3,
+        "4": 105.0,
+        "5": 11.4,
+        "6": 94.6,
+        "7": 227.6,
+        "8": -67.2,
+        "9": 132.7,
+        "10": 106.1
+      },
+      "diverging_pair": {
+        "good": "#2E9E63",
+        "bad": "#D9564A"
+      },
+      "mark_contrast_on_every_surface": {
+        "#2E9E63": {
+          "#0F1115": 5.57,
+          "#181B21": 5.08,
+          "#FFFFFF": 3.39
+        },
+        "#D9564A": {
+          "#0F1115": 4.84,
+          "#181B21": 4.42,
+          "#FFFFFF": 3.9
+        }
+      },
+      "clears_three_to_one_everywhere": true,
+      "not_a_position_hue": true,
+      "note": "The chart deliberately does NOT inherit `chartCategoricalColors`, which UI-1 set so future charts would. That was right for a categorical chart; this one is diverging, and position identity is already carried by the axis label, which is what frees colour to carry the sign."
+    },
+    "flow": {
+      "bar": "FLOW \u2014 six pages at k \u2208 {0,1,4}, every board mode, a pick made by clicking",
+      "pass": true,
+      "pages_rendered": {
+        "settings": [
+          0,
+          1,
+          4
+        ],
+        "board": [
+          0,
+          1,
+          4
+        ],
+        "draft": [
+          0,
+          1,
+          4
+        ],
+        "grid": [
+          0,
+          1,
+          4
+        ],
+        "post": [
+          0,
+          1,
+          4
+        ],
+        "cost": [
+          0,
+          1,
+          4
+        ]
+      },
+      "runs": 18,
+      "modes_rendered_without_exception": [
+        "slim",
+        "ranges",
+        "value",
+        "risk"
+      ],
+      "pick_made_by_clicking": true,
+      "clicked": "Jahmyr Gibbs",
+      "n_exceptions": 0,
+      "exceptions": []
+    },
+    "b0": {
+      "bar": "B0 \u2014 UI-1's sheet re-runs (K2, K1.5, K1 nested); the fifteen are bit-identical",
+      "pass": true,
+      "returncode": 0,
+      "ui1_all_pass": true,
+      "ui1_per_bar": {
+        "b1": true,
+        "b2": true,
+        "b3": true,
+        "b4": true,
+        "b5": true,
+        "b6": true,
+        "flow": true,
+        "b0": true
+      },
+      "k2_all_pass": true,
+      "k1_5_all_pass": true,
+      "k1_all_pass": true,
+      "existing_columns_checked": 15,
+      "existing_columns_differing": [],
+      "quantile_block_differing": [],
+      "every_moved_leaf_classified": true,
+      "moves_vs_committed": {
+        "analysis/session_k1_app.json": {
+          "comparable": true,
+          "leaves": 261,
+          "moved": {
+            "display_count": 1
+          },
+          "moved_paths": {
+            "display_count": [
+              "bars.apptest.n_elements_rendered"
+            ]
+          },
+          "unclassified": []
+        },
+        "analysis/session_k1_5_app.json": {
+          "comparable": true,
+          "leaves": 116,
+          "moved": {
+            "entropy": 8,
+            "ui2_columns": 1,
+            "timing": 8,
+            "stat_dict": 1
+          },
+          "moved_paths": {
+            "entropy": [
+              "bars.b0.distinct_openings",
+              "bars.b0.example_openings[0]",
+              "bars.b0.example_openings[1]",
+              "bars.b0.example_openings[2]",
+              "bars.b0.replayed_room_seed",
+              "bars.b0.replayed_seed",
+              "bars.flow.randomized_room_seed",
+              "bars.flow.randomized_seed"
+            ],
+            "ui2_columns": [
+              "bars.b2.slim_columns[4]"
+            ],
+            "timing": [
+              "bars.b3.worst_ms",
+              "bars.b3.worst_pick_ms_by_seat.autopilot",
+              "bars.b3.worst_pick_ms_by_seat.balanced",
+              "bars.b3.worst_pick_ms_by_seat.chalk",
+              "bars.b3.worst_pick_ms_by_seat.reacher",
+              "bars.b3.worst_pick_ms_by_seat.safe_floor",
+              "bars.b3.worst_pick_ms_by_seat.upside_chaser",
+              "bars.b3.worst_pick_ms_by_seat.value_hawk"
+            ],
+            "stat_dict": [
+              "bars.b5.n_entries"
+            ]
+          },
+          "unclassified": []
+        },
+        "analysis/session_k2_app.json": {
+          "comparable": true,
+          "leaves": 162,
+          "moved": {
+            "display_count": 4
+          },
+          "moved_paths": {
+            "display_count": [
+              "bars.b1.runs[0].n_dataframes",
+              "bars.b1.runs[1].n_dataframes",
+              "bars.b1.runs[2].n_dataframes",
+              "bars.flow.post_page_dataframes"
+            ]
+          },
+          "unclassified": []
+        },
+        "analysis/session_ui_1.json": {
+          "comparable": false,
+          "reason": "not in HEAD (uncommitted since UI-1)"
+        }
+      },
+      "tail": ""
+    }
+  }
+}

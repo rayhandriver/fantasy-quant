@@ -561,6 +561,96 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
   - **Session K3 — league import (17.5 Sleeper · 17.6 ESPN; 17.7 Yahoo deferred to 14.4).** One function
     and two adapters: `import_league(...) -> LeagueSettings`, filling the 17.3 form for the user to
     confirm. Spec: `docs/BUILD_PLAN.md` §"Session K3" + §"Phase 17 — league import".
+  - **★ Sessions UI-1 … UI-4 — the front end** *(scoped 2026-08-01 from a competitive deep dive across
+    **eleven** products — FantasyPros Draft Wizard · Draft Sharks War Room · PFF · 4for4 Draft Hero ·
+    RotoWire · Sleeper · ESPN · Yahoo · Underdog · UDK · Footballguys, plus Boris Chen and KeepTradeCut.
+    Evidence + fourteen non-recommendations: `docs/UI-PLAN.md`. Build spec + per-session bars:
+    `docs/BUILD_PLAN.md` §"Sessions UI-1 … UI-4").* **The finding is not the expected one: we are not
+    missing analysis, we are missing an information architecture.** `app/` renders **68 prose blocks
+    against 9 visual elements, 0 uses of colour to encode anything, 0 tier breaks drawn** — and
+    `ADVANCED` is 15 columns, **two more than Draft Sharks' full rankings table**, whose density is that
+    product's most-criticised property. The work is ranking, encoding and hiding; it is not adding.
+    Seven things we ship have **no competitor equivalent** (validated `P(available)` with an un-drifted
+    baseline · `COIN` · `censored floor` · the T27 chain · lockbox provenance · the printed 14.I weights ·
+    the cost report) and every one currently reads as an apology.
+    - **☑ UI-1 "it looks like a product" — COMPLETE 2026-08-01.** All eight bars PASS
+      (`steps/session_ui_1.py` → `analysis/session_ui_1.json`); **737 tests** (was 726), ruff clean.
+      Shipped: S4 a dark `.streamlit/config.toml` · S1 position colour on all five surfaces from one
+      `app/palette.py` constant — **Okabe-Ito, the user's call over the market convention, because
+      QB-gold / RB-red / TE-orange is three positions a deuteranope reads as one** · S3 prose
+      **68 → 23** by relocation into `st.badge` chips, `help=` tooltips and `st.popover`s, with **B3
+      asserting all seven honesty surfaces still render by driving the app** · S5 the draft-order seat
+      strip (`st.html`, position-coloured last pick, your seats marked, snake arrow, *your next pick
+      #N, k away*) · S6 **T37 ☑** the reach risk out of the expander and permanently in the right rail,
+      plus `P(THERE)` on the **slim** board and in the CLI's · A6 **T38 ☑** 14.N as a report card
+      (hero row **grade · title fair-share multiple · STARTABLE rank**, biggest-reach / best-value pair,
+      the rest behind `st.tabs`). **One authorised deviation from "nothing enters `session.py`"** (user
+      decision): `attach_reach` / `next_pick_info` / `team_for_pick` are **placements**, not
+      derivations — B0 re-ran the K2 sheet unchanged. **Deferred to UI-2:** the positional-strength
+      chart (needs a genuinely new derivation) and the hatched `censored floor` **bar** (UI-3's A3 is
+      where bars get drawn; UI-1 ships the `⌀` chip + tooltip instead).
+    - **☑ UI-2 "the board answers the question" — COMPLETE 2026-08-01**, four of five steps shipped and
+      **step 1 measured as a NULL**. Shipped: A4 `Δ` (ADP countdown) + `BARGAIN` · A5 the 14.F
+      construction flags surfaced **at pick time** as `RISKS` (`⚑⛓🛡⌀◔`), each glyph a delta of
+      `roster_construction_risk` on (roster + him) · the 15-column `ADVANCED` split into `VALUE`(12) /
+      `RISK`(9) · **A6's positional-strength chart**, the piece UI-1 deferred by name. All eight bars
+      PASS (`steps/session_ui_2.py`), 749 tests, and B0 holds the fifteen existing columns
+      **bit-identical**.
+      **★ S2 did NOT ship — the tier cut by *band overlap* is a null (T39).** It was scoped as *"the one
+      item here no competitor could copy without our distribution stack"*; measured, it cuts **1 tier per
+      position** and **2 over the whole board**, because the median RB 80 % band is **228 pts** against a
+      median adjacent gap of **16.3** (**14×**) and because the Boris Chen analogy is a category error
+      (he clusters expert rank **dispersion**; we hold a **predictive interval**). ⚠ It also corrected a
+      number quoted throughout these docs: `COIN`'s **146 of 199** conflates *distinguishable* with
+      *unknown* — **147** pairs have both bands, **146** overlap, **1** is a genuine break and **52** are
+      missing bands, so the honest figure is **99.3 % of evaluable pairs overlap**.
+    - **☐ UI-3 "preferences are first-class"** — A1 the queue/tag system (🎯 must · 🚫 never · ↑ reach ·
+      ↓ wait) **unified with the Cost page, replacing its four multiselects**, so a preference formed
+      while drafting can be priced — the direct-indexing workflow the current UI makes impossible · A2 the
+      selected-player strip (PLAYER-VIEW §3's hover card, inline, board stays visible) · A3 **actually
+      draw the §5 bars** (today's `st.metric` has no bar and no baseline — the largest spec-vs-shipped gap
+      in the repo) · A7 two taps to a pick, not three.
+    - **☐ UI-4 polish tail** — league presets *(after K3 — same 17.3 form)* · room-grid colour · density ·
+      CSV export · merge the `why` box into the dialog · land on Board · C2 a mock history that **replays
+      exactly** (T34's stamped seeds make it near-free; PFF's hub cannot) · C3 a room scouting report from
+      `drift_frames["seats"]` — **realism, never prediction** (PLAYER-VIEW §9.3) · C4 light/dark.
+    - **Recommended order: UI-1 → K3 → UI-2 → UI-3 → UI-4.** *(UI-1 ☑ and UI-2 ☑ are both done as of
+      2026-08-01; K3 is next.)* UI-1 is pure formatting with zero engine
+      risk; the only real coupling is that UI-4's presets sit above the form K3's importer fills.
+    - **Deferred out of all four, deliberately:** **C1 undo** (`DraftState` is append-only and consumes an
+      RNG, so honest undo is a seeded replay and must preserve K1.5's clocked-≡-stepped identity — engine
+      work with its own sheet) · **the 14.3 Next.js frontend** (get Streamlit to "a friend can use it
+      unaided" first) · `streamlit-aggrid` · headshots/logos · mobile-in-Streamlit · LLM board narrative ·
+      drag-to-reorder rankings · multiplayer rooms — twelve more with reasons at `docs/UI-PLAN.md` §5.
+- **☐ Session VH — the value-hawk repair** *(scoped 2026-08-01 s5, from a user report; spec
+  `docs/BUILD_PLAN.md` §"Sessions VH · MM-1 · MM-2", register **T42** + **T33**)*. The user reported the
+  seat "consistently makes picks that are characteristically uncalled for" **and** finishes weak — asked to
+  separate them, he said **both, and they feel related**, which is the answer that diagnoses it. **The value
+  path is slot-blind and `value_hawk` is the only seat that *maximizes* it**: `capital − startable` is
+  **+152** for this seat and negative for every other, and the shipped mock has it taking a **QB2 in round 8
+  and a TE2 in round 9** in a 10-team 1-QB league with its first RB in round 6. **★ T28 could not have
+  settled this** — its bar asked which roster-value definition best *correlates* with title probability and
+  used the answer to decide what the seat should *maximize*; **a relationship measured on outcomes is not a
+  specification for the mechanism that produced them** (T24's lesson, one level up). Substeps: **VH.0**
+  attribute the objected picks (**and it can kill its own hypothesis** — confirmed at ≥50 % slot-driven,
+  abandoned below 25 %) · **VH.1** T33 (`n_teams` is the room size, so the interactive seat is not the
+  measured seat) · **VH.2** the interventional A/B, ≥200 seating-marginalized drafts × ≥4 DEV seasons,
+  **reporting outcome and roster shape separately** · **VH.3** the window sweep that never resolved. ⚠ The
+  seat is **repaired, not replaced** — it is 1 of 10 in `REALISTIC_ROOM` and every T15/T24 bar was measured
+  with it there. ~half a session.
+- **☐ Sessions MM-1 · MM-2 — the fitted manager model (16.18)** *(scoped 2026-08-01 s5)*. The user's own
+  proposal: a personality **modelled on himself**. Ships as `FittedManager`, loading a **profile file** — a
+  general mechanism with the user as subject #1, which **preserves** the 2026-07-23 "nothing personal to the
+  user" decision rather than overriding it. **★ The scoping finding: "mimic me" is two objects** — *beliefs*
+  (disagreement with consensus about players → a board, ~50 rows) and *policy* (the tradeoff rule → fitted
+  from ~300 **designed** pairwise comparisons, 45–60 min). Learning both at once from mock drafts is what
+  made it look like it needed "many many drafts". A comparison and a real 40-way pick are the **same
+  conditional-logit likelihood**, so elicited and realized data pool; the fit is a **shrunk deviation** from
+  the corpus β (16.4's EB machinery). **★ The bar is held-out pick prediction against the corpus-fit
+  `balanced`** — withheld comparisons *and* real mock picks never used in fitting — pre-registered before
+  the fit is read, because the optimizer and the grader are the same human. **A faithful replica is a
+  realism deliverable, not an edge one**; the spent lockbox already called personalization noise-dominated
+  on realized points. MM-1 ≈ full session + his hour; MM-2 ≈ half to full.
 - **Session L+ — Phase 14 go-live tail (14.2–14.7).** Personalization tiers, explain, FastAPI backend, Next.js
   frontend (PLAYER-VIEW deep pages + 14.H playoff-SOS lens), Sleeper live-draft sync (+ 16.16 run-detection
   alert, item D), widget, mock-draft sim. **Expect multiple sessions**, each ≥ a single past phase.

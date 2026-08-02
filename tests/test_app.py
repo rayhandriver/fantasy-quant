@@ -973,3 +973,441 @@ def test_k2_the_stat_dictionary_covers_every_rendered_view():
         assert e["worked_example"].strip() and e["provenance"].strip()
     examples = [e["worked_example"] for e in session.STAT_DICT.values()]
     assert len(examples) == len(set(examples))
+
+
+# ------------------------------------------------------------------------------------------------
+# Session UI-1 — the palette, the strip, the attached column, and the compression
+#
+# ★ Offline throughout, like the rest of this file. The *rendering* claims (five surfaces coloured,
+#   seven honesty surfaces still on screen, zero expanders in the reach path) are the live driver's
+#   job — `steps/session_ui_1.py`. What is unit-tested here is the arithmetic and the parsing those
+#   claims sit on, because a bar that boots a server is a slow place to discover that `"BN1"` was
+#   read as a position.
+# ------------------------------------------------------------------------------------------------
+palette = pytest.importorskip("app.palette")
+app_views = pytest.importorskip("app.views")
+
+
+def test_ui1_every_position_chip_clears_wcag_aa():
+    """The palette is a colourblind-safe set; a set chosen for one accessibility property should
+    not fail a different one.
+
+    ⚠ The first implementation picked the ink by a luminance threshold of 0.42 and lettered QB
+    (`#E69F00`, luminance 0.410) in **white at a contrast ratio of 2.3**. The break-even luminance
+    is 0.179, not 0.5, and the way to not have to know that is to compute both and take the larger.
+    """
+    assert set(palette.POSITION_COLORS) == set(palette.POSITIONS)
+    for pos, hue in palette.POSITION_COLORS.items():
+        ink = palette.ink_for(hue)
+        assert palette.contrast_ratio(hue, ink) >= 4.5, f"{pos} chip fails AA"
+        assert ink in palette.INK
+    assert palette.contrast_ratio("#FFFFFF", "#000000") == pytest.approx(21.0, abs=0.05)
+
+
+def test_ui1_the_theme_and_the_palette_cannot_drift_apart():
+    """``.streamlit/config.toml`` is the one unavoidable second copy of the hexes — a TOML file is
+    read before any of our Python runs, so it cannot import a constant. Assert it, do not hope."""
+    import tomllib
+
+    cfg = tomllib.loads((Path(__file__).resolve().parents[1] / ".streamlit"
+                         / "config.toml").read_text())
+    assert cfg["theme"]["base"] == "dark"
+    assert ([c.upper() for c in cfg["theme"]["chartCategoricalColors"]]
+            == [h.upper() for h in palette.POSITION_COLORS.values()])
+
+
+def test_ui1_a_flex_slot_is_not_a_position():
+    """Colouring FLEX or a bench row as a position would assert something false about the roster."""
+    assert palette.pos_in_slot("RB2") == "RB" and palette.pos_in_slot("QB") == "QB"
+    assert palette.pos_in_slot("FLEX") is None
+    assert palette.pos_in_slot("SUPERFLEX") is None
+    assert palette.pos_in_slot("BN4") is None
+    assert palette.chip_style("FLEX") == "" and palette.tint_style(None) == ""
+    assert palette.pos_in_cell("3.07  Puka Nacua (WR)") == "WR"
+    assert palette.pos_in_cell("1.01  Bijan Robinson (RB)") == "RB"
+    assert palette.pos_in_cell("") is None
+    assert palette.pos_in_cell("Somebody (XYZ)") is None
+
+
+def test_ui1_the_tint_is_theme_independent_and_the_chip_is_not():
+    """Two treatments, one constant: a solid hue where the cell *is* a position (opaque, so its
+    contrast does not depend on the background), an rgba tint where the cell merely mentions one
+    (composited by the browser over whichever theme is active)."""
+    tint = palette.tint_style("WR")
+    assert tint.startswith("background-color: rgba(")
+    # ⚠ the declaration, not the substring — `background-color:` contains `color:`, which is what
+    # the first version of this assertion tripped over.
+    assert [d.split(":")[0].strip() for d in tint.split(";")] == ["background-color"]
+    chip = palette.chip_style("WR")
+    assert palette.POSITION_COLORS["WR"] in chip
+    assert "color" in [d.split(":")[0].strip() for d in chip.split(";")]
+
+
+def test_ui1_attach_reach_places_and_never_fabricates(k2_built):
+    """``P(THERE)`` is a placement, not a derivation — and a row nobody simulated stays NaN.
+
+    T22's rule with the other sign: printing 0.00 for an unsimulated player reads as *he will
+    certainly be gone*, which is a claim the model never made.
+    """
+    state, meta = _k2_draft(k2_built, finish=False)
+    reach = session.reach_risk_view(state, meta, 0, n=8, n_sims=40)
+    view = session.project_view(session.board_view(state, 0, n=20), mode="slim")
+    out = session.attach_reach(view, reach)
+
+    assert session.REACH_COL in out.columns
+    assert list(out.index) == list(view.index)
+    want = dict(zip(reach["board_index"].astype(int), reach["p_available"], strict=False))
+    for idx, val in out[session.REACH_COL].items():
+        if int(idx) in want:
+            assert val == pytest.approx(float(want[int(idx)]))
+        else:
+            assert pd.isna(val)
+    # an absent or empty readout gives the column, all-NaN — never a silent 0.0 and never a
+    # missing column the renderer then has to special-case
+    for empty in (None, reach.iloc[0:0]):
+        blank = session.attach_reach(view, empty)
+        assert session.REACH_COL in blank.columns
+        assert blank[session.REACH_COL].isna().all()
+
+
+def test_ui1_the_snake_has_one_arithmetic(k2_built):
+    """``team_for_pick`` is a second copy of ``team_on_clock``'s geometry, and the only thing that
+    makes that acceptable here is that it is differenced **exhaustively** (16.17's precedent)."""
+    from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp
+
+    state, _ = _k2_draft(k2_built, finish=False)
+    last = state.n_teams * state.rounds
+    checked = 0
+    while not state.is_done() and state.available:
+        t = state.team_on_clock()
+        assert session.team_for_pick(state, state.overall_pick) == t
+        checked += 1
+        _apply_pick(state, t, int(pick_by_adp(state, t, noise=0.0)))
+    assert checked == last
+    assert session.team_for_pick(state, 0) is None
+    assert session.team_for_pick(state, last + 1) is None
+
+
+def test_ui1_next_pick_info_is_the_optimizers_own_window(k2_built):
+    """The strip's "12 away" and the availability readout's simulation window are one number."""
+    from fantasy_quant.draft import optimizer
+
+    state, meta = _k2_draft(k2_built, finish=False)
+    seat = state.team_on_clock()
+    info = session.next_pick_info(state, seat)
+    last = state.n_teams * state.rounds
+    assert info["on_the_clock"] is True
+    assert info["next_pick"] == optimizer._next_own_pick(state.overall_pick, seat,
+                                                        state.n_teams, last)
+    assert (session.reach_risk_view(state, meta, seat, n=4, n_sims=20).attrs["window_picks"]
+            == info["picks_away"])
+    # a seat that is not on the clock counts one more opponent than a seat that is
+    other = (seat + 1) % state.n_teams
+    assert (session.next_pick_info(state, other)["on_the_clock"]) is False
+
+
+def test_ui1_the_seat_strip_is_the_seat_maps_order(k2_built):
+    """B4's content half, offline: order, the clock, on deck, and which chips are yours."""
+    state, meta = _k2_draft(k2_built, k=4, finish=False)
+    sm = session.seat_map_from(meta)
+    rows = app_views.seat_strip_rows(state, meta, sm)
+
+    assert [r["team"] for r in rows] == list(range(1, state.n_teams + 1))
+    assert all(r["label"] == session.seat_label(r["seat"], sm) for r in rows)
+    assert [r["seat"] for r in rows if r["on_clock"]] == [state.team_on_clock()]
+    assert {r["seat"] for r in rows if r["you"]} == set(sm.human_teams)
+    deck = session.team_for_pick(state, state.overall_pick + 1)
+    assert [r["seat"] for r in rows if r["on_deck"]] == ([deck] if deck != state.team_on_clock()
+                                                         else [])
+    # a finished draft has nobody on the clock, and the strip must not invent one
+    done, dmeta = _finished(k2_built, k=1)
+    assert not any(r["on_clock"] for r in app_views.seat_strip_rows(
+        done, dmeta, session.seat_map_from(dmeta)))
+
+
+def test_ui1_the_elite_fall_table_replaces_the_json_dump():
+    """T38 — the same numbers, with the label and the unit that make them readable."""
+    table = app_views.elite_fall_table({"n": 12, "mean_slot": 6.5, "p95_slot": 14.0,
+                                        "max_slot": 17.0, "share_past_10": 0.25})
+    text = " ".join(table.iloc[:, 0].astype(str))
+    assert "Consensus top-12" in text and "10-team picks" in text
+    assert "25.0%" in " ".join(table.iloc[:, 1].astype(str))
+    # the threshold is read off the key, never hard-coded — the profile names it after its own cut
+    other = app_views.elite_fall_table({"n": 3, "share_past_8": 0.5})
+    assert len(other) == 2
+    assert len(app_views.elite_fall_table({"n": 0})) == 1
+
+
+def test_ui1_the_attached_column_is_documented_and_reaches_the_terminal():
+    """K2's rule: a column the app shows and the CLI cannot is a documented column with no
+    behaviour behind it."""
+    session.assert_stat_dict_covers_board()
+    entry = session.stat_entry(session.REACH_COL)
+    assert entry["worked_example"].strip() and entry["provenance"].strip()
+
+    cli = _load_cli()
+    assert session.REACH_COL in cli._VIEW_FMT["slim"]
+    assert session.REACH_COL not in cli._VIEW_FMT["advanced"]
+
+
+def test_ui1_the_prose_census_is_under_its_bar():
+    """B2, as a unit test so a later session cannot quietly re-inflate the app.
+
+    ⚠ The count is `st.caption` + the four alert primitives — 37 + 31 = the 68 `docs/UI-PLAN.md`
+    §3.1 measured. `st.badge`, `st.popover` and `help=` are where the compressed text went, and
+    they are *not* counted, which is the whole point: the rule is that an explanation longer than
+    one line moves, and that a state-dependent fact becomes a chip.
+    """
+    import re as _re
+
+    app_dir = Path(__file__).resolve().parents[1] / "app"
+    pattern = _re.compile(r"\.(caption|warning|info|error|success)\(")
+    total = sum(len(pattern.findall(f.read_text())) for f in app_dir.glob("*.py"))
+    assert total <= 25, f"prose blocks back up to {total}"
+
+
+def _load_cli():
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[1] / "steps" / "mock_draft.py"
+    spec = importlib.util.spec_from_file_location("_mock_draft_cli_ui1", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# ================================================================================================
+# Session UI-2 — "the board answers the question"
+# ================================================================================================
+def test_ui2_delta_is_the_engines_own_pick_counter(k2_built):
+    """B2's first half. ``Δ`` is ``adp − overall_pick``, and there is no second counter."""
+    from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp
+
+    state, meta = _k2_draft(k2_built, finish=False)
+    for _ in range(7):
+        t = state.team_on_clock()
+        _apply_pick(state, t, int(pick_by_adp(state, t, noise=0.0)))
+    view = session.board_view(state, 0, n=20)
+    expected = pd.to_numeric(view["ADP"], errors="coerce") - float(state.overall_pick)
+    pd.testing.assert_series_equal(view["Δ"], expected, check_names=False)
+    # and it *recomputes* — one more pick and every surviving row's Δ falls by exactly one, which
+    # is the claim "no second counter" actually makes. (A frozen column would fail this; an
+    # identity check alone would not, because it would hold against a stale counter too.)
+    t = state.team_on_clock()
+    _apply_pick(state, t, int(pick_by_adp(state, t, noise=0.0)))
+    after = session.board_view(state, 0, n=200)
+    common = after.index.intersection(view.index)
+    assert len(common) >= 15
+    assert np.allclose(after.loc[common, "Δ"], view.loc[common, "Δ"] - 1.0)
+
+
+def test_ui2_bargain_is_static_and_matches_the_player_card(k2_built):
+    """B2's second half — *one derivation, two surfaces*, plus the claim that it does not drift.
+
+    The card carries it as a **field**, not a ninth bar: ``card["bars"]`` is a shape this file and
+    two committed bar sheets assert the length of.
+    """
+    from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp
+
+    state, meta = _k2_draft(k2_built, finish=False)
+    first = session.board_view(state, 0, n=25)["BARGAIN"].copy()
+    for _ in range(9):
+        t = state.team_on_clock()
+        _apply_pick(state, t, int(pick_by_adp(state, t, noise=0.0)))
+    later = session.board_view(state, 0, n=200)["BARGAIN"]
+    common = first.index.intersection(later.index)
+    assert len(common) >= 5
+    # STATIC: both ranks are over the whole board, so emptying the pool cannot move it
+    pd.testing.assert_series_equal(first.loc[common], later.loc[common], check_names=False)
+
+    board = state.board
+    idx = int(common[0])
+    card = session.player_card(state, idx, vi=k2_built["value_index"], lam=0.01)
+    assert len(card["bars"]) == 8, "the card's bar shape is asserted by two committed sheets"
+    assert card["bargain"]["value"] == pytest.approx(float(later.loc[idx]))
+    assert card["bargain"]["rounds"] == pytest.approx(float(later.loc[idx]) / state.n_teams)
+    # the sign convention: positive means value the market has not charged for
+    adp_rank = pd.to_numeric(board["adp"], errors="coerce").rank(method="min")
+    assert float(later.loc[idx]) == pytest.approx(
+        float(adp_rank.loc[idx]) - float(board.loc[idx, "overall_rank"]))
+
+
+def test_ui2_the_construction_glyphs_are_the_post_draft_function(k2_built):
+    """B3 — every roster-shape glyph is a delta of ``roster_construction_risk``'s own scalars."""
+    from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp
+
+    state, meta = _k2_draft(k2_built, finish=False)
+    for _ in range(24):
+        t = state.team_on_clock()
+        _apply_pick(state, t, int(pick_by_adp(state, t, noise=0.0)))
+    byes = pd.Series({str(k): int(4 + i % 6)
+                      for i, k in enumerate(state.board["player_key"].astype(str))})
+    seat, vi = 0, k2_built["value_index"]
+    pool = state.draftable_pool(seat).head(12)
+    flags = session.construction_flags(state, seat, pool.index, vi=vi, byes=byes, elevation=1.5)
+    base = session.roster_construction_risk(state, seat, vi=vi, byes=byes, elevation=1.5)
+    roster = state.roster(seat)
+    g = session.CONSTRUCTION_GLYPHS
+    checked = 0
+    for i in pool.index:
+        hypo = session.roster_construction_risk(
+            state, seat, vi=vi, byes=byes, elevation=1.5,
+            roster=pd.concat([roster, state.board.loc[[i]]], ignore_index=True))
+        # each glyph is the candidate's OWN row in the hypothetical readout — not a movement in
+        # that readout's maximum, which fires only when he joins the already-largest cluster
+        wk = byes.get(str(state.board.loc[i, "player_key"]))
+        hb, hc = hypo["byes"], hypo["concentration"]
+        bye_row = hb[hb["week"].astype(str) == str(int(wk))] if pd.notna(wk) and len(hb) \
+            else hb.iloc[:0]
+        tm = state.board.loc[i, "team"]
+        tm_row = hc[hc["nfl_team"].astype(str) == str(tm)] if isinstance(tm, str) and len(hc) \
+            else hc.iloc[:0]
+        assert (g["bye"] in flags.loc[i]) is bool(
+            str(state.board.loc[i, "player_name"]) in set(hypo["starters"])
+            and len(bye_row) and int(bye_row.iloc[0]["n"]) >= 2)
+        assert (g["stack"] in flags.loc[i]) is bool(
+            len(tm_row) and int(tm_row.iloc[0]["n"]) >= 2
+            and int(tm_row.iloc[0]["n_starters"]) >= 1)
+        assert (g["handcuff"] in flags.loc[i]) is (
+            hypo["n_handcuff_gaps"] < base["n_handcuff_gaps"])
+        checked += 1
+    assert checked == 12
+    # the control: a bar that cannot fire is the same defect as a bar that cannot fail
+    assert any(g["bye"] in s for s in flags), "no ⚑ fired on a board where every bye collides"
+
+
+def test_ui2_an_unknown_bye_produces_silence_not_a_clean_bill(k2_built):
+    """14.F's rule, on the live glyph: no bye table means no ``⚑``, never a fabricated absence."""
+    from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp
+
+    state, meta = _k2_draft(k2_built, finish=False)
+    for _ in range(24):
+        t = state.team_on_clock()
+        _apply_pick(state, t, int(pick_by_adp(state, t, noise=0.0)))
+    idx = state.draftable_pool(0).head(10).index
+    none = session.construction_flags(state, 0, idx, vi=k2_built["value_index"], byes=None)
+    assert not any(session.CONSTRUCTION_GLYPHS["bye"] in s for s in none)
+
+
+def test_ui2_risks_never_edits_the_flags_string(k2_built):
+    """UI-1's rule, carried forward: K2's bar B4 matches on ``FLAGS``, so a display layer may not
+    edit it. ``RISKS`` is a second column and ``FLAGS`` is byte-identical to ``range_flags``."""
+    state, meta = _k2_draft(k2_built, finish=False)
+    view = session.board_view(state, 0, n=30)
+    pool = state.draftable_pool(0).head(30)
+    pd.testing.assert_series_equal(view["FLAGS"], session.range_flags(pool), check_names=False)
+    for glyph in session.CONSTRUCTION_GLYPHS.values():
+        assert not any(glyph in str(f) for f in view["FLAGS"])
+
+
+def test_ui2_every_mode_is_a_projection_of_one_frame(k2_built):
+    """B4 — one query, N projections. K1.5's B2, two modes wider, and the ``#`` handle survives."""
+    state, meta = _k2_draft(k2_built, finish=False)
+    view = session.board_view(state, 0, n=30)
+    seen = {}
+    for mode in session.VIEW_MODES:
+        proj = session.project_view(view, mode=mode)
+        assert list(proj.index) == list(view.index), f"{mode} reordered or dropped rows"
+        seen[mode] = list(proj.columns)
+    assert seen["advanced"] == [lbl for _, lbl in session.BOARD_VIEW_COLS]
+    assert seen["value"] == list(session.VALUE_VIEW_COLS)
+    assert seen["risk"] == list(session.RISK_VIEW_COLS)
+    assert seen["slim"] == list(session.SLIM_VIEW_COLS)
+    # the split covers the fifteen it replaced, minus nothing
+    assert set(seen["value"]) | set(seen["risk"]) >= set(seen["advanced"])
+    # and no mode is back up at fifteen
+    for mode in session.APP_VIEW_MODES:
+        assert len(seen[mode]) < len(seen["advanced"])
+
+
+def test_ui2_advanced_is_untouched_by_the_new_columns(k2_built):
+    """B0's structural half: two committed bar sheets difference against this exact frame."""
+    state, meta = _k2_draft(k2_built, finish=False)
+    view = session.board_view(state, 0, n=20)
+    assert list(session.project_view(view, advanced=True).columns) == [
+        lbl for _, lbl in session.BOARD_VIEW_COLS]
+    for col in session.UI2_COLS:
+        assert col not in [lbl for _, lbl in session.BOARD_VIEW_COLS]
+
+
+def test_ui2_the_overlap_tier_rule_is_a_null_and_stays_runnable(k2_built):
+    """The session's finding, pinned so it cannot be quietly re-adopted.
+
+    ``method="overlap"`` is `docs/BUILD_PLAN.md`'s recommended cut and it does not cut: an 80 %
+    season band is an order of magnitude wider than the gap between neighbours, so every adjacent
+    pair overlaps. This asserts the *mechanism*, not the 2026 board's exact numbers.
+    """
+    lo = np.array([10.0, 9.0, 8.0, 7.0])
+    hi = np.array([200.0, 199.0, 198.0, 197.0])          # bands ~20x the gaps
+    assert np.nanmax(session._tiers_from_bands(lo, hi)) == 1
+    # it *can* cut when the bands are narrow relative to the gaps — so the null is about the data
+    assert np.nanmax(session._tiers_from_bands(np.array([100.0, 10.0]),
+                                               np.array([110.0, 20.0]))) == 2
+    # a missing band is skipped, never a break (T22's rule on a third face)
+    ids = session._tiers_from_bands(np.array([10.0, np.nan, 9.0]),
+                                    np.array([200.0, np.nan, 199.0]))
+    assert np.isnan(ids[1]) and ids[0] == 1 and ids[2] == 1
+    # and it is not wired to any rendered view
+    for cols in (session.SLIM_VIEW_COLS, session.VALUE_VIEW_COLS, session.RISK_VIEW_COLS,
+                 session.RANGE_VIEW_COLS, tuple(lbl for _, lbl in session.BOARD_VIEW_COLS)):
+        assert "TIER" not in cols
+
+
+def test_ui2_coin_flags_false_means_two_different_things(k2_built):
+    """The decomposition behind the null: ``False`` is *distinguishable* **or** *unknown*."""
+    lo = pd.Series([10.0, 9.0, np.nan, 500.0])
+    hi = pd.Series([200.0, 199.0, np.nan, 600.0])
+    flags = session.coin_flags(lo, hi)
+    assert bool(flags[0]) is True            # bands overlap
+    assert bool(flags[1]) is False           # neighbour has no band  -> UNKNOWN
+    assert bool(flags[2]) is False           # this row has no band   -> UNKNOWN
+    # so a bare count of False conflates the two, which is what the published 146/199 does
+    banded = np.isfinite(lo.to_numpy(float)) & np.isfinite(hi.to_numpy(float))
+    evaluable = banded[:-1] & banded[1:]
+    assert evaluable.sum() == 1 and flags[:-1][evaluable].all()
+
+
+def test_ui2_positional_strength_is_starters_only_and_sums_to_the_room(k2_built):
+    """A6 — the chart's derivation. Slot-aware (T28), and the median is the room's own."""
+    from fantasy_quant.draft import optimizer as draft_optimizer
+
+    state, meta = _k2_draft(k2_built)
+    sm = session.seat_map_from(meta)
+    tab = session.positional_strength(state, sm, k2_built["value_index"])
+    assert set(tab["pos"]) == {"QB", "RB", "WR", "TE", "K", "DST"}
+    assert len(tab) == state.n_teams * 6
+    for _pos, grp in tab.groupby("pos"):
+        assert float(grp["room_median"].iloc[0]) == pytest.approx(float(grp["value"].median()))
+        assert np.allclose(grp["delta"], grp["value"] - grp["room_median"])
+    # starters only: a team's total here cannot exceed its slot-blind capital
+    for t in range(state.n_teams):
+        mine = tab[tab["team"] == t + 1]["value"].sum()
+        capital = draft_optimizer.team_value(state.roster(t), k2_built["value_index"])
+        assert mine <= capital + 1e-6
+
+
+def test_ui2_the_stat_dictionary_covers_the_new_columns():
+    """B5 — a column with no entry fails the build, and one with no CLI home has no behaviour."""
+    session.assert_stat_dict_covers_board()
+    cli = _load_cli()
+    for col in session.UI2_COLS:
+        assert col in session.STAT_DICT, col
+        assert session.stat_entry(col)["worked_example"]
+        assert any(col in fmt or col in ("RISKS",) for fmt in cli._VIEW_FMT.values()), col
+    assert set(cli._VIEW_FMT) == set(session.VIEW_MODES)
+
+
+def test_ui2_the_signed_ink_is_a_tint_that_survives_both_themes():
+    """UI-1's two-treatments rule, on the value pair: a colour that works in one theme is a bug."""
+    from app import palette as pal
+
+    assert pal.signed_style(3.0).startswith("background-color: rgba")
+    assert pal.signed_style(-3.0).startswith("background-color: rgba")
+    assert pal.signed_style(0.0) == "" and pal.signed_style(None) == ""
+    assert "; color:" not in pal.signed_style(3.0), "a tint must not set the text colour"
+    assert pal.VALUE_GOOD not in pal.POSITION_COLORS.values()
+    assert pal.VALUE_BAD not in pal.POSITION_COLORS.values()
+    # the measured floor: both poles clear 3.0 against both surfaces and white
+    for surface in ("#0F1115", "#181B21", "#FFFFFF"):
+        for hue in (pal.VALUE_GOOD, pal.VALUE_BAD):
+            assert pal.contrast_ratio(hue, surface) >= 3.0, (hue, surface)

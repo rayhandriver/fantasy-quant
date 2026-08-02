@@ -2593,3 +2593,378 @@ read for 14.F, 14.L and the rail — 17.1's `flex_groups` rule one altitude down
 Yahoo deferred to 14.4) → **L+** the go-live tail. Still open in Phase 14/16: **16.6** the Beta Lab tab,
 **14.H** the playoff-SOS lens (specced for 14.3, not the Streamlit MVP). Stage-0 FFC chore last pulled
 2026-07-30, next due after 08-05.
+
+## 2026-08-01 — the competitive UI/UX deep dive → Sessions UI-1 … UI-4 scoped (docs-only, no code)
+
+**State: unchanged — 726 tests, ruff clean, still UNCOMMITTED.** Nothing ran, no `src/` change, no
+`app/` change, no test-count change. Edited: `docs/UI-PLAN.md` (new, the research + recommendation
+register), `docs/BUILD_PLAN.md` §"Sessions UI-1 … UI-4" (the build spec), `docs/TECH-DEBT.md`
+(**T37**, **T38**), `ROADMAP.md`, `CLAUDE.md`, `glossary.md`, `findings.md`, this entry.
+
+**The request.** *"Do a deep dive into the UIs and components of all the prominent fantasy football
+websites — pff, fantasypros, draftsharks, etc. Their UIs are much more favorable and usable than ours.
+Spend 45–60 minutes… give me exactly what you recommend and don't recommend."* Stop gate waived for
+the research explicitly. **Eleven products surveyed** — FantasyPros Draft Wizard (six tools, and the
+hand-offs are the product) · Draft Sharks War Room (17 live indicators) · PFF's 2026 simulator ·
+4for4 Draft Hero (the only publicly documented *layout*) · RotoWire · Sleeper · ESPN · Yahoo ·
+Underdog · Ultimate Draft Kit · Footballguys, plus Boris Chen and KeepTradeCut as visualisation
+references — then `app/` audited page by page against them.
+
+### ★ The finding is not the one the premise implies
+
+The user's premise was that we are behind. We are, but **not on content**:
+
+> **We are not missing analysis — we have *more* decision-relevant content than any product surveyed.
+> We are missing an information architecture.**
+
+Measured over `app/`'s 1,903 lines: **22 `st.dataframe` · 37 `st.caption` · 31 banner calls · 28
+markdown prose blocks · 9 `st.metric` · 0 uses of colour to encode anything · 0 status icons · 0 tier
+breaks drawn.** **68 prose blocks against 9 visual elements.** Every competitor inverts that ratio:
+they encode in colour, tier bands, icons and screen position, and keep prose one click away.
+
+**And the density argument runs the other way from the intuition.** Draft Sharks and Footballguys are
+the two most analytically rich tools in the market and are **penalised for it in their own category
+reviews** — *"the extensive amount of features and data might be overwhelming."* Our `ADVANCED` view
+is **15 columns, two more than Draft Sharks' full rankings table.** So: **rank, encode, hide. Do not
+add.** That single sentence is what the four sessions optimise for.
+
+### ★ The corollary that decides the design
+
+Seven things we ship have **no competitor equivalent at all**: a validated `P(available)` with an
+un-drifted baseline (FantasyPros' Pick Predictor has neither) · `COIN` (146/199 adjacent pairs
+overlap) · `censored floor` · the auditable T27 chain · lockbox provenance · the **printed** 14.I
+grade weights · the cost report. **Every one currently reads as an apology** — a paragraph explaining
+a limitation. The redesign's job is to give them a *visual language* so they read as a feature:
+a badge, a chip, a paired probability, and — the item worth remembering — **a hatched bar for
+`censored floor`, because a censored quantity should *look* different rather than be *described* as
+different.**
+
+### ★ The one differentiated feature the survey turned up (UI-2's S2)
+
+**Cut tiers by band overlap, not by value gaps.** A tier ends where adjacent 10–90 bands stop
+overlapping, which makes a tier a claim of **statistical indistinguishability** — and that is exactly
+what `session.coin_flags` already computes and buries. It promotes `COIN` from an honesty footnote to
+the board's primary navigation aid. It is Boris Chen's thesis (the most-cited visualisation in fantasy
+football, and it is *one chart*) executed **on our own distributions** rather than on expert ranks.
+**No competitor could copy it without building our distribution stack first.**
+
+### Two defects found in the audit, both ticketed
+
+- **T37** — `draft_room._reach_risk` renders inside `st.expander(expanded=False)` **directly beneath
+  its own docstring** arguing *"a readout you have to ask for is a readout nobody asks for."* The
+  docstring is right; the code contradicts it. Our best asset, hidden.
+- **T38** — `post_draft` ships `c1.json(frames["elite"])`, a raw JSON dump, in the page whose entire
+  job is to be a report card. It survived because K2 *moved* the readouts rather than rewriting them.
+
+### Decisions taken this session
+
+| decision | choice |
+|---|---|
+| where the plan lives | **UI-PLAN = evidence and argument; BUILD_PLAN §"Sessions UI-1 … UI-4" = plan of record.** Two documents because the survey is long and the spec must stay readable |
+| session shape | **four sessions**, UI-1 pure formatting (nothing enters `session.py`), UI-2 the first `session.py` work, UI-3 the workflow, UI-4 polish |
+| sequencing | **recommend UI-1 → K3 → UI-2 → UI-3 → UI-4.** UI-1 has zero engine risk; K3 makes the app *correct* for his league and should not queue behind three UI sessions. One coupling: UI-4's presets sit above the form K3's importer fills |
+| the compression bar | **paired, never solo.** Prose 68 → ≤ 25 **and** all seven honesty surfaces still render, asserted by driving the app. *Compress and relocate; never delete* |
+| tier cut | **overlap-based recommended** over gap-based — it is the differentiated one, and it re-uses `coin_flags` rather than inventing a second cliff |
+| tags over drag-to-reorder | **tags.** A hand reorder silently replaces the value model with an opinion while every downstream number keeps claiming calibration. **Tags express a preference *and get priced*** |
+
+### Dead ends / do not re-propose
+
+- **`streamlit-aggrid`** — the obvious answer and the wrong one: its own selection model would break the
+  `on_select="rerun"` / board-index contract `_apply_pick` depends on, and 1.59's `column_config` +
+  Styler covers ~90 % of the use. Revisit only for frozen columns *and* row grouping at once.
+- **Starting the 14.3 Next.js frontend now** — Streamlit is ~four focused sessions from genuinely good;
+  a rewrite restarts the UI learning at zero and abandons the surface that is **actually finding
+  defects** (three real bugs found by booting it). Port the *settled* design later.
+- **Headshots / team logos** — an asset-licensing and pipeline problem for zero decision value. **Team
+  colour on the row gets ~80 % of the recognition benefit for zero assets.**
+- **Mobile in Streamlit · LLM board narrative (`CLAUDE.md` §4) · keyboard shortcuts · faked hover ·
+  multiplayer rooms · copying Draft Sharks' 17-indicator density.** Reasons at `docs/UI-PLAN.md` §5.
+- **A second board frame** for the queue or tier view. Every view stays a projection of one
+  `board_view` call.
+- **C1 undo** is *not* dead — it is deferred with a reason: `DraftState` is append-only and consumes an
+  RNG, so honest undo is a seeded replay and must preserve K1.5's clocked-≡-stepped identity. Engine
+  work with its own sheet, not a UI step.
+
+**★ NEXT: user reviews, then Session UI-1** (`docs/BUILD_PLAN.md` §"Sessions UI-1 … UI-4"), whose three
+decisions must be asked first: **the palette** (market convention or ours) · **theme base** (dark/light)
+· **the prose target** (≤ 25 is proposed and is a judgement call). Then **K3** league import →
+UI-2 → UI-3 → UI-4 → L+. Stage-0 FFC chore last pulled 2026-07-30, **next due after 08-05**.
+
+## 2026-08-01 (session 2) — ★ SESSION UI-1 COMPLETE: "it looks like a product"
+
+**737 tests (was 726), ruff clean, all eight bars PASS** (`steps/session_ui_1.py` →
+`analysis/session_ui_1.json`). Ran straight through — the user asked for UI-1 "in its entirety", which
+waives §3.7 for the session's six steps. **UNCOMMITTED**, on top of `5eff21d` (K2) together with the
+still-uncommitted 08-01 scoping docs.
+
+### The four decisions taken before anything ran (the three the spec mandated, plus one it forced)
+
+| | decision |
+|---|---|
+| **palette** | **Okabe-Ito**, colourblind-safe, over the market convention — the convention puts QB gold / RB red / TE orange in one hue family, i.e. three positions read as one by a deuteranope |
+| **theme base** | **dark**; the light/dark toggle comes free either way |
+| **prose target** | **≤ 25** blocks (the spec's proposal). Landed at **23** |
+| **`P(THERE)` placement** | a **small labelled placement in `session.py`**, not a merge in `app/` — see below |
+
+### The `session.py` question, which the spec contradicts itself about
+
+UI-1 says both *"step 5: `P(THERE)` joins the slim board"* and *"⚠ do not touch `session.py`"*. The
+number already exists (`session.reach_risk_view`); what was missing is a **placement**. Resolved by the
+user in favour of `session.py`, and the resolution is narrow: `attach_reach` computes nothing,
+`next_pick_info` **removes** a copy (`reach_risk_view` now reads it rather than deriving the window
+itself), and `team_for_pick` adds one — allowed only because bar B4 differences it against
+`DraftState.team_on_clock` at **every one of 150 picks**, which is 16.17's precedent rather than an
+exception to it. Doing the join in `app/` would have been the T18 / F.5 / T27 family and would have left
+the CLI unable to print a documented column.
+
+### What shipped, step by step
+
+- **Step 0 — T37 ☑ + T38 ☑.** The reach readout out of `st.expander(expanded=False)`; the
+  `c1.json(frames["elite"])` dump replaced by `views.elite_fall_table` (labels **and units** — the slots
+  are 10-team picks, and the `share_past_*` row is matched by prefix so the threshold is read off the
+  key rather than hard-coded).
+- **Step 1 — S4** `.streamlit/config.toml`: dark base, full theme surface, `[theme.sidebar]`,
+  `chartCategoricalColors` = the position palette. `primaryColor` is deliberately **near-white**: every
+  hue in the app's vocabulary is spoken for (six name a position, the rest name a state), so a coloured
+  primary would add a seventh meaning-free hue and weaken the six that carry meaning.
+- **Step 2 — S1** `app/palette.py`: one constant, five surfaces (board · room grid · log · roster rail ·
+  post-draft rosters), chip-vs-tint, auto-contrast ink, and a `STYLED` counter that ships in the app for
+  the same reason `probe.py` does.
+- **Step 3 — S3** prose **68 → 23**: `st.badge` chips for state, `help=` and `st.popover` for
+  explanation, three genuine deduplications (`no_board_error`, `no_picks_yet`, `chain_problem`). Every
+  honesty surface moved and none was deleted.
+- **Step 4 — S5** the seat strip (`views.seat_strip` / `seat_strip_rows`, `st.html` so a chip can carry
+  a **position hue** — `st.badge` has seven named colours and mapping six positions onto them would be a
+  second palette).
+- **Step 5 — S6 + A6** the reach risk permanently in the right rail; `P(THERE)` on the slim board *and*
+  in the CLI's `board --view slim`; 14.N rebuilt as a report card.
+
+### Deferred out of UI-1, named rather than dropped
+
+- **The positional-strength chart** (A6's remaining half) needs per-position value sums per team — a
+  genuinely new derivation, which is **UI-2's** character. Everything else in A6 shipped.
+- **The hatched `censored floor` bar** → **UI-3's A3**, which is where `st.html` quasi-bars get drawn.
+  UI-1 ships the `⌀` chip with the sentence in its tooltip instead. ⚠ The `FLAGS` **string** was
+  deliberately not edited to carry the glyph: K2's bar B4 matches on it, and a display layer must not
+  edit the thing a bar reads.
+
+### Dead ends and corrections (do not re-derive)
+
+- **A luminance threshold for chip ink is wrong** — the break-even is 0.179, not 0.5, and 0.42 lettered
+  QB in white at 2.3 : 1. Compare both contrasts.
+- **A text scan is not a behaviour measurement.** Both the palette census and the `st.json` census
+  counted a *mention* (docstring, comment) as an occurrence. Both are AST parses now.
+- **B4's control checked 15 picks and called itself exhaustive** because it advanced the room between
+  checks. It steps pick-by-pick now: 150/150.
+- **UI-PLAN §S1's "35 % tint with full-strength text" is right for dark and wrong for light** (2.4 : 1),
+  which is why the shipped answer is two treatments rather than one.
+- **`--only` writes a `.partial.json`.** The house pattern overwrote the committed K2 sheet with a
+  one-bar run during this session; it was restored from git.
+
+**★ NEXT: user reviews + commits, then — per the plan's recommended order — Session K3 (league import,
+17.5 Sleeper → 17.6 ESPN), then UI-2.** Stage-0 FFC chore last pulled 2026-07-30, next due after 08-05.
+
+---
+
+## 2026-08-01 (session 3) — ★ SESSION UI-2: "the board answers the question", and a null
+
+**Ran straight through under a waived rule-7 gate (user instruction), with eight decisions taken up
+front and not re-litigated:** the tier cut = **overlap, adjacent-chain** · tier scope = **within
+position** · `SLIM` to trade `PROJ` for `TIER` + `Δ` · modes = **SLIM · RANGES · VALUE · RISK** with
+`advanced` retained in `session.py` · glyphs in a **new `RISKS` column** with `FLAGS` untouched ·
+`BARGAIN` as a card **field** rather than a ninth bar · **A6's chart built here** · tree left
+**uncommitted** for review.
+
+**Two of those decisions were overtaken by measurement, and both reversals are recorded rather than
+quietly applied:**
+
+1. **The tier column does not ship at all.** Both cuts the plan offers were built and both fail —
+   see **T39**. `SLIM` therefore keeps `PROJ` (there was nothing to trade it for) and gains `Δ` only.
+2. **`BARGAIN` ships with the opposite sign to the expression BUILD_PLAN writes**, because the
+   expression contradicts PLAYER-VIEW §5's *green = good for the drafter, always* and its own worked
+   example. The plan states no polarity in words; the words won.
+
+### What was built
+
+- **`Δ`** = `adp − DraftState.overall_pick` — the engine's own counter, subtracted, never a second one.
+- **`BARGAIN`** = `adp rank − overall_rank`, both over the whole board, hence **static**.
+- **`RISKS`** = `⚑⛓🛡⌀◔`. The three roster-shape glyphs are **deltas of `roster_construction_risk`'s
+  own scalars** on (roster) vs (roster + candidate) — the post-draft readout moved to the moment it
+  can be acted on. `roster_construction_risk` gained `roster=` and **no arithmetic**.
+- **The split** — `ADVANCED`(15) → `VALUE`(12) + `RISK`(9) via `st.segmented_control`, both still
+  projections of one `board_view` frame. `advanced` stays in `session.py`, off the app's control.
+- **A6's chart** — `session.positional_strength`: per-position **starting** value per team vs the
+  room median, diverging bars on 14.N.
+- **`app.state.byes` / `.elevation`** — one cached home for the two season facts the board now needs;
+  `post_draft._byes` became a forwarder rather than a second cached reader.
+
+### ★ The result that matters: S2 is a null (**T39**)
+
+The plan's one differentiated feature cuts **1 tier per position** and **2 over the whole board**.
+Scale (median RB band **228 pts** vs median adjacent gap **16.3** — **14×**) plus a category error
+(Chen clusters **rank dispersion**; we hold a **predictive interval**). And the figure that sold it —
+`COIN`'s **146 of 199** — conflates *distinguishable* with *unknown*: 147 pairs have both bands, 146
+overlap, **1** genuine break, **52** missing bands. Honest figure: **99.3 % of evaluable pairs
+overlap**. Nothing shipped; `session.tier_series` is runnable, unwired, unit-pinned.
+
+### ⚠ Method notes
+
+- **A renamed display string is a breaking change.** `board_mode` is a widget key; lowercasing the
+  mode control's option values made UI-1's bar B3 report two honesty surfaces missing. Option values
+  stay uppercase; the lowering happens at the boundary.
+- **`_ALLOWED_MOVES` is cumulative by design.** UI-1's B0 fails any unclassified leaf, and UI-2
+  legitimately lengthens `slim_columns`. The allowance was added there with a dated note — *a list
+  getting longer is a display change; a number inside it moving is not*, and the latter is checked
+  separately, column by column, by UI-2's own B0.
+- **Colour is measured, not chosen.** The first `Δ`/`BARGAIN` pair failed contrast twice.
+
+**★ NEXT: user reviews + commits (UI-1 and UI-2 are one tree), then Session K3 = league import
+(17.5 Sleeper → 17.6 ESPN), then UI-3.** **T39** is open and UI-3 does not depend on it. **T36** still
+open. Stage-0 FFC chore last pulled 2026-07-30, next due after **08-05**.
+
+## 2026-08-01 (session 4) — Stage-0 pull + reconciliation (chore-only; T40 + T41 opened)
+
+User asked to run the Stage-0 snapshot and reconcile the codebase with the updated ADP. No model change,
+no refit, no lockbox read, frozen value stack untouched. Full write-up in `findings.md`.
+
+**Ran:** `stage0_adp_snapshot.py` (banked `ffc-20260801`, 1,288 rows, gsis 98.0 %, PASS) → `backup_db.py`
+→ `phase0_8_validate.py` (**all gates PASS**, freshness age 0) → T32 vintage gate on 2026 (**244 == 244**)
+→ `phase16_5_situation_events.py --write` (**138 → 154** rows) → `pytest` (**749 passed**) →
+`steps/session_ui_2.py`.
+
+**Blocker worth recording:** the pull needs the DuckDB **write lock** and the user's Streamlit app held
+it. `db.connect()` is read-write, DuckDB is single-writer, so the chore cannot run against a live app —
+the app was stopped (with permission) and relaunched afterwards. Read-only probing still works, and
+`_pull_ffc` is a pure network call, so *whether a pull would yield anything* was answerable without the
+lock: FFC's `meta.end_date` had advanced to 08-01, which is what made stopping the app worth doing.
+
+**Decisions taken (do not re-litigate):**
+1. **Neither failing bar was tuned into a pass.** B0 (T41) and B3's control (T40) are reported as
+   tickets. Widening `_ALLOWED_MOVES` would delete B0's purpose; loosening B3's control would tune a bar
+   to a board.
+2. **Consensus projections deliberately NOT re-pulled**, though they are dated 2026-07-05. The reframe
+   makes value (projections) and availability (ADP) **separate signals**, so this is not a mismatch the
+   pull created. Coverage verified fine (4 of 201 skill rows uncovered, 3 of them the new arrivals).
+   Flagged for its own decision — the FantasyPros board is as perishable as FFC's and has **no recurring
+   chore**, only `steps/phase4_1_consensus.py`, last run 07-05.
+3. **`reference/hype_board.csv` NOT regenerated** — inert by construction (`reviewed=false`), so a stale
+   nomination list cannot reach a simulation; regenerating would only add diff churn.
+4. **The 08-01 sheets were left on disk as the current truth**, with the pre-pull ones preserved at
+   `analysis/session_ui_{1,2}.pre_ffc20260801.json` rather than restored over them.
+
+**Dead end avoided:** the first consensus-coverage check joined on `name` and reported Patrick Mahomes
+and Oronde Gadsden as missing projections. Both are `… II` in the consensus table; the system joins on
+`gsis_id` and never saw a gap. *A join key chosen for convenience invents its own findings* — the same
+shape as 16.4's `LA`/`LAR` bug, where a failed join and a missing entity looked identical.
+
+**★ NEXT is unchanged: user reviews + commits.** The tree now also carries the regenerated 16.5 board,
+the re-run sheets and these docs. **T41 should land before the next board-dependent session** — it is
+cheap and it makes every future chore legible.
+
+---
+
+## 2026-08-01 (session 5) — the `value_hawk` objection → Sessions VH · MM-1 · MM-2 scoped (docs-only, no code)
+
+User reported that `value_hawk` "is consistently underperforming" and "consistently makes picks that are
+characteristically uncalled for", and proposed replacing it with a personality **modelled on himself** —
+either from many mock drafts or from a new system where he narrates his read on each player. He asked how
+to go about it and for recommendations. **Docs-only: no `src/` change, no test-count change (749), nothing
+ran, no refit, no lockbox read.** Spec of record: `docs/BUILD_PLAN.md` §"Sessions VH · MM-1 · MM-2".
+
+### The three decisions taken before scoping (asked, because each changes the build)
+
+1. **What "underperforming" means → both, and they feel related.** This is the answer that decides the
+   session: one cause, not two. It points straight at T28's slot-blindness, where the picks look wrong
+   *because* the capital they buy cannot start.
+2. **What the model-of-him is FOR → a realistic opponent.** So it is a **personality**, not a
+   `DraftConfig` archetype. Nothing touches the frozen value stack, the cost report or the spent lockbox,
+   and the bar is **held-out pick prediction**, not realized points.
+3. **Time budget → ~1–2 hours, concentrated.** Which makes it **designed elicitation**, not 20 mock drafts.
+
+### ★ What the diagnosis found before any plan was written
+
+`value_hawk` is the **Phase-9 greedy in an opponent seat** maximizing **portfolio CE** — and the value path
+is **slot-blind**. T28 measured the fingerprint and did not connect it to a pick objection: `capital −
+startable` is negative for every seat **except** this one (**+152**), because it is the only seat that
+*maximizes* the sum. The shipped mock shows the shape — QB2 in round 8, TE2 in round 9, first RB in round 6,
+in a 10-team 1-QB league. → **T42**.
+
+**★★ And why T28 could not have settled it.** Its bar B5 asked which roster-value definition best
+**correlates** with title probability and used the answer to decide what the seat should **maximize**.
+*A relationship measured on outcomes is not a specification for the mechanism that produced them* —
+**T24's own lesson, one level up**, and the third time this repo has met it. The interventional experiment
+has never been run and is cheap.
+
+Two smaller findings in the same path: **T33** (the interactive seat prices context ~10 % differently from
+every seat ever measured — T27's divergence one argument along) and the **unresolved window sweep**
+(`sweep_resolved: false`; the shipped window is a default, not a result).
+
+### ★★ The decomposition that makes the 1–2 hour budget sufficient
+
+"Mimic my movements" is **two** learnable objects, which this repo already keeps in separate boxes:
+
+- **beliefs** — where he disagrees with consensus about *players* → a **board**;
+- **policy** — how he trades value/risk/need/scarcity *given* a board → a **decision rule**.
+
+Mock drafting learns both at once from the same thin data, which is exactly why "many many drafts" felt
+like the price. Separated, each has a cheap instrument. It is the reframe's own value-vs-availability split
+one level down.
+
+**The technical fact underneath it:** a pairwise comparison and a real 40-way draft pick are the **same
+conditional-logit likelihood** at different choice-set sizes, so elicited comparisons and any future mock
+drafts **pool into one fit**. He is choosing what to spend an hour on, not which channel to commit to.
+
+**Why comparisons and not drafts:** most picks in a draft are obvious, and an obvious pick carries almost
+no information about the *tradeoff* coefficients. The informative observations are the ones where he is
+torn; in a real draft those are rare and unplanned, and in a designed pair they are the only thing you ask.
+
+**Why disagreement-only on the board side:** for every player where he agrees with consensus, consensus
+already encodes his view. The annotation surface is ~50 rows on a 250-player board, not 250.
+
+### Decisions embedded in the spec (do not re-litigate)
+
+4. **`value_hawk` is repaired, not replaced.** It is 1 of 10 seats in `REALISTIC_ROOM` and every T15/T24
+   bar was measured with it there. The self-model ships **beside** it.
+5. **The self-model is a general mechanism with the user as subject #1** — `FittedManager` loads a profile
+   file; nothing in the code knows whose it is. This **preserves** the 2026-07-23 "nothing personal to the
+   user" exclusion rather than overriding it: that decision was about the backlog serving all users, and a
+   fitting mechanism does.
+6. **The fit is a shrunk deviation from the corpus β**, not a fresh fit — 16.4's `k = σ²/τ²` EB machinery.
+   At n ≈ 300 over ~15 features a fresh fit would be mostly noise, and a well-estimated prior is sitting
+   right there. Honest expectation recorded **before** the fit: mostly prior, him dominating on 2–4 dimensions.
+7. **VH runs before MM.** If the slot repair absorbs most of the objection, the self-model becomes an
+   addition rather than a replacement — and it changes nothing about MM either way, so VH is cheap insurance.
+
+### ⚠ Traps written down before the sessions, not after
+
+- **★ The model must not be judged by the person it models.** A model fit on his stated preferences and
+  scored by him will always look right — the repo's **scoring trap** with a sharper edge, because the
+  optimizer and the grader are the same human. Bar B4 (held-out prediction against the corpus-fit
+  `balanced`, on withheld comparisons **and** on real mock picks never used in fitting) is the only thing
+  that makes it falsifiable, and it is pre-registered before the fit is read.
+- **A faithful replica is a more *realistic* seat, not a stronger one.** The spent lockbox says
+  personalization is noise-dominated on realized points.
+- **Stated ≠ revealed.** What he says in a calm session need not be what he does on a clock. B5 measures
+  exactly that gap and a disagreement is a **finding**, not a failure.
+- **Anchoring:** showing consensus first compresses stated disagreement → a blind subset as a control.
+- **T24's per-seat private board was measured harmful** — in its *noise* form. A deterministic systematic
+  offset is a different object; **the seam may be reusable, the finding is not transferable.** Verify.
+- **The personal board must never reach the cost report's baseline.** That report's entire job is pricing
+  preference *against* consensus; contaminating the baseline deletes the measurement.
+
+### Dead ends / do not re-propose
+
+- **A `signal_weights` value hawk.** Measured dead in 16.14R: `pos_z(vbd)` deletes VBD's cross-position
+  content and the seat becomes a chalk tilt with extra width (5.5/10, behind `safe_floor`).
+- **Asking him to describe his own weights.** People report tradeoff weights poorly and make individual
+  choices well. Elicit choices; fit the weights.
+- **A personal `DraftConfig` archetype in these sessions.** A real and separate idea with a different bar
+  (the cost report, on realized points). He chose *realistic opponent*; that is a personality.
+- **Collecting the policy by having him drive 20+ mocks.** Viable but ~10 hours to reach the *floor* of
+  usable data, and it samples the design matrix instead of choosing it.
+
+### ★ NEXT
+
+**User reviews + commits** (this joins the still-uncommitted UI-1 / UI-2 / 08-01 tree), then **Session VH**.
+Ordering against K3 and UI-3 is the user's call — VH and MM are independent of both. Stage-0 FFC chore is
+current (`ffc-20260801`), next due after **08-07**.

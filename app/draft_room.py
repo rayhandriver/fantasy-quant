@@ -16,7 +16,7 @@ import time
 import pandas as pd
 import streamlit as st
 
-from app import engine, nav, probe, state, views
+from app import engine, nav, palette, probe, state, views
 from app.settings_form import lockbox_banner
 from fantasy_quant.draft import session
 from fantasy_quant.draft.personalities import REALISTIC_ROOM, personalities
@@ -37,7 +37,7 @@ def page_draft() -> None:
     settings = state.settings()
     seasons = state.seasons()
     if not seasons:
-        st.error("The store has no FFC board for any season.")
+        views.no_board_error()
         return
     d = state.draft()
     if d is None:
@@ -126,7 +126,9 @@ def _room(d: dict) -> None:
 
     top = st.columns([3, 1, 1])
     if done:
-        top[0].success("**Draft complete.** The post-draft page has your grade and every team.")
+        top[0].markdown("### 🏁 Draft complete")
+        top[0].badge("Grade and every team are on the Post-draft page", color="green",
+                     icon=":material/check:")
     else:
         team = st_obj.team_on_clock()
         who = session.seat_label(team, sm)
@@ -141,18 +143,16 @@ def _room(d: dict) -> None:
         state.clear_draft()
         st.rerun()
 
+    # ★ S5 — the seat strip replaces both the markdown on-the-clock line and the collapsed "The
+    # room" expander. The room's composition was one click away on the page whose entire subject is
+    # the room; now it is the first thing on screen, and it carries the last pick per seat in
+    # position colour, so a run reads off the strip without opening anything.
+    views.seat_strip(st_obj, meta, sm)
     # T34 — a randomized draft is only honest if it is also replayable, so the draw is shown.
-    st.caption(f"Pick seed **{meta.get('seed')}** · seating seed **{meta.get('room_seed')}** — "
-               f"lock these two on a new draft to replay this exact room.")
-
-    with st.expander("The room", expanded=False):
-        chips = pd.DataFrame({
-            "TEAM": [f"T{t + 1}" for t in range(st_obj.n_teams)],
-            "WHO": [session.seat_label(t, sm) for t in range(st_obj.n_teams)],
-            "YOU": [t in sm.human_teams for t in range(st_obj.n_teams)],
-            "AUTOPICK": [t in session.auto_teams(meta) for t in range(st_obj.n_teams)],
-        })
-        st.dataframe(chips, width="stretch", hide_index=True)
+    seeds = st.columns([1, 4])
+    seeds[0].badge(f"seeds {meta.get('seed')} / {meta.get('room_seed')}", color="gray",
+                   help="Pick seed and seating seed. Lock both on a new draft to replay this "
+                        "exact room, pick for pick.")
 
     if done:
         return
@@ -161,6 +161,13 @@ def _room(d: dict) -> None:
     with rail_col:
         seat = _rail_seat(st_obj, sm)
         views.roster_rail(st_obj, seat, sm, d.get("vi"))
+        # ★ T37 / S6 — the reach risk lives here now, permanently, beneath the roster. It is our
+        # single most differentiated readout (a validated `P(available)` with an un-drifted
+        # baseline — FantasyPros' Pick Predictor has neither) and it shipped collapsed.
+        st.divider()
+        st.markdown("**Still there at your next pick?**")
+        views.next_pick_badge(st_obj, seat)
+        _reach_risk(d, seat, n=12)
     with board_col:
         _clock_and_board(d, sm)
 
@@ -191,20 +198,21 @@ def _clock_and_board(d: dict, sm) -> None:
     # driving the app under AppTest, not by any bar — the K1 lesson, one session later.)
     c1, c2 = st.columns([2, 3])
     secs = c1.slider("Seconds per modelled pick", 0, 30, CLOCK_DEFAULT, key="clock_secs",
-                     help="0 = the room waits for you and picks all at once on Advance.")
+                     help="0 = the room waits for you and picks all at once on Advance. **Your "
+                          "own seat never has a clock** — the room drafts on the timer, and when "
+                          "it reaches one of your seats it waits as long as you like (your "
+                          "choice, K1.5 step 3).")
     effective = _effective_interval(secs)
     if 0 < secs < MIN_CLOCK_SECONDS:
         c2.warning(f"A {secs}s clock is below the measured floor — running at "
                    f"{effective}s so the interval is one the room can actually meet.")
-    else:
-        c2.caption("**Your seat has no clock.** The room drafts on the timer; when it reaches one "
-                   "of your seats it waits as long as you like. (Your choice, K1.5 step 3.)")
 
     if not yours:
         if secs > 0:
             _run_clock(d, effective)
         else:
-            st.info("The room is picking — press **Advance** to run it to your next turn.")
+            c2.badge("The room is picking — press Advance", color="blue",
+                     icon=":material/play_arrow:")
             if st.button("Advance", type="primary"):
                 session.advance(st_obj, meta, d.get("risk"))
                 st.rerun()
@@ -248,7 +256,7 @@ def _run_clock(d: dict, interval: int) -> None:
         _recent_picks(s, m)
         _overrun_notice(interval)
 
-    st.caption(f"⏱ The room is drafting — one pick every {interval}s.")
+    st.badge(f"⏱ The room is drafting — one pick every {interval}s", color="blue")
     tick()
 
 
@@ -264,7 +272,7 @@ def _recent_picks(st_obj, meta) -> None:
     sm = session.seat_map_from(meta)
     log = st_obj.log[-8:]
     if not log:
-        st.caption("No picks yet.")
+        views.no_picks_yet()
         return
     frame = pd.DataFrame([{
         "PICK": f"{p['round']}.{p['pick_in_round']:02d}",
@@ -272,7 +280,8 @@ def _recent_picks(st_obj, meta) -> None:
         "WHO": session.seat_label(int(p["team"]), sm),
         "PLAYER": p["player_name"], "POS": p["pos"], "ADP": p["adp"],
     } for p in reversed(log)])
-    st.dataframe(frame, width="stretch", hide_index=True,
+    st.dataframe(palette.style_pos_columns(frame, surface="log"), width="stretch",
+                 hide_index=True,
                  column_config={"ADP": st.column_config.NumberColumn("ADP", format="%.1f")})
 
 
@@ -284,7 +293,10 @@ def _overrun_notice(interval: int) -> None:
         st.warning(f"The room's slowest pick this draft took {worst:.1f}s against a {interval}s "
                    f"clock — picks are landing late. Raise the interval.")
     elif worst:
-        st.caption(f"Slowest pick so far: {worst * 1000:.0f} ms.")
+        st.badge(f"Slowest pick so far: {worst * 1000:.0f} ms", color="gray",
+                 help="Reported rather than assumed: MIN_CLOCK_SECONDS is justified by a "
+                      "measurement taken on 2026-07-31, and a constant justified by a measurement "
+                      "needs something that notices when the measurement goes stale.")
 
 
 # ------------------------------------------------------------------------------------------------
@@ -307,7 +319,7 @@ def _pick_controls(d: dict, team: int) -> None:
         else:
             # ⚠ deliberately two-step. `st.text_input` fires on Enter and Streamlit has no keypress
             # hook, so "Enter drafts the top hit" would let a stray Enter cost a round.
-            st.caption(f"{len(found)} matches — click one to load it into the confirm bar.")
+            st.badge(f"{len(found)} matches — click one", color="gray")
             for m in found[:10]:
                 if st.button(f"{m['player_name']} · {m['pos']} · ADP {m['adp']:.1f}",
                              key=f"hit_{st_obj.overall_pick}_{m['index']}", width="stretch"):
@@ -323,21 +335,24 @@ def _pick_controls(d: dict, team: int) -> None:
     pos = c1.multiselect("Position", ["QB", "RB", "WR", "TE", "K", "DST"],
                          key=f"pos_{st_obj.overall_pick}")
     n = c2.slider("Rows", 10, 100, 25, step=5, key=f"n_{st_obj.overall_pick}")
-    # 14.G — a third projection of the same frame, never a third query. SLIM stays the default
+    # UI-2 step 4 — four projections of the same frame, never four queries. SLIM stays the default
     # because it is the view a human drafts under a clock.
-    mode = c3.radio("View", ["SLIM", "RANGES", "ADVANCED"], horizontal=True,
-                    key=f"mode_{st_obj.overall_pick}",
-                    help="SLIM = the four drafting columns. RANGES = each player's 10–90 band and "
-                         "whether he is distinguishable from the man below him. ADVANCED = the "
-                         "full value/risk chain.")
+    with c3:
+        mode = views.mode_control(f"mode_{st_obj.overall_pick}")
 
-    # 14.E — where each position's next tier cliff falls, above the board it describes
+    # 14.E — where each position's next value cliff falls, above the board it describes
     views.cliff_strip(st_obj, team, d.get("risk"))
 
+    # ★ S6 — `P(THERE)` joins the **slim** board, the view a human drafts under a clock, because
+    # "will he still be here" beats `PROJ` at that moment. Slim only: the other views are already
+    # dense, and the readout costs a survival simulation per row.
+    reach = _reach_frame(d, team, n) if mode == "slim" else None
+    season = int(d["meta"].get("season", 2026))
     view, selected = views.board_table(
-        st_obj, team=team, pos=",".join(pos) if pos else None, n=n, mode=mode.lower(),
-        key=f"board_{st_obj.overall_pick}", selectable=True, risk=d.get("risk"))
-    if mode == "RANGES":
+        st_obj, team=team, pos=",".join(pos) if pos else None, n=n, mode=mode,
+        key=f"board_{st_obj.overall_pick}", selectable=True, risk=d.get("risk"), reach=reach,
+        vi=d.get("vi"), byes=state.byes(season), elevation=state.elevation())
+    if mode == "ranges":
         views.range_note(view)
     if selected is not None:
         st.session_state["pending_pick"] = int(selected)
@@ -346,7 +361,6 @@ def _pick_controls(d: dict, team: int) -> None:
 
     # a literal button per row is fine for the top handful and gets slow past that (14.K spec), so
     # the quick row covers the picks a drafter actually makes at a glance and the table covers all.
-    st.caption("Quick pick — the top of the board you are looking at:")
     quick = view.head(6)
     if len(quick):
         cols = st.columns(len(quick))
@@ -359,25 +373,52 @@ def _pick_controls(d: dict, team: int) -> None:
         engine.autopick(st_obj, d["meta"], team, d.get("risk"))
         st.session_state.pop("pending_pick", None)
         st.rerun()
+    # ⚠ the reach readout used to render here as well as being one of the board's columns. It now
+    # lives in the **rail** (S6) — *moved, not copied*, which is K2's rule about 14.N absorbing the
+    # room page's readouts, one altitude down. Two render paths for one frame is how a display
+    # drifts away from what it displays.
 
-    _reach_risk(d, team)
+
+#: How far down the board `P(THERE)` is simulated. Each row costs a survival simulation, and the
+#: column exists to answer "can I wait on him", a question nobody asks about the 60th-best player
+#: left. Rows past this stay **NaN and print blank** (`attach_reach`), never 0.00 — T22's rule.
+REACH_ROWS = 40
 
 
-def _reach_risk(d: dict, team: int) -> None:
-    """16.12(c) — ``P(available at your next pick)``, on screen for the first time.
+def _reach_frame(d: dict, team: int, n: int):
+    """The reach readout for the slim board, or ``None`` if it cannot be computed.
+
+    ⚠ **Same call as the rail's**, so bar B5's "one derivation, two placements" is true by
+    construction rather than by comparison. If this ever grows its own arguments, the two surfaces
+    can disagree about the same player on the same screen.
+    """
+    try:
+        return session.reach_risk_view(d["state"], d["meta"], team, n=min(int(n), REACH_ROWS))
+    except (LookupError, ValueError, FileNotFoundError):
+        return None
+
+
+def _reach_risk(d: dict, team: int, *, n: int = 20) -> None:
+    """16.12(c) — ``P(available at your next pick)``, on screen and **not behind a click** (T37).
 
     The engine side has been built and validated since Session G and had no surface, because the
     app came strictly last. It is cheap (~20 ms for 25 players) so it renders inline rather than
     behind a button: a readout you have to ask for is a readout nobody asks for.
+
+    ⚠ **That sentence was in this docstring for a session while the code did the opposite** — the
+    readout shipped inside ``st.expander(..., expanded=False)``, collapsed, directly beneath the
+    argument against collapsing it. That is **T37**, and it is the reason UI-1 opens with two
+    one-line fixes rather than with the theme: *a docstring is not a guard, and where the two
+    disagree the code is what the user gets.* There is now a bar (B5) asserting no expander sits in
+    this render path, because the next person to reach for one will have the same good reason.
     """
     st_obj, meta = d["state"], d["meta"]
-    with st.expander("Who will still be there at your next pick?", expanded=False):
-        try:
-            frame = session.reach_risk_view(st_obj, meta, team, n=20)
-        except (LookupError, ValueError, FileNotFoundError) as exc:
-            st.caption(f"No availability readout: {exc}")
-            return
-        views.reach_panel(frame, frame.attrs.get("window_picks"))
+    try:
+        frame = session.reach_risk_view(st_obj, meta, team, n=n)
+    except (LookupError, ValueError, FileNotFoundError) as exc:
+        st.caption(f"No availability readout: {exc}")
+        return
+    views.reach_panel(frame, frame.attrs.get("window_picks"))
 
 
 def _card_button(d: dict, board_index: int) -> None:
@@ -392,11 +433,13 @@ def _confirm_bar(d: dict, team: int, board_index: int, *, why: str) -> None:
     """Never a one-click irreversible pick without the name in front of the user — a mis-click
     costs a round, and a round is the most expensive unit in this app."""
     row = d["state"].board.loc[board_index]
-    c1, c2 = st.columns([3, 1])
-    c1.info(f"**{row['player_name']}** · {row['pos']} · ADP {float(row['adp']):.1f} "
-            f"(#{board_index}) — {why}.")
-    if c2.button("Draft him", type="primary", key=f"confirm_{d['state'].overall_pick}"):
-        _apply(d, team, board_index)
+    with st.container(border=True):
+        c1, c2 = st.columns([3, 1])
+        c1.markdown(f"**{row['player_name']}** · {row['pos']} · "
+                    f"ADP {float(row['adp']):.1f} (#{board_index})")
+        c1.badge(why, color="gray")
+        if c2.button("Draft him", type="primary", key=f"confirm_{d['state'].overall_pick}"):
+            _apply(d, team, board_index)
 
 
 def _apply(d: dict, team: int, board_index: int) -> None:

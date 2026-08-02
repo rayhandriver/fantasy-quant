@@ -47,7 +47,13 @@ At a glance:
 | **T34** | ☑ | **every mock draft is the same mock draft.** `app/engine.start_draft` defaults `seed=7` and `room_seed=None`, which freezes *both* sources of variation — the pick RNG and the seating — so a user re-drafting his slot gets the identical room, the identical picks and the identical story every time. Reported by the user from the live app (seat 6 always opens Gibbs · Chase · Taylor · McCaffrey · Cook) and **reproduced exactly**: same seed twice is identical, `seed=8` gives Gibbs · Nacua · Jeanty · Bijan · Chase, `room_seed=3` gives McCaffrey first. The engine is fine and the personalities *are* sampling — **the human-facing default is the measurement default**, and practising against one frozen draft is worse than not practising | **now** — it defeats the purpose of the mock drafter, which is repeated practice. Session K1.5 step 0. ⚠ **`steps/` must not move**: T24's sweep, 16.17's mapping check and every committed bar sheet are differenced against `--seed 7` | ☑ 2026-07-31 |
 | **T35** | ☑ | **`st.tabs` executes every tab body on every rerun** — it hides inactive tabs client-side, it does not skip them. `app/main.py` calls `tab_settings()`, `tab_board()`, `tab_draft()` and `tab_cost()` unconditionally, so one keystroke in the draft room's player box also re-runs the cost tab's `_prepare_board` and its ADP-sorted option-label build over the entire board. Wasteful today; **a hard blocker on the 14.M pick clock**, which reruns on a timer and must rerun one fragment, not four tabs | with 14.K (Session K1.5 step 1) — the fix is `st.navigation`/`st.Page`, which the user asked for on ergonomic grounds independently | ☑ 2026-07-31 |
 | **T36** | 🟡 | **no automated bar covers the board's row-selection path, and therefore not the player modal.** `st.dataframe(on_select="rerun")` is a *client* event: `AppTest` can click a button and set a widget value, but it cannot make a selection in a dataframe. So the two things a K2 drafter does most on the board — select a row to load the confirm bar, select a row to open the PLAYER-VIEW card — are exercised only by the pieces around them (`session.player_card` is unit-tested for content, `resolve_pick` for the typed path, and FLOW proves every page renders). This is the same shape as the gap K1 shipped through: *an import bar and a use bar are different claims*, and here the use bar stops one layer short of the click | opportunistic. The honest options are a real browser driver (Playwright — a new dev dependency and a slow bar) or a selection-independent duplicate control that would exist only to be testable, which is worse. Revisit if row-select ever carries a number rather than a navigation | ☐ 2026-07-31 |
-| **T33** | 🟡 | **`make_value_hawk_pick_fn(n_teams=)` receives the ROOM size, not the league size** — both room builders pass `len(seats)`, so the *interactive* room (9 modelled seats) scales the value hawk's `_local_z` context weights by **9** and the *batch* room by **10**: the same seat prices step-3 context ~10 % apart depending on which harness it is sitting in. Pre-existing since 16.14R step 6, and 16.17 only made it visible — with k human seats the divisor becomes `10 − k`, so it now varies with the room shape rather than being one of two constants | with the next room measurement. **Deliberately preserved verbatim by 16.17**, whose entire done-bar is bit-identity against both builders; fixing it changes the shipped room's picks and needs the full T24 seating-marginalized before/after as its own sub-step | ☐ 2026-07-30 |
+| **T33** | 🟡 | **`make_value_hawk_pick_fn(n_teams=)` receives the ROOM size, not the league size** — both room builders pass `len(seats)`, so the *interactive* room (9 modelled seats) scales the value hawk's `_local_z` context weights by **9** and the *batch* room by **10**: the same seat prices step-3 context ~10 % apart depending on which harness it is sitting in. Pre-existing since 16.14R step 6, and 16.17 only made it visible — with k human seats the divisor becomes `10 − k`, so it now varies with the room shape rather than being one of two constants | **Session VH.1** *(scheduled 2026-08-01)* — the room measurement it was waiting for is now booked, and T33 sits directly in the path of the user's `value_hawk` objection: the seat he is judging is measurably not the seat that was measured. **Deliberately preserved verbatim by 16.17**, whose entire done-bar is bit-identity against both builders; fixing it changes the shipped room's picks and needs the full T24 seating-marginalized before/after as its own sub-step | ☐ 2026-07-30 |
+| **T37** | ☑ | **the 16.12 reach-risk readout is hidden behind a collapsed expander, directly beneath a docstring arguing that it must not be.** `app/draft_room._reach_risk` opens with *"it renders inline rather than behind a button: a readout you have to ask for is a readout nobody asks for"* and then calls `st.expander("Who will still be there at your next pick?", expanded=False)`. The docstring is right and the code contradicts it. This matters more than a normal display slip because **`P(available)` with an un-drifted baseline is the one thing in the app no competitor ships at all** (FantasyPros' Pick Predictor has neither the baseline nor a validation claim), it had no surface at all between Session G and K2, it costs ~20 ms, and the two-line prose caveat around it is the *only* thing a drafter sees | **Session UI-1 step 0**, with S6 — out of the expander and into the right rail permanently, plus `P(THERE)` on the **slim** board, which under a clock is more decision-relevant than `PROJ`. Bar B5 asserts the slim column **is** `reach_risk_view`'s own number (one derivation, two placements) and that no expander sits in its render path | ☑ 2026-08-01 (Session UI-1 step 0) |
+| **T38** | ☑ | **`app/post_draft.py` ships a raw JSON dump in a user-facing page.** `c1.json(frames["elite"])` (and its sibling column) render the elite-fall frame as pretty-printed JSON under the heading *"Elite fall (consensus top-12)"* — a debug artifact that survived into 14.N because the readouts were *moved* from the room page rather than rewritten. It is not wrong, it is unreadable, and it sits on the page whose entire job is to be a report card | **Session UI-1 step 0**, with A6 — a titled table, and the page led by **grade letter · title fair-share multiple · STARTABLE rank** (T29's ordering: the multiple leads, because the sim's documented −113 pts/team level bias is survived by the ratio and not by the percentage). Bar B6 asserts **zero** `st.json` calls remain in `app/` | ☑ 2026-08-01 (Session UI-1 step 0) |
+| **T39** | 🟠 | **the overlap-based tier column — the UI plan's one differentiated feature — does not cut the live board, and the figure that sold it hides its own denominator.** Measured 2026-08-01: **1 tier per position** (62 RBs in one tier), **2 over the whole board**. Cause (a) **scale** — the median RB 80 % band is **228 pts** against a median adjacent gap of **16.3 pts**, so overlap is universal by construction; cause (b) a **category error** — Boris Chen clusters expert rank *dispersion*, we hold a *predictive interval*, and UI-PLAN calls them the same thing. ★ And `COIN`'s published **146 of 199** conflates *distinguishable* with *unknown*: only **147** pairs have both bands, **146** of those overlap, **1** is a genuine break and **52** are missing bands — the honest figure is **99.3 % of evaluable pairs overlap** | **when it is worth a modelling session**, not a display one: a 1-D clustering with model selection, run on a rank-**dispersion** quantity (`adp_stdev` is on the board already), never on a season-points interval. ⚠ The gap cut is **not** a fallback — a threshold at the median is exceeded by half of all pairs *by definition* | ☐ 2026-08-01 — **nothing shipped**: no `TIER` column on any view, `session.tier_series` runnable and unwired with both cuts, mechanism pinned by a unit test, and `coin_flags` + the `COIN` entry now carry the decomposition |
+| **T41** | 🟠 | **a bar sheet records no vintage for the live board it was measured on, so the mandated weekly Stage-0 pull is indistinguishable from a regression.** Measured 2026-08-01, immediately after the chore banked an `ffc-20260801` board: UI-1's and UI-2's B0 went from `all_pass: True` with **zero** unclassified leaves to **122 unclassified in K1's sheet and 23 in K2's** — `app_summary[0].who: 'autopilot' → 'YOU (T7)'`, `grades.YOU: 'C+ 59' → 'D+ 39'`, `adjacent_overlapping_pairs: 146 → 150`. **Nothing broke**: every nested sheet still passes its own bars (`k1/k1_5/k2_all_pass: True`), the ADP board simply moved (3 arrivals, 2 departures, 91 players >2 picks) and the drafts played out differently. But `_ALLOWED_MOVES` classifies display counts, entropy, timings and column lists — it has **no category for *the input moved*** — so B0 fails by construction after every chore run, and the operator must re-derive by hand each week whether the cause was the board or the code. **This is T32 one level up**: there the cache key omitted the board vintage, here the *control* does | **before the next board-dependent session**, and it is cheap: stamp `mock.board_vintage(raw, src)` into each sheet, then have `_classify_moves` report `vintage_changed` and bucket board-driven moves under it — *not* a blanket allowance, which would delete B0's whole purpose. ⚠ Do **not** widen `_ALLOWED_MOVES` to swallow these leaves | ☐ 2026-08-01 — reported, not fixed; pre-pull sheets preserved at `analysis/session_ui_{1,2}.pre_ffc20260801.json` |
+| **T40** | 🟡 | **a bar control that can be satisfied by a single observation, and was.** UI-2's B3 requires `every_glyph_fired_at_least_once` so the row-by-row glyph identity cannot pass vacuously — a good control, and on the 07-30 board `handcuff` fired **exactly once** in 40 rows (`{'bye': 6, 'stack': 8, 'handcuff': 1}`). The 08-01 board took it to **zero** (`{'bye': 13, 'stack': 12, 'handcuff': 0}`) and B3 flipped to FAIL. **Every correctness claim in the bar still holds** — `mismatched: []`, `FLAGS` byte-identical, unknown byes still unknown, zero week-0 rows — so the failure is the control's sampling, not the glyph logic. A control whose n is 1 is one board refresh from reporting a defect that does not exist, which is the same alarm-fatigue failure as T41 and arrives from the opposite direction | with the next UI session. Fix by **constructing** a roster that guarantees each glyph fires (the lead-back + handcuff pair is deterministic from the depth chart) rather than hoping the sampled rows contain one; keep the control, do not loosen it into a pass | ☐ 2026-08-01 |
+| **T42** | 🟠 | **the value hawk maximizes a slot-blind objective, and it is the only seat that fully expresses it** — so the defect T28 measured as a *reporting* artifact is, for this one seat, a **behaviour**. `capital − startable` is negative for every seat except `value_hawk`, where it is **+152**; the shipped mock has it taking a **QB2 in round 8 (ADP 63)** and a **TE2 in round 9 (ADP 85)** in a 10-team 1-QB full-PPR league while its first RB arrives in round 6. **★ T28 did not settle this and could not have:** its bar B5 asked which roster-value definition best *correlates* with title probability (`team_value` +0.8382 > `portfolio_ce` +0.8202 > `starter_value` +0.7971) and used the answer to decide what the seat should **maximize**. *A relationship measured on outcomes is not a specification for the mechanism that produced them* — T24's lesson one level up. The **interventional** experiment (run the seat on each objective, measure the rosters it builds) has never been run | **Session VH.2**, on the user's report that the seat's picks are "characteristically uncalled for" *and* that it finishes weak — one cause, both symptoms. ≥200 seating-marginalized drafts × ≥4 DEV seasons, `RiskModel.bench_weight` as the knob (default 1.0 nests the shipped greedy pick-for-pick). **Report outcome and roster shape separately; ship starter-awareness only if shape improves AND outcome does not degrade beyond its CI.** ⚠ If shape improves and the outcome degrades, that is a finding about the sim (bench value alone predicts title +0.711 because it draws injuries) — report it, do not reweight | ☐ 2026-08-01 |
 
 ---
 
@@ -2268,3 +2274,295 @@ and adds a dev dependency plus a slow, flaky-by-nature bar. The alternative — 
 control that exists only so a test can reach it — would be *testing a path the human does not use*,
 which is the T27/K1 failure mode inverted, and worse than the gap. Revisit if row-select ever carries a
 number rather than a navigation.
+
+## ☑ T37 — the reach-risk readout was hidden behind a collapsed expander
+**Status ☑ done 2026-08-01 (Session UI-1, step 0 + step 5) · was 🟡.**
+
+`app/draft_room._reach_risk` rendered `session.reach_risk_view` inside
+`st.expander("Who will still be there at your next pick?", expanded=False)` — **directly beneath its own
+docstring arguing that it must not**: *"it is cheap (~20 ms for 25 players) so it renders inline rather
+than behind a button: a readout you have to ask for is a readout nobody asks for."*
+
+**Why it mattered more than an ordinary display slip.** `P(available)` with an **un-drifted baseline**,
+from the Brier-validated 11.2 survival oracle, is one of the seven things this app ships that has no
+competitor equivalent — FantasyPros' Pick Predictor has neither the baseline nor a validation claim. It
+had no surface at all between Session G and K2, and then arrived collapsed.
+
+**Fixed:** the expander is gone; the readout lives in the **right rail, permanently, beneath the roster**,
+and `P(THERE)` also joins the **slim** board — under a clock it is more decision-relevant than `PROJ`.
+Both placements read the *same* `session.reach_risk_view` call (`session.attach_reach` is a placement,
+not a derivation), and the CLI's `board --view slim` carries the same column with the same numbers.
+
+**Bar B5** asserts the column *is* the readout's number row for row, that rows the readout did not
+simulate stay **NaN** rather than printing `0.00` (T22's rule with the other sign), and that the draft
+room renders **zero expanders** — a claim a future edit cannot satisfy by accident.
+
+**★ The durable lesson: a docstring is not a guard.** The argument against collapsing it was written,
+correct, and sitting two lines above the code that collapsed it, through a whole session in which every
+K2 bar passed. Where prose and code disagree, the code is what the user gets — so the fix ships with a
+bar, not with a stronger comment.
+
+## ☑ T38 — a raw JSON dump on the page whose job is to be a report card
+**Status ☑ done 2026-08-01 (Session UI-1, step 0 + A6) · was 🟡.**
+
+`app/post_draft.py` rendered `c1.json(frames["elite"])` — the elite-fall profile as pretty-printed JSON,
+under the heading *"Elite fall (consensus top-12)"*, on 14.N.
+
+**Fixed:** `views.elite_fall_table` renders it as a titled table with the label **and the unit** each
+number needs — the slots are **10-team picks**, so a 12-team draft's pick 20 is not silently compared to
+a 10-team draft's pick 20, and the readout is worthless without saying so. The `share_past_*` row is
+matched by prefix because `mock.elite_fall_profile` names that key after its own threshold; hard-coding
+the 10 would be a second definition of the bar's cut. 14.N was rebuilt around it as a report card: a hero
+row of **grade letter · title fair-share multiple · STARTABLE rank**, the biggest-reach / best-value pair
+promoted out of a six-row table nobody read, and standings / odds / every-team / draft-flow behind
+`st.tabs`. **Bar B6** asserts `app/` contains zero `st.json` calls and that the elite table renders.
+
+**★ Why it survived.** K2 **moved** the readouts here from the room page rather than rewriting them, so
+the defect changed address without being looked at. *That is the cheapest kind of defect to keep* — and
+the reason a move should be read as a rewrite opportunity, not as a no-op.
+
+**⚠ Method note for the next register entry.** The first version of B6 counted `st.json` with a regex and
+reported 1 — the hit was the *comment* recording what T38 replaced. B1's palette census had the identical
+failure with the hex strings in a docstring. Both now parse the AST. **A grep does not know the
+difference between doing a thing and describing it**, and in a repo whose comments quote the code they
+replaced, that is not a rare edge case.
+
+## 🟠 T39 — the tier feature is a null, and the number that sold it hides its own denominator
+**Status 🟠 open 2026-08-01 (Session UI-2, step 1) · found by building the feature.**
+
+`docs/UI-PLAN.md` §S2 and `docs/BUILD_PLAN.md` §UI-2 step 1 both specify, and both recommend, an
+**overlap-based tier column**: *a tier ends where adjacent players' 10–90 bands stop overlapping*.
+Both call it the one differentiated item in the whole UI plan — *"the single item no competitor could
+copy without building our distribution stack first"* — on the strength of `COIN`'s published figure,
+**146 of 199 adjacent pairs overlap**.
+
+**Measured on the live 2026 board, the rule cuts nothing at any scope:**
+
+| | |
+|---|---|
+| within RB / WR / QB / TE | **1 tier each** — 62, 83, 29 and 24 players in one undivided tier |
+| whole board order | **2 tiers** over 244 available players |
+| adjacent pairs in the top 200 | 199 |
+| …with **both** bands present | **147** |
+| …of those, overlapping | **146** |
+| …**genuine** non-overlaps | **1** |
+| …pairs where a band is **missing** | **52** |
+
+**Two causes, and the second is worth more than the feature.**
+
+1. **Scale.** The median RB 80 % band is **228 points** wide; the median gap between adjacent RBs is
+   **16.3 points**. That is **14×**. A pairwise-overlap rule cannot cut a sequence whose neighbours sit
+   at a fourteenth of their own interval width — overlap is near-universal *by construction*, and that
+   is a fact about season-total predictive intervals, not about football.
+2. **A category error in the premise.** UI-PLAN says the design is *"precisely Boris Chen's thesis
+   executed on our own distributions rather than on expert ranks."* It is not. Chen clusters **expert
+   rank dispersion** — a measure of how much rankers *disagree about where a player belongs*. We hold a
+   **predictive interval for a season total**. Disagreement is narrow; outcome uncertainty is enormous.
+   Two different quantities wearing one name. This is **T24's lesson** (*a relationship measured on one
+   object is not a specification for the mechanism that produced it*) arriving on a visualisation
+   instead of on a draft room, and it presented the same way both times: as a plausible design idea.
+
+**★ The half that outlives the feature — a published figure that conflates two answers.**
+`session.coin_flags` returns `False` **both** for *these two are distinguishable* and for *we cannot
+tell*, and **its own docstring says those are different answers**. But every published statement of the
+column reports the single number: K2's bar B4, UI-PLAN §3.3, the `COIN` dictionary entry, and this
+session's own bar B1 anchor. Read as *"73 % overlap, so 27 % are resolvable"* it is wrong by a factor of
+fifty: **52 of the 53 non-overlaps are missing bands.** The honest statement is *of the adjacent pairs
+we can evaluate at all, **99.3 %** overlap* — which is a **stronger** version of the honesty claim the
+column exists to make, and a fatal one for anything trying to navigate by it.
+
+**What shipped instead:** nothing. No `TIER` column is on any rendered view, `SLIM` keeps `PROJ`, and
+`session.tier_series` ships **runnable and unwired** with both cuts (`method="overlap"` and
+`method="gap"`) so the null stays checkable rather than becoming a sentence in a write-up — the 16.9 /
+16.16 precedent (*built, wired, tested, default OFF*). A unit test pins the mechanism so the rule cannot
+be quietly re-adopted, and `coin_flags`' docstring and the `COIN` dictionary entry now both carry the
+decomposition.
+
+**⚠ The gap cut is not a fallback, and this is why.** `BUILD_PLAN`'s option (a) — *"a tier ends where
+`base_value` falls by more than the pool's local median gap"* — was built and measured too. **A
+threshold at the median is exceeded by half of all pairs by definition**, so it returns ~n/2 tiers (31
+over 62 RBs) regardless of the data: it is a coin flip wearing a tier's name. Cutting on the *board*
+order rather than the value order makes it worse still, because the board is ADP-sorted and
+`base_value` is not monotone in it (one tier came out spanning 0.0 → 63.5). The drop distribution is
+heavy-tailed, not bimodal — max/median **8–16×** per position, with only **1–2** drops per position past
+mean + 2 sd — so *how many tiers exist* is entirely a function of where the threshold is put.
+
+**Fix, when it is worth a session:** a real 1-D clustering with model selection (Chen uses a Gaussian
+mixture with an information criterion), on a **rank-dispersion** quantity rather than on a season-points
+interval — `adp_stdev` is already on the board and is exactly the disagreement measure Chen's method
+wants. That is **modelling**, with its own validation, and it is not a display session's work. Until
+then the board's scarcity question is answered by `CLIFF` (14.E), which is per-position, threshold-free
+and already shipped.
+
+## 🟠 T41 — a control that cannot tell "the world moved" from "the code broke"
+
+Opened 2026-08-01, by the Stage-0 chore itself. The pull banked an `ffc-20260801` board (1,288 rows,
+gsis 98.0 %, every data-health gate PASS) and the reconciliation that followed re-ran the bar sheets.
+
+**The before/after is unambiguous, and it was checked in that order** — the pre-pull sheets were read
+*first*, so the attribution is measured rather than assumed:
+
+| | pre-pull (`ffc-20260730`) | post-pull (`ffc-20260801`) |
+|---|---|---|
+| UI-1 / UI-2 `all_pass` | **True** | **False** |
+| `session_k1_app.json` moved | `display_count: 1` | `display_count: 1`, **UNCLASSIFIED: 122** |
+| `session_k2_app.json` moved | `display_count: 4` | `display_count: 4`, **UNCLASSIFIED: 23** |
+| nested `k1 / k1_5 / k2_all_pass` | True | **True — unchanged** |
+
+Every nested sheet still passes its own bars. The 150-of-150 app-vs-CLI identity, the cliff identity,
+the Brier and the probability fields are all untouched. What moved is what a different board makes
+different: the room drafts other players, so the standings re-order (`app_summary[0].who: 'autopilot'
+→ 'YOU (T7)'`, `team: 2 → 7`), the grades re-scale (`grades.YOU: 'C+ 59' → 'D+ 39'`), and board-shaped
+counts shift (`adjacent_overlapping_pairs: 146 → 150`, `at_censoring_point: 70 → 72`).
+
+**The defect is that none of that is *sayable* by the instrument.** `_ALLOWED_MOVES` names five
+rendered-element counts, six entropy draws, eight timings, one stat-dictionary entry and one column
+list. There is no category for *the input moved*, and no field in the sheet records **which board it
+was measured on** — so B0 cannot distinguish a weekly chore from a regression, and says the alarming
+thing both times. `CLAUDE.md` §2 mandates that pull whenever the board is >6 days old, which means
+**this failure is scheduled**, not incidental.
+
+★ **It is T32 one level up, and the fix is T32's fix.** There, `mock.room_board` cached on
+`(season, scoring, teams, include_dst, ENRICH_VERSION)` and omitted *which snapshot answered*, so a
+fresh board and a stale one shared a filename. `board_vintage(raw, src)` went into the key and the
+cache became self-healing. Here the same omission sits in the **control** rather than the cache: stamp
+the vintage into each sheet, have `_classify_moves` compare it, and bucket board-driven leaves under a
+reported `vintage_changed` — a *classification*, so the leaves are still enumerated and still visible.
+
+⚠ **Do not widen `_ALLOWED_MOVES` to swallow them.** The list's docstring says what a display session
+is allowed to move; a blanket board allowance would wave through exactly the regressions B0 exists to
+catch, and the UI-1 pointer already records what that costs — the one leaf its first version missed was
+`bars.b3.worst_seat`, an argmax over a noisy vector, caught only because the bar refused to generalise.
+
+**Interim rule until it is built:** after a Stage-0 pull, a B0 failure whose unclassified leaves are all
+draft-outcome or board-count fields, *with every nested sheet still passing*, is a **re-baseline**, not a
+regression. Re-run, read the nested `*_all_pass` flags, and commit the sheets so `HEAD` carries the new
+vintage. Pre-pull evidence for this instance is preserved at
+`analysis/session_ui_{1,2}.pre_ffc20260801.json` (the `phase11_opponent_model.pre_t15.json` convention).
+
+## 🟡 T40 — the control fired once, so it was one board refresh from firing never
+
+Opened 2026-08-01, alongside T41 and from the same run. UI-2's B3 asserts that each construction glyph
+**is** `roster_construction_risk` evaluated on (roster + candidate), row by row, and — because the UI-1
+pointer records that the first build had `⚑` firing **zero times in 40 rows** — it carries a control
+requiring every glyph to fire at least once, so the identity cannot pass vacuously.
+
+The control was right to exist and is too weak as written:
+
+| | pre-pull | post-pull |
+|---|---|---|
+| `glyphs_that_fired` | `{'bye': 6, 'stack': 8, 'handcuff': 1}` | `{'bye': 13, 'stack': 12, 'handcuff': 0}` |
+| `every_glyph_fired_at_least_once` | True | **False** |
+| `mismatched` | `[]` | **`[]` — the identity still holds** |
+| `FLAGS_string_byte_identical` | True | **True** |
+
+**`handcuff` fired exactly once**, on whichever sampled row happened to pair a lead back with his
+backup. A different board seats a different room, and the pair vanished. Nothing about the glyph logic
+changed: `mismatched` is still empty, `FLAGS` is still byte-identical, unknown byes still stay unknown,
+and there are still zero fabricated week-0 rows.
+
+★ **The lesson is the repo's own, from the other side.** K2 recorded that *a test that cannot fail is
+the same defect as a bar that cannot fail* — a handcuff unit test that drove a draft seating **no lead
+back at all**, asserted over an empty frame and passed while proving nothing. This is its mirror: a
+control that *can* fail, and does, on n = 1 — a sample of one is indistinguishable from a coincidence,
+and it produces a **false** failure rather than a false pass. Both come from letting a sampled fixture
+decide whether the interesting case is present.
+
+**Fix:** construct the case instead of sampling for it. A lead back and his handcuff are deterministic
+from the depth chart, so the control can seat that pair on the hypothetical roster and *require* the
+glyph, rather than drafting 40 rows and hoping. Keep the control — do not loosen it into a pass, which
+would be tuning a bar to a board.
+
+---
+
+## 🟠 T42 — the value hawk maximizes a slot-blind objective, and it is the only seat that fully expresses it
+
+**Opened 2026-08-01 (session 5), from a user report:** `value_hawk` "is consistently underperforming …
+it consistently makes picks that are characteristically uncalled for", and — asked to separate the two
+readings — **both**: the picks look wrong *and* the roster finishes weak. That pairing is the ticket.
+One cause produces both.
+
+### What the seat is
+
+`draft/personalities.py:713` / `:989` — not a `signal_weights` seat but the **Phase-9 greedy in an
+opponent seat**: `RiskModel.effective_rank` scoring each candidate by its marginal contribution to
+**portfolio CE**, bounded by a reach window and tilted by three context weights. 16.14R built it that way
+deliberately, and correctly: a `signal_weights` hawk provably cannot work, because `pos_z(vbd)` deletes
+VBD's only non-ADP content (`corr(vbd, adp)` within position −0.86…−0.96).
+
+### The defect
+
+**The value path is slot-blind** — nothing in `draft/optimizer.py` references starters — and `value_hawk`
+is the only seat that **maximizes** that quantity. T28 recorded the fingerprint without connecting it to a
+pick objection:
+
+> the gap `capital − startable` is negative for every seat **EXCEPT** `value_hawk` (**+152**), the only
+> seat that maximizes the sum, so the display defect is real and **seat-dependent** while the objective is not.
+
+The shape is visible in the shipped mock (`analysis/mock_16_14R_picks.csv`, seat 8, 15 rounds):
+
+| round | 1 | 2 | **3** | 4 | 5 | 6 | 7 | **8** | **9** | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| pos | WR | WR | **QB** | TE | WR | RB | RB | **QB** | **TE** | RB | WR | RB | WR | K | DST |
+| adp | 10.3 | 25.6 | 27.9 | 46.8 | 45.5 | 60.2 | 58.0 | **63.3** | **85.2** | 72.8 | 84.9 | 127.3 | 130.7 | 128.4 | 132.4 |
+
+A **QB2 in round 8** and a **TE2 in round 9** in a **10-team 1-QB full-PPR** league, with the first RB in
+round 6. Correct as capital accumulation; indefensible as a roster. It is the same failure the user's two
+symptoms describe from two sides — the picks read as uncalled for *because* the capital they buy cannot start.
+
+### ★★ Why T28 did not settle it, and could not have
+
+T28's bar B5 asked **which roster-value definition best *correlates* with title probability**, over 200
+seated-reshuffled drafts:
+
+| definition | Spearman vs title |
+|---|---|
+| `team_value` (slot-blind sum) | **+0.8382** |
+| `portfolio_ce` (shipped objective) | +0.8202 |
+| `starter_value` | +0.7971 |
+| `starter_mean` | +0.7920 |
+
+…and used that ranking to decide what the seat should **maximize**, closing the ticket as a labelling fix.
+
+**Those are different questions.** *A relationship measured on outcomes is not a specification for the
+mechanism that produced them* — **T24's own durable lesson, arriving one level up.** T24 learned it about
+`|drift| ≈ 2·adp_stdev`: a law true of realized drift, harmful when re-injected as a per-seat perception.
+Here it is `starter_value`: a *worse predictor* of title probability across rosters, which says nothing
+directly about whether a seat that *optimizes* it builds better rosters. The interventional experiment has
+never been run.
+
+T28 also flagged the seat-dependence in its own write-up and did not follow it: the correlational bar
+pools ten seats, nine of which do not maximize the quantity at all.
+
+### The fix — Session VH.2
+
+Run `value_hawk` on `objective="portfolio_ce"` vs a **starter-aware** objective, ≥200 seating-marginalized
+drafts (`--shuffle-room`, the T24 protocol) × ≥4 DEV seasons. `RiskModel.bench_weight` already exists from
+T28 (default **1.0**, and 1.0 nests the shipped greedy pick-for-pick per `test_phase9`), so the sweep has a
+knob and needs no new one.
+
+**Report outcome and roster shape as separate claims:**
+
+| | measured |
+|---|---|
+| **outcome** | realized points · `starter_value` · title/playoff **fair-share multiple** (T29: the multiple, never the bare percentage) |
+| **shape** | QB2/TE2 count before round 12 · `capital − startable` gap · RB1 arrival round |
+
+**Done-when:** ship starter-awareness only if **shape improves AND outcome does not degrade beyond its
+CI**. B0 holds throughout — the five T15 bars + landing + legality, seating-marginalized.
+
+### ⚠ Two traps written down before the session, not after
+
+1. **If shape improves and the outcome degrades, that is a FINDING and not a tuning target.** Our sim draws
+   injuries, and T28 measured **bench value alone predicting title +0.711, positive in 100 % of drafts**,
+   with the blend sweep peaking at `w=0.90` against a shipped 1.0. So the sim may genuinely prefer the
+   roster a knowledgeable human calls indefensible. That would be a statement about the sim's documented
+   under-modelled availability, and it gets reported, not reweighted away.
+2. **Do not delete or replace the seat, and do not rebuild it as `signal_weights`.** It is 1 of 10 in
+   `REALISTIC_ROOM`; every T15/T24 bar was measured with it there, and 16.14R already measured what the
+   `signal_weights` version becomes (a chalk tilt with extra width, finishing 5.5/10 behind `safe_floor`).
+
+**Travelling with it:** **T33** (VH.1 — `n_teams` is the room size, so the interactive seat the user
+watches prices context ~10 % differently from every seat that was ever measured) and the unresolved
+window sweep (`analysis/phase16_14r_value_hawk.json`, `sweep_resolved: false`, +13.1 CE against a pooled
+se of 10.7 — the shipped window is a **default, not a result**).

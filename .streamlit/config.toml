@@ -1,0 +1,55 @@
+# Fantasy-Quant — the app's theme (Session UI-1, step 1 / UI-PLAN §S4).
+#
+# ★ Why this file exists at all. Nobody in the category ships framework defaults, and the survey's
+#   one-sentence finding is that we are behind on *encoding*, not on analysis. A theme is the
+#   cheapest encoding there is: ~40 lines that stop the app announcing "this is a Streamlit demo"
+#   before a single number is read.
+#
+# ★ The rule this theme is written to: **the only colours that MEAN anything are position and
+#   status.** Chrome is monochrome. `primaryColor` is deliberately a near-white rather than a hue,
+#   because every hue in the app's vocabulary is already spoken for — six of them name a position
+#   (`app/palette.py`) and the rest are Streamlit's semantic red/green/orange, which name a state.
+#   A coloured primary button would put a seventh meaning-free hue on screen and quietly weaken the
+#   six that carry meaning. On a dark base a near-white primary also gives Streamlit a high-contrast
+#   button it can label in dark text, which a mid-saturation accent does not.
+#
+# ⚠ `chartCategoricalColors` below is the position palette, in `app/palette.POSITIONS` order, so any
+#   future chart inherits it instead of inventing a seventh scheme. **It is the one place the hex
+#   strings are duplicated outside `app/palette.py`, and that duplication is unavoidable** — a TOML
+#   file is read by Streamlit before any of our Python runs, so it cannot import a constant. Bar B1
+#   therefore does not pretend there is one copy: it *parses this file and asserts the list equals
+#   the palette*. A duplication you assert is a duplication; a duplication you hope about is a bug.
+
+[theme]
+base = "dark"
+
+# Chrome — monochrome on purpose (see above).
+primaryColor = "#E8EAED"
+backgroundColor = "#0F1115"
+secondaryBackgroundColor = "#181B21"
+textColor = "#E6E8EB"
+linkColor = "#7FB3D5"
+
+# Tables are the app's primary surface: 22 dataframes against 9 metrics before this session. So the
+# dataframe chrome gets named explicitly rather than inheriting — a header that reads as a header is
+# what lets a 6-column board be scanned instead of read.
+borderColor = "#2A2F38"
+dataframeBorderColor = "#2A2F38"
+dataframeHeaderBackgroundColor = "#1C2029"
+codeBackgroundColor = "#161A20"
+
+baseRadius = "small"
+buttonRadius = "small"
+showWidgetBorder = true
+showSidebarBorder = true
+
+# QB · RB · WR · TE · K · DST — Okabe-Ito, the same six hues `app/palette.POSITION_COLORS` uses,
+# in the same order. Chosen over the market convention (QB gold / RB red / WR blue / TE orange)
+# because that convention puts red beside orange beside gold, which is three positions a
+# deuteranope reads as one.
+chartCategoricalColors = ["#E69F00", "#D55E00", "#0072B2", "#CC79A7", "#56B4E9", "#009E73"]
+
+[theme.sidebar]
+backgroundColor = "#14171C"
+secondaryBackgroundColor = "#1C2029"
+borderColor = "#262B33"

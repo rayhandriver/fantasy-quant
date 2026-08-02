@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-07-26T06:01:31.476005+00:00",
+  "generated_at": "2026-08-01T23:49:02.069222+00:00",
   "tables": {
-    "adp_snapshots": 34469,
+    "adp_snapshots": 37029,
     "combine": 4080,
     "consensus_projections": 529,
     "depth_charts": 955989,
@@ -47,7 +47,7 @@
       "date_modified": 0.9079
     },
     "adp_snapshots": {
-      "gsis_id": 0.9092
+      "gsis_id": 0.9085
     }
   },
   "gates": [
@@ -94,14 +94,14 @@
     {
       "gate": "ADP top-150 gsis match <1%",
       "passed": true,
-      "unmatched_rate": 0.00607
+      "unmatched_rate": 0.00612
     },
     {
       "gate": "adp: live-season snapshot fresh",
       "passed": true,
       "live_season": 2026,
-      "latest": "2026-07-24",
-      "age_days": 2,
+      "latest": "2026-08-01",
+      "age_days": 0,
       "max_age_days": 6
     },
     {
@@ -137,6 +137,81 @@
       "passed": true,
       "n_mocks": 3,
       "with_human_slot": 3
+    },
+    {
+      "gate": "sleeper: manager reach is a behaviour, not a join",
+      "passed": true,
+      "n_managers": 8212,
+      "max_rounds": 2.0,
+      "mean_abs_reach_rounds": 0.776
+    },
+    {
+      "gate": "value_scale_2024",
+      "passed": true,
+      "max_rho": -0.5,
+      "min_n": 8,
+      "failed_positions": [],
+      "skipped": [],
+      "by_position": {
+        "QB": {
+          "n": 23,
+          "rho": -0.8981,
+          "median_haircut": 0.2453,
+          "neg_haircut_share": 0.0
+        },
+        "RB": {
+          "n": 51,
+          "rho": -0.594,
+          "median_haircut": 0.3274,
+          "neg_haircut_share": 0.0
+        },
+        "WR": {
+          "n": 61,
+          "rho": -0.6811,
+          "median_haircut": 0.2382,
+          "neg_haircut_share": 0.0
+        },
+        "TE": {
+          "n": 19,
+          "rho": -0.8123,
+          "median_haircut": 0.2523,
+          "neg_haircut_share": 0.0
+        }
+      },
+      "full_board": {
+        "QB": {
+          "n": 81,
+          "rho": -0.9293,
+          "median_haircut": 0.4422,
+          "neg_haircut_share": 0.0247
+        },
+        "RB": {
+          "n": 150,
+          "rho": -0.6545,
+          "median_haircut": 0.3797,
+          "neg_haircut_share": 0.0
+        },
+        "WR": {
+          "n": 212,
+          "rho": -0.8435,
+          "median_haircut": 0.3205,
+          "neg_haircut_share": 0.0
+        },
+        "TE": {
+          "n": 116,
+          "rho": -0.8829,
+          "median_haircut": 0.3898,
+          "neg_haircut_share": 0.0
+        }
+      }
+    },
+    {
+      "gate": "board_vintage_2024",
+      "passed": true,
+      "n_served": 204,
+      "n_resolved": 204,
+      "n_missing": 0,
+      "missing_examples": []
     }
   ],
   "all_gates_passed": true,

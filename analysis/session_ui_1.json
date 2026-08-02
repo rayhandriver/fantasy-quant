@@ -1,0 +1,385 @@
+{
+  "season": 2026,
+  "seat": 6,
+  "bar_sims": 120,
+  "prose_before": 68,
+  "prose_target": 25,
+  "palette": {
+    "QB": "#E69F00",
+    "RB": "#D55E00",
+    "WR": "#0072B2",
+    "TE": "#CC79A7",
+    "K": "#56B4E9",
+    "DST": "#009E73"
+  },
+  "all_pass": false,
+  "bars": {
+    "b1": {
+      "bar": "B1 \u2014 one palette constant, five surfaces, zero second copies",
+      "pass": true,
+      "palette": {
+        "QB": "#E69F00",
+        "RB": "#D55E00",
+        "WR": "#0072B2",
+        "TE": "#CC79A7",
+        "K": "#56B4E9",
+        "DST": "#009E73"
+      },
+      "hex_occurrences_per_app_file": {
+        "palette.py": 6
+      },
+      "single_home_in_app": true,
+      "config_toml_matches_palette": true,
+      "theme_base": "dark",
+      "chip_contrast_ratios": {
+        "QB": 8.38,
+        "RB": 4.88,
+        "WR": 5.19,
+        "TE": 6.17,
+        "K": 8.18,
+        "DST": 5.52
+      },
+      "min_contrast": 4.88,
+      "wcag_aa_all_chips": true,
+      "required_surfaces": [
+        "board",
+        "room_grid",
+        "log",
+        "roster_rail",
+        "post_draft_rosters"
+      ],
+      "styled_surfaces": {
+        "roster_rail": 1,
+        "reach": 1,
+        "board": 1,
+        "room_grid": 1,
+        "log": 1,
+        "reaches": 1,
+        "post_draft_rosters": 1
+      },
+      "all_five_surfaces_styled": true,
+      "n_exceptions": 0,
+      "exceptions": [],
+      "note": "`.streamlit/config.toml` is the one place the hex strings are duplicated outside `app/palette.py` and the duplication is unavoidable \u2014 a TOML file is read before any of our Python runs, so it cannot import a constant. The bar therefore asserts the two agree rather than pretending there is one copy. A duplication you assert is a duplication; a duplication you hope about is a bug."
+    },
+    "b2": {
+      "bar": "B2 \u2014 prose blocks 68 \u2192 \u2264 25, one census both ways",
+      "pass": true,
+      "before_total": 68,
+      "after_total": 24,
+      "target": 25,
+      "before_reproduces_ui_plan_68": true,
+      "before_by_file": {
+        "draft_room.py": 17,
+        "main.py": 1,
+        "post_draft.py": 7,
+        "room_grid.py": 4,
+        "screens.py": 12,
+        "settings_form.py": 3,
+        "views.py": 24
+      },
+      "after_by_file": {
+        "draft_room.py": 6,
+        "main.py": 1,
+        "post_draft.py": 5,
+        "room_grid.py": 1,
+        "screens.py": 4,
+        "settings_form.py": 1,
+        "views.py": 6
+      },
+      "removed": 44,
+      "note": "The census is `st.caption` + the four alert primitives \u2014 37 + 31 = the 68 in UI-PLAN \u00a73.1. `st.markdown` is excluded because those 28 blocks are mostly headers and labels. The 'before' is read from `git show HEAD:` rather than hard-coded, so the two numbers come off one ruler."
+    },
+    "b3": {
+      "bar": "B3 \u2014 all seven honesty surfaces still render after the compression",
+      "pass": true,
+      "surfaces": {
+        "lockbox_both_branches": true,
+        "coin_overlap": true,
+        "censored_floor": true,
+        "t22_blank_is_not_zero": true,
+        "t31_level_cap": true,
+        "k_seats_one_observation": true,
+        "printed_grade_weights": true
+      },
+      "detail": {
+        "lockbox_both_branches": "validated=True not_validated=True",
+        "censored_floor": "censored floors] A season points total cannot be negative, so these rows' Q10 sits exactly",
+        "printed_grade_weights": "(50, 20, 15, 15)"
+      },
+      "n_exceptions": 0,
+      "exceptions": [],
+      "note": "Scraped from every render primitive, not markdown/caption only: `st.badge` renders as markdown, and popover / expander / tab bodies render as their children. Compression moved most of these into popovers and chips \u2014 a scrape that could not see those would fail this bar for the wrong reason."
+    },
+    "b4": {
+      "bar": "B4 \u2014 the seat strip is the SeatMap's order and the optimizer's own next pick",
+      "pass": true,
+      "picks_checked_against_team_on_clock": 150,
+      "every_pick_of_a_full_draft_checked": true,
+      "team_for_pick_mismatches": [],
+      "out_of_range_returns_none": true,
+      "runs": [
+        {
+          "k": 1,
+          "chip_order_is_seat_order": true,
+          "labels_from_seat_map": true,
+          "exactly_one_on_the_clock": true,
+          "on_deck_is_team_for_pick": true,
+          "your_seats_marked": true,
+          "next_pick_is_optimizers": true,
+          "window_matches_reach_readout": true,
+          "every_chip_rendered": true,
+          "one_strip_element": true,
+          "next_pick": 6,
+          "picks_away": 5
+        },
+        {
+          "k": 4,
+          "chip_order_is_seat_order": true,
+          "labels_from_seat_map": true,
+          "exactly_one_on_the_clock": true,
+          "on_deck_is_team_for_pick": true,
+          "your_seats_marked": true,
+          "next_pick_is_optimizers": true,
+          "window_matches_reach_readout": true,
+          "every_chip_rendered": true,
+          "one_strip_element": true,
+          "next_pick": 20,
+          "picks_away": 18
+        }
+      ],
+      "note": "`team_for_pick` duplicates the snake formula so the strip can say who is on *deck*, one pick ahead of what `team_on_clock` answers. The K1.5 seat-map defect was that arithmetic written four times and correct in three; the fix that stuck was an exhaustive difference, so that is what this runs."
+    },
+    "b5": {
+      "bar": "B5 \u2014 P(THERE) on the slim board IS reach_risk_view, and no expander hides it",
+      "pass": true,
+      "rows_compared": 25,
+      "values_identical": true,
+      "uncovered_rows_stay_nan": true,
+      "uncovered_rows": 15,
+      "slim_board_carries_column": true,
+      "rail_panel_renders": true,
+      "expanders_on_the_draft_page": 0,
+      "documented_in_stat_dict": true,
+      "in_cli_slim_board": true,
+      "window_picks": 5,
+      "note": "T37 closed: the draft room now renders zero expanders. The readout is our single most differentiated number \u2014 a validated P(available) with an un-drifted baseline, which FantasyPros' Pick Predictor has neither of \u2014 and it shipped collapsed for a session."
+    },
+    "b6": {
+      "bar": "B6 \u2014 zero st.json in app/; the elite-fall dump is a titled table",
+      "pass": true,
+      "st_json_call_sites": {},
+      "st_json_total": 0,
+      "json_elements_rendered": 0,
+      "elite_table_rendered": true,
+      "elite_table_rows": [
+        "Consensus top-12 players drafted",
+        "Mean landing slot (10-team picks)",
+        "p95 landing slot",
+        "Furthest any of them fell",
+        "Share that fell past the bar's cut"
+      ],
+      "note": "The dump was not wrong, it was unreadable \u2014 and it survived into 14.N because K2 *moved* the readouts from the room page rather than rewriting them. A defect that changes address without being looked at is the cheapest kind to keep."
+    },
+    "flow": {
+      "bar": "FLOW \u2014 all six pages render at k \u2208 {0,1,4}; a pick made by clicking completes",
+      "pass": true,
+      "pages_rendered": {
+        "k0:settings": 0,
+        "k0:board": 0,
+        "k0:draft": 0,
+        "k0:grid": 0,
+        "k0:post": 0,
+        "k0:cost": 0,
+        "k1:settings": 0,
+        "k1:board": 0,
+        "k1:draft": 0,
+        "k1:grid": 0,
+        "k1:post": 0,
+        "k1:cost": 0,
+        "k4:settings": 0,
+        "k4:board": 0,
+        "k4:draft": 0,
+        "k4:grid": 0,
+        "k4:post": 0,
+        "k4:cost": 0
+      },
+      "runs": [
+        {
+          "k": 0,
+          "pages": 6,
+          "page_bodies": {
+            "settings": 1,
+            "board": 1,
+            "draft": 1,
+            "post": 2,
+            "grid": 1,
+            "cost": 1
+          }
+        },
+        {
+          "k": 1,
+          "pages": 6,
+          "page_bodies": {
+            "settings": 1,
+            "board": 1,
+            "draft": 1,
+            "post": 2,
+            "grid": 1,
+            "cost": 1
+          }
+        },
+        {
+          "k": 4,
+          "pages": 6,
+          "page_bodies": {
+            "settings": 1,
+            "board": 1,
+            "draft": 1,
+            "post": 2,
+            "grid": 1,
+            "cost": 1
+          }
+        }
+      ],
+      "picks_before": 145,
+      "picks_after": 150,
+      "completed_by_click": true,
+      "navigated_to_post_draft": true,
+      "clicked": "Ka'imi Fairbairn",
+      "n_exceptions": 0,
+      "exceptions": [],
+      "modal_click_not_drivable": true
+    },
+    "b0": {
+      "bar": "B0 \u2014 the K2 sheet re-runs (K1.5 and K1 nested), and every moved leaf is named",
+      "pass": false,
+      "returncode": 0,
+      "k2_all_pass": true,
+      "k2_per_bar": {
+        "b2": true,
+        "b4": true,
+        "b3": true,
+        "b5": true,
+        "b6": true,
+        "b1": true,
+        "flow": true,
+        "b0": true
+      },
+      "k1_5_all_pass": true,
+      "k1_all_pass": true,
+      "every_moved_leaf_classified": false,
+      "moves_vs_committed": {
+        "analysis/session_k1_app.json": {
+          "comparable": true,
+          "leaves": 261,
+          "moved": {
+            "display_count": 1,
+            "UNCLASSIFIED": 122
+          },
+          "moved_paths": {
+            "display_count": [
+              "bars.apptest.n_elements_rendered"
+            ],
+            "UNCLASSIFIED": [
+              "bars.b1.app_summary[0].capital",
+              "bars.b1.app_summary[0].human",
+              "bars.b1.app_summary[0].proj",
+              "bars.b1.app_summary[0].startable",
+              "bars.b1.app_summary[0].starters",
+              "bars.b1.app_summary[0].team",
+              "bars.b1.app_summary[0].who",
+              "bars.b1.app_summary[1].capital"
+            ]
+          },
+          "unclassified": [
+            "bars.b1.app_summary[0].capital: 228.5269 -> 281.5103",
+            "bars.b1.app_summary[0].human: False -> True",
+            "bars.b1.app_summary[0].proj: 3178.988 -> 3209.856",
+            "bars.b1.app_summary[0].startable: 355.2197 -> 336.2911",
+            "bars.b1.app_summary[0].starters: 2361.198 -> 2397.956",
+            "bars.b1.app_summary[0].team: 2 -> 7",
+            "bars.b1.app_summary[0].who: 'autopilot' -> 'YOU (T7)'",
+            "bars.b1.app_summary[1].capital: 174.7196 -> 325.529"
+          ]
+        },
+        "analysis/session_k1_5_app.json": {
+          "comparable": true,
+          "leaves": 116,
+          "moved": {
+            "entropy": 7,
+            "ui2_column_lists": 1,
+            "timing": 9,
+            "stat_dict": 1
+          },
+          "moved_paths": {
+            "entropy": [
+              "bars.b0.example_openings[0]",
+              "bars.b0.example_openings[1]",
+              "bars.b0.example_openings[2]",
+              "bars.b0.replayed_room_seed",
+              "bars.b0.replayed_seed",
+              "bars.flow.randomized_room_seed",
+              "bars.flow.randomized_seed"
+            ],
+            "ui2_column_lists": [
+              "bars.b2.slim_columns[4]"
+            ],
+            "timing": [
+              "bars.b3.worst_ms",
+              "bars.b3.worst_pick_ms_by_seat.autopilot",
+              "bars.b3.worst_pick_ms_by_seat.balanced",
+              "bars.b3.worst_pick_ms_by_seat.chalk",
+              "bars.b3.worst_pick_ms_by_seat.reacher",
+              "bars.b3.worst_pick_ms_by_seat.safe_floor",
+              "bars.b3.worst_pick_ms_by_seat.upside_chaser",
+              "bars.b3.worst_pick_ms_by_seat.value_hawk"
+            ],
+            "stat_dict": [
+              "bars.b5.n_entries"
+            ]
+          },
+          "unclassified": []
+        },
+        "analysis/session_k2_app.json": {
+          "comparable": true,
+          "leaves": 162,
+          "moved": {
+            "display_count": 4,
+            "UNCLASSIFIED": 23
+          },
+          "moved_paths": {
+            "display_count": [
+              "bars.b1.runs[0].n_dataframes",
+              "bars.b1.runs[1].n_dataframes",
+              "bars.b1.runs[2].n_dataframes",
+              "bars.flow.post_page_dataframes"
+            ],
+            "UNCLASSIFIED": [
+              "bars.b3.max_bye_starters",
+              "bars.b3.n_handcuff_gaps",
+              "bars.b4.adjacent_overlapping_pairs",
+              "bars.b4.at_censoring_point",
+              "bars.b4.no_distribution_rows",
+              "bars.b5.grades.YOU",
+              "bars.b5.grades.autopilot",
+              "bars.b5.grades.balanced"
+            ]
+          },
+          "unclassified": [
+            "bars.b3.max_bye_starters: 3 -> 4",
+            "bars.b3.n_handcuff_gaps: 4 -> 2",
+            "bars.b4.adjacent_overlapping_pairs: 146 -> 150",
+            "bars.b4.at_censoring_point: 70 -> 72",
+            "bars.b4.no_distribution_rows: 31 -> 30",
+            "bars.b5.grades.YOU: 'C+ 59' -> 'D+ 39'",
+            "bars.b5.grades.autopilot: 'C\u2212 44' -> 'B 72'",
+            "bars.b5.grades.balanced: 'D\u2212 31' -> 'C 54'"
+          ]
+        }
+      },
+      "note": "No **model** number moved: every 'differing: 0' / '150 of 150 identical' / Brier / grade / cliff / probability field is untouched. What moved is the count of rendered elements (UI-1 adds a table to 14.N and a panel to the rail), the OS-entropy seeds T34 deliberately draws fresh, wall-clock timings, and the stat dictionary gaining `P(THERE)`.",
+      "tail": ""
+    }
+  }
+}

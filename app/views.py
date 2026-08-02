@@ -15,6 +15,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
+from app import palette
 from fantasy_quant.draft import session
 
 #: Column formats for the board. ``None`` = leave as text.
@@ -25,6 +26,9 @@ _BOARD_FMT: dict[str, str | None] = {
     # K2: 14.E's cliff and 14.G's quantile block. COIN and FLAGS are not numbers and are
     # configured separately in `_column_config`.
     "CLIFF": "%.0f", "Q10": "%.0f", "MED": "%.0f", "Q90": "%.0f",
+    # UI-2 — both signed, always, because the sign *is* the reading and it is also the channel a
+    # colourblind reader keeps when the green/red ink drops out (see `palette.VALUE_GOOD`).
+    "Δ": "%+.1f", "BARGAIN": "%+.0f",
 }
 
 def _column_config() -> dict:
@@ -39,15 +43,73 @@ def _column_config() -> dict:
                  for c, f in _BOARD_FMT.items() if f is not None}
     cfg["COIN"] = st.column_config.CheckboxColumn("COIN", help=session.stat_help("COIN"))
     cfg["FLAGS"] = st.column_config.TextColumn("FLAGS", help=session.stat_help("FLAGS"))
+    # UI-2 step 3 — the scan channel. Narrow on purpose: it is meant to be swept down, not read.
+    cfg["RISKS"] = st.column_config.TextColumn("RISKS", width="small",
+                                               help=session.stat_help("RISKS"))
+    # UI-1 step 5 — attached, not projected. A progress column rather than a number because the one
+    # thing a drafter does with it under a clock is compare it to the row above.
+    cfg[session.REACH_COL] = st.column_config.ProgressColumn(
+        session.REACH_COL, format="%.2f", min_value=0.0, max_value=1.0,
+        help=session.stat_help(session.REACH_COL))
     return cfg
+
+
+#: What each mode is *for*, in one clause. The control's help text, and the only place the four are
+#: described — a mode explained twice is a mode described differently the first time one is edited.
+_MODE_HELP: dict[str, str] = {
+    "slim": "the columns you draft on under a clock",
+    "ranges": "each player's 10–90 band, and whether he is distinguishable from the man below him",
+    "value": "the T27 chain, plus what he costs relative to right now",
+    "risk": "shape, tails, and what he would do to the construction of your roster",
+}
+
+
+def mode_control(key: str) -> str:
+    """The board's mode picker — UI-2 step 4's four, as a ``segmented_control``.
+
+    ★ **``ADVANCED`` is deliberately not on it.** Fifteen columns is two more than the densest
+    product in the market, whose density is the most-criticised thing about it; splitting the view
+    and then leaving the undivided one on the control means nobody ever has to learn the split. It
+    remains reachable from the CLI and from ``session.project_view``, which is where the two
+    committed bar sheets read it.
+
+    ⚠ **The option *values* stay the UPPERCASE labels the radio used, and the lowering happens
+    here.** Making them the lowercase mode ids was the obvious build and it broke a contract nobody
+    had written down: ``board_mode`` is a **widget key**, so it is session state, and UI-1's bar B3
+    reaches the RANGES view by pre-setting it to ``"RANGES"``. Under lowercase ids that assignment
+    matched no option, the control silently fell back to the default, and the bar reported that
+    **COIN and the censored floor had stopped rendering** — a compression-deleted-an-honesty-surface
+    alarm caused entirely by a renamed enum. *A display string that anything else can write is an
+    interface; changing it is a breaking change even when nothing imports it.*
+    """
+    labels = [m.upper() for m in session.APP_VIEW_MODES]
+    choice = st.segmented_control(
+        "View", labels, default=labels[0], key=key,
+        help=" · ".join(f"**{m.upper()}** {h}" for m, h in _MODE_HELP.items()))
+    # `segmented_control` returns None when a user deselects the active pill; the board still has
+    # to render something, and the thing it renders is the view a drafter is most often in.
+    return str(choice or labels[0]).lower()
 
 
 def board_table(st_obj, team: int | None = None, *, pos: str | None = None, n: int = 40,
                 advanced: bool = False, mode: str | None = None, key: str | None = None,
-                selectable: bool = False, risk=None) -> tuple[pd.DataFrame, int | None]:
+                selectable: bool = False, risk=None, reach: pd.DataFrame | None = None,
+                vi: pd.DataFrame | None = None, byes: pd.Series | None = None,
+                elevation: float | None = None) -> tuple[pd.DataFrame, int | None]:
     """Render the best-available board; return ``(frame_rendered, selected_board_index)``.
 
-    **Slim by default, advanced on a toggle, one query** — the frame is
+    ``reach`` is :func:`~fantasy_quant.draft.session.reach_risk_view`'s frame. When it is given, the
+    board gains a ``P(THERE)`` column through
+    :func:`~fantasy_quant.draft.session.attach_reach` — *one derivation, two placements* (UI-1 bar
+    B5). Under a clock "will he still be here" is a more decision-relevant column than ``PROJ``, and
+    it is the one thing in this app no competitor ships at all.
+
+    ``byes``/``elevation``/``vi`` are what the ``RISKS`` column needs (UI-2 step 3): they are
+    properties of the *season* and of the *frozen 8.5 option*, not of the board, so they are handed
+    in from a cache rather than opened here. Omit them and the roster-shape glyphs are simply
+    absent — which is silence, not a clean bill of health (14.F).
+
+    **Slim by default, one query per rerun** — the frame is
     :func:`~fantasy_quant.draft.session.board_view` and the two views are
     :func:`~fantasy_quant.draft.session.project_view` applied to it, so they cannot show different
     rows in a different order (bar B2). Building a second, narrower query for the slim view is the
@@ -60,11 +122,18 @@ def board_table(st_obj, team: int | None = None, *, pos: str | None = None, n: i
     pair leaves him NaN, and NaN must survive all the way to the screen — a ``fillna(0)`` anywhere
     in this file would silently restore the exact defect the column was rebuilt to fix.
     """
-    view = session.board_view(st_obj, team=team, pos=pos, n=n, risk=risk)
+    view = session.board_view(st_obj, team=team, pos=pos, n=n, risk=risk, vi=vi, byes=byes,
+                              elevation=elevation)
     shown = session.project_view(view, advanced=advanced, mode=mode)
+    if reach is not None:
+        shown = session.attach_reach(shown, reach)
     extra = {"on_select": "rerun", "selection_mode": "single-row"} if selectable else {}
+    # ⚠ the Styler wraps `shown`, it does not replace it — row selection still indexes the same
+    # frame, so `view.index[rows[0]]` below is untouched. Streamlit honours `background-color` and
+    # `color` from a Styler and ignores the rest — exactly the two properties `palette` sets.
     event = st.dataframe(
-        shown, width="stretch", height=min(620, 40 + 35 * min(len(shown), 16)),
+        palette.style_pos_columns(shown), width="stretch",
+        height=min(620, 40 + 35 * min(len(shown), 16)),
         column_config=_column_config(), key=key, **extra,
     )
     picked = None
@@ -75,6 +144,122 @@ def board_table(st_obj, team: int | None = None, *, pos: str | None = None, n: i
             # `_apply_pick` wants. Never re-derive it from the row position of a filtered view.
             picked = int(view.index[rows[0]])
     return view, picked
+
+
+#: Chrome for the seat strip. Deliberately **rgba greys, not hex** — they composite over whichever
+#: theme is active, so the strip does not need a light and a dark variant, and they are not palette
+#: colours, so bar B1's "the six hex strings appear exactly once" stays a statement about meaning.
+_STRIP_EDGE = "rgba(128,128,128,0.35)"
+_STRIP_LIVE = "rgba(128,128,128,0.16)"
+
+
+def seat_strip_rows(st_obj, meta, sm) -> list[dict]:
+    """One dict per seat, in :class:`SeatMap` order — the strip's content, before any styling.
+
+    Split out from the rendering so bar **B4** can assert on the *content*: chip order is seat
+    order, exactly one chip is on the clock and it is ``state.team_on_clock()``, and the on-deck
+    chip is :func:`~fantasy_quant.draft.session.team_for_pick` at the next pick rather than a
+    second piece of snake arithmetic living in a renderer.
+    """
+    on_clock = None if st_obj.is_done() else st_obj.team_on_clock()
+    on_deck = session.team_for_pick(st_obj, st_obj.overall_pick + 1)
+    autos = session.auto_teams(meta)
+    last: dict[int, dict] = {}
+    for p in st_obj.log:
+        last[int(p["team"])] = p
+    rows = []
+    for t in range(st_obj.n_teams):
+        p = last.get(t)
+        rows.append({
+            "team": t + 1, "seat": t, "label": session.seat_label(t, sm),
+            "you": t in sm.human_teams, "autopick": t in autos,
+            "on_clock": t == on_clock, "on_deck": (t == on_deck and t != on_clock),
+            "last_player": (str(p["player_name"]) if p else ""),
+            "last_pos": (str(p["pos"]) if p else ""),
+            "last_handle": (f"{int(p['round'])}.{int(p['pick_in_round']):02d}" if p else ""),
+        })
+    return rows
+
+
+def seat_strip(st_obj, meta, sm) -> list[dict]:
+    """S5 — the draft-order strip, pinned at the top of the room.
+
+    ★ **The first place a drafter's eye goes, and we did not have one.** Every mainstream draft
+    room (ESPN, Yahoo, Sleeper) puts the order across the top with the team on the clock at the
+    left and your team marked; ours had a line of markdown. Convention #4 in the shared design
+    grammar, and matching a convention a user already has in their fingers is free.
+
+    Rendered with :func:`st.html` rather than badges because a chip has to carry the **position
+    colour** of the seat's last pick, and ``st.badge`` takes seven named colours — mapping six
+    positions onto those would be a second palette, which is the defect B1 exists to prevent.
+    """
+    rows = seat_strip_rows(st_obj, meta, sm)
+    cells = []
+    for r in rows:
+        edge = f"2px solid {_STRIP_EDGE}" if r["on_clock"] else (
+            f"1px dashed {_STRIP_EDGE}" if r["on_deck"] else f"1px solid {_STRIP_EDGE}")
+        fill = _STRIP_LIVE if r["on_clock"] else "transparent"
+        you = ("<span style='font-size:.62rem;letter-spacing:.06em;opacity:.9'> YOU</span>"
+               if r["you"] else "")
+        auto = ("<span style='font-size:.62rem;opacity:.55'> auto</span>"
+                if r["autopick"] else "")
+        pick = ""
+        if r["last_player"]:
+            tint = palette.tint_style(r["last_pos"]) or "background-color: transparent"
+            pick = (f"<div style='{tint};border-radius:4px;padding:1px 4px;margin-top:4px;"
+                    f"font-size:.68rem;white-space:nowrap;overflow:hidden;"
+                    f"text-overflow:ellipsis'>{r['last_handle']} {r['last_player']}</div>")
+        cells.append(
+            f"<div style='flex:1 1 0;min-width:86px;border:{edge};background:{fill};"
+            f"border-radius:6px;padding:5px 7px'>"
+            f"<div style='font-size:.78rem;font-weight:700'>T{r['team']}{you}{auto}</div>"
+            f"<div style='font-size:.65rem;opacity:.7;white-space:nowrap;overflow:hidden;"
+            f"text-overflow:ellipsis'>{r['label']}</div>{pick}</div>")
+    arrow = "▸ round runs left to right" if st_obj.round() % 2 else "◂ round runs right to left"
+    st.html(f"<div style='display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;"
+            f"padding-bottom:4px'>{''.join(cells)}</div>"
+            f"<div style='font-size:.66rem;opacity:.6;margin-top:2px'>{arrow} · solid = on the "
+            f"clock, dashed = on deck</div>")
+    return rows
+
+
+def next_pick_badge(st_obj, team: int) -> dict:
+    """"Your next pick **#37** — 12 away", from the optimizer's own snake arithmetic."""
+    info = session.next_pick_info(st_obj, team)
+    if info["next_pick"] is None:
+        st.badge("No further pick for this seat", color="gray")
+    else:
+        st.badge(f"Your next pick #{info['next_pick']} · {info['picks_away']} away",
+                 color="blue", icon=":material/schedule:",
+                 help="From `session.next_pick_info`, which wraps the optimizer's own "
+                      "`_next_own_pick` — the same call the availability readout sizes its "
+                      "simulation window with. One arithmetic, two surfaces.")
+    return info
+
+
+def chain_problem(entry: dict) -> None:
+    """Why the T27 chain could not be built for one player — the same sentence on both surfaces.
+
+    It was written out twice, in :func:`why_panel` and in :func:`player_card_body`, which is two
+    places for one explanation to drift apart.
+    """
+    st.warning(entry["reason"])
+
+
+def no_picks_yet() -> None:
+    """The "nothing has happened yet" state, in one place rather than three."""
+    st.badge("No picks yet", color="gray")
+
+
+def no_board_error() -> None:
+    """The "there is no board" dead end, in **one** place.
+
+    It was written out three times — two pages and the draft-room setup — which is three chances
+    for the sentence to drift and, in a session whose bar counts prose blocks, three blocks saying
+    one thing. Deduplicating a message is the same discipline as deduplicating a derivation.
+    """
+    st.error("The store has no FFC ADP board for any season, so there is nothing to draft from. "
+             "Run `uv run python steps/stage0_adp_snapshot.py` to pull one.")
 
 
 def why_panel(board: pd.DataFrame, vi: pd.DataFrame, query: str, lam: float) -> list[dict]:
@@ -91,12 +276,12 @@ def why_panel(board: pd.DataFrame, vi: pd.DataFrame, query: str, lam: float) -> 
         st.info(f"No player on the board matching “{query}”.")
         return entries
     if len(entries) > 6:
-        st.info(f"{len(entries)} matches — be more specific.")
+        st.badge(f"{len(entries)} matches — be more specific", color="gray")
         return entries
     for e in entries:
         st.markdown(f"**{e['name']}** · {e['pos']} · ADP {e['adp']:.1f}")
         if not e["ok"]:
-            st.warning(e["reason"])
+            chain_problem(e)
             continue
         rows = [{"": r["label"],
                  " ": "" if r["value"] is None else f"{r['value']:,.1f}",
@@ -111,14 +296,17 @@ def roster_panel(st_obj, team: int, label: str = "") -> pd.DataFrame:
     if label:
         st.markdown(f"**{label}**")
     if r.empty:
-        st.caption("(empty)")
+        no_picks_yet()
         return r
     show = r.rename(columns={"pos": "POS", "player_name": "PLAYER", "adp": "ADP",
                              "proj_points": "PROJ"})
-    st.dataframe(show, width="stretch", hide_index=True,
+    st.dataframe(palette.style_pos_columns(show, surface="roster_panel"),
+                 width="stretch", hide_index=True,
                  column_config={"ADP": st.column_config.NumberColumn("ADP", format="%.1f"),
                                 "PROJ": st.column_config.NumberColumn("PROJ", format="%.0f")})
-    st.caption(f"Total consensus projection: **{session.roster_total(r):,.0f}** pts")
+    st.metric("Total consensus projection", f"{session.roster_total(r):,.0f} pts",
+              help="The sum of `proj_points` over the whole roster — descriptive, and slot-blind. "
+                   "STARTABLE on the post-draft page is the version that knows about lineup slots.")
     return r
 
 
@@ -142,45 +330,65 @@ def roster_rail(st_obj, team: int, sm=None, vi: pd.DataFrame | None = None) -> p
         col = grid.columns[team]
         show = pd.DataFrame({"SLOT": grid.index, "PLAYER": grid[col].to_numpy()})
         show["PLAYER"] = show["PLAYER"].replace("", "—")
-        st.dataframe(show, width="stretch", hide_index=True, height=min(560, 40 + 28 * len(show)))
+        st.dataframe(palette.style_roster_rail(show), width="stretch", hide_index=True,
+                     height=min(560, 40 + 28 * len(show)))
     r = session.roster_view(st_obj, team)
     needs = st_obj.starter_needs(team)
-    short = ", ".join(f"{k} {v}" for k, v in needs.items() if v)
-    st.caption(f"Starter needs: **{short or 'none — starters filled'}**")
-    st.caption(f"Running consensus projection: **{session.roster_total(r):,.0f}** pts "
-               f"· {len(r)} of {st_obj.rounds} picks made")
+    # ★ The needs line was a sentence; it is the most-glanced fact in the rail and it is a *state*,
+    # so it becomes chips — one per unfilled slot, in the position's own colour vocabulary. UI-1's
+    # rule: explanations move into tooltips, state-dependent facts become badges.
+    open_slots = [(k, v) for k, v in needs.items() if v]
+    if open_slots:
+        cols = st.columns(min(len(open_slots), 6))
+        for c, (pos, n_open) in zip(cols, open_slots, strict=False):
+            c.badge(f"{pos} ×{n_open}" if n_open > 1 else pos, color="orange",
+                    help=f"{n_open} unfilled starting slot(s) at {pos}.")
+    else:
+        st.badge("Starters filled", color="green", icon=":material/check:",
+                 help="Every dedicated and flex slot has a player in it. Bench picks from here.")
+    st.metric("Running projection", f"{session.roster_total(r):,.0f} pts",
+              f"{len(r)} of {st_obj.rounds} picks", delta_color="off")
     return r
 
 
 def room_grid_panel(st_obj, sm, vi: pd.DataFrame | None = None, *,
-                    by: str = "pick") -> pd.DataFrame:
+                    by: str = "pick", surface: str = "room_grid") -> pd.DataFrame:
     """14.L — every drafter's team on one page, teams across the top."""
     grid = session.room_grid(st_obj, sm, by=by, vi=vi)
-    st.dataframe(grid, width="stretch", height=min(760, 40 + 32 * len(grid)))
-    if by == "pick":
-        st.caption("Each cell is that seat's pick in that round, handled `round.pick`. The snake "
-                   "is in the handles: round 1 runs 1.01 → 1.10 left to right, round 2 runs "
-                   "2.01 → 2.10 right to left. Columns never move, so a team stays in one place.")
-    else:
-        st.caption("Slots are filled by the frozen lineup solver (`RosterSlots.flex_groups`), the "
-                   "same one the season sim scores every week with — not a display-layer fill "
-                   "order. Bench rows are best remaining value first; there is no optimal bench.")
+    # ★ **This is the surface position colour was worth doing for.** A draft board without it cannot
+    # show a position run, and a position run is the only reason to look at a draft board mid-draft
+    # (UI-PLAN §2, convention 3). The slot index is chipped too where it names a position — FLEX and
+    # the bench rows stay uncoloured on purpose, because a flex slot is not a position.
+    st.dataframe(palette.style_grid_cells(grid, index=(by == "slot"), surface=surface),
+                 width="stretch", height=min(760, 40 + 32 * len(grid)))
+    with st.popover("How to read this grid", icon=":material/help:"):
+        st.markdown(
+            "Every cell is tinted in its player's **position colour**, so a run shows up as a "
+            "band of one hue moving across the board.\n\n"
+            "**BY PICK** — cells are `round.pick` handles and the snake is in them: R1 runs "
+            "1.01 → 1.10 left to right, R2 runs 2.01 → 2.10 right to left. Columns never move, "
+            "so a team stays in one place.\n\n"
+            "**BY SLOT** — slots are filled by the frozen lineup solver "
+            "(`RosterSlots.flex_groups`), the same one the season sim scores every week with, not "
+            "a display-layer fill order. Bench rows are best remaining value first; there is no "
+            "optimal bench. `FLEX` and the bench rows are uncoloured because a flex slot is not "
+            "a position.")
     return grid
 
 
 def stat_dictionary_panel(columns=None) -> None:
     """14.O — every column, with a worked example. One dictionary, served here and by the CLI."""
-    cols = list(columns or [lbl for _, lbl in session.BOARD_VIEW_COLS])
-    st.caption("Every number on the board, in the order it appears — what it is, an example off "
-               "the live board, and how to read it.")
+    cols = list(columns or [lbl for _, lbl in session.BOARD_VIEW_COLS] + [session.REACH_COL])
+    st.markdown("Every number on the board, in the order it appears — what it is, an example off "
+                "the live board, and how to read it.")
     for c in cols:
         e = session.STAT_DICT.get(c)
         if not e:
             continue
         with st.expander(f"**{c}** — {e['label']}: {e['one_line']}"):
             st.markdown(f"{e['what_it_means']}\n\n**Example.** {e['worked_example']}\n\n"
-                        f"**Reading it.** {e['how_to_read_it']}")
-            st.caption(f"Source: {e['provenance']}")
+                        f"**Reading it.** {e['how_to_read_it']}\n\n"
+                        f"*Source: {e['provenance']}*")
 
 
 def summary_panel(st_obj, sm, vi: pd.DataFrame | None) -> pd.DataFrame:
@@ -202,12 +410,16 @@ def summary_panel(st_obj, sm, vi: pd.DataFrame | None) -> pd.DataFrame:
     st.dataframe(show[cols], width="stretch", hide_index=True,
                  column_config={c: st.column_config.NumberColumn(c, format="%.0f")
                                 for c in cols if c not in ("TEAM", "WHO", "RANK")})
-    st.caption(
-        "**STARTABLE** = the best legal starting lineup's base_value. **CAPITAL** = the slot-blind "
-        "sum over all roster rows, which prices a bench QB2 as if he started. They disagree, and "
-        "the gap is a real property of the roster, not a rounding difference (T28). "
-        "Top-9 PROJ is descriptive only — scoring our own seats on our own board wins by "
-        "construction.")
+    with st.popover("STARTABLE vs CAPITAL", icon=":material/help:"):
+        st.markdown(
+            "**STARTABLE** is the best legal starting lineup's `base_value`. **CAPITAL** is the "
+            "slot-blind sum over every roster row, which prices a bench QB2 as though he "
+            "started.\n\nThey disagree, and the gap is a real property of the roster rather than a "
+            "rounding difference (T28) — on the 2026 walkthrough one QB2 line moved a team from "
+            "9th of 10 on one to 3rd on the other. Showing one alone is the defect; showing both "
+            "without saying which is which is the same defect with extra steps.\n\n"
+            "**TOP-9 PROJ is descriptive only.** Scoring our own seats on our own board wins by "
+            "construction; evaluative claims run on realized points.")
     return tab
 
 
@@ -229,10 +441,19 @@ def odds_panel(tab: pd.DataFrame, provenance: list[str]) -> None:
         "(abs) ": tab["title"].map(lambda v: f"{v:.1%}"),
     })
     st.dataframe(show, width="stretch", hide_index=True)
-    st.caption(
-        "**Read the multiples, not the percentages.** `1.70x` = 1.7 times a fair share of titles. "
-        "The absolute percentages inherit the sim's documented −113 pts/team level bias; the "
-        "ratios do not, because the bias moves every team together. " + " ".join(provenance))
+    # ⚠ T29's ordering is load-bearing and survives the compression: the badge that renders is the
+    # *instruction to read the multiple*, and the paragraph explaining why lives one click away.
+    st.badge("Read the multiples, not the percentages", color="orange",
+             icon=":material/priority_high:")
+    with st.popover("Why the ratio and not the percentage", icon=":material/help:"):
+        st.markdown(
+            "`1.70x` means 1.7 times a fair share of titles — in a ten-team league a fair share "
+            "is 10 %.\n\nThe absolute percentages inherit the season sim's documented **−113 "
+            "pts/team level bias**; the ratios do not, because that bias moves all ten teams "
+            "together and cancels in a ratio. The lockbox certified the *ordering* (title Brier "
+            "0.088) and recorded playoff Brier 0.240 as marginal — so the multiple is the number "
+            "with evidence behind it and the percentage is the number that looks authoritative.\n\n"
+            + " ".join(provenance))
 
 
 # ------------------------------------------------------------------------------------------------
@@ -263,19 +484,35 @@ def cliff_strip(st_obj, team: int, risk=None) -> pd.DataFrame:
 
 
 def range_note(view: pd.DataFrame) -> None:
-    """14.G's honest headline: how much of the order on screen the model can actually resolve."""
+    """14.G's honest headline, as **chips** — how much of the order on screen the model resolves.
+
+    ★ This is the S3 item the compression was really for. `COIN` and `censored floor` are two of
+    the seven things this app ships that no competitor ships at all, and both of them shipped as a
+    five-line grey paragraph under a table — i.e. as an *apology*. A chip carrying a number, with
+    the paragraph one click behind it, is read; the paragraph was skipped.
+
+    ⚠ **Neither surface may vanish.** Bar B3 asserts both still render, by driving the app. The
+    compression is allowed to move a sentence and is not allowed to lose one.
+    """
     if "COIN" not in view.columns or view.empty:
         return
     n_pairs = max(len(view) - 1, 0)
     n_coin = int(pd.Series(view["COIN"]).fillna(False).astype(bool).sum())
     censored = int(view["FLAGS"].astype(str).str.contains("censored floor").sum()) \
         if "FLAGS" in view.columns else 0
-    st.caption(
-        f"**{n_coin} of {n_pairs} adjacent pairs on this screen overlap at 10–90 %** — where COIN "
-        f"is ticked the two players are not distinguishable by this model and the row order is a "
-        f"presentation, not a finding. {censored} row(s) show `censored floor`: a season total "
-        f"cannot be negative, so their Q10 sits on the zero censoring point and their downside is "
-        f"**unresolvable, not zero** (T19).")
+    chips = st.columns([1, 1, 2])
+    chips[0].badge(f"{n_coin}/{n_pairs} pairs overlap", color="violet", icon=":material/help:",
+                   help="Where COIN is ticked, the two players' 10–90 % bands overlap: they are "
+                        "not distinguishable by this model, and the row order between them is a "
+                        "presentation rather than a finding.")
+    # ⌀ — a censored quantity should LOOK different, not be described as different. The glyph is
+    # on the chip rather than inside the FLAGS text, because FLAGS is the frozen string bar B4 of
+    # the K2 sheet matches on and a display layer must not edit the thing a bar reads.
+    if censored:
+        chips[1].badge(f"⌀ {censored} censored floors", color="orange",
+                       help="A season points total cannot be negative, so these rows' Q10 sits "
+                            "exactly on the zero censoring point. Their downside is "
+                            "UNRESOLVABLE, not zero (T19) — read the flag, never the 0.")
 
 
 def construction_panel(risk: dict) -> None:
@@ -300,10 +537,11 @@ def construction_panel(risk: dict) -> None:
         show = byes.rename(columns={"week": "WEEK", "n": "STARTERS", "who": "WHO"})
         st.dataframe(show, width="stretch", hide_index=True)
     if risk["unknown_byes"]:
-        st.caption(f"⚠ {risk['unknown_byes']} of your starters have **no bye week on file** — the "
-                   f"store has no schedule table, so byes come from the FantasyPros ECR snapshot "
-                   f"and about one row in ten has none. They are counted as unknown, never as "
-                   f"week 0.")
+        st.badge(f"⌀ {risk['unknown_byes']} byes unknown", color="orange",
+                 help="The store has no schedule table, so byes come from the FantasyPros ECR "
+                      "snapshot and about one row in ten has none. These starters are counted as "
+                      "unknown and never as week 0 — 14.F's rule, and the same distinction the "
+                      "censored floor draws: a missing value is not a zero.")
     conc = risk["concentration"]
     if len(conc):
         top = conc[conc["n"] > 1]
@@ -335,7 +573,7 @@ def grade_panel(grade: pd.DataFrame, team: int) -> None:
     """
     row = grade[grade["team"] == team + 1]
     if row.empty:
-        st.info("No grade for this seat.")
+        st.badge("No grade for this seat", color="gray")
         return
     r = row.iloc[0]
     left, right = st.columns([1, 3])
@@ -352,51 +590,152 @@ def grade_panel(grade: pd.DataFrame, team: int) -> None:
         "RAW": st.column_config.NumberColumn("RAW", format="%.2f"),
         "SCORE": st.column_config.NumberColumn("SCORE", format="%.2f"),
         "POINTS": st.column_config.NumberColumn("POINTS", format="%.1f")})
-    st.caption(
-        f"**odds** = the T29 title fair-share multiple (immune to the sim's −113 pts/team level "
-        f"bias, which the percentage is not) · **starters** = STARTABLE, the best legal lineup's "
-        f"base_value · **value** = harvest picks against the corpus reach scale · "
-        f"**construction** = minus your worst bye-week starter count. Each is scored **min–max "
-        f"across the ten teams in this room**, so 50 is the middle of *this* room and a C means "
-        f"average here, not average in the abstract. "
-        f"⚠ **The weights {tuple(int(w) for w in session.GRADE_WEIGHTS.values())} are a "
-        f"presentation choice and nothing validates them** — the inputs are frozen, the blend is "
-        f"house style.")
+    # ★ The printed weights stay printed. Being the only tool in the category that shows its own
+    # blend is a feature, not a liability — so the disclaimer is compressed to a badge and a
+    # popover, never deleted (UI-1 constraint 4, and bar B3 checks it renders).
+    weights = tuple(int(w) for w in session.GRADE_WEIGHTS.values())
+    st.badge(f"Blend {weights} — nothing validates it", color="orange",
+             icon=":material/priority_high:")
+    with st.popover("How this grade is built", icon=":material/help:"):
+        st.markdown(
+            f"**odds** — the T29 title fair-share multiple, which is immune to the sim's "
+            f"−113 pts/team level bias where the percentage is not.\n\n"
+            f"**starters** — STARTABLE, the best legal lineup's `base_value`.\n\n"
+            f"**value** — harvest picks against the corpus reach scale.\n\n"
+            f"**construction** — minus your worst bye-week starter count.\n\n"
+            f"Each is scored **min–max across the ten teams in this room**, so 50 is the middle of "
+            f"*this* room: a C means average here, not average in the abstract.\n\n"
+            f"⚠ **The weights {weights} are a presentation choice and nothing validates them.** "
+            f"Every input is frozen and separately validated; the act of blending them is house "
+            f"style. A reader who can see the four contributions can disagree with the weights — "
+            f"a reader shown only `B+` cannot.")
 
 
 def reach_panel(frame: pd.DataFrame, window: int | None = None) -> None:
     """16.12(c) — ``P(available at your next pick)``, with the un-drifted baseline beside it."""
     if frame.empty:
-        st.caption("No availability readout — the draft has no further pick for this seat.")
+        st.badge("No further pick for this seat", color="gray")
         return
     show = frame.rename(columns={"player_name": "PLAYER", "pos": "POS", "adp": "ADP",
-                                 "p_available": "P(THERE)", "p_available_baseline": "BASELINE",
+                                 "p_available": session.REACH_COL,
+                                 "p_available_baseline": "BASELINE",
                                  "drift_picks": "DRIFT", "reach_risk": "READ"})
-    cols = [c for c in ("PLAYER", "POS", "ADP", "P(THERE)", "BASELINE", "DRIFT", "READ")
+    cols = [c for c in ("PLAYER", "POS", "ADP", session.REACH_COL, "BASELINE", "DRIFT", "READ")
             if c in show.columns]
-    st.dataframe(show[cols], width="stretch", hide_index=True, column_config={
-        "ADP": st.column_config.NumberColumn("ADP", format="%.1f"),
-        "P(THERE)": st.column_config.ProgressColumn("P(THERE)", format="%.2f",
-                                                    min_value=0.0, max_value=1.0),
-        "BASELINE": st.column_config.NumberColumn("BASELINE", format="%.2f"),
-        "DRIFT": st.column_config.NumberColumn("DRIFT", format="%+.1f")})
-    st.caption(
-        f"P(still there when you pick again{f', {window} opponent picks away' if window else ''}) "
-        f"from the **validated** 11.2 survival oracle, not the crude ADP+noise placeholder. "
-        f"**BASELINE is the same number without the narrative-drift adjustment, and it is shown "
-        f"because the adjustment is not backtestable** — FFC gives one board a season, so 16.11's "
-        f"momentum could only ever be validated forward. Drift is opt-in and off by default, which "
-        f"is why the two columns usually agree.")
+    st.dataframe(palette.style_pos_columns(show[cols], surface="reach"),
+                 width="stretch", hide_index=True,
+                 column_config={
+                     "ADP": st.column_config.NumberColumn("ADP", format="%.1f"),
+                     session.REACH_COL: st.column_config.ProgressColumn(
+                         session.REACH_COL, format="%.2f", min_value=0.0, max_value=1.0),
+                     "BASELINE": st.column_config.NumberColumn("BASELINE", format="%.2f"),
+                     "DRIFT": st.column_config.NumberColumn("DRIFT", format="%+.1f")})
+    st.badge(f"{window} opponent picks until your next turn" if window
+             else "No further pick for this seat", color="blue", icon=":material/schedule:",
+             help="The window comes from the snake itself (`session.next_pick_info`), not from a "
+                  "rule of thumb — the same call the seat strip reads.")
+    with st.popover("Why two probabilities", icon=":material/help:"):
+        st.markdown(
+            "**P(THERE)** is the 11.2 survival oracle — a *fitted, Brier-validated* behavioural "
+            "opponent model, not the crude ADP+noise placeholder.\n\n"
+            "**BASELINE is the same number without the narrative-drift adjustment**, and it ships "
+            "beside it because that adjustment **is not backtestable**: FFC publishes one board a "
+            "season, so 16.11's momentum could only ever be validated forward. Drift is opt-in and "
+            "off by default, which is why the two columns usually agree — and that agreement is a "
+            "fact about the default, not evidence about the model.")
+
+
+#: T38 — the elite-fall dict's keys, in reading order, with the label and unit a human needs.
+#: ``share_past_*`` is matched by prefix because
+#: :func:`~fantasy_quant.draft.mock.elite_fall_profile`
+#: names it after its own threshold (``share_past_10``), and hard-coding the 10 here would be a
+#: second definition of the bar's cut.
+_ELITE_ROWS: tuple[tuple[str, str, str], ...] = (
+    ("n", "Consensus top-12 players drafted", "{:.0f}"),
+    ("mean_slot", "Mean landing slot (10-team picks)", "{:.1f}"),
+    ("p95_slot", "p95 landing slot", "{:.1f}"),
+    ("max_slot", "Furthest any of them fell", "{:.1f}"),
+    ("share_past_", "Share that fell past the bar's cut", "{:.1%}"),
+)
+
+
+def elite_fall_table(elite: dict) -> pd.DataFrame:
+    """The elite-fall profile as a titled table rather than a JSON dump (T38).
+
+    Pure formatting: every value is :func:`~fantasy_quant.draft.mock.elite_fall_profile`'s own, and
+    the only thing added is the label and the unit. The units matter more than they look — the
+    slots are **10-team picks**, so a 12-team draft's pick 20 is not silently compared to a
+    10-team draft's pick 20, and the readout is worthless without saying so.
+    """
+    rows = []
+    for key, label, fmt in _ELITE_ROWS:
+        k = key if key in elite else next((c for c in elite if c.startswith(key)), None)
+        if k is None:
+            continue
+        rows.append({"": label, " ": fmt.format(float(elite[k]))})
+    return pd.DataFrame(rows or [{"": "No consensus top-12 player has been drafted yet", " ": ""}])
+
+
+def positional_strength_panel(tab: pd.DataFrame, team: int) -> pd.DataFrame:
+    """A6's positional-strength chart — one seat's starting value per position vs the room median.
+
+    ★ **The form is chosen by the data's job, and the job here is polarity, not identity.** The
+    question a report card answers is *which positions did I win and which did I lose*, so the
+    measure is a **signed** delta and the chart is a diverging bar around zero. Position identity
+    already has a channel — it is the axis label — which is exactly what frees colour to carry the
+    sign. Colouring the bars by position instead would spend the strongest channel on the one fact
+    the reader can already see, which is the commonest way a dense chart says nothing.
+    - ⚠ That is why this chart does **not** inherit ``chartCategoricalColors``, and the exception is
+      worth naming because UI-1 set that key *specifically* so future charts would. It was right
+      for a categorical chart. This one is diverging, and a diverging scale with six hues at its
+      midpoint is not a scale.
+    - The pair is :data:`app.palette.VALUE_GOOD`/``VALUE_BAD`` — the same two the board inks ``Δ``
+      and ``BARGAIN`` with, so "green means good for you" means one thing across the whole app.
+    - **Direction and hue both carry the sign** (a bar left of zero is also red), so nothing is
+      lost to a reader who cannot separate the hues, and the table beneath is the third encoding.
+
+    Returns the seat's own rows so a caller — or a bar — can assert on what was drawn.
+    """
+    mine = tab[tab["team"] == int(team) + 1].copy()
+    if mine.empty:
+        return mine
+    mine["stronger"] = mine["delta"].clip(lower=0.0)
+    mine["weaker"] = mine["delta"].clip(upper=0.0)
+    st.markdown("**Positional strength** — your starters' `base_value` against the room median")
+    st.bar_chart(mine.set_index("pos")[["stronger", "weaker"]], horizontal=True, stack=True,
+                 color=[palette.VALUE_GOOD, palette.VALUE_BAD], height=240,
+                 x_label="base_value vs the room median", y_label="")
+    show = mine[["pos", "value", "room_median", "delta"]].rename(
+        columns={"pos": "POS", "value": "YOURS", "room_median": "ROOM MEDIAN", "delta": "Δ"})
+    st.dataframe(show, hide_index=True, width="stretch", column_config={
+        c: st.column_config.NumberColumn(c, format="%.0f") for c in ("YOURS", "ROOM MEDIAN")}
+        | {"Δ": st.column_config.NumberColumn("Δ", format="%+.0f")})
+    st.caption("A within-this-draft comparison, so it moves with the room — it answers *did I win "
+               "this position in this league*, never *is this a good RB corps*. Starters come from "
+               "the one lineup solver, so a deep bench cannot make a position look strong (T28).")
+    return mine
 
 
 def player_card_body(card: dict) -> None:
     """The PLAYER-VIEW deep page for one player — bars, the T27 chain, flags, cliff, reach risk."""
     st.markdown(f"### {card['name']} · {card['pos']} · {card['team']}")
-    st.caption(f"ADP {card['adp']:.1f} · board #{card['board_index']} · "
-               f"{'available' if card['available'] else 'already drafted'}")
+    chips = st.columns([1, 1, 1, 3])
+    chips[0].badge(f"ADP {card['adp']:.1f}", color="gray")
+    chips[1].badge(f"board #{card['board_index']}", color="gray")
+    chips[2].badge("available" if card["available"] else "drafted",
+                   color="green" if card["available"] else "red")
+    # ★ UI-2 — PLAYER-VIEW bar #5, in the identity strip where §4 puts it. A chip rather than a
+    # ninth `metric`, because `card["bars"]` is a shape two committed sheets assert the length of.
+    bg = card.get("bargain") or {}
+    if bg.get("value") is not None:
+        chips[3].badge(f"{bg['value']:+.0f} ranks of value ({bg['rounds']:+.1f} rounds)",
+                       color="green" if bg["value"] > 0 else "red", help=bg.get("help"))
     if card["flags"]:
-        st.warning(f"**Confidence flags: {card['flags']}.** "
-                   f"{session.stat_entry('FLAGS')['how_to_read_it']}")
+        # An honesty surface: state-dependent, so it becomes a chip rather than a banner — but it
+        # keeps its full sentence in the tooltip and it still renders (bar B3).
+        st.badge(f"⌀ {card['flags']}", color="orange", icon=":material/priority_high:",
+                 help=session.stat_entry("FLAGS")["how_to_read_it"] + " "
+                      + session.stat_entry("FLAGS")["what_it_means"])
 
     bars = [b for b in card["bars"] if b["value"] is not None]
     for chunk in (bars[:4], bars[4:]):
@@ -421,7 +760,7 @@ def player_card_body(card: dict) -> None:
         st.markdown("**How his value is built** (T27 — every line is an identity, not a "
                     "re-derivation)")
         if not e["ok"]:
-            st.warning(e["reason"])
+            chain_problem(e)
         else:
             st.dataframe(pd.DataFrame([{"": r["label"],
                                         " ": "" if r["value"] is None else f"{r['value']:,.1f}",

@@ -26,7 +26,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from app import probe, state, views
+from app import palette, probe, state, views
 from fantasy_quant.draft import session
 
 #: Simulations run on arrival at a completed draft. 200 is the resolution floor 9.5 measured for a
@@ -54,17 +54,123 @@ def page_post() -> None:
                    f"{st_obj.n_teams * st_obj.rounds} picks made. Rosters and the reach profile "
                    f"are live below; the season simulation waits for the final pick, because a "
                    f"half-drafted league has no season to simulate.")
-    st.caption(f"{len(st_obj.log)} picks · pick seed {meta.get('seed')} · "
-               f"seating seed {meta.get('room_seed')} · {n_humans} human seat(s)")
+    chips = st.columns([1, 1, 1, 3])
+    chips[0].badge(f"{len(st_obj.log)} picks", color="gray")
+    chips[1].badge(f"{n_humans} human seat(s)", color="gray")
+    chips[2].badge(f"seeds {meta.get('seed')} / {meta.get('room_seed')}", color="gray",
+                   help="Pick seed and seating seed (T34) — lock both on a new draft to replay "
+                        "this exact room.")
 
+    # ★ Everything expensive is computed **once, here**, and handed to the tabs. `st.tabs` executes
+    # every tab body on every rerun (T35), which is why K1.5 pulled the room page's nested tabs
+    # out — the cost that made it a 🟠 there was that a *timer-driven* rerun multiplied it. 14.N has
+    # no timer, and these four readouts were all computed unconditionally on one page before this
+    # session, so the tabs cost nothing new. The rule that keeps it true: nothing below re-derives.
     odds = _odds(d, st_obj, meta, sm) if done else None
+    frames = session.drift_frames(st_obj, meta, sm)
+    summary = session.summary_table(st_obj, sm, vi)
+    grade = _grade(st_obj, meta, sm, vi, odds)
+    strength = session.positional_strength(st_obj, sm, vi)
 
-    _standings(st_obj, sm, vi, n_humans)
-    if odds is not None:
+    _hero(sm, summary, odds, grade, frames, n_humans)
+
+    tabs = st.tabs(["Your team" + ("s" if n_humans > 1 else ""), "Standings", "Season odds",
+                    "Every team", "How the room drafted"])
+    with tabs[0]:
+        _your_teams(st_obj, meta, sm, vi, n_humans, grade=grade, frames=frames,
+                    strength=strength)
+    with tabs[1]:
+        _standings(st_obj, sm, vi, n_humans)
+    with tabs[2]:
         _season_odds(odds, sm)
-    _your_teams(d, st_obj, meta, sm, vi, odds, n_humans)
-    _room_rosters(st_obj, sm, vi)
-    _draft_flow(st_obj, meta, sm, n_humans)
+    with tabs[3]:
+        _room_rosters(st_obj, sm, vi)
+    with tabs[4]:
+        _draft_flow(frames, n_humans)
+
+
+# ------------------------------------------------------------------------------------------------
+# the hero row — a report card leads with a verdict, not with a table
+# ------------------------------------------------------------------------------------------------
+def _hero(sm, summary: pd.DataFrame, odds, grade, frames: dict, n_humans: int) -> None:
+    """**Grade letter · title fair-share multiple · STARTABLE rank**, then best and worst pick.
+
+    ⚠ **T29 governs the order and it is not a style choice.** The absolute title percentage is the
+    weakest number in the stack wearing the most authoritative costume: the season sim carries a
+    documented **−113 pts/team** level bias and a *marginal* playoff Brier of 0.240. A ratio to the
+    uniform share moves all ten teams together and survives that bias; a percentage does not. So the
+    multiple is the big number and the percentage is the small print under it — *no hero-number
+    redesign may promote the absolute probability above the fair share.*
+
+    ⚠ **16.17: one block per human seat, never a blend.** k human teams in one draft are ONE
+    observation, so there is deliberately nowhere here to put a combined grade.
+    """
+    if not sm.human_teams:
+        return                      # the "no human seat" line lives in the Your-team tab, once
+
+    # An ordinal over a column that already exists. Sorting is formatting; the model quantity is
+    # `startable`, which `session.summary_table` computed, and this does not change it.
+    ranks = (summary.set_index("team")["startable"].rank(ascending=False, method="min")
+             if "startable" in summary.columns else None)
+
+    for seat in sorted(sm.human_teams):
+        team_no = seat + 1
+        with st.container(border=True):
+            st.markdown(f"### T{team_no} · {session.seat_label(seat, sm)}")
+            c = st.columns(4)
+            row = grade[grade["team"] == team_no] if grade is not None else None
+            if row is not None and len(row):
+                r = row.iloc[0]
+                c[0].metric("Draft grade", str(r["letter"]), f"{r['total']:.0f} / 100",
+                            delta_color="off",
+                            help="Weighted composite, curved across the ten teams in this room. "
+                                 "The weights are printed on the Your-team tab.")
+            else:
+                c[0].metric("Draft grade", "—", "needs the season sim", delta_color="off")
+
+            if odds is not None:
+                o = odds[odds["team"] == team_no]
+                if len(o):
+                    c[1].metric("Title fair share", f"{float(o.iloc[0]['title_fair']):.2f}×",
+                                f"{float(o.iloc[0]['title']):.1%} absolute", delta_color="off",
+                                help="1.00× is a fair share of titles. Read the multiple — the "
+                                     "percentage inherits the sim's −113 pts/team level bias and "
+                                     "the ratio does not.")
+                    c[2].metric("Playoff fair share",
+                                f"{float(o.iloc[0]['playoff_fair']):.2f}×",
+                                f"{float(o.iloc[0]['playoff']):.1%} absolute", delta_color="off")
+            else:
+                c[1].metric("Title fair share", "—", "needs the season sim", delta_color="off")
+
+            if ranks is not None and team_no in ranks.index:
+                c[3].metric("STARTABLE rank", f"{int(ranks.loc[team_no])} of {len(summary)}",
+                            help="Rank on the best legal starting lineup's base_value — the "
+                                 "slot-aware number, not the slot-blind CAPITAL sum (T28).")
+            _headline_picks(frames, seat)
+
+    if n_humans > 1:
+        views.honesty_notes(n_humans)
+
+
+def _headline_picks(frames: dict, seat: int) -> None:
+    """The one pair a report card owes: **biggest reach** and **best value**.
+
+    ``pick_drift_table`` is sorted most-reached first, so the two ends of the frame *are* the pair.
+    It was already computed and rendered as a six-row table under a heading nobody reads.
+    """
+    picks = session.pick_drift_table(frames, seat)
+    if picks.empty:
+        return
+    worst, best = picks.iloc[0], picks.iloc[-1]
+    c1, c2 = st.columns(2)
+    c1.metric(f"Biggest reach · {worst['player']}", f"{float(worst['reach_picks']):+.1f} picks",
+              f"{worst['pos']} · ADP {float(worst['adp']):.1f} · taken {int(worst['pick_no'])}",
+              delta_color="off",
+              help="10-team ADP picks, the unit every T15 bar is stated in. Positive = you took "
+                   "him earlier than the room would have.")
+    c2.metric(f"Best value · {best['player']}", f"{float(best['reach_picks']):+.1f} picks",
+              f"{best['pos']} · ADP {float(best['adp']):.1f} · taken {int(best['pick_no'])}",
+              delta_color="off", help="Negative = he fell to you.")
 
 
 # ------------------------------------------------------------------------------------------------
@@ -97,68 +203,75 @@ def _odds(d: dict, st_obj, meta, sm):
 # the panels
 # ------------------------------------------------------------------------------------------------
 def _standings(st_obj, sm, vi, n_humans: int) -> None:
-    st.subheader("Standings")
     views.summary_panel(st_obj, sm, vi)
     views.honesty_notes(n_humans)
 
 
-def _season_odds(odds: pd.DataFrame, sm) -> None:
-    st.subheader("Season odds")
+def _season_odds(odds, sm) -> None:
+    if odds is None:
+        st.info("The season simulation waits for the final pick — a half-drafted league has no "
+                "season to simulate.")
+        return
     views.odds_panel(odds, st.session_state.get("odds_prov", []))
     if len(sm.human_teams) > 1:
         st.warning("Your seats' probabilities are **not** independent and do not add up to your "
                    "chance of winning — the sim runs one league in which they play each other.")
 
 
-def _your_teams(d: dict, st_obj, meta, sm, vi, odds, n_humans: int) -> None:
+def _grade(st_obj, meta, sm, vi, odds):
+    """14.I, computed once for the whole page. ``None`` until the draft is finished."""
+    if odds is None or not sm.human_teams:
+        return None
+    con = state.con()
+    with st.spinner("Grading…"):
+        return session.draft_grade(st_obj, meta, sm, odds=odds, vi=vi,
+                                   byes=_byes(int(meta.get("season", 2026))),
+                                   elevation=session.elevation_ratio(con))
+
+
+def _your_teams(st_obj, meta, sm, vi, n_humans: int, *, grade, frames, strength) -> None:
     """14.I + 14.F, **once per human seat**, with nowhere to put a combined number."""
     if not sm.human_teams:
-        st.subheader("Your team")
-        st.caption("This draft has no human seat — every team was drafted by the room.")
+        st.info("This draft has no human seat — every team was drafted by the room.")
         return
 
-    st.subheader("Your team" + ("s" if n_humans > 1 else ""))
     if n_humans > 1:
         views.honesty_notes(n_humans)
 
     con = state.con()
     byes = _byes(int(meta.get("season", 2026)))
-    grade = None
-    if odds is not None:
-        with st.spinner("Grading…"):
-            grade = session.draft_grade(st_obj, meta, sm, odds=odds, vi=vi, byes=byes,
-                                        elevation=session.elevation_ratio(con))
-    frames = session.drift_frames(st_obj, meta, sm)
-
     for seat in sorted(sm.human_teams):
         with st.container(border=True):
             st.markdown(f"#### T{seat + 1} · {session.seat_label(seat, sm)}")
             if grade is not None:
                 views.grade_panel(grade, seat)
-            else:
-                st.caption("The grade needs the season simulation, which waits for the final pick.")
+            # ★ A6's positional-strength chart — deferred out of UI-1 by name because it needed a
+            # genuinely new derivation (per-position starting value per team), which is UI-2's
+            # character rather than a formatting session's.
+            views.positional_strength_panel(strength, seat)
             st.markdown("**Roster construction risk**")
             views.construction_panel(session.roster_construction_risk(
                 st_obj, seat, vi=vi, byes=byes, elevation=session.elevation_ratio(con)))
             _reaches(frames, seat)
 
 
-@st.cache_data(show_spinner=False)
 def _byes(season: int) -> pd.Series:
-    """Cached because it is a property of the season, not of the draft."""
-    return session.bye_weeks(state.con(), int(season))
+    """UI-2 — moved to :func:`app.state.byes`, because the board needs the same table at pick time.
+    Kept as a one-line forwarder so this page's four call sites read the way they did."""
+    return state.byes(int(season))
 
 
 def _reaches(frames: dict, seat: int) -> None:
     picks = session.pick_drift_table(frames, seat)
     if picks.empty:
         return
-    st.markdown("**Biggest reach & best value**")
+    st.markdown("**Every reach and every steal, both ends**")
     show = picks.rename(columns={"pick_no": "PICK", "round": "RD", "player": "PLAYER",
                                  "pos": "POS", "adp": "ADP", "reach_picks": "REACH"})
     ends = pd.concat([show.head(3), show.tail(3)]).drop_duplicates(subset=["PICK"])
-    st.dataframe(ends[["PICK", "RD", "PLAYER", "POS", "ADP", "REACH"]], width="stretch",
-                 hide_index=True, column_config={
+    st.dataframe(palette.style_pos_columns(
+        ends[["PICK", "RD", "PLAYER", "POS", "ADP", "REACH"]], surface="reaches"),
+                 width="stretch", hide_index=True, column_config={
                      "ADP": st.column_config.NumberColumn("ADP", format="%.1f"),
                      "REACH": st.column_config.NumberColumn(
                          "REACH", format="%+.1f",
@@ -167,21 +280,22 @@ def _reaches(frames: dict, seat: int) -> None:
 
 
 def _room_rosters(st_obj, sm, vi) -> None:
-    st.subheader("Every team")
-    views.room_grid_panel(st_obj, sm, vi, by="slot")
+    views.room_grid_panel(st_obj, sm, vi, by="slot", surface="post_draft_rosters")
 
 
-def _draft_flow(st_obj, meta, sm, n_humans: int) -> None:
-    st.subheader("How the room drafted")
-    if not st_obj.log:
-        st.caption("No picks yet.")
+def _draft_flow(frames: dict, n_humans: int) -> None:
+    if frames["panel"].empty:
+        views.no_picks_yet()
         return
-    frames = session.drift_frames(st_obj, meta, sm)
     st.markdown("**Reach profile** — 10-team ADP picks, by round")
     st.dataframe(frames["profile"].round(2), width="stretch", hide_index=True)
     c1, c2 = st.columns([1, 2])
     c1.markdown("**Elite fall** (consensus top-12)")
-    c1.json(frames["elite"])
+    # T38 — this was `c1.json(frames["elite"])`: a pretty-printed debug dump on the page whose
+    # whole job is to be a report card. It survived because K2 *moved* the readouts here from the
+    # room page rather than rewriting them, which is the cheapest way for a defect to change
+    # address without being looked at.
+    c1.dataframe(views.elite_fall_table(frames["elite"]), width="stretch", hide_index=True)
     c2.markdown("**Per seat**")
     c2.dataframe(frames["seats"].round(2), width="stretch", hide_index=True)
     views.honesty_notes(n_humans, drift=True)

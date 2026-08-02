@@ -112,20 +112,39 @@ def validation_message(settings: LeagueSettings) -> str | None:
 
 
 def lockbox_banner(settings: LeagueSettings) -> None:
-    """The honesty banner. **Not a feature flag** — both branches describe supported leagues.
+    """The honesty surface, as a **badge with the paragraph one click behind it** (UI-1 S3).
 
-    The distinction it draws is about evidence, not capability: one configuration has an
-    out-of-sample result behind it and every other one has correctness tests and nothing more.
+    **Not a feature flag** — both branches describe supported leagues. The distinction it draws is
+    about evidence, not capability: one configuration has an out-of-sample result behind it and
+    every other one has correctness tests and nothing more.
+
+    ★ **Compressed, not deleted, and that is the whole discipline of UI-1 step 3.** It was a
+    four-line coloured block at the top of three pages, which is the shape an eye learns to skip.
+    A green or amber chip with the same sentences in a popover is *more* likely to be read, and bar
+    B3 asserts that **both branches still render** by driving the app rather than by reading the
+    diff — because the failure mode of a compression pass is a surface that quietly stops
+    appearing, and that failure looks exactly like success in a diff.
     """
-    if settings.lockbox_validated():
-        st.success(
-            "**Lockbox-validated league.** This is the exact format the held-out evaluation was "
-            "spent on (2023+2024, once): title Brier 0.088, conditional distribution coverage "
-            "80.1 %, projection Spearman 0.54. Those numbers describe *this* configuration.")
+    validated = settings.lockbox_validated()
+    c1, c2 = st.columns([1, 3])
+    if validated:
+        c1.badge("LOCKBOX-VALIDATED", color="green", icon=":material/verified:")
     else:
-        st.warning(
-            "**Supported, but not lockbox-validated.** This format is correctness-tested — the "
-            "lineup solver is checked against brute force and the replacement levels are "
-            "recomputed for your slots — but the held-out evaluation was spent once, on a 10-team "
-            "full-PPR 1-QB league. No out-of-sample claim transfers here. The board is right; the "
-            "calibration numbers are not evidence about your league.")
+        c1.badge("NOT LOCKBOX-VALIDATED", color="orange", icon=":material/priority_high:")
+    with c2.popover("What that means", icon=":material/help:"):
+        if validated:
+            st.markdown(
+                "**This is the exact format the held-out evaluation was spent on** — 2023 + 2024, "
+                "once, and once only: title Brier **0.088**, conditional distribution coverage "
+                "**80.1 %**, projection Spearman **0.54**.\n\nThose numbers describe *this* "
+                "configuration: 10 teams, full PPR, one QB. They are the only out-of-sample claim "
+                "this project has, and it cannot be re-spent.")
+        else:
+            st.markdown(
+                "**Supported, and correctness-tested — but carrying no out-of-sample claim.**\n\n"
+                "The lineup solver for your slots is checked against an exhaustive brute force and "
+                "the VBD replacement levels are recomputed for your format (a superflex league "
+                "moves QB replacement from QB10 to QB20, which lifts the best QB from overall rank "
+                "15 to 3). The board is right.\n\nWhat does not transfer is the *calibration*: the "
+                "held-out evaluation was spent once, on a 10-team full-PPR 1-QB league. Title "
+                "Brier 0.088 is evidence about that league and not about yours.")

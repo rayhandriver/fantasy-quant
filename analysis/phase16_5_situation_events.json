@@ -1,27 +1,25 @@
 {
-  "n_events": 138,
+  "n_events": 154,
   "n_teams": 30,
   "max_adp": 200.0,
   "by_event_type": {
-    "room_change": 60,
-    "context_only": 36,
-    "team_change": 23,
-    "new_to_league": 19
+    "room_change": 63,
+    "context_only": 44,
+    "team_change": 27,
+    "new_to_league": 20
   },
   "n_annotated": 8,
-  "n_mechanism_unknown": 111,
+  "n_mechanism_unknown": 126,
   "n_below_high_confidence": 1,
-  "n_new_play_caller": 95,
-  "n_new_qb": 49,
+  "n_new_play_caller": 104,
+  "n_new_qb": 40,
   "qb_changes": {
-    "ARI": "(unsettled)",
     "ATL": "(unsettled)",
     "CLE": "(unsettled)",
     "LV": "Fernando Mendoza",
     "MIA": "Malik Willis",
     "MIN": "Kyler Murray",
     "NYJ": "(unsettled)",
-    "PIT": "(unsettled)",
     "WAS": "Jayden Daniels"
   },
   "team_changes": [
@@ -30,161 +28,189 @@
       "position": "WR",
       "prev_team": "PHI",
       "team": "NE",
-      "adp": 13.6
+      "adp": 16.9
     },
     {
       "player": "Kenneth Walker III",
       "position": "RB",
       "prev_team": "SEA",
       "team": "KC",
-      "adp": 22.5
+      "adp": 25.2
     },
     {
       "player": "Travis Etienne Jr.",
       "position": "RB",
       "prev_team": "JAX",
       "team": "NO",
-      "adp": 39.9
+      "adp": 37.1
     },
     {
       "player": "Jaylen Waddle",
       "position": "WR",
       "prev_team": "MIA",
       "team": "DEN",
-      "adp": 40.8
+      "adp": 47.1
     },
     {
       "player": "Mike Evans",
       "position": "WR",
       "prev_team": "TB",
       "team": "SF",
-      "adp": 49.6
+      "adp": 57.5
     },
     {
       "player": "David Montgomery",
       "position": "RB",
       "prev_team": "DET",
       "team": "HOU",
-      "adp": 56.2
+      "adp": 59.5
     },
     {
       "player": "DJ Moore",
       "position": "WR",
       "prev_team": "CHI",
       "team": "BUF",
-      "adp": 64.9
+      "adp": 63.7
     },
     {
       "player": "Michael Pittman Jr.",
       "position": "WR",
       "prev_team": "IND",
       "team": "PIT",
-      "adp": 70.9
+      "adp": 71.0
     },
     {
       "player": "Rico Dowdle",
       "position": "RB",
       "prev_team": "CAR",
       "team": "PIT",
-      "adp": 78.8
+      "adp": 75.4
     },
     {
       "player": "Wan'Dale Robinson",
       "position": "WR",
       "prev_team": "NYG",
       "team": "TEN",
-      "adp": 89.0
+      "adp": 80.6
     },
     {
       "player": "Rachaad White",
       "position": "RB",
       "prev_team": "TB",
       "team": "WAS",
-      "adp": 101.1
+      "adp": 101.7
     },
     {
       "player": "Romeo Doubs",
       "position": "WR",
       "prev_team": "GB",
       "team": "NE",
-      "adp": 103.8
+      "adp": 105.9
+    },
+    {
+      "player": "John Metchie III",
+      "position": "WR",
+      "prev_team": "NYJ",
+      "team": "CAR",
+      "adp": 116.1
     },
     {
       "player": "Jauan Jennings",
       "position": "WR",
       "prev_team": "SF",
       "team": "MIN",
-      "adp": 130.5
-    },
-    {
-      "player": "Jalen Nailor",
-      "position": "WR",
-      "prev_team": "MIN",
-      "team": "LV",
-      "adp": 135.8
-    },
-    {
-      "player": "Isaiah Likely",
-      "position": "TE",
-      "prev_team": "BAL",
-      "team": "NYG",
-      "adp": 136.9
+      "adp": 138.8
     },
     {
       "player": "Kyler Murray",
       "position": "QB",
       "prev_team": "ARI",
       "team": "MIN",
-      "adp": 149.0
+      "adp": 139.0
     },
     {
-      "player": "Chris Rodriguez Jr.",
-      "position": "RB",
-      "prev_team": "WAS",
-      "team": "JAX",
-      "adp": 154.4
+      "player": "Isaiah Likely",
+      "position": "TE",
+      "prev_team": "BAL",
+      "team": "NYG",
+      "adp": 141.3
     },
     {
       "player": "Isiah Pacheco",
       "position": "RB",
       "prev_team": "KC",
       "team": "DET",
-      "adp": 156.6
+      "adp": 144.7
+    },
+    {
+      "player": "Chris Rodriguez Jr.",
+      "position": "RB",
+      "prev_team": "WAS",
+      "team": "JAX",
+      "adp": 153.3
     },
     {
       "player": "Brian Robinson Jr.",
       "position": "RB",
       "prev_team": "SF",
       "team": "ATL",
-      "adp": 163.9
+      "adp": 155.7
     },
     {
-      "player": "Malik Willis",
-      "position": "QB",
-      "prev_team": "GB",
-      "team": "MIA",
-      "adp": 164.4
+      "player": "Jalen Nailor",
+      "position": "WR",
+      "prev_team": "MIN",
+      "team": "LV",
+      "adp": 156.5
+    },
+    {
+      "player": "Christian Kirk",
+      "position": "WR",
+      "prev_team": "HOU",
+      "team": "SF",
+      "adp": 160.2
     },
     {
       "player": "Tyler Allgeier",
       "position": "RB",
       "prev_team": "ATL",
       "team": "ARI",
-      "adp": 167.0
+      "adp": 162.0
     },
     {
       "player": "Chig Okonkwo",
       "position": "TE",
       "prev_team": "TEN",
       "team": "WAS",
-      "adp": 169.4
+      "adp": 162.6
+    },
+    {
+      "player": "Malik Willis",
+      "position": "QB",
+      "prev_team": "GB",
+      "team": "MIA",
+      "adp": 162.8
     },
     {
       "player": "Keaton Mitchell",
       "position": "RB",
       "prev_team": "BAL",
       "team": "LAC",
-      "adp": 170.1
+      "adp": 163.1
+    },
+    {
+      "player": "Darnell Mooney",
+      "position": "WR",
+      "prev_team": "ATL",
+      "team": "NYG",
+      "adp": 164.0
+    },
+    {
+      "player": "Dontayvion Wicks",
+      "position": "WR",
+      "prev_team": "GB",
+      "team": "PHI",
+      "adp": 171.2
     }
   ],
   "withdrawn": {

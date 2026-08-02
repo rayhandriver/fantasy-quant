@@ -10,7 +10,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from app import probe, state, views
+from app import palette, probe, state, views
 from app.settings_form import lockbox_banner, settings_form, validation_message
 from fantasy_quant.draft import session
 from fantasy_quant.draft.config import ARCHETYPES, DraftConfig
@@ -21,10 +21,8 @@ from fantasy_quant.valuation.cost_report import personalization_cost
 def page_settings() -> None:
     probe.ran("settings")
     st.header("⚙️ Your league")
-    st.caption("Platform-agnostic — enter what your league actually plays. We do not import from "
-               "ESPN, Yahoo or Sleeper; you tell us the rules and every downstream number obeys "
-               "them.")
     current = state.settings()
+    lockbox_banner(current)
     settings, applied = settings_form(current)
     problem = validation_message(settings)
     if problem:
@@ -33,11 +31,15 @@ def page_settings() -> None:
     if applied:
         st.session_state["settings"] = settings
         state.clear_draft()                     # a format change invalidates a draft in progress
-        st.success("Settings applied. The board rebuilds on the Board page.")
-    lockbox_banner(settings)
+        # A confirmation is a transient event, not a fact about the page — so it is a toast, which
+        # is what Streamlit has for exactly this and which does not leave a block of prose behind.
+        st.toast("Settings applied. The board rebuilds on the Board page.", icon="✅")
 
     with st.expander("What these settings actually change"):
         st.markdown(
+            "**Platform-agnostic.** Enter what your league actually plays — we do not import from "
+            "ESPN, Yahoo or Sleeper; you tell us the rules and every downstream number obeys "
+            "them.\n\n"
             "- **Roster slots** drive the lineup solver *and* the VBD replacement level. A "
             "superflex league moves the QB replacement from QB10 to QB20, which lifts the best QB "
             "from overall rank 15 to 3 on the live board — a real re-ranking, not a caption.\n"
@@ -56,7 +58,7 @@ def page_board() -> None:
     seasons = state.seasons()
     st.header("📋 The board")
     if not seasons:
-        st.error("The store has no FFC board for any season.")
+        views.no_board_error()
         return
     c1, c2, c3 = st.columns([1, 1, 2])
     season = c1.selectbox("Season", seasons, index=0,
@@ -65,23 +67,29 @@ def page_board() -> None:
     n = c3.slider("Rows", 10, 200, 40, step=10)
 
     built = state.built_for(settings, int(season))
-    st.caption(f"{len(built['board'])} players · {built['source'].upper()} ADP + frozen "
-               f"Phase-4/5 context · {built['n_base_value']} carry base_value · "
-               f"λ={built['lam']}")
+    # Provenance as chips rather than a sentence: it is four independent state facts, and a reader
+    # scanning for "which ADP source is this" should not have to parse a clause to find it.
+    b = st.columns([1, 1, 1, 3])
+    b[0].badge(f"{len(built['board'])} players", color="gray")
+    b[1].badge(f"{built['source'].upper()} ADP", color="blue",
+               help="The availability signal — where players actually go in leagues shaped like "
+                    "yours. Deliberately NOT the value signal.")
+    b[2].badge(f"λ={built['lam']}", color="gray",
+               help=f"The risk dial in the mean-variance objective. {built['n_base_value']} of "
+                    f"these players carry a `base_value`; the rest draft on ADP fallback.")
 
     # A board with no draft in progress still needs a DraftState to be read through — an empty one
     # is exactly "nothing drafted yet", so the same `board_view` serves both cases.
     draft = state.draft()
     st_obj = draft["state"] if draft else _preview_state(built, settings, int(season))
-    mode = st.radio("View", ["SLIM", "RANGES", "ADVANCED"], horizontal=True, key="board_mode",
-                    help="SLIM = the four columns a human drafts on. RANGES = each player's 10–90 "
-                         "band and whether he is distinguishable from the man below him (14.G). "
-                         "ADVANCED = the full value/risk chain.")
+    mode = views.mode_control("board_mode")
     views.cliff_strip(st_obj, st_obj.your_team, built["risk"])
     view, selected = views.board_table(st_obj, pos=",".join(pos) if pos else None, n=n,
-                                       mode=mode.lower(), risk=built["risk"],
-                                       key="board_page_table", selectable=True)
-    if mode == "RANGES":
+                                       mode=mode, risk=built["risk"],
+                                       key="board_page_table", selectable=True,
+                                       vi=built["value_index"], byes=state.byes(int(season)),
+                                       elevation=state.elevation())
+    if mode == "ranges":
         views.range_note(view)
     if selected is not None:
         views.player_dialog(session.player_card(st_obj, int(selected),
@@ -90,10 +98,12 @@ def page_board() -> None:
 
     st.divider()
     st.markdown("#### Why is this player worth that?")
-    st.caption("The arithmetic chain from the consensus projection a human trusts to the "
-               "`base_value` every seat optimizes. Each line is read from the frozen contracts — "
-               "nothing here is recomputed for display.")
-    q = st.text_input("Player", placeholder="e.g. Bijan", label_visibility="collapsed")
+    q = st.text_input(
+        "Player", placeholder="e.g. Bijan", label_visibility="collapsed",
+        help="The T27 arithmetic chain, from the consensus projection a human trusts to the "
+             "`base_value` every seat optimizes. Each line is an identity read from the frozen "
+             "contracts — nothing here is recomputed for display, which is what makes it an audit "
+             "trail rather than a caption.")
     if q.strip():
         # ⚠ `st_obj.board`, not `built["board"]` — the *prepared* board, which is what the CLI
         # passes too. `_prepare_board` is where `player_key`/`player_name`/`pos` come from; the raw
@@ -124,12 +134,16 @@ def page_cost() -> None:
     settings = state.settings()
     seasons = state.seasons()
     st.header("💸 What does wanting your team cost?")
-    st.caption("Build the team you want; see the honest price against the value-optimal team from "
-               "the same seat, at the same risk dial. This is the whole point of the project — the "
-               "benchmark is a *tracked* number, not the objective.")
+    with st.popover("What this page is", icon=":material/help:"):
+        st.markdown(
+            "Build the team you *want*; see the honest price against the value-optimal team from "
+            "the same seat, at the same risk dial.\n\n"
+            "This is the whole point of the project — the 2026-07-04 reframe's *direct indexing* "
+            "thesis. The benchmark is a **tracked** number, not the objective: we are not claiming "
+            "your preferences are wrong, we are pricing them.")
     lockbox_banner(settings)
     if not seasons:
-        st.error("The store has no FFC board for any season.")
+        views.no_board_error()
         return
 
     c1, c2, c3 = st.columns(3)
@@ -186,9 +200,11 @@ def page_cost() -> None:
 
     left, right = st.columns(2)
     left.markdown("**Your team**")
-    left.dataframe(rep.personalized_roster, hide_index=True, width="stretch")
+    left.dataframe(palette.style_pos_columns(rep.personalized_roster, surface="cost"),
+                   hide_index=True, width="stretch")
     right.markdown("**Benchmark (pure value)**")
-    right.dataframe(rep.benchmark_roster, hide_index=True, width="stretch")
+    right.dataframe(palette.style_pos_columns(rep.benchmark_roster, surface="cost"),
+                    hide_index=True, width="stretch")
 
     if not rep.per_constraint.empty:
         st.markdown("**What each preference cost**")
@@ -198,7 +214,11 @@ def page_cost() -> None:
         st.dataframe(show[["name", "cost", "share"]].rename(
             columns={"name": "preference", "cost": "cost (pts)",
                      "share": "cost (% of benchmark)"}), hide_index=True, width="stretch")
-        st.caption("Leave-one-out. Positive = the preference cost you value; negative = it "
-                   "happened to help. A projected draft-day gap, not a realized-season claim — "
-                   "and on ~10 seasons these costs are noise-dominated, which the lockbox "
-                   "confirmed (every archetype-cost CI contained zero).")
+        with st.popover("How to read these costs", icon=":material/help:"):
+            st.markdown(
+                "**Leave-one-out.** Positive = the preference cost you value; negative = it "
+                "happened to help.\n\n"
+                "It is a **projected draft-day gap, not a realized-season claim** — and on ~10 "
+                "seasons these costs are noise-dominated, which the lockbox confirmed directly: "
+                "every archetype-cost confidence interval contained zero. Read the ordering and "
+                "the sign; do not read the third significant figure.")

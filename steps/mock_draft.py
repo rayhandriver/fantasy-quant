@@ -153,8 +153,19 @@ _VIEW_FMT: dict[str, dict[str, str]] = {
                  "BV": ">+7.0f", "VBD": ">6.0f", "RK": ">5.0f", "UPSIDE": ">+7.2f",
                  "FLOOR": ">+7.2f", "TAIL": ">+7.2f", "BOOM": ">6.2f", "BUST": ">6.2f",
                  "CLIFF": ">6.0f"},
-    "slim": {"ADP": ">6.1f", "PROJ": ">6.0f"},
+    # UI-1 — `P(THERE)` is *attached* rather than projected (`session.attach_reach`), so it is
+    # listed here and simply absent from the format map when no reach frame was passed. The header
+    # is derived from the columns that are actually present, for the same reason K2 derived it
+    # from this dict in the first place.
+    "slim": {"ADP": ">6.1f", "PROJ": ">6.0f", "Δ": ">+7.1f", session.REACH_COL: ">9.2f"},
     "ranges": {"ADP": ">6.1f", "PROJ": ">6.0f", "Q10": ">6.0f", "MED": ">6.0f", "Q90": ">6.0f"},
+    # UI-2 step 4 — `ADVANCED` split in two. *A column the app shows and the terminal cannot is a
+    # documented column with no behaviour behind it* (K2's rule), so the split moves here with the
+    # app and bar B5 checks that it did.
+    "value": {"ADP": ">6.1f", "PROJ": ">6.0f", "MEAN": ">6.0f", "AVAIL": ">6.1f", "BV": ">+7.0f",
+              "VBD": ">6.0f", "RK": ">5.0f", "Δ": ">+7.1f", "BARGAIN": ">+8.0f", "CLIFF": ">6.0f"},
+    "risk": {"UPSIDE": ">+7.2f", "FLOOR": ">+7.2f", "TAIL": ">+7.2f", "BOOM": ">6.2f",
+             "BUST": ">6.2f"},
 }
 
 
@@ -171,7 +182,9 @@ def _width(numeric_fmt: str) -> str:
 
 
 def show_available(st: DraftState, n: int = 18, pos: str | None = None,
-                   team: int | None = None, view: str = "advanced", risk=None) -> None:
+                   team: int | None = None, view: str = "advanced", risk=None,
+                   reach: pd.DataFrame | None = None, vi: pd.DataFrame | None = None,
+                   byes: pd.Series | None = None, elevation: float | None = None) -> None:
     """The best-available table. Columns and their meaning: :data:`session.BOARD_VIEW_COLS`.
 
     ★ T27 — the value chain reads left to right in the order the arithmetic runs: ``PROJ`` the
@@ -189,11 +202,17 @@ def show_available(st: DraftState, n: int = 18, pos: str | None = None,
     the CLI cannot is a documented column with no terminal behind it. ``FLAGS`` prints as a trailing
     note rather than a fixed-width cell, because it is prose.
     """
-    fmt = _VIEW_FMT[str(view)]
-    frame = session.board_view(st, team=team, pos=pos, n=n, risk=risk)
+    frame = session.board_view(st, team=team, pos=pos, n=n, risk=risk, vi=vi, byes=byes,
+                               elevation=elevation)
+    if reach is not None:
+        frame = session.attach_reach(frame, reach)
+    fmt = {c: f for c, f in _VIEW_FMT[str(view)].items() if c in frame.columns}
     head = "".join(format(c, _width(f)) for c, f in fmt.items())
-    print(f"  {'#':<5}{'PLAYER':<22}{'POS':<4}{head}"
-          + ("  FLAGS" if view == "ranges" else ""))
+    # `FLAGS` and `RISKS` are trailing notes rather than fixed-width cells — one is prose and the
+    # other is a variable-width glyph run, and padding either into a column wastes the width the
+    # numbers need.
+    tail_cols = {"ranges": "  FLAGS", "risk": "  RISKS / FLAGS"}
+    print(f"  {'#':<5}{'PLAYER':<22}{'POS':<4}{head}{tail_cols.get(view, '')}")
     for idx, r in frame.iterrows():
         cells = "".join(
             format(r[c], f) if pd.notna(r[c]) else format("-", _width(f))
@@ -202,6 +221,9 @@ def show_available(st: DraftState, n: int = 18, pos: str | None = None,
         if view == "ranges":
             marks = [m for m in (str(r["FLAGS"]), "coin flip" if bool(r["COIN"]) else "") if m]
             tail = "  " + "; ".join(marks) if marks else ""
+        elif view == "risk":
+            marks = [m for m in (str(r["RISKS"]), str(r["FLAGS"])) if m]
+            tail = "  " + " · ".join(marks) if marks else ""
         print(f"  {idx:<5}{str(r['PLAYER'])[:21]:<22}{str(r['POS']):<4}{cells}{tail}")
 
 
@@ -444,9 +466,35 @@ def _seat_arg(st: DraftState, team: int | None) -> int:
 
 
 def cmd_board(a) -> None:
-    st, _, _, risk = load()
-    show_available(st, n=a.n, pos=a.pos, team=_seat_arg(st, a.team),
-                   view=getattr(a, "view", "advanced"), risk=risk)
+    """The board. On ``--view slim`` it also carries ``P(THERE)``, exactly as the app does.
+
+    ★ **The app and the terminal show the same columns with the same numbers** — the K2 rule, and
+    the reason the reach frame is fetched here rather than the column being an app-only extra. It
+    is guarded rather than assumed: a store with no fitted opponent model still has a board.
+    """
+    st, meta, vi, risk = load()
+    team = _seat_arg(st, a.team)
+    view = getattr(a, "view", "advanced")
+    reach = None
+    if view == "slim":
+        try:
+            reach = session.reach_risk_view(st, meta, team, n=min(int(a.n), 40))
+        except (LookupError, ValueError, FileNotFoundError) as exc:
+            print(f"  (no P(THERE) column: {exc})")
+    # UI-2 — `RISKS` needs the season's byes and the frozen 8.5 elevation ratio. Fetched only for
+    # the view that prints them, and guarded, for the same reason the reach frame is: a store
+    # without them still has a board.
+    byes = elevation = None
+    if view == "risk":
+        try:
+            con = _con()
+            byes = session.bye_weeks(con, int(meta.get("season", 2026)))
+            elevation = session.elevation_ratio(con)
+            con.close()
+        except Exception as exc:                                  # noqa: BLE001 — a readout, not a gate
+            print(f"  (no roster-shape glyphs: {exc})")
+    show_available(st, n=a.n, pos=a.pos, team=team, view=view, risk=risk, reach=reach,
+                   vi=vi, byes=byes, elevation=elevation)
 
 
 def cmd_roster(a) -> None:
@@ -490,7 +538,9 @@ def cmd_stats(a) -> None:
     One dictionary, every surface: a column explained two ways is a column explained differently
     the first time one of the two is edited.
     """
-    cols = [a.column.upper()] if a.column else [lbl for _, lbl in session.BOARD_VIEW_COLS]
+    cols = ([a.column.upper()] if a.column
+            else [lbl for _, lbl in session.BOARD_VIEW_COLS]
+            + [session.REACH_COL, *session.UI2_COLS])
     for c in cols:
         try:
             e = session.stat_entry(c)
@@ -568,10 +618,11 @@ def main() -> None:
     b.add_argument("--n", type=int, default=18)
     b.add_argument("--pos", default=None)
     b.add_argument("--view", choices=sorted(_VIEW_FMT), default="advanced",
-                   help="'advanced' (the full value/risk chain, default) | 'slim' (the four "
-                        "columns a human drafts on) | 'ranges' (14.G — each player's 10-90 band, "
-                        "his confidence flags, and whether he is distinguishable from the man "
-                        "below him)")
+                   help="'value' (the T27 chain + what he costs relative to now) | 'risk' "
+                        "(shape, tails and what he would do to your roster) | 'slim' (the columns "
+                        "you draft on under a clock) | 'ranges' (14.G — each player's 10-90 band "
+                        "and whether he is distinguishable from the man below him) | 'advanced' "
+                        "(all fifteen at once, which is why UI-2 split it)")
     b.set_defaults(fn=cmd_board)
 
     r = sub.add_parser("roster")

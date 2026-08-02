@@ -39,6 +39,16 @@ Nothing here requires new modeling — every bar reads an existing frozen output
 | 3 | **Downside / floor** | `player_distributions`: `bust_prob`, `q10` (vs `mean`) | ✅ | ✅ |
 | 4 | **Injury / availability** | `games_played_mean`, `avail_p`, `team_games`; Phase-6 `DURABILITY` | ✅ | ✅ |
 | 5 | **Draft-cost value (bargain)** | `value_board` `overall_rank` − ADP-board rank | ✅ | ✅ |
+
+> **★ Bar #5 SHIPPED 2026-08-01 (Session UI-2) — as `BARGAIN` on the board and as a chip on the
+> card, and with the **opposite sign** to the expression written above.** `overall_rank − adp_rank`
+> makes the best bargains most *negative*, which contradicts §5's governing rule — *green = good
+> for the drafter, always* — and this document's own worked example, *"+1.5 rounds of value"*. It
+> ships as `adp_rank − overall_rank`. ⚠ It is a **field** on `session.player_card`
+> (`card["bargain"]`), not a ninth entry in `card["bars"]`: that list's length is asserted by two
+> committed bar sheets and a unit test, and growing it to make room for a number would mean
+> editing a bar sheet to keep it passing. Both ranks are taken over the **whole board**, so it is
+> static — which is what this document means by *"a static value gap"*.
 | 6 | **Situation-change upside** | Phase 16 (`team_changed`, `new_starting_qb`, competition, scheme) | — | ✅* |
 | 7 | **Week-to-week consistency** | Phase-5 weekly CoV (`sd`/`mean`; `boom_prob`/`bust_prob` are the weekly signal) | — | ✅ |
 | 8 | **Opportunity / role security** | Phase-3 `features/opportunity.py` (target share, WOPR, aDOT, RZ, snap/touch role) | — | ✅ |

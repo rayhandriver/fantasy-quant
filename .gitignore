@@ -29,6 +29,8 @@ dist/
 # --- analysis caches (keep small JSON/CSV results, drop big caches/figures dumps) ---
 /analysis/**/*.parquet
 /analysis/cache/
+# a `--only <bar>` run is a partial measurement and must never be mistaken for a sheet
+/analysis/*.partial.json
 
 # --- tooling ---
 .mypy_cache/

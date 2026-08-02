@@ -9,13 +9,13 @@
       "n_drafts": 20,
       "distinct_openings": 19,
       "example_openings": [
-        "Amon-Ra St. Brown \u00b7 Ja'Marr Chase \u00b7 Jahmyr Gibbs \u00b7 Jonathan Taylor \u00b7 Puka Nacua",
-        "Amon-Ra St. Brown \u00b7 Ja'Marr Chase \u00b7 Puka Nacua \u00b7 Jahmyr Gibbs \u00b7 James Cook III",
-        "Bijan Robinson \u00b7 Christian McCaffrey \u00b7 Ja'Marr Chase \u00b7 Jaxon Smith-Njigba \u00b7 Jahmyr Gibbs"
+        "Amon-Ra St. Brown \u00b7 Puka Nacua \u00b7 Jahmyr Gibbs \u00b7 Bijan Robinson \u00b7 Christian McCaffrey",
+        "Bijan Robinson \u00b7 Amon-Ra St. Brown \u00b7 Christian McCaffrey \u00b7 Puka Nacua \u00b7 Ja'Marr Chase",
+        "Bijan Robinson \u00b7 Amon-Ra St. Brown \u00b7 Jahmyr Gibbs \u00b7 Puka Nacua \u00b7 Ja'Marr Chase"
       ],
       "locked_seeds_replay": true,
-      "replayed_seed": 514362,
-      "replayed_room_seed": 204842,
+      "replayed_seed": 147469,
+      "replayed_room_seed": 359233,
       "cli_first_five": [
         "Jahmyr Gibbs",
         "Ja'Marr Chase",
@@ -61,7 +61,8 @@
         "PLAYER",
         "POS",
         "ADP",
-        "PROJ"
+        "PROJ",
+        "\u0394"
       ],
       "advanced_columns": [
         "PLAYER",
@@ -87,16 +88,16 @@
       "logs_identical": true,
       "n_picks": 150,
       "worst_pick_ms_by_seat": {
-        "autopilot": 6.9,
-        "balanced": 7.2,
-        "chalk": 6.3,
-        "reacher": 7.6,
-        "safe_floor": 8.4,
-        "upside_chaser": 9.2,
-        "value_hawk": 6.8
+        "autopilot": 7.1,
+        "balanced": 10.4,
+        "chalk": 8.2,
+        "reacher": 10.1,
+        "safe_floor": 6.3,
+        "upside_chaser": 7.4,
+        "value_hawk": 8.2
       },
-      "worst_seat": "upside_chaser",
-      "worst_ms": 9.2,
+      "worst_seat": "balanced",
+      "worst_ms": 10.4,
       "clock_floor_s": 1,
       "note": "\u2605 The pre-registered worry does not survive the measurement: 14.M expected `value_hawk`'s Phase-9 greedy to be too slow for a 5s clock, and the slowest single pick in a full draft is ~10 ms. The floor stays as a floor \u2014 it is what stops the NEXT slow seat overrunning silently \u2014 and the app reports actual tick cost so the constant cannot go stale unnoticed."
     },
@@ -128,7 +129,7 @@
     "b5": {
       "bar": "B5 \u2014 every column documented with a worked example; rail == starter_needs",
       "pass": true,
-      "n_entries": 20,
+      "n_entries": 24,
       "empty_fields": [],
       "duplicate_examples": [],
       "rail_disagreements": [],
@@ -139,8 +140,8 @@
       "bar": "FLOW \u2014 a human can start a draft and make a pick by clicking",
       "pass": true,
       "start_button_started_a_draft": true,
-      "randomized_seed": 661634,
-      "randomized_room_seed": 643425,
+      "randomized_seed": 796701,
+      "randomized_room_seed": 368617,
       "quick_pick_buttons": 6,
       "clicked": "Bijan Robinson",
       "your_picks": [

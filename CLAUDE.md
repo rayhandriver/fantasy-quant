@@ -34,6 +34,14 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
   disk** (they're gitignored, single-copy): run `uv run python steps/backup_db.py` — it copies the 2026 ADP
   snapshots + 2025 backfill + a timestamped `.duckdb` to `/mnt/c/Users/rayha/fantasy-quant-backup/` and
   md5-verifies each. See `docs/TECH-DEBT.md` **T2** (done 2026-07-10).
+  - ⚠ **Stop the Streamlit app first.** `db.connect()` is read-write and DuckDB is single-writer, so a
+    running `app/main.py` holds the lock and the chore dies with `Conflicting lock is held`. Read-only
+    connections still work, and `adp._pull_ffc` is a pure network call — so you can check *whether a
+    pull would bank anything* (FFC's `meta.end_date` vs the newest `snapshot_date`) before stopping it.
+  - ⚠ **A pull invalidates the live-board bar sheets.** Re-running them after the chore is expected to
+    fail B0 until **T41** lands; see the 2026-08-01 session-4 pointer below for the re-baseline rule,
+    and note `analysis/session_ui_*.json` are **untracked** — back them up before a re-run overwrites
+    them, because `git` cannot.
 
 ## 3. The discipline (non-negotiable — ported from the intern project)
 1. **Point-in-time (PIT) everywhere.** When building any as-of feature/projection/ranking, **no data
@@ -61,7 +69,378 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
-> **★★★ Next-session pointer (2026-07-31 session 2 — ★ SESSION K2 ☑ COMPLETE: surfacing + the post-draft page. READ THIS FIRST.)**
+> **★★★ Next-session pointer (2026-08-01 session 5 — the `value_hawk` objection → SESSIONS VH · MM-1 · MM-2 SCOPED. Docs-only, no code, nothing ran. READ THIS FIRST.)**
+>
+> **State: 749 tests (unchanged), ruff clean. Still UNCOMMITTED**, on top of `5eff21d` (K2), now one tree
+> with UI-1, UI-2, the 08-01 scoping docs, the Stage-0 reconciliation and this. **No `src/` change, no
+> refit, no lockbox read, the frozen value stack untouched.** Edited: `docs/BUILD_PLAN.md` §"Sessions VH ·
+> MM-1 · MM-2" (the plan of record), `docs/TECH-DEBT.md` (**T42** + T33's fix-when), `PLAN.md`
+> §2026-08-01 (session 5), `findings.md`, `glossary.md`, `PROJECT.md` §5 (16.18), `ROADMAP.md`.
+>
+> **What happened.** The user reported that `value_hawk` "is consistently underperforming" and
+> "consistently makes picks that are characteristically uncalled for" — a seat meant to be *"one of the
+> most realistic replicas of a genuinely intelligent and knowledgeable fantasy player"* — and proposed
+> rebuilding it as a personality **modelled on himself**, accepting it would take many drafts or a new
+> narration system. He asked for a plan and recommendations.
+>
+> **★ Three decisions were ASKED before scoping** (they change the build — do not re-litigate):
+> **(a) what "underperforming" means → both the picks and the finish, and they feel related**;
+> **(b) what the model-of-him is FOR → a realistic opponent** (so: a **personality**, not a `DraftConfig`
+> archetype; bar = held-out pick prediction, not realized points); **(c) time budget → ~1–2 hours,
+> concentrated** (so: **designed elicitation**, not 20 mock drafts).
+>
+> **★★ THE DIAGNOSIS — the objection has a cause already on file, and it was filed as the wrong kind of
+> thing.** `value_hawk` is the Phase-9 greedy in an opponent seat maximizing **portfolio CE**, and the
+> value path is **slot-blind** (nothing in `draft/optimizer.py` references starters). T28 measured the
+> fingerprint and left it as a *display* defect — but it recorded that `capital − startable` is negative
+> for every seat **EXCEPT** `value_hawk` (**+152**), *the only seat that maximizes the sum*. The shipped
+> mock shows what that buys (`analysis/mock_16_14R_picks.csv`, seat 8): a **QB2 in round 8** (ADP 63.3)
+> and a **TE2 in round 9** (ADP 85.2) in a **10-team 1-QB full-PPR** league, first RB in round 6. Correct
+> as capital accumulation, indefensible as a roster — and **one cause for both halves of his report**,
+> which is exactly why answer (a) mattered. → **T42**.
+>
+> **★★ THE METHOD FINDING — T28 answered a correlational question and closed an interventional one.** Its
+> bar B5 ranked roster-value definitions by **Spearman against title probability** (`team_value` +0.8382 >
+> `portfolio_ce` +0.8202 > `starter_value` +0.7971) and used that to decide what the seat should
+> **maximize**. *A relationship measured on outcomes is not a specification for the mechanism that produced
+> them* — **T24's own lesson one level up, and the third time this repo has met that shape.** The
+> interventional experiment (run the seat on each objective; measure the rosters it builds) has **never
+> been run** and is cheap. A second reason the bar was blind to it, visible in T28's own write-up and not
+> followed: **it pools ten seats, nine of which do not maximize the quantity at all.**
+>
+> **★★ THE SCOPING FINDING — "mimic me" is TWO objects, and conflating them is what made it look
+> expensive.** *Beliefs* = where he disagrees with consensus about **players** (a board — and only
+> disagreements need eliciting, **~50 rows** of 250, because consensus already encodes agreement).
+> *Policy* = how he trades value/risk/need/scarcity **given** a board (a decision rule — ~300 **designed**
+> pairwise comparisons). A mock draft observes both at once and identifies neither cheaply. Three facts
+> make the hour sufficient, all properties of machinery that already exists: **(1)** a pairwise comparison
+> and a real 40-way pick are the **same conditional-logit likelihood**, so elicited and realized data
+> **pool into one fit**; **(2)** *his easy picks teach us nothing* — the informative observations are the
+> ones where he is **torn**, and **you can design for that region, you cannot sample your way into it**;
+> **(3)** the fit is a **shrunk deviation from the corpus β** (16.4's `k = σ²/τ²` EB machinery pointed at
+> a manager), not a fresh fit that n ≈ 300 could not support.
+>
+> **★ THE BAR, fixed before the build because it cannot be fixed after.** A model fit on his stated
+> preferences and scored **by him** always looks right — the **scoring trap** with a sharper edge, since
+> the optimizer and the grader are the same human. Only **held-out prediction** is falsifiable: beat the
+> corpus-fit `balanced` on top-1 accuracy **and** log-loss against **withheld comparisons** *and* **real
+> mock picks never used in fitting** — or **report the null as a null**. And say plainly: **a faithful
+> replica is a more *realistic* seat, not a stronger one** (the spent lockbox already called
+> personalization noise-dominated on realized points).
+>
+> **⚠ Do not re-derive / do not "fix":**
+> - **`value_hawk` is repaired, NOT replaced.** It is 1 of 10 in `REALISTIC_ROOM` and every T15/T24 bar was
+>   measured with it there. The self-model ships **beside** it.
+> - **Do not rebuild it as a `signal_weights` seat.** 16.14R measured why that cannot work — `pos_z(vbd)`
+>   deletes VBD's cross-position content and the seat becomes a chalk tilt with extra width (5.5/10).
+> - **If starter-awareness improves roster SHAPE and degrades the OUTCOME, that is a FINDING about the
+>   sim**, not a tuning target: it draws injuries, and T28 measured **bench value alone predicting title
+>   +0.711**, blend peaking at `w=0.90` against a shipped 1.0. Report it.
+> - **VH.0 is written so it can kill its own hypothesis** (≥50 % slot-driven confirms; <25 % abandons).
+>   Three tickets in a row here — T13, T24, T31 — had the wrong cause on file, and T24's prescription was
+>   built and rejected.
+> - **The personal board must never reach the cost report's baseline.** That report prices preference
+>   *against* consensus; contaminating the baseline deletes the measurement. Per-seat, opt-in.
+> - **T24's per-seat private board was measured harmful in its NOISE form.** A deterministic systematic
+>   offset is a different object — **the seam may be reusable, the finding is not transferable.** Verify.
+> - **16.18 narrowly reverses 2026-07-23's "nothing personal to the user" exclusion, and preserves its
+>   reasoning**: `FittedManager` loads a **profile file**, so the mechanism is general and he is subject #1.
+>   Same shape as K3's narrow reversal of "not auto-import".
+>
+> **★ NEXT: user reviews + commits, then Session VH.** Ordering against **K3** (league import) and **UI-3**
+> is the user's call — VH and MM are independent of both, and the previously recommended order was K3 → UI-3.
+> Open: **T42** (new), **T33**, **T41**, **T40**, **T39**, **T36**, **T26**. Stage-0 FFC chore is current
+> (`ffc-20260801`), next due after **08-07**.
+>
+> _(The Stage-0 reconciliation pointer, still the authority on the chore and the two failing bars, follows.)_
+>
+> **★★★ Next-session pointer (2026-08-01 session 4 — STAGE-0 PULL + RECONCILIATION. Chore-only, no model change. READ THIS FIRST, especially before re-running any bar sheet.)**
+>
+> **State: 749 tests (unchanged), ruff clean. Still UNCOMMITTED**, on top of `5eff21d` (K2), now one
+> tree with UI-1, UI-2, the 08-01 scoping docs and this. **Nothing refits, no frozen contract moved,
+> the spent lockbox was not re-read, and the value stack is untouched.**
+>
+> **Stage-0 FFC chore: pulled `ffc-20260801` (this session). Next due after 08-07.** Backup verified.
+>
+> | step | result |
+> |---|---|
+> | `stage0_adp_snapshot.py` | **PASS** — 1,288 rows, gsis 98.0 %, `adp_asof` PIT verified |
+> | `backup_db.py` | ☑ 08-01 snapshots + timestamped DB, checksums verified |
+> | `phase0_8_validate.py` | **all gates PASS**, incl. `live-season snapshot fresh` age 0 |
+> | T32 vintage gate (2026) | **PASS — 244 resolved == 244 served**, cache rebuilt in 12.9 s |
+> | `phase16_5_situation_events.py --write` | gate fired → **138 → 154 rows**, annotations merged forward |
+> | `pytest` | **749 passed** |
+> | K1 / K1.5 / K2 sheets | **all still pass their own bars** |
+> | UI-1 / UI-2 sheets | **B0 fails → T41** · **UI-2 B3 fails on its control only → T40** |
+>
+> **★★ READ BEFORE YOU "FIX" THE TWO FAILING BARS — they are the chore, not a regression.** The board
+> moved (247 vs 246 rows: 3 arrivals, 2 departures, **91 players >2 picks**), so the room drafts other
+> players and every draft-outcome leaf moves with it: `app_summary[0].who: 'autopilot' → 'YOU (T7)'`,
+> `grades.YOU: 'C+ 59' → 'D+ 39'`, `adjacent_overlapping_pairs: 146 → 150`. **No model number moved and
+> every nested sheet still passes.** The attribution is *measured*: the pre-pull sheets were read first
+> and showed `all_pass: True` with **zero** unclassified leaves, preserved at
+> `analysis/session_ui_{1,2}.pre_ffc20260801.json`.
+> - **T41 🟠 — a bar sheet records no vintage for the board it was measured on**, and `_ALLOWED_MOVES`
+>   has no category for *the input moved*, so B0 fails **by construction after every mandated pull**.
+>   This is **T32 one level up** and takes T32's fix: stamp `mock.board_vintage` into the sheet and have
+>   `_classify_moves` bucket board-driven leaves under a reported `vintage_changed`. ⚠ **Do NOT widen
+>   `_ALLOWED_MOVES`** — a blanket allowance deletes the bar's entire purpose.
+> - **T40 🟡 — UI-2's B3 control was passing on n = 1.** `handcuff` fired **exactly once** in 40 rows on
+>   the 07-30 board and **zero** times on 08-01. `mismatched: []`, `FLAGS` byte-identical and unknown
+>   byes preserved throughout — the identity holds, the *sampling* failed. Fix by **constructing** a
+>   lead-back/handcuff pair, never by loosening the control.
+> - **Interim rule:** after a Stage-0 pull, a B0 failure whose unclassified leaves are all draft-outcome
+>   or board-count fields, **with every nested `*_all_pass` still True**, is a **re-baseline** — re-run,
+>   check those flags, and commit the sheets so `HEAD` carries the new vintage.
+>
+> **⚠ The pull needs the DuckDB WRITE lock and a running Streamlit app holds it** (`db.connect()` is
+> read-write; DuckDB is single-writer). Stop the app before the chore. You can still probe read-only,
+> and `_pull_ffc` is a pure network call — so *whether a pull would yield anything* is answerable
+> without the lock by reading FFC's `meta.end_date`.
+>
+> **☐ OPEN DECISION, not taken this session — consensus projections are dated 2026-07-05, 27 days behind
+> the board.** This is **not** a mismatch the pull created: the reframe makes value (projections) and
+> availability (ADP) *separate signals*. Coverage is fine — **4 of 201** skill rows uncovered, 3 of them
+> the new arrivals. But the FantasyPros board is **as perishable as FFC's and has no recurring chore**,
+> only `steps/phase4_1_consensus.py` (last run 07-05). ⚠ Re-pulling moves **every value number in the
+> app**, so do it as its own step, not folded into a review. *And check coverage on `gsis_id`, never on
+> `name` — a name join reports "Patrick Mahomes II" as a missing projection.*
+>
+> **★ NEXT is unchanged: user reviews + commits** (UI-1 + UI-2 + this are one tree), then **Session K3 =
+> league import** (17.5 Sleeper → 17.6 ESPN), then **UI-3**. Open: **T41**, **T40**, **T39**, **T36**,
+> **T33**, **T26**.
+>
+> _(Session UI-2's pointer, still the authority on the board columns and the tier null, follows.)_
+>
+> **★★★ Next-session pointer (2026-08-01 session 3 — ★ SESSION UI-2 ☑ COMPLETE: "the board answers the question" — AND ITS HEADLINE FEATURE IS A NULL. READ THIS FIRST.)**
+>
+> **State: 749 tests (was 737), ruff clean. UNCOMMITTED**, on top of `5eff21d` (K2), in one tree with
+> UI-1 and the 08-01 scoping docs. Nothing refits, no frozen contract moved, the spent lockbox was not
+> re-read, and **all fifteen existing board columns are bit-identical.**
+>
+> **Run it:** `uv sync --extra ui && uv run streamlit run app/main.py`
+> **Re-check it:** `uv run python steps/session_ui_2.py` → `analysis/session_ui_2.json`
+> *(`--only <bar>` writes `analysis/session_ui_2.partial.json` — UI-1's rule, kept.)*
+>
+> | bar | result |
+> |---|---|
+> | **B0** | UI-1's sheet re-runs passing (K2, K1.5, K1 nested), every moved leaf named, **and the fifteen existing columns are bit-identical** with the three new ones attached |
+> | **B1** | **NULL, reported as one.** The overlap rule reproduces `coin_flags` exactly and cuts **1 tier per position, 2 over the board**. No `TIER` column ships → **T39** |
+> | **B2** | `Δ` **is** `adp − overall_pick` and falls by exactly 1 per pick; `BARGAIN` == the card's field for **every player on the live board** |
+> | **B3** | every glyph **is** `roster_construction_risk` on (roster + him), row by row, with a control requiring each to fire; unknown byes stay unknown; `FLAGS` byte-identical |
+> | **B4** | one query, N projections — 5 modes × 6 filters; the split covers the fifteen, every app mode narrower |
+> | **B5** | every new column documented with a worked example **and printing in the CLI** (`board --view value\|risk`, driven in a subprocess) |
+> | **B6** | A6's chart equals `starter_value` exactly; the diverging pair clears 3.0 on both surfaces and white |
+> | **FLOW** | six pages × k ∈ {0,1,4}, every board mode, zero exceptions, a pick made **by clicking** |
+>
+> **★ The user's eight decisions, taken before the run** (do not re-litigate): tier cut = **overlap,
+> adjacent-chain** · tier scope = **within position** · `SLIM` to trade `PROJ` for `TIER` + `Δ` · modes
+> = **SLIM · RANGES · VALUE · RISK** with `advanced` kept in `session.py` · glyphs in a **new `RISKS`
+> column**, `FLAGS` untouched · `BARGAIN` a card **field**, not a ninth bar · **A6's chart built here** ·
+> rule 7 waived, tree left uncommitted. **Two were overtaken by measurement and reversed in the open**
+> — the tier column does not ship at all, so `SLIM` keeps `PROJ`; and `BARGAIN` ships with the opposite
+> sign to the expression the plan writes.
+>
+> **★★ THE FINDING — the plan's one differentiated feature is a null, and the number that sold it hides
+> its own denominator.** S2 was scoped as *"the single item in this plan that no competitor could copy
+> without building our distribution stack first."* Measured on the live board: **1 tier per position**
+> (62 RBs in one tier), **2 over the whole board**. Two causes. **(a) Scale** — the median RB 80 % band
+> is **228 pts** against a median adjacent gap of **16.3**, i.e. **14×**, so overlap is universal *by
+> construction*. **(b) A category error in the premise** — UI-PLAN calls it *"precisely Boris Chen's
+> thesis on our own distributions"*, but Chen clusters **expert rank dispersion** (disagreement about
+> placement) and we hold a **predictive interval** (uncertainty about outcome). T24's lesson arriving on
+> a visualisation. **⚠ And `COIN`'s published `146 of 199` conflates *distinguishable* with *unknown*:**
+> only **147** pairs have both bands, **146** overlap, **1** is a genuine break and **52** are missing
+> bands. The honest figure is **99.3 % of evaluable pairs overlap** — a *stronger* honesty claim and a
+> fatal one for navigating by it. All of it is **T39**; `coin_flags`' docstring and the `COIN` entry now
+> carry the decomposition.
+>
+> **⚠ The gap cut is NOT a fallback.** `BUILD_PLAN`'s option (a) — *"falls by more than the pool's local
+> median gap"* — is exceeded by **half of all pairs by definition**, so it returns ~n/2 tiers whatever
+> the data says (31 over 62 RBs). The drop distribution is heavy-tailed, not bimodal. A real cut needs
+> 1-D clustering with model selection on a **dispersion** quantity (`adp_stdev` is already on the board),
+> which is modelling with its own validation — not a display session's work.
+>
+> **★ What shipped:** `Δ` (`adp − DraftState.overall_pick`) · `BARGAIN` (`adp rank − overall_rank`, whole
+> board, **static**) · `RISKS` (`⚑⛓🛡⌀◔`) · `ADVANCED`(15) → `VALUE`(12) + `RISK`(9) via
+> `st.segmented_control` · **A6's positional-strength chart** on 14.N (`session.positional_strength`) ·
+> `roster_construction_risk(..., roster=)` for hypothetical evaluation · `app.state.byes/elevation`.
+>
+> **⚠ Do not re-derive / do not "fix":**
+> - **`FLAGS` is byte-identical and must stay so** — K2's bar B4 matches on its text. `RISKS` is the
+>   *scan* channel beside it; `⌀`/`◔` appear in both deliberately.
+> - **The construction glyphs read the candidate's OWN row in the hypothetical readout**, not a movement
+>   in its maximum. The first build tested `max_bye_starters` going up, which fires only when he joins
+>   the already-largest cluster: **`⚑` fired zero times in 40 rows** and the bar's control caught it.
+> - **`roster_construction_risk(..., roster=)` adds no arithmetic** and its default path is unchanged —
+>   that is what keeps K2's 14.F bar and B0 unmoved.
+> - **`RISKS` is scoped to the rendered rows and that is not the cliff/tier error.** A tier is a fact
+>   about the pool; a construction flag is a fact about the *pair* (your roster, this player). **554 ms
+>   for 40 rows** — one lineup solve per row, so a 200-row board page costs ~2.7 s per rerun.
+> - **`advanced` stays in `session.py`, off the app's control.** K1.5's and K2's committed sheets
+>   difference against `project_view(advanced=True)` returning exactly `BOARD_VIEW_COLS`.
+> - **The mode control's option *values* stay UPPERCASE.** `board_mode` is a widget key, hence session
+>   state, and UI-1's bar B3 pre-sets it to `"RANGES"`. Lowercasing them made B3 report **two honesty
+>   surfaces missing** — a deletion alarm caused entirely by a renamed enum. *A display string anything
+>   else can write is an interface.*
+> - **`_ALLOWED_MOVES` in `steps/session_ui_1.py` is cumulative by design** and UI-2 added one entry
+>   (`slim_columns`) with a dated note. A list getting longer is a display change; a number inside it
+>   moving is not, and the latter is checked column by column by UI-2's own B0.
+> - **`session.tier_series` is a null, not an unfinished feature.** Runnable, unwired, unit-pinned.
+> - **The A6 chart deliberately does NOT inherit `chartCategoricalColors`** — UI-1 set that key so
+>   future charts would, which was right for a *categorical* chart. This one is **diverging**.
+> - **`palette.VALUE_GOOD/BAD` were measured, not chosen.** The first pair failed contrast twice (2.63
+>   as a mark on the app's own background; both poles under AA as text on both themes at once).
+>
+> **★ NEXT: user reviews + commits (UI-1 and UI-2 are one tree), then — per the plan's recommended
+> order — Session K3 = league import** (17.5 Sleeper for the contract → 17.6 ESPN, the one he needs;
+> 17.7 Yahoo deferred to 14.4), **then UI-3** (A1 queue/tags + Cost rewire · A2 selected-player strip ·
+> A3 draw the bars · A7 fewer taps). Open: **T39** (new, does not block UI-3) · **T36** (UI-3 sits on
+> top of it) · **T33** · **T26**. Still ☐ in Phase 14/16: **16.6** the Beta Lab (skipped by decision)
+> and **14.H** playoff-SOS (specced for the 14.3 frontend). Stage-0 FFC chore last pulled **2026-07-30**,
+> next due after **08-05**.
+>
+> _(Session UI-1's pointer, still the authority on the palette, the theme and the seat strip, follows.)_
+>
+> **★★★ Next-session pointer (2026-08-01 session 2 — ★ SESSION UI-1 ☑ COMPLETE: "it looks like a product". READ THIS FIRST.)**
+>
+> **State: 737 tests (was 726), ruff clean. UNCOMMITTED**, on top of `5eff21d` (K2), together with the
+> 08-01 scoping docs. Nothing refits, no frozen contract moved, the spent lockbox was not re-read.
+>
+> **Run it:** `uv sync --extra ui && uv run streamlit run app/main.py`
+> **Re-check it:** `uv run python steps/session_ui_1.py` → `analysis/session_ui_1.json`
+> *(`--only <bar>` writes `analysis/session_ui_1.partial.json` — see the ⚠ below.)*
+>
+> | bar | result |
+> |---|---|
+> | **B0** the K1 rule | the K2 sheet re-runs passing in full, K1.5's and K1's nested — **and every changed leaf is classified** |
+> | **B1** one palette | six hexes, one home, `config.toml` asserted equal, **five surfaces styled**, every chip ≥ **4.88** contrast |
+> | **B2** compression | prose **68 → 23** against ≤ 25, "before" read from `git show HEAD:` |
+> | **B3** honesty | **all seven surfaces still render**, asserted by driving, both lockbox branches |
+> | **B4** seat strip | order == `SeatMap`, on-deck == `team_for_pick`, next pick == the optimizer's; **150/150** picks differenced |
+> | **B5** `P(THERE)` | **is** `reach_risk_view`'s number; uncovered rows NaN; **zero expanders**; the CLI has it |
+> | **B6** T38 | **zero** `st.json`; the dump is a titled table |
+> | **FLOW** | six pages × k ∈ {0,1,4}, zero exceptions; a pick **made by clicking** finished the draft |
+>
+> **★ The user's four decisions, taken before the run** (do not re-litigate): palette = **Okabe-Ito**,
+> colourblind-safe, over the market convention — the convention puts QB gold / RB red / TE orange in one
+> hue family, i.e. **three positions a deuteranope reads as one** · theme base = **dark** · prose target
+> = **≤ 25** · and `P(THERE)` gets a **small labelled placement in `session.py`** rather than a merge in
+> `app/`.
+>
+> **★★ THE FINDING TO CARRY FORWARD — "all bars pass" is a weaker claim than B0 was written to make.**
+> The three nested sheets came back **passing** and **23 of their 538 leaves had moved**. Passing and
+> unchanged are different statements. B0 now diffs each committed sheet against `git show HEAD:` and
+> requires every changed leaf to fall under a **named** allowance — 5 rendered-element counts (UI-1 adds
+> a table to 14.N and a panel to the rail), 6 T34 entropy draws (*a sheet that reproduced these would
+> mean the randomisation had stopped working*), 8 wall-clock timings, 1 stat-dictionary entry for the
+> attached column. **An unclassified move fails the bar.** No model number moved. ⚠ **It earned its
+> keep by failing on its first run**: the one leaf it flagged was `bars.b3.worst_seat`
+> (`upside_chaser` → `reacher`), the **argmax** of a per-seat millisecond vector whose entries sit
+> within a few ms of each other — *the argmax of a noisy vector is noisier than the vector*, and it
+> does not look like a number, so an eyeballed sweep goes straight past it.
+>
+> **★★ The second finding, paid for three times in one afternoon — a grep cannot tell doing from
+> describing.** B1's palette census read 9 hexes in `palette.py`, three of them out of the **docstring
+> explaining** why a 35 % tint fails; B6's `st.json` census read 1, and the hit was the **comment
+> recording what T38 replaced**. Both are AST parses now. In a repo whose comments deliberately quote the
+> code they replaced, *a text scan over source is not a measurement of behaviour.* Third instance the
+> same day: B1 reported four of five surfaces coloured, and the missing one was the **log** — at k=1 the
+> human seat drafts first, so the fixture's log was **empty**, and *a surface with no rows is not a
+> surface that failed to colour.*
+>
+> **⚠ Do not re-derive / do not "fix":**
+> - **`app/palette.py` is the only home for the six hex strings** (B1 asserts it, on the AST). The
+>   `.streamlit/config.toml` copy is unavoidable — a TOML file is read before any of our Python runs —
+>   and is **asserted equal** rather than hoped about. *A duplication you assert is a duplication; a
+>   duplication you hope about is a bug.*
+> - **Chip ink is chosen by comparing both contrasts, never by a luminance threshold.** The break-even
+>   is **0.179**, not 0.5; a 0.42 cut lettered QB (`#E69F00`, luminance 0.410) in white at 2.3 : 1.
+> - **Two treatments, not one.** UI-PLAN §S1's "35 % tint with full-strength text" is right for dark and
+>   **wrong for light** (2.4 : 1) — hence solid chip where the cell *is* a position, rgba tint with **no
+>   colour set** where it merely mentions one. A colour that works in one theme breaks on the toggle.
+> - **The `FLAGS` string was NOT edited to carry the `⌀` glyph.** K2's bar B4 matches on it; a display
+>   layer must not edit the thing a bar reads. The glyph is on the chip.
+> - **`session.team_for_pick` is a licensed second copy of the snake formula** — licensed *only* by B4
+>   differencing it against `DraftState.team_on_clock` at every one of 150 picks (16.17's precedent).
+>   A third copy voids that. ⚠ B4's first version checked **15** picks and called itself exhaustive
+>   because it advanced the room between checks.
+> - **`app/palette.STYLED` ships in the app, not in the bar** (the `probe.py` rule): Streamlit encodes a
+>   Styler's CSS into the Arrow payload rather than exposing it, so counting the call is the only honest
+>   instrument for "did this surface get coloured".
+> - **`--only` writes `analysis/session_ui_1.partial.json`.** The house pattern overwrites the real
+>   artifact; a 30-second `--only b6` against the **K2** runner destroyed its committed eight-bar sheet
+>   this session and it was restored from git. *A partial measurement should not look like a full one.*
+>
+> **★ Deferred out of UI-1 deliberately, and owed by name:** **A6's positional-strength chart → UI-2**
+> (it needs per-position value sums per team — a genuinely new derivation) and **the hatched `censored
+> floor` bar → UI-3's A3** (where `st.html` quasi-bars get drawn; UI-1 ships the `⌀` chip + tooltip).
+>
+> **★ NEXT: user reviews + commits, then — per the plan's recommended order — Session K3 = league
+> import** (17.5 Sleeper for the contract → 17.6 ESPN, the one he needs; 17.7 Yahoo deferred to 14.4),
+> **then UI-2** (`docs/BUILD_PLAN.md` §"Sessions UI-1 … UI-4"). Still ☐ in Phase 14/16: **16.6** the
+> Beta Lab (skipped by decision, not a defect) and **14.H** playoff-SOS (specced for the 14.3 frontend).
+> **T36** is still open and UI-3 sits on top of it. Stage-0 FFC chore last pulled **2026-07-30**, next
+> due after **08-05**.
+>
+> _(The scoping session that produced the plan, still the authority on the survey and the four sessions, follows.)_
+>
+> **★★★ Next-session pointer (2026-08-01 — the competitive UI/UX deep dive → SESSIONS UI-1 … UI-4 SCOPED. docs-only, no code.)**
+>
+> **State: unchanged — 726 tests, ruff clean, still UNCOMMITTED.** Nothing ran, no `src/` change, no
+> `app/` change, no test-count change. Edited: `docs/UI-PLAN.md` (new), `docs/BUILD_PLAN.md`
+> §"Sessions UI-1 … UI-4", `docs/TECH-DEBT.md` (**T37**, **T38**), `ROADMAP.md`, `glossary.md`,
+> `findings.md`, `PLAN.md` §2026-08-01.
+>
+> **What happened.** The user asked for a deep dive into the prominent fantasy football UIs (PFF,
+> FantasyPros, Draft Sharks, "etc."), on the premise that theirs are more usable than ours, and for a
+> comprehensive plan with **both** recommendations and non-recommendations. **Eleven products
+> surveyed** — FantasyPros Draft Wizard · Draft Sharks War Room · PFF 2026 · 4for4 Draft Hero ·
+> RotoWire · Sleeper · ESPN · Yahoo · Underdog · UDK · Footballguys, plus Boris Chen and KeepTradeCut —
+> then `app/` audited page by page.
+>
+> **★ The premise is right and its obvious reading is wrong.**
+>
+> > **We are not missing analysis. We have *more* decision-relevant content than any product surveyed.
+> > We are missing an information architecture.**
+>
+> The census over `app/`'s 1,903 lines: **22 `st.dataframe` · 37 `st.caption` · 31 banners · 28 markdown
+> blocks · 9 `st.metric` · 0 uses of colour to encode anything · 0 status icons · 0 tier breaks drawn** —
+> **68 prose blocks to 9 visual elements**, a ratio every competitor inverts. And the density argument
+> runs the other way from the intuition: our `ADVANCED` view is **15 columns, two more than Draft Sharks'
+> full rankings table**, whose density is the most-criticised property in its own category reviews.
+> **The work is ranking, encoding and hiding. It is not adding.**
+>
+> **★ The corollary that decides the design.** Seven things we ship have **no competitor equivalent**:
+> validated `P(available)` with an un-drifted baseline · `COIN` · `censored floor` · the T27 chain ·
+> lockbox provenance · the **printed** 14.I grade weights · the cost report. Every one currently reads
+> as an **apology**. Give them a visual language and they become the reason to use this instead of
+> FantasyPros — hence *a censored quantity should look different, not be described as different*, and
+> hence the compression bar is **paired** with a render bar: **compress and relocate, never delete.**
+>
+> **★ The one differentiated feature (UI-2's S2): cut tiers by band overlap, not by value gaps.** A tier
+> ends where adjacent 10–90 bands stop overlapping, which makes it a claim of statistical
+> indistinguishability — exactly what `session.coin_flags` already computes (146/199) and buries behind a
+> checkbox. Boris Chen's thesis on **our** distributions. Nobody can copy it without a distribution stack.
+>
+> **★ Two defects, both ticketed and both UI-1 step 0.** **T37** — `draft_room._reach_risk` renders
+> inside `st.expander(expanded=False)` *directly beneath its own docstring* saying *"a readout you have
+> to ask for is a readout nobody asks for."* **T38** — `post_draft` ships `c1.json(frames["elite"])`, a
+> raw JSON dump, on the page whose job is to be a report card.
+>
+> **★ NEXT: user reviews, then Session UI-1** — pure formatting, nothing enters `session.py`, done-bar is
+> that the K2 sheet re-runs unchanged (`docs/BUILD_PLAN.md` §"Sessions UI-1 … UI-4"). **⚠ Three
+> decisions must be ASKED before a straight run:** (a) the **palette** — market convention (QB gold · RB
+> red · WR blue · TE orange · K purple · DST green) or ours; (b) **theme base** dark or light; (c) the
+> **prose target** — ≤ 25 blocks is proposed and is a judgement call.
+> **Recommended order: UI-1 → K3 → UI-2 → UI-3 → UI-4** (UI-1 has zero engine risk; K3 makes the app
+> *correct* for his league and should not queue behind three UI sessions; the only coupling is UI-4's
+> presets sitting above the 17.3 form K3's importer fills). Stage-0 FFC chore last pulled 2026-07-30,
+> **next due after 08-05**.
+>
+> _(Session K2's pointer, still the authority on the app's surfacing and its bars, follows.)_
+>
+> **★★★ Next-session pointer (2026-07-31 session 2 — ★ SESSION K2 ☑ COMPLETE: surfacing + the post-draft page.)**
 >
 > **State: 726 tests (was 702), ruff clean. UNCOMMITTED**, on top of `455fb8e` (K1.5). Nothing
 > refits, no frozen contract moved, the spent lockbox was not re-read, and **B0 re-runs both

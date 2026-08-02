@@ -81,11 +81,17 @@ _RANGE_EXTRA_COLS: tuple[tuple[str, str], ...] = (
     ("q10", "Q10"), ("q50", "MED"), ("q90", "Q90"),
 )
 
-#: The four columns a human actually drafts on, plus the ``#`` pick handle carried by the index.
-#: **Slim is a projection of :func:`board_view`, never a second query** — one derivation, two
+#: The columns a human actually drafts on under a clock, plus the ``#`` pick handle carried by the
+#: index. **Slim is a projection of :func:`board_view`, never a second query** — one derivation, two
 #: column subsets, which is why :data:`BOARD_VIEW_COLS` and this tuple cannot describe different
 #: rows. (K1.5 step 2. The advanced view is simply :data:`BOARD_VIEW_COLS` in full.)
-SLIM_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "ADP", "PROJ")
+#:
+#: ★ **UI-2 adds ``Δ`` and keeps ``PROJ``.** The session was authorised to trade ``PROJ`` away
+#: for ``TIER`` — the two questions under a clock being *"is he in the same tier as the man below
+#: him"* and *"is the draft past his price"*. ``TIER`` did not survive its own measurement (see
+#: :func:`tier_series`), so the trade had nothing to trade for and ``PROJ`` stays. ``Δ`` ships:
+#: it is the half of the pair that measured out.
+SLIM_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "ADP", "PROJ", "Δ")
 
 #: **14.G — the board as ranges rather than false-precise ranks.** The same frame again, projected
 #: onto the distribution's own quantiles: ``Q10``/``MED``/``Q90`` are the frozen Phase-5 season
@@ -101,8 +107,65 @@ SLIM_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "ADP", "PROJ")
 RANGE_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "ADP", "PROJ", "Q10", "MED", "Q90",
                                     "COIN", "FLAGS")
 
-#: The three board projections, in the order the mode control offers them.
-VIEW_MODES: tuple[str, ...] = ("slim", "ranges", "advanced")
+#: **UI-2 step 4 — ``ADVANCED``'s fifteen columns, split in two.** Fifteen is two more than Draft
+#: Sharks' full rankings table, whose density is the single most-criticised property in its own
+#: category reviews (`docs/UI-PLAN.md` §1.2). The split is not a deletion: both halves are
+#: projections of the same one :func:`board_view` frame, so bar B4's *one query, N projections*
+#: property is preserved exactly as it was when there were three.
+#:
+#: ``VALUE`` is the T27 chain plus the two "relative to *now*" columns UI-2 adds; ``RISK`` is the
+#: shape/uncertainty block plus the tier and the two flag columns. ``CLIFF`` sits in ``VALUE``
+#: because a positional cliff is a statement about *value* falling away, not about a player's own
+#: variance — the one placement UI-PLAN's sketch of this split did not name.
+VALUE_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "ADP", "PROJ", "MEAN", "AVAIL", "BV", "VBD",
+                                    "RK", "Δ", "BARGAIN", "CLIFF")
+RISK_VIEW_COLS: tuple[str, ...] = ("PLAYER", "POS", "UPSIDE", "FLOOR", "TAIL", "BOOM", "BUST",
+                                   "RISKS", "FLAGS")
+
+#: The board projections, in the order the mode control offers them.
+#:
+#: ⚠ **``advanced`` stays**, and is deliberately no longer on the app's control. K1.5's and K2's
+#: committed sheets both difference against ``project_view(view, advanced=True)`` returning exactly
+#: :data:`BOARD_VIEW_COLS`; deleting the mode would force an edit to two committed bar sheets to
+#: keep them passing, and *a bar sheet that has to be edited to keep passing is not a bar sheet.*
+VIEW_MODES: tuple[str, ...] = ("slim", "ranges", "value", "risk", "advanced")
+
+#: The four modes a **human** is offered (UI-2 step 4). ``advanced`` is reachable from the CLI and
+#: from :func:`project_view`, and is not on the app's segmented control: the whole point of the
+#: split is that nobody reads fifteen columns, and leaving the fifteen on the control means they
+#: stay read.
+APP_VIEW_MODES: tuple[str, ...] = ("slim", "ranges", "value", "risk")
+
+#: **The one column that is attached rather than projected** (UI-1 step 5 / bar B5).
+#: ``P(THERE)`` is :func:`reach_risk_view`'s ``p_available`` placed beside the board instead of in a
+#: panel of its own. It is *not* in :data:`BOARD_VIEW_COLS`, and that is deliberate: the readout
+#: costs ~20 ms of survival simulation and depends on the seat's *next* pick, so making it part of
+#: ``board_view`` would charge every caller — the CLI, every bar sheet, nine seasons of cached
+#: measurement — for a number most of them never look at. :func:`attach_reach` is therefore a
+#: **placement**, not a derivation: it moves an existing frame's column onto an existing frame's
+#: rows and computes nothing.
+REACH_COL: str = "P(THERE)"
+
+#: **UI-2 step 3 — the construction glyphs, and the one place they are spelled.** Each is a fact
+#: about the pair *(your roster, this player)* that :func:`roster_construction_risk` already
+#: computed and, until now, only rendered **after** the draft — when none of it can be acted on.
+#:
+#: ⚠ **The ``FLAGS`` string was not extended to carry these**, exactly as UI-1 refused to put ``⌀``
+#: on it: K2's bar B4 matches on ``FLAGS``' text, and a display layer must not edit the thing a bar
+#: reads. ``RISKS`` is a second, separate column — the *scan* channel, where ``FLAGS`` is the *read*
+#: channel. ``⌀`` and ``◔`` appear in both by design; a glyph you can sweep a column for and a
+#: sentence you can read are different jobs.
+CONSTRUCTION_GLYPHS: dict[str, str] = {
+    "bye": "⚑",          # his bye week already holds ≥1 of your starters
+    "stack": "⛓",        # same NFL team as ≥1 of your starters
+    "handcuff": "🛡",     # he is the backup to a lead RB you already hold
+    "censored": "⌀",     # q10 sits on the censoring point — no resolvable floor (T19)
+    "thin": "◔",         # no Phase-5 distribution, or never seen play (T22)
+}
+
+#: The three columns UI-2 derives onto the board. Named here so the CLI, the app and the bar sheet
+#: all agree on what "the new columns" means without any of them listing the strings again.
+UI2_COLS: tuple[str, ...] = ("Δ", "BARGAIN", "RISKS")
 
 
 #: **14.O — one stat dictionary, served to every surface.** Board tooltips, the room grid, the
@@ -334,11 +397,15 @@ STAT_DICT: dict[str, dict[str, str]] = {
         "what_it_means": "Two adjacent rows whose 80 % intervals overlap are not distinguishable "
                          "by this model. The board still has to print them in *some* order, and "
                          "this column is the board admitting that the order is not evidence.",
-        "worked_example": "On the 2026 board almost every adjacent pair inside the first four "
-                          "rounds overlaps — the ranking there is a presentation, not a finding.",
+        "worked_example": "On the 2026 board **146 of the 147 adjacent pairs whose bands can both "
+                          "be read overlap** — the ordering is a presentation almost everywhere, "
+                          "not a finding.",
         "how_to_read_it": "Where it is true, break the tie on something the model does not price: "
-                          "your own read, roster fit, or the bye-week and concentration risks on "
-                          "the post-draft page.",
+                          "your own read, roster fit, or the construction risks in RISKS. ⚠ Read "
+                          "the denominator: this column is also False when a band is *missing*, "
+                          "which is 52 of the top 200's 199 pairs. The often-quoted '146 of 199' "
+                          "therefore sums *distinguishable* and *unknown* into one number — of the "
+                          "pairs we can evaluate at all, 99.3 % overlap (UI-2).",
         "provenance": "derived in session.range_flags from the frozen q10/q90 pair",
     },
     "FLAGS": {
@@ -354,6 +421,86 @@ STAT_DICT: dict[str, dict[str, str]] = {
                           "than a veteran's of the same width.",
         "how_to_read_it": "Flags never change a number; they tell you how hard to lean on one.",
         "provenance": "session.range_flags over the board's rookie / q10 / mean columns",
+    },
+    # ---- UI-2's three ----------------------------------------------------------------------
+    "Δ": {
+        "label": "ADP countdown",
+        "one_line": "His ADP minus the pick the draft is on right now.",
+        "what_it_means": "Value relative to *now*, which is the thing every product in the "
+                         "category shows and we showed relative to nothing. Positive means the "
+                         "board has not reached his price yet — he is falling toward you; negative "
+                         "means the draft is already past it and taking him is a reach of that "
+                         "many picks.",
+        "worked_example": "At pick 9, a player with ADP 11.4 reads `+2.4` — the room would "
+                          "typically take him two picks from now. Same player at pick 15 reads "
+                          "`−3.6`.",
+        "how_to_read_it": "Read it against P(THERE), not instead of it: Δ is where the *market* "
+                          "is, P(THERE) is what the fitted room will actually do before your turn "
+                          "comes round. A big positive Δ on a player with a low P(THERE) is "
+                          "precisely the trap — cheap by the market, gone by your pick.",
+        "provenance": "session.board_view — adp − DraftState.overall_pick, the engine's own "
+                      "pick counter",
+    },
+    "BARGAIN": {
+        "label": "Value vs draft cost",
+        "one_line": "How many ranks of value you get over what the market charges.",
+        "what_it_means": "His rank on the ADP board minus his rank on our value board, over the "
+                         "whole board rather than the shrinking pool — so it is a **static** "
+                         "property of the player, not something that moves as the draft empties. "
+                         "PLAYER-VIEW's bar #5, specced since the card was written and never put "
+                         "on a board until now.",
+        "worked_example": "A player the market takes 50th and our board ranks 20th reads `+30` — "
+                          "thirty ranks of value, about three rounds in a ten-team league.",
+        "how_to_read_it": "Positive is good, always (PLAYER-VIEW's grammar rule: green = good for "
+                          "the drafter). ⚠ It is the *value board's* opinion of him, so it "
+                          "inherits everything the value board inherits — read it beside FLAGS, "
+                          "and treat a large bargain on a row flagged `no distribution` or "
+                          "`rookie` as a question rather than an answer.",
+        "provenance": "session.board_view — adp rank − value_board.overall_rank, both over the "
+                      "full board",
+    },
+    "RISKS": {
+        "label": "Construction risks",
+        "one_line": "What this player would do to the shape of YOUR roster, at pick time.",
+        "what_it_means": "`⚑` his bye week already holds at least one of your starters · `⛓` he "
+                         "plays for the same NFL team as one of your starters, which the "
+                         "covariance prices as correlated risk · `🛡` he is the handcuff to a lead "
+                         "RB you already hold · `⌀` his floor is censored, i.e. unresolvable "
+                         "rather than zero · `◔` we have no prior on him at all. The first three "
+                         "are the post-draft roster-construction readout, evaluated on your "
+                         "roster **plus him** — the same function, moved to the moment it can "
+                         "still be acted on.",
+        "worked_example": "`⚑⛓` on a WR means taking him gives you a second starter on his bye "
+                          "week and a second starter on his NFL team — two independent reasons a "
+                          "roster that wins every player comparison can still be badly built.",
+        "how_to_read_it": "None of these is a veto and none of them is priced against the others: "
+                          "there is no evidence for a rate of exchange between 'two starters idle "
+                          "in week 11' and 'two starters on one offense', so they are reported "
+                          "separately and unweighted. ⚠ A blank `⚑` where a bye is simply unknown "
+                          "is an unknown, never a clean bill — unknown byes stay unknown (14.F).",
+        "provenance": "session.construction_flags → session.roster_construction_risk on "
+                      "(roster + this player)",
+    },
+    # UI-1 step 5 — the attached column. It is documented here rather than in `app/` for the same
+    # reason every other column is: one dictionary, every surface, and a column the CLI cannot
+    # explain is a column with no behaviour behind it.
+    "P(THERE)": {
+        "label": "Probability he is still there at your next pick",
+        "one_line": "How likely this player survives the picks between now and your next turn.",
+        "what_it_means": "The 11.2 survival oracle — a fitted, Brier-validated behavioural "
+                         "opponent model — simulated forward over exactly the opponents who pick "
+                         "before you do, not an ADP rule of thumb. The window comes from the "
+                         "snake itself (`session.next_pick_info`), so it shrinks as your turn "
+                         "approaches and is 0 when you have no further pick.",
+        "worked_example": "A 0.62 on a player 8 picks before your next turn means he survives "
+                          "that gap in about 5 of 8 simulated rooms — so taking someone else "
+                          "now and him later works more often than not, but not reliably.",
+        "how_to_read_it": "Read it against the cliff, not on its own: a 0.9 on a player whose "
+                          "position has four more of roughly his value is not a reason to reach, "
+                          "and a 0.35 on the last man above a cliff is. The panel beneath the "
+                          "board shows the same number with its **un-drifted baseline** beside "
+                          "it, because the narrative-drift adjustment is not backtestable.",
+        "provenance": "session.reach_risk_view → draft.drift.availability_readout (Phase 11.2)",
     },
 }
 
@@ -382,7 +529,11 @@ def assert_stat_dict_covers_board() -> None:
     a column documented only in the mode nobody opens is the defect 14.O exists to prevent — the
     dictionary is complete when the *screens* are covered, not when one tuple is.
     """
-    rendered = {lbl for _, lbl in BOARD_VIEW_COLS} | set(RANGE_VIEW_COLS) | set(SLIM_VIEW_COLS)
+    # ⚠ :data:`REACH_COL` is in here even though it is *attached* rather than projected. It renders
+    # on the slim board and in the CLI's, so a reader meets it exactly the way they meet `PROJ`;
+    # "documented unless it is bolted on" would be a rule about our plumbing, not about them.
+    rendered = ({lbl for _, lbl in BOARD_VIEW_COLS} | set(RANGE_VIEW_COLS) | set(SLIM_VIEW_COLS)
+                | set(VALUE_VIEW_COLS) | set(RISK_VIEW_COLS) | {REACH_COL})
     missing = sorted(c for c in rendered if c not in STAT_DICT)
     if missing:
         raise AssertionError(f"rendered board columns with no STAT_DICT entry: {missing}")
@@ -404,13 +555,84 @@ def project_view(view: pd.DataFrame, advanced: bool = False,
     mode = str(mode) if mode else ("advanced" if advanced else "slim")
     if mode not in VIEW_MODES:
         raise ValueError(f"project_view takes mode in {VIEW_MODES}, got {mode!r}")
-    if mode == "advanced":
-        cols = [lbl for _, lbl in BOARD_VIEW_COLS]
-    elif mode == "ranges":
-        cols = list(RANGE_VIEW_COLS)
-    else:
-        cols = list(SLIM_VIEW_COLS)
+    cols = {
+        "advanced": [lbl for _, lbl in BOARD_VIEW_COLS],
+        "ranges": list(RANGE_VIEW_COLS),
+        "value": list(VALUE_VIEW_COLS),
+        "risk": list(RISK_VIEW_COLS),
+        "slim": list(SLIM_VIEW_COLS),
+    }[mode]
     return view[[c for c in cols if c in view.columns]]
+
+
+def attach_reach(view: pd.DataFrame, reach: pd.DataFrame | None) -> pd.DataFrame:
+    """Place :func:`reach_risk_view`'s ``p_available`` onto a rendered board as :data:`REACH_COL`.
+
+    ★ **A placement, not a derivation** — and the distinction is the whole reason this lives here
+    rather than in ``app/``. Nothing is computed: the probability was produced by the validated
+    11.2 oracle in :func:`reach_risk_view`, and this aligns it to the board's own index. Doing the
+    same join inside a renderer would give the app a number the CLI could not print, which is the
+    T18 / F.5 / T27 family this repo has already paid for three times.
+
+    Rows the reach frame does not cover (it reads the top ``n`` of the pool, the board may show
+    more) come back **NaN and stay NaN**. That is T22's rule again: a player nobody simulated is
+    not a player with a 0 % chance of surviving.
+    """
+    out = view.copy()
+    if reach is None or len(reach) == 0 or "board_index" not in getattr(reach, "columns", []):
+        out[REACH_COL] = np.nan
+        return out
+    p = pd.Series(pd.to_numeric(reach["p_available"], errors="coerce").to_numpy(float),
+                  index=pd.Index(reach["board_index"].astype(int)))
+    out[REACH_COL] = p.reindex(out.index).to_numpy(float)
+    return out
+
+
+def team_for_pick(st: DraftState, overall_pick: int) -> int | None:
+    """Which seat is on the clock at ``overall_pick`` — the snake, for a pick that is not *now*.
+
+    :meth:`DraftState.team_on_clock` answers the same question for the *current* pick and is the
+    only place the geometry lived; a strip that shows who is **on deck** needs it one pick ahead.
+
+    ⚠ **This is a second copy of a formula, and it is allowed only because it is checked.** The
+    K1.5 seat-map defect was positional ``team → seat`` arithmetic written out four times and
+    correct in three of them, and the fix that stuck was not "write it once" but "write it once and
+    *assert exhaustively* that the deleted copies agreed with it". So this function is differenced
+    against ``team_on_clock`` over **every pick of a full draft** by both a unit test and UI-1's bar
+    B4. Copy it a third time and that guarantee stops meaning anything.
+    """
+    n, last = int(st.n_teams), int(st.n_teams) * int(st.rounds)
+    p = int(overall_pick)
+    if p < 1 or p > last:
+        return None
+    rnd0, idx = (p - 1) // n, (p - 1) % n
+    return idx if rnd0 % 2 == 0 else n - 1 - idx
+
+
+def next_pick_info(st: DraftState, team: int | None = None) -> dict:
+    """``{next_pick, picks_away, on_the_clock}`` for one seat — **the one snake arithmetic.**
+
+    ★ Both surfaces that need it read this: the draft room's seat strip (*"your next pick #37, 12
+    away"*) and :func:`reach_risk_view`'s simulation window. Before UI-1 the window was derived in
+    ``reach_risk_view`` and the strip did not exist; adding a second copy for the strip is exactly
+    how the K1.5 seat-map defect happened, where positional ``team → seat`` arithmetic was written
+    out four times and was correct in three of them.
+
+    ⚠ ``optimizer._next_own_pick`` answers *which* pick is next; a reader needs *how many
+    opponents pick first*, and the two differ by whether the seat is on the clock right now. That
+    subtraction is the thing being centralised — it is one line and it is one line people get
+    wrong.
+    """
+    from fantasy_quant.draft.optimizer import _next_own_pick
+
+    seat = st.your_team if team is None else int(team)
+    last = st.n_teams * st.rounds
+    nxt = _next_own_pick(st.overall_pick, seat, st.n_teams, last)
+    mine = st.team_on_clock() == seat
+    away = 0 if nxt is None else max(
+        0, int(nxt) - int(st.overall_pick) - (1 if mine else 0))
+    return {"next_pick": (None if nxt is None else int(nxt)), "picks_away": int(away),
+            "on_the_clock": bool(mine)}
 
 
 # ------------------------------------------------------------------------------------------------
@@ -697,6 +919,15 @@ def coin_flags(q10, q90) -> np.ndarray:
 
     The last row compares with nothing and is ``False``; so is any row whose band is missing, since
     "we cannot tell" and "they are indistinguishable" are different answers.
+
+    ⚠⚠ **That last sentence is right and the number this column is quoted by is not.** ``False``
+    means *both* "distinguishable" and "no band to compare", and every published statement of this
+    column — K2's bar B4, UI-PLAN §3.3, the ``COIN`` dictionary entry — reports the single figure
+    *146 of 199 adjacent pairs overlap*, which a reader takes as "27 % are resolvable". On the live
+    2026 board the decomposition is **147 pairs with both bands present, 146 of them overlapping,
+    exactly 1 genuine break, and 52 pairs where a band is absent.** The honest statement is *of the
+    adjacent pairs we can evaluate at all, 99.3 % overlap*. Found in UI-2 while trying to build
+    tiers on top of this column, and it is why that feature is a null — see :func:`tier_series`.
     """
     lo = pd.to_numeric(pd.Series(q10), errors="coerce").to_numpy(float)
     hi = pd.to_numeric(pd.Series(q90), errors="coerce").to_numpy(float)
@@ -709,8 +940,244 @@ def coin_flags(q10, q90) -> np.ndarray:
     return out
 
 
+def _tiers_from_bands(q10, q90) -> np.ndarray:
+    """1-indexed tier ids down **one ordered sequence**; ``NaN`` where the band is missing.
+
+    ★ **This is :func:`coin_flags`, accumulated.** A tier ends where and only where two adjacent
+    10–90 bands stop overlapping, so the rule that draws the tiers and the rule that already
+    published *146 of 199 adjacent pairs overlap* are the same code rather than two descriptions of
+    one idea. That is the whole differentiated claim: a tier here is a statement of statistical
+    indistinguishability on **our own distributions**, which is Boris Chen's thesis executed on
+    something better than expert ranks — and it is the one item in the UI plan no competitor can
+    copy without building a distribution stack first.
+
+    ⚠ **A missing band is skipped, not treated as a break.** A player with no Phase-5 cloud does not
+    end a tier and does not start one; he simply has no tier, and the chain closes over him. Reading
+    "we cannot tell" as "these are different" would manufacture a boundary out of missing data,
+    which is T22's rule (*blank is not zero*) wearing a third face — and it is the same distinction
+    :func:`coin_flags` makes when it returns ``False`` for an absent band rather than ``True``.
+    """
+    lo = pd.to_numeric(pd.Series(q10), errors="coerce").to_numpy(float)
+    hi = pd.to_numeric(pd.Series(q90), errors="coerce").to_numpy(float)
+    ids = np.full(len(lo), np.nan)
+    ok = np.isfinite(lo) & np.isfinite(hi)
+    if not ok.any():
+        return ids
+    overlap = coin_flags(lo[ok], hi[ok])            # overlap[i] = row i overlaps row i + 1
+    breaks = (~overlap[:-1]).astype(int) if len(overlap) > 1 else np.zeros(0, int)
+    ids[ok] = 1 + np.cumsum(np.concatenate([[0], breaks]))
+    return ids
+
+
+def _tiers_from_gaps(values) -> np.ndarray:
+    """1-indexed tier ids down one ordered sequence, cut where the drop exceeds the median drop.
+
+    `docs/BUILD_PLAN.md` §UI-2 step 1's option **(a)**, verbatim: *"a tier ends where ``base_value``
+    falls by more than the pool's local median gap."* The threshold is the sequence's own median
+    adjacent drop, so there is no constant to tune and none to go stale — a position whose board is
+    flat gets a small threshold and one with real steps gets a large one, which is the behaviour the
+    word "local" is doing in that sentence.
+
+    ⚠ **This is the cut the plan called the cheap one, and it is the one that ships**, because the
+    differentiated one does not cut this board at all — see :func:`tier_series`. Rows with no value
+    are skipped rather than treated as breaks, exactly as a missing band is in
+    :func:`_tiers_from_bands`.
+    """
+    v = pd.to_numeric(pd.Series(values), errors="coerce").to_numpy(float)
+    ids = np.full(len(v), np.nan)
+    ok = np.isfinite(v)
+    if not ok.any():
+        return ids
+    x = v[ok]
+    if len(x) < 2:
+        ids[ok] = 1.0
+        return ids
+    drops = -np.diff(x)                      # board order is value-descending, so drops are ≥ 0
+    thresh = float(np.median(drops))
+    ids[ok] = 1 + np.cumsum(np.concatenate([[0], (drops > thresh).astype(int)]))
+    return ids
+
+
+def tier_series(st: DraftState, team: int | None = None, *, method: str = "gap",
+                within_position: bool = True) -> pd.Series:
+    """Within-position tier ids for one seat's pool — ``board index -> "RB2"`` (UI-2 step 1).
+
+    ★★ **``method="overlap"`` is a NULL on this board, and that is this session's finding.**
+    `docs/UI-PLAN.md` §S2 and `docs/BUILD_PLAN.md` §UI-2 both specify the overlap cut — *a tier ends
+    where adjacent 10–90 bands stop overlapping* — and both call it the one differentiated item in
+    the plan, *"the single item no competitor could copy without building our distribution stack
+    first."* Measured on the live 2026 board it does not cut anything, at any scope:
+
+    ====================================  ==============================================
+    within RB / WR / QB / TE              **1 tier each** — 62, 83, 29, 24 players
+    whole board order                     **2 tiers** over 244 available
+    adjacent pairs with **both** bands    **147**; of those, **146 overlap**
+    adjacent pairs that genuinely break   **1**
+    ====================================  ==============================================
+
+    Two mechanisms, and the second is worth more than the column:
+
+    1. **Scale.** The median RB 80 % band is **228 points** wide against a median adjacent-player
+       gap of **16.3 points** — **14×**. A pairwise-overlap rule cannot cut a sequence whose
+       neighbours sit at a fourteenth of their own interval width. Overlap is near-universal *by
+       construction*, not as a finding about football.
+    2. **A category error in the premise.** UI-PLAN calls this *"precisely Boris Chen's thesis
+       executed on our own distributions rather than on expert ranks."* It is not. Chen clusters
+       **expert rank dispersion** — how much rankers *disagree about where a player belongs* — and
+       we hold a **predictive interval for a season total**. Disagreement is narrow; outcome
+       uncertainty is enormous. Two different quantities wearing one name, which is T24's lesson
+       (*a relationship measured on one object is not a specification for another*) arriving on a
+       visualisation instead of on a draft room.
+
+    ⚠ **And the published figure hides its own denominator.** *146 of 199 adjacent pairs overlap*
+    has been quoted all session — in K2's bar B4, in UI-PLAN §3.3, in this module's ``COIN``
+    entry — and reads as *"73 % overlap, so 27 % are resolvable."* **52 of those 53 non-overlaps
+    are pairs where a band is missing.** :func:`coin_flags` returns ``False`` both for *these two
+    are distinguishable* and for *we cannot tell*, and its own docstring says those are different
+    answers — but the headline sums them. The honest statement is **"of the adjacent pairs we can
+    evaluate at all, 99.3 % overlap."*
+
+    ★ **So ``method="gap"`` ships** — `BUILD_PLAN`'s own option (a), the cut it called the cheap
+    one. The overlap path is kept runnable, not deleted, so the null stays checkable rather than
+    becoming a sentence in a write-up.
+
+    ⚠ **Computed over the seat's whole available pool, before any position filter or row cap** —
+    14.E's rule for the cliff, verbatim. A tier is a fact about the pool, so cutting it inside a
+    25-row window would make "the tier runs out" mean "the tier runs out *on this screen*". Bar B1
+    asserts the ids do not move under truncation or filtering, which is what that scope buys.
+    """
+    seat = st.your_team if team is None else int(team)
+    pool = st.draftable_pool(seat)
+    out = pd.Series([pd.NA] * len(pool), index=pool.index, dtype=object)
+    if pool.empty:
+        return out
+    if method not in ("gap", "overlap"):
+        raise ValueError(f"tier_series takes method in ('gap', 'overlap'), got {method!r}")
+
+    def ids_for(frame) -> np.ndarray:
+        if method == "overlap":
+            q10 = frame["q10"] if "q10" in frame.columns else pd.Series(np.nan, index=frame.index)
+            q90 = frame["q90"] if "q90" in frame.columns else pd.Series(np.nan, index=frame.index)
+            return _tiers_from_bands(q10, q90)
+        bv = (frame["base_value"] if "base_value" in frame.columns
+              else pd.Series(np.nan, index=frame.index))
+        return _tiers_from_gaps(bv)
+
+    if within_position:
+        for p, grp in pool.groupby("pos", sort=False):
+            out.loc[grp.index] = [f"{p}{int(k)}" if np.isfinite(k) else pd.NA for k in ids_for(grp)]
+        return out
+    out.loc[pool.index] = [f"T{int(k)}" if np.isfinite(k) else pd.NA for k in ids_for(pool)]
+    return out
+
+
+def tier_number(label: object) -> int | None:
+    """``"RB2"`` -> ``2``; anything with no tier -> ``None``. The renderer's shading reads this."""
+    s = str(label)
+    digits = s[len(s.rstrip("0123456789")):]
+    return int(digits) if digits else None
+
+
+def _shares_row(frame: pd.DataFrame, key: str, value, *, starts: bool = True,
+                starters_col: bool = False) -> bool:
+    """Does ``value``'s row in a :func:`roster_construction_risk` sub-frame hold company?
+
+    The one predicate behind ``⚑`` and ``⛓``: find the candidate's own row in the hypothetical
+    readout and ask whether it counts **more than him**. Returns ``False`` for a value the readout
+    has no row for, which is 14.F's rule — *an unknown bye stays unknown*, and silence is not a
+    clean bill of health.
+    """
+    if not starts or value is None or (not isinstance(value, str) and pd.isna(value)):
+        return False
+    if frame is None or len(frame) == 0 or key not in frame.columns:
+        return False
+    col = frame[key]
+    hit = frame[col.astype(str) == str(int(value) if not isinstance(value, str) else value)]
+    if hit.empty:
+        return False
+    if int(hit.iloc[0]["n"]) < 2:
+        return False
+    return bool(not starters_col or int(hit.iloc[0].get("n_starters", 0)) >= 1)
+
+
+def construction_flags(st: DraftState, team: int, index=None, *, vi: pd.DataFrame | None = None,
+                       byes: pd.Series | None = None, elevation: float | None = None,
+                       flags: pd.Series | None = None) -> pd.Series:
+    """The A5 glyph string per candidate — *what would this player do to your roster* (UI-2 step 3).
+
+    ★ **The live glyph IS the post-draft readout, evaluated one pick early.**
+    :func:`roster_construction_risk` already priced bye clustering, NFL-team concentration and
+    handcuff gaps, and rendered them only **after** the draft, when none of it can be acted on. Each
+    of the three construction glyphs here is read off **that same function, evaluated on your roster
+    plus this candidate** — nothing is recomputed and no second rule is written:
+
+    ==========  ==========================================================================
+    ``⚑``       he starts, and **his** bye-week row in the hypothetical holds ≥ 2 starters
+    ``⛓``       **his** NFL-team row holds ≥ 2 of your players, ≥ 1 of them a starter
+    ``🛡``       ``n_handcuff_gaps`` goes **down** — he closes insurance you do not own
+    ==========  ==========================================================================
+
+    ⚠ **Each reads *his own row* in the hypothetical readout, not a movement in its maximum.** The
+    first build tested ``max_bye_starters`` going up, which is a different and much narrower claim:
+    it fires only when the candidate joins the *already-largest* cluster, so a player who would put
+    a second starter on a clean bye week showed nothing. Measured on the live board, ``⚑`` fired
+    **zero** times in 40 rows — and the bar's control caught it, which is what the control is for.
+    The documented meaning (*"his bye week already holds one of your starters"*) is also the
+    decision-relevant one, so the code moved to the documentation rather than the other way round.
+
+    Writing a cheaper look-alike rule here (compare his bye against a list of your starters' byes,
+    say) is the T18 / F.5 / T27 family: two descriptions of one quantity, correct on the day and
+    divergent by the second edit. The two that are *not* roster-dependent — ``⌀`` and ``◔`` — are
+    likewise read straight off :func:`range_flags` rather than re-testing ``q10`` here, so ``RISKS``
+    is a strict glyph encoding of facts that already have exactly one home.
+
+    ⚠ **Scoped to the rows handed in, and that is not the cliff/tier error.** A tier is a fact about
+    the *pool*, so scoping it to the screen would change its meaning; a construction flag is a fact
+    about the *pair* (your roster, this player), so evaluating it for the rows on screen is the
+    whole of it. What it costs is one lineup solve per row, which is why the scope matters at all.
+
+    ⚠ **An unknown bye stays unknown** (14.F). ``byes=None`` — or a player the bye table does not
+    cover — yields no ``⚑``, and that is *silence*, never a clean bill of health.
+    """
+    seat = int(team)
+    idx = pd.Index(st.draftable_pool(seat).index if index is None else index)
+    out = pd.Series([""] * len(idx), index=idx, dtype=object)
+    if len(idx) == 0:
+        return out
+    board, roster, g = st.board, st.roster(seat), CONSTRUCTION_GLYPHS
+    flags = range_flags(board.loc[[i for i in idx if i in board.index]]) if flags is None else flags
+
+    base = roster_construction_risk(st, seat, vi=vi, byes=byes, elevation=elevation)
+    can_shape = not roster.empty            # nothing to cluster with, nothing to concentrate on
+
+    for i in idx:
+        if i not in board.index:
+            continue
+        row, marks = board.loc[i], []
+        if can_shape:
+            hypo = roster_construction_risk(
+                st, seat, vi=vi, byes=byes, elevation=elevation,
+                roster=pd.concat([roster, board.loc[[i]]], ignore_index=True))
+            if _shares_row(hypo["byes"], "week",
+                           (byes.get(str(row.get("player_key"))) if byes is not None else None),
+                           starts=str(row.get("player_name")) in set(hypo["starters"])):
+                marks.append(g["bye"])
+            if _shares_row(hypo["concentration"], "nfl_team", row.get("team"), starters_col=True):
+                marks.append(g["stack"])
+            if hypo["n_handcuff_gaps"] < base["n_handcuff_gaps"]:
+                marks.append(g["handcuff"])
+        f = str(flags.get(i, ""))
+        if "no distribution" in f:
+            marks.append(g["thin"])
+        elif "censored floor" in f:
+            marks.append(g["censored"])
+        out.loc[i] = "".join(marks)
+    return out
+
+
 def board_view(st: DraftState, team: int | None = None, *, pos: str | None = None,
-               n: int | None = None, risk=None) -> pd.DataFrame:
+               n: int | None = None, risk=None, vi: pd.DataFrame | None = None,
+               byes: pd.Series | None = None, elevation: float | None = None) -> pd.DataFrame:
     """The best-available board for one seat: every rendered column, index = the pick handle.
 
     The index is preserved deliberately — it is the ``#`` a CLI user types and the row key an app
@@ -745,7 +1212,41 @@ def board_view(st: DraftState, team: int | None = None, *, pos: str | None = Non
         out[label] = pool[col] if col in pool.columns else np.nan
     out["COIN"] = coin_flags(out["Q10"], out["Q90"])
     out["FLAGS"] = range_flags(pool)
+    # ---- UI-2's four ---------------------------------------------------------------------------
+    # ⚠ appended **after** the fifteen, and none of them read by the existing three projections, so
+    # `project_view(advanced=True)` returns exactly what it returned before this session. That is
+    # not tidiness: two committed bar sheets difference against that frame column-for-column.
+    # `Δ` is the engine's own pick counter, subtracted — never a second counter kept in a renderer.
+    out["Δ"] = pd.to_numeric(out["ADP"], errors="coerce") - float(st.overall_pick)
+    out["BARGAIN"] = _bargain(st).reindex(pool.index)
+    out["RISKS"] = construction_flags(st, seat, pool.index, vi=vi, byes=byes, elevation=elevation,
+                                      flags=out["FLAGS"])
     return out
+
+
+def _bargain(st: DraftState) -> pd.Series:
+    """``adp rank − overall_rank`` over the **whole board** — PLAYER-VIEW bar #5, as a column.
+
+    ★ **Static by construction, and that is the claim.** Both ranks are taken over every boarded
+    player rather than over the shrinking available pool, so a player's bargain does not improve
+    merely because better players were drafted. PLAYER-VIEW calls bar #5 *"a static value gap"*; a
+    pool-relative version would be a different quantity wearing its name.
+
+    ⚠ **The sign is the opposite of the expression `docs/BUILD_PLAN.md` writes**, and this is the
+    one place UI-2 deviates from its own pre-registration. The plan says
+    ``overall_rank − adp_rank``;
+    under that sign a player the market takes 50th and our board ranks 20th scores **−30**, i.e. the
+    bargain column is most negative for the best bargains. That contradicts PLAYER-VIEW §5's
+    governing rule — *green = good for the drafter, always* — and its own worked example, *"+1.5
+    rounds of value"*. The plan never states a polarity in words, only the expression, so this ships
+    the polarity the words require and records the discrepancy rather than quietly picking one.
+    """
+    board = st.board
+    if "overall_rank" not in board.columns:
+        return pd.Series(np.nan, index=board.index, dtype=float)
+    adp_rank = pd.to_numeric(board["adp"], errors="coerce").rank(method="min")
+    val_rank = pd.to_numeric(board["overall_rank"], errors="coerce")
+    return (adp_rank - val_rank).astype(float)
 
 
 def roster_view(st: DraftState, team: int) -> pd.DataFrame:
@@ -914,8 +1415,8 @@ def bye_weeks(con, season: int) -> pd.Series:
 
 
 def roster_construction_risk(st: DraftState, team: int, *, vi: pd.DataFrame | None = None,
-                             byes: pd.Series | None = None,
-                             elevation: float | None = None) -> dict:
+                             byes: pd.Series | None = None, elevation: float | None = None,
+                             roster: pd.DataFrame | None = None) -> dict:
     """The three construction risks for one seat — bye clustering, concentration, handcuff gaps.
 
     A roster can win every player-level comparison and still be badly built, and all three of these
@@ -931,9 +1432,15 @@ def roster_construction_risk(st: DraftState, team: int, *, vi: pd.DataFrame | No
     costs nothing, and counting him would make a deep roster look fragile for being deep. Starters
     come from :func:`lineup_choice`, the frozen solver, so this readout and the 14.L grid can never
     disagree about who starts.
+
+    ★ **``roster=`` is UI-2's whole step 3, and it adds no arithmetic.** Passing a roster evaluates
+    this same readout on a *hypothetical* one — your fifteen plus a candidate — which is how
+    :func:`construction_flags` puts the post-draft warning on the board at the moment it can still
+    be acted on. The default path (``roster=None``) is byte-for-byte what it was, which is what
+    keeps K2's 14.F bar and this session's B0 unmoved.
     """
     seat = int(team)
-    roster = st.roster(seat)
+    roster = st.roster(seat) if roster is None else roster
     out: dict = {"team": seat, "starters": [], "byes": pd.DataFrame(columns=["week", "n", "who"]),
                  "max_bye_starters": 0, "unknown_byes": 0,
                  "concentration": pd.DataFrame(columns=["nfl_team", "n", "n_starters", "who"]),
@@ -1117,6 +1624,46 @@ def summary_table(st: DraftState, sm: SeatMap, vi: pd.DataFrame | None = None) -
         rows.append(row)
     tab = pd.DataFrame(rows).sort_values("starters", ascending=False).reset_index(drop=True)
     tab.insert(0, "rank", np.arange(1, len(tab) + 1))
+    return tab
+
+
+def positional_strength(st: DraftState, sm: SeatMap,
+                        vi: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Each team's **starting** value by position, against the room median — A6's chart, as data.
+
+    ``team · pos · value · room_median · delta``, one row per (team, position). This is the piece
+    deferred out of UI-1 by name: every other part of A6 was a rearrangement of frames that already
+    existed, and this needed a genuinely new derivation, which is UI-2's character rather than a
+    formatting session's.
+
+    ★ **Starters only, through :func:`lineup_choice`.** A positional-strength readout summed over
+    the whole roster would tell a drafter his RB room is strong because he carries five of them,
+    which is the exact defect T28 named at the team level: ``capital`` is slot-blind and
+    ``startable`` is not. The single starters read is 17.1's ``flex_groups`` rule one altitude down
+    — a fourth display-layer fill order would be the copy nobody thinks to test.
+
+    ⚠ **The median is over the room, so it moves with the room.** It is a *within-this-draft*
+    comparison and carries no out-of-sample claim; the number it answers is "did I win this
+    position in this league", not "is this a good RB corps".
+    """
+    order = [p for p in ("QB", "RB", "WR", "TE", "K", "DST")]
+    rows = []
+    for t in range(st.n_teams):
+        roster = st.roster(t)
+        slots, _ = lineup_choice(st, roster, vi)
+        starter_rows = sorted({int(i) for _lbl, i in slots.items() if i is not None})
+        starters = roster.iloc[starter_rows] if starter_rows else roster.iloc[[]]
+        bv = pd.to_numeric(starters.get("base_value"), errors="coerce") if len(starters) \
+            else pd.Series(dtype=float)
+        by_pos = (pd.Series(bv.to_numpy(float), index=starters["pos"].astype(str).to_numpy())
+                  .groupby(level=0).sum() if len(starters) else pd.Series(dtype=float))
+        for p in order:
+            rows.append({"team": t + 1, "who": seat_label(t, sm), "human": t in sm.human_teams,
+                         "pos": p, "value": float(by_pos.get(p, 0.0))})
+    tab = pd.DataFrame(rows)
+    med = tab.groupby("pos")["value"].median()
+    tab["room_median"] = tab["pos"].map(med).astype(float)
+    tab["delta"] = tab["value"] - tab["room_median"]
     return tab
 
 
@@ -1369,33 +1916,28 @@ def reach_risk_view(st: DraftState, meta: dict, team: int | None = None, *, n: i
     """
     seat = st.your_team if team is None else int(team)
     pool = st.draftable_pool(seat).head(int(n))
-    cols = ["player_key", "player_name", "pos", "adp", "drift_picks", "p_available",
+    # ``board_index`` is first because it is what makes this frame joinable back onto the board
+    # (:func:`attach_reach`); the readout itself never looks at it.
+    cols = ["board_index", "player_key", "player_name", "pos", "adp", "drift_picks", "p_available",
             "p_available_baseline", "p_available_delta", "reach_risk"]
     if pool.empty:
         return pd.DataFrame(columns=cols)
 
     from fantasy_quant.draft import drift
-    from fantasy_quant.draft.optimizer import _next_own_pick
 
-    last = st.n_teams * st.rounds
-    nxt = _next_own_pick(st.overall_pick, seat, st.n_teams, last)
-    # ⚠ `_next_own_pick` answers *which* pick is next; the readout needs *how many opponents pick
-    # first*, and the two differ by whether the seat is on the clock right now. The optimizer's
-    # `window_end = nxt - 1` is a pick-number threshold on the ADP scale, a different
-    # parameterisation of the same fact — so the count is derived here rather than copied from
-    # there and quietly reinterpreted.
-    if nxt is None:
-        window = 0
-    elif st.team_on_clock() == seat:
-        window = max(0, int(nxt) - int(st.overall_pick) - 1)
-    else:
-        window = max(0, int(nxt) - int(st.overall_pick))
+    # ⚠ `optimizer._next_own_pick` answers *which* pick is next; the readout needs *how many
+    # opponents pick first*, and the two differ by whether the seat is on the clock right now. That
+    # one-line difference now lives in :func:`next_pick_info` and is read, not repeated — the seat
+    # strip needs the same fact and a second copy is how the K1.5 seat-map defect happened.
+    nxt_info = next_pick_info(st, seat)
+    nxt, window = nxt_info["next_pick"], nxt_info["picks_away"]
     model = model if model is not None else mock.load_opponent_model()
     out = drift.availability_readout(pool.reset_index(drop=True), model, window_picks=window,
                                      season=int(meta.get("season", 2026)),
                                      n_teams=int(st.n_teams), pick0=int(st.overall_pick),
                                      n_sims=int(n_sims), seed=int(seed))
     out.insert(1, "player_name", pool["player_name"].to_numpy())
+    out["board_index"] = pool.index.to_numpy()
     out.attrs["window_picks"] = window
     out.attrs["next_pick"] = nxt
     return out[[c for c in cols if c in out.columns]]
@@ -1448,6 +1990,17 @@ def player_card(st: DraftState, board_index: int, *, vi: pd.DataFrame | None = N
         card["cliff"] = float(cliffs.loc[int(board_index)])
     else:
         card["cliff"] = None
+
+    # ★ UI-2 — PLAYER-VIEW bar #5, as a **field rather than a ninth bar**. The eight ``bars`` are a
+    # frozen shape two committed sheets and a unit test assert the length of, and growing it to make
+    # room for a number would mean editing a bar sheet to keep it passing. The card renders this
+    # beside the identity strip; bar B2 asserts it is the *same* number the board's `BARGAIN` column
+    # shows, for every player on the live board — one derivation, two surfaces.
+    bg = _bargain(st)
+    v = float(bg.loc[int(board_index)]) if int(board_index) in bg.index else np.nan
+    card["bargain"] = {"value": (None if pd.isna(v) else v),
+                       "rounds": (None if pd.isna(v) else v / float(st.n_teams)),
+                       "help": stat_help("BARGAIN")}
 
     if vi is not None and not vi.empty:
         hit = [e for e in explain_chain(st.board.loc[[int(board_index)]], vi,

@@ -36,10 +36,10 @@
       "k1_5_advanced_flag_unchanged": true,
       "bands_are_frozen_q10": true,
       "rows": 200,
-      "at_censoring_point": 70,
+      "at_censoring_point": 72,
       "all_censored_rows_flagged": true,
-      "no_distribution_rows": 31,
-      "adjacent_overlapping_pairs": 146,
+      "no_distribution_rows": 30,
+      "adjacent_overlapping_pairs": 150,
       "note": "A season total cannot be negative, so q10 piles up on zero. Printing a bare 0 there would read as 'his floor is zero' \u2014 the T22 defect (blank is not zero) with the other sign. It reads `censored floor` instead."
     },
     "b3": {
@@ -51,9 +51,9 @@
       "starters_accounted_for": true,
       "fabricated_week_zero_rows": 0,
       "bye_source_rows_for_this_roster": 14,
-      "max_bye_starters": 3,
+      "max_bye_starters": 4,
       "max_team_players": 2,
-      "n_handcuff_gaps": 4,
+      "n_handcuff_gaps": 2,
       "handcuff_problems": [],
       "elevation_ratio": 1.765,
       "degrades_without_byes": true,
@@ -78,14 +78,14 @@
       "k4_human_rows": 4,
       "no_combined_column": true,
       "grades": {
-        "balanced": "D\u2212 31",
-        "value_hawk": "B 70",
-        "safe_floor": "B\u2212 66",
-        "chalk": "C+ 61",
-        "YOU": "C+ 59",
-        "autopilot": "C\u2212 44",
-        "reacher": "F 18",
-        "upside_chaser": "F 18"
+        "value_hawk": "A 92",
+        "autopilot": "B 72",
+        "safe_floor": "B 72",
+        "balanced": "C 54",
+        "chalk": "C\u2212 49",
+        "YOU": "D+ 39",
+        "reacher": "F 17",
+        "upside_chaser": "F 5"
       },
       "note": "\u2605 The bands are anchored to this scale, not to a school gradebook. On plain 90/80/70/60 bands the median team in a ten-team room graded D+ and six of ten graded D or F \u2014 the app calling an average draft a failure because the letters assumed 50 % was a fail when on a curve 50 is the middle."
     },
@@ -98,7 +98,7 @@
       "window_picks": 5,
       "window_expected": 5,
       "next_own_pick": 6,
-      "spearman_p_vs_adp": 0.954,
+      "spearman_p_vs_adp": 0.975,
       "buckets": {
         "likely available": 21,
         "coin flip": 3,
@@ -115,7 +115,7 @@
           "page_bodies": {
             "post": 1
           },
-          "n_dataframes": 5,
+          "n_dataframes": 6,
           "standings_matches_session": true,
           "capital_labelled": true,
           "odds_lead_with_multiple": true,
@@ -128,7 +128,7 @@
           "page_bodies": {
             "post": 1
           },
-          "n_dataframes": 10,
+          "n_dataframes": 12,
           "standings_matches_session": true,
           "capital_labelled": true,
           "odds_lead_with_multiple": true,
@@ -141,7 +141,7 @@
           "page_bodies": {
             "post": 1
           },
-          "n_dataframes": 25,
+          "n_dataframes": 30,
           "standings_matches_session": true,
           "capital_labelled": true,
           "odds_lead_with_multiple": true,
@@ -170,18 +170,16 @@
       "picks_after": 150,
       "draft_completed_by_click": true,
       "navigated_to_post_draft": true,
-      "clicked": "Cameron Dicker",
-      "post_page_dataframes": 10,
+      "clicked": "Ka'imi Fairbairn",
+      "post_page_dataframes": 12,
       "letters_seen": [
-        "A\u2212",
-        "B",
         "B+",
-        "C+",
-        "D+",
+        "B\u2212",
+        "D",
         "D\u2212",
         "F"
       ],
-      "card_player": "Blake Corum",
+      "card_player": "MarShawn Lloyd",
       "card_bars": 8,
       "card_chain_rows": 9,
       "n_exceptions": 0,

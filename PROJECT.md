@@ -445,6 +445,23 @@ feature); the 16.9 narrative shock expresses **through** the ceiling/hype person
   the done-bar is bit-identity with today's room at k=1 and k=0.** Two honesty rules travel with it: k human
   teams in one draft are **one** observation (their picks deplete each other's pools), and the T15 realism
   bars describe a **fully-simulated** room.
+- 16.18 **The fitted manager model — a personality learned from a human** *(added 2026-08-01, user request:
+  "maybe we make the value-hawk mimic my own movements")*. Every seat in 16.14 is **hand-specified**; this
+  one is **fitted**. `FittedManager` loads coefficients from a **profile file**, so the mechanism is general
+  and the user is subject #1 — which is how this preserves the 2026-07-23 "nothing personal to the user"
+  decision rather than overriding it. **★ The scoping insight: "draft like me" is two objects** —
+  **beliefs** (where a person disagrees with consensus about *players* → a board) and **policy** (how they
+  trade value/risk/need/scarcity *given* a board → a decision rule). A mock draft observes both at once and
+  identifies neither cheaply; separated, each has a cheap instrument. → 16.18a the elicitation instrument
+  (designed pairwise comparisons on real board states, actively selected for model uncertainty, with a
+  random control arm) · 16.18b the session (~300 comparisons, 45–60 min) · 16.18c the fit (a **shrunk
+  deviation** from the corpus β, 16.4's `k = σ²/τ²` EB machinery pointed at a manager) · 16.18d the
+  `FittedManager` personality · 16.18e the **disagreement-only** personal board, attached per-seat.
+  A comparison and a real 40-way pick are the **same conditional-logit likelihood**, so elicited and
+  realized data pool into one fit. **Done when** the fitted seat beats the corpus-fit `balanced` on
+  **held-out** pick prediction — withheld comparisons *and* real mock picks never used in fitting — or the
+  **null is reported as a null**. ⚠ The bar is pre-registered before the fit is read, because the optimizer
+  and the grader are the same human. A faithful replica is a **realism** deliverable, not an edge one.
 - **Done when** (personalities) 16.13 enriches the board read-only; 16.14's 5 personalities pass **face-
   validity** checks (Upside skews young / high-`q90`, Safe skews durable / high-`q10`, Autopilot draws pure
   ADP order, Homer reaches for `fandom`/hype names, Balanced ≈ the fitted model) + unit-tested tilt mechanics;
