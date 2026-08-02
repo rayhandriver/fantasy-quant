@@ -69,6 +69,78 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
+> **★★★ Next-session pointer (2026-08-01 session 6 — ✅ SESSION VH RUN AND COMPLETE. READ THIS FIRST.)**
+>
+> **State: 765 tests (was 749), ruff clean. UNCOMMITTED** on top of `c712f86` (UI-1+2, which the user
+> committed mid-session — verified to contain **none** of VH's work). **No refit, no lockbox read, the
+> frozen value stack untouched.** New: `steps/vh_{0,1,2,3}_*.py`, `tests/test_vh.py`,
+> `analysis/vh_*.json`, `analysis/mock_room_bars_vh_*.json`. Modified: `adp/boards.py`
+> (`asof`), `draft/mock.py`, `draft/personalities.py` (**T33**), `steps/mock_room_bars.py`
+> (`--vh-window`), `steps/phase16_17_seat_map.py` (the control moved with the fix).
+>
+> **★★ THE SESSION IN ONE LINE: the leading hypothesis was demoted by its own first substep, and the
+> arm that passed the bar is not the arm the ticket proposed.** Full write-up in `findings.md`
+> §"SESSION VH"; per-substep notes in `PLAN.md` §2026-08-01; the spec's own scorecard is in
+> `docs/BUILD_PLAN.md` §"✅ RUN 2026-08-01 — what the spec got right, and what it got wrong".
+>
+> **What was settled (do not re-derive):**
+> - **T33 ☑.** The divisor reads `state.n_teams`. **k=0 bit-identical (0/1200 picks)** — no committed
+>   batch measurement moves — while **k=1, the room a human actually drafts against, moved 20.7 %**.
+>   Not monotone in k (10.2 % at k=2): one changed pick cascades, so it is chaotic amplification, not
+>   a dose-response. **749 tests passed over this bug** because every harness ran at k=0.
+> - **T42 answered, and its flagship evidence was wrong.** The **TE2** the ticket leads with is
+>   changed by **no** ablation — **TE is flex-eligible**, so a TE2 is a legal starter, not bench
+>   depth. The slot channel owns **QB2 only**. **B1 = 38 %/29 % → INCONCLUSIVE.**
+> - **★ The dominant channel is the reach WINDOW**, not the objective — 6 of 7–8 objected picks, and
+>   it is what the user's own labels track (`corr(reach, labelled-bad) = +0.767`; his bad picks
+>   average **+5.5** reach, his good ones **−10.6**). `starter_aware` cuts reach 0.2 and on the live
+>   board **raises** it +5.4.
+> - **★★ Realized points and the sim's title probability DISAGREE IN SIGN.** `starter_aware` is
+>   **+50.4 realized** / **−0.295 title ×** with every shape measure improving. B3 blocks it on the
+>   metric we least trust. T28's bench↔title link was **correlational**; interventionally it is
+>   **the sim's, not the world's**. Filed with the −113 pts/team level bias. **Not reweighted.**
+> - **B0: 628 leaves, zero gate values moved, all 8 pass flags hold.**
+>
+> **★ TWO DECISIONS ARE OPEN AND BOTH ARE THE USER'S** (measured, priced, deliberately not shipped —
+> each is a seat-**character** change, and 16.14R's own lesson is not to read an argmax off noise):
+> 1. **`blend_50` (`bench_weight = 0.5`)** passes B3 (+0.144 title ×, +0.026 playoff, +19.9 starter
+>    value, 3 of 4 shape measures, nothing degraded) at a **stated realism cost of +0.0051 profile
+>    distance** (0.0894 → 0.0945; bw 0.0 is 0.1020). For scale, **T30's swap cost +0.0021 and was not
+>    shipped.** Needs a seam that does not exist: `bench_weight` is on `RiskModel` and the room builds
+>    **one** model for all ten seats.
+> 2. **The reach window — RECOMMEND KEEP 1.0**, and the realism sheet is why. B4 = unresolved on
+>    outcome (non-monotone, ±25 vs se 9–13) and the knob is monotone/clean on reach (0.70 → 3.77),
+>    but w=0.5 costs **+0.0360 profile distance** (0.0894 → **0.1254**) — **7× T30's unshipped
+>    +0.0021, and worse than 16.14R's own baseline 0.1156**, i.e. it gives back the realism T24
+>    bought. **Free on outcome, expensive on realism.**
+>    **★★ And that reframes the whole objection.** Corpus round-1 mean reach is **2.868**; the
+>    shipped seat's is **2.6405** — *the seat already reaches slightly LESS than a real human
+>    drafter*. So **the seat is realistic; it just is not a *value hawk***. One seat is being asked
+>    to do two jobs — be a plausible tenth of a calibrated room, and be the sharp value-seeker in it
+>    — and only the first has a corpus to price it against. That is a **design** question (keep the
+>    window and accept the name, or add a sharper seat **beside** it and re-measure the mix, which is
+>    T30-shaped with a T15 re-run attached), not a knob turn. ⚠ The spec's "⚠ Do not" opens with
+>    *do not delete or replace `value_hawk`*.
+>
+> **⚠ A harness bug VH introduced and caught — read before trusting any `--vh-window` sheet.** The
+> flag rewrote the room built once in `main()`, but `--shuffle-room` re-draws the seating **per seed**,
+> so it never reached the measured path. The sheet came back byte-identical while its config block
+> reported `vh_window: 0.5`. **An echoed flag is not an applied flag**; the check that works is that
+> the treatment and control arms must not produce identical numbers. Fixed (override is now a function
+> applied to every room) + 2 regression tests. `--bench-weight` was never affected.
+>
+> **→ T43 opened (🟡):** T33 settled *which* count the context scale is and made visible that nobody
+> justified it being a **count**. `eff` is a priority rank, `_local_z` is a z-score, so the multiplier
+> is a ranks-per-SD conversion. Against the pool it reads **0.08**; against the **contended top-10**
+> — the only rows an argmax is decided between — **0.29–0.34**, changing 6 of 15 picks. Fix **with the
+> next 11.1 refit, alongside T26**: the weights absorbed the old scale, so they move together.
+>
+> **★ NEXT: the two decisions above, then Sessions MM-1 · MM-2** (the fitted manager model, 16.18) —
+> unchanged and unblocked by any of this. Stage-0 FFC chore is current (`ffc-20260801`), next due
+> after **08-07**. Open register: **T43** (new), T41, T40, T39, T36, T26.
+>
+> _(The VH/MM scoping pointer this replaces follows, still the spec of record for MM-1 · MM-2.)_
+>
 > **★★★ Next-session pointer (2026-08-01 session 5 — the `value_hawk` objection → SESSIONS VH · MM-1 · MM-2 SCOPED. Docs-only, no code, nothing ran. READ THIS FIRST.)**
 >
 > **State: 749 tests (unchanged), ruff clean. Still UNCOMMITTED**, on top of `5eff21d` (K2), now one tree

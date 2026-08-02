@@ -3031,6 +3031,27 @@ value-vs-availability line one level down.
 
 # Session VH — the value hawk repair *(diagnosis first; ~half a session)*
 
+> ## ✅ RUN 2026-08-01 — what the spec below got right, and what it got wrong
+>
+> Kept as written because a spec that is quietly edited after the fact teaches nothing. The four
+> substeps ran straight through on the user's authority; all four bars are reported.
+>
+> | the spec said | the measurement said |
+> |---|---|
+> | "the leading hypothesis is already measured and it is T28's" (slot-blindness) | **B1 = 38 % / 29 % slot-driven → INCONCLUSIVE.** Real but minority |
+> | the fingerprint is "a QB2 in round 8 **and a TE2 in round 9**" | the **TE2 is changed by no ablation at all** — **TE is flex-eligible**, so a TE2 is a *legal starter*. The slot channel owns **QB2 only**; the spec pooled two things |
+> | VH.3 is a tail item ("the window the sweep never resolved") | the **window is the dominant channel** (6 of 7–8 objected picks) and the only one aligned with the user's criterion. VH.3 should have been VH.1 |
+> | "he supplies the objected picks" | he supplied a verdict on **all 15**, which is strictly better — a verdict on every pick carries its own **control group**, and it is what produced `corr(reach, labelled-bad) = +0.767` |
+> | VH.0 is "reading, not building" | it needed a new capability: the judged artifact was **unreproducible** (10/150 picks live, 33/150 pinned; it predates T22, T31 and the 08-01 refresh) → `resolve_board(..., asof=)`. *You cannot attribute a decision to a mechanism if you cannot reproduce the decision* |
+> | ship starter-awareness iff shape improves and outcome does not degrade | shape improved on **every** measure and realized points **+50.4** — and the **sim's title probability fell 0.295×**, so B3 **blocks** it. The two metrics **disagree in sign**; recorded as a finding about the sim, not acted on. `blend_50` passes B3 instead |
+>
+> **The ⚠ that earned its keep:** *"if shape improves and the outcome degrades, that is a FINDING,
+> not a tuning target."* Written for a case where the sim was the arbiter — it arrived with
+> **realized points on the other side**, which makes it sharper than its author intended.
+>
+> Results: `analysis/vh_attribution.json` (+`_pinned0724`), `vh_t33_divisor.json`,
+> `vh_objective_ab.json`, `vh_window.json`, `mock_room_bars_vh_after.json`.
+
 **★ The leading hypothesis is already measured and it is T28's.** The value path is **slot-blind** —
 nothing in `draft/optimizer.py` references starters — and `value_hawk` is *the only seat that fully
 expresses that*, because it is the only seat that **maximizes** the sum. T28 recorded the fingerprint

@@ -6043,3 +6043,318 @@ serve **all** users. That reasoning is **preserved rather than overridden**: `Fi
 personality whose coefficients load from a **profile file**, so the *mechanism* is general and the user is
 subject #1. Nothing in the code knows whose profile it is. Same shape as Session K3's narrow reversal of
 the "not auto-import" decision — the original reasoning was about scope, and it survives the change.
+
+---
+
+# SESSION VH — the value-hawk repair *(2026-08-01)*
+
+Run on a user report: `value_hawk` "consistently makes picks that are characteristically uncalled
+for" *and* it finishes weak. He supplied a **pick-by-pick verdict on all 15 picks** of the shipped
+mock — six bad, four good, five "good not great" — which turned out to be a far better instrument
+than the "name the picks you object to" the spec asked for, because a verdict on *every* pick has a
+control group built in.
+
+## VH.0 — the attribution, and it demoted the session's own hypothesis
+
+### ★ First finding, and it is a process one: the artifact he judged no longer exists
+
+`analysis/mock_16_14R_picks.csv` is dated 2026-07-28 and **predates T22 (07-29), T31 (07-30) and
+the 08-01 situation-event refresh**. Re-running the exact call that produced it reproduces:
+
+| board | picks reproduced |
+|---|---|
+| live `ffc-20260801` | **10 / 150** |
+| pinned `ffc-20260724` (the vintage it was written on) | **33 / 150** |
+
+So neither the board *nor* the code is the same, and his player-specific verdicts cannot be
+ablated. **A committed artifact that no longer describes the thing it is named after is worse than
+no artifact** — it is what a human forms an opinion against, and nothing in the repo dates it
+against the code that made it. *(T41 is this defect for bar sheets; this is the same defect for
+the CSV a human reads. See the register.)*
+
+The enabling fix, and it is small: **`resolve_board(..., asof=)`** pins the FFC vintage. `asof=None`
+leaves the SQL identical, and T32's cache key already carries `board_vintage`, so a pinned board
+and a live one cannot collide. *You cannot attribute a decision to a mechanism if you cannot
+reproduce the decision.*
+
+### ★ Second finding: his labels correlate with **reach**, not with roster construction
+
+No model needed — his verdicts against the artifact's own `reach_picks` column:
+
+| his verdict | mean reach |
+|---|---|
+| **bad** (6 picks) | **+5.5 picks** |
+| neutral (5) | −5.5 |
+| **good** (4) | **−10.6 picks** |
+
+`corr(reach, labelled-bad) = **+0.767**`. Every pick he praised — Egbuka, Henderson, Maye, Price —
+is one where value **fell** to the seat. **He objects to reaching and approves of waiting**, and
+that is a single, mechanical criterion, not a bundle of taste.
+
+### ★ Third finding: the flagship case of T42 is falsified by its own ablation
+
+Each of the seat's 15 turns was re-taken under one-knob ablations with the draft state held fixed.
+On the pinned 07-24 board:
+
+| knob | changes N of 8 objected picks |
+|---|---|
+| `board_only` (λ=0, scarcity 0, no context) | 7 |
+| `context_off` | 6 |
+| **`window_none`** (never pay above the board) | **6** |
+| `window_half` | 4 |
+| **`starter_aware`** (`bench_weight=0`) | **3** |
+| `window_open` (1.25×) | 2 |
+
+**Kyle Pitts — the redundant TE2, the pick T42 was opened on — is changed by NOTHING.** Not
+`starter_aware`, not the window, not the context, not even the raw board argmax. The reason is in
+the league file: **TE is flex-eligible**, so a second TE is a legal starter, not bench depth, and a
+slot-aware objective has no complaint about him. The slot channel owns **QB2 (Prescott, Dart)** —
+QB is not flex-eligible — and **not TE2**. T42's headline evidence pooled the two.
+
+**B1: slot-driven share = 38 % (pinned 07-24) / 29 % (live 08-01) → INCONCLUSIVE on both**
+(pre-registered: ≥50 % confirms, <25 % kills). So the hypothesis is neither confirmed nor dead: it
+is **real but minority, and narrower than its ticket**.
+
+### ★ Fourth finding: the prescribed fix moves the seat *away* from his criterion
+
+Asking each knob what it does to the reach — the thing he actually objects to — rather than merely
+whether it changes a name:
+
+| knob | Δ mean reach, pinned 07-24 | Δ mean reach, live 08-01 |
+|---|---|---|
+| `window_none` | **−5.8 picks** | **−5.2 picks** |
+| `context_off` | −3.7 | −2.1 |
+| `board_only` | −1.8 | −0.5 |
+| `starter_aware` | −0.2 | **+5.4** |
+
+**Starter-awareness makes the seat reach *more* on the live board.** The window is the dominant
+channel on both vintages and the only one that speaks to his stated criterion — which reorders the
+session: **VH.3 is the substantive substep, not the tail item the spec filed it as.**
+
+### ★ Fifth finding: a term measured against the wrong dispersion
+
+The step-3 context term is `w · n_teams · _local_z(...)`, subtracted from a priority rank. Its size:
+
+| denominator | ratio |
+|---|---|
+| the whole 200-row pool, `sd(context)/sd(eff)` | **0.08** — negligible |
+| the **contended top-10**, `|context|max / spread` | **0.29–0.34** — decisive |
+
+Both are correct; only the second is relevant, because **an argmax is only ever decided among the
+few candidates at the top**. This is why a term that changes 6 of 15 picks read as noise for four
+sessions. → **T43**.
+
+## VH.1 — T33, and the number is bigger than the ticket guessed
+
+`make_value_hawk_pick_fn` now reads **`state.n_teams`** instead of taking the room size; both
+builders pass nothing. Measured before/after (`analysis/vh_t33_divisor.json`):
+
+**k=0 is bit-identical (0/1200 picks)** — so every committed batch measurement, every T15/T24 bar
+and every `phase16_14r_*` artifact is untouched — while **k=1, the room a human actually drafts
+against, moved 248/1200 = 20.7 % of picks.** The register estimated "~11 % in pricing"; *the
+pricing gap is not the quantity that matters, the pick is.*
+
+The share is **not monotone in k** (10.2 % at k=2, under both neighbours): one changed pick
+cascades through the rest of the draft, so this is a chaotic amplification of the divisor gap, not
+a dose-response. Do not read it as one.
+
+Two smaller things fell out:
+
+- **The 16.17 control had to move on the same axis.** `steps/phase16_17_seat_map.py::_legacy_fns`
+  passed the old divisor verbatim; left alone it would have reported a T33 difference as a 16.17
+  *mapping* difference and failed bars 1–3 for something they were never built to test. *A control
+  has to differ from the thing it controls on exactly one axis.*
+- **749 tests passed over this bug**, because the only harness that ever exercised the value hawk
+  ran at k=0, where room size and league size coincide. *A bug that only appears off the measured
+  path needs a test on the unmeasured one* — `tests/test_vh.py` now runs k=0..3, with a control
+  asserting the **old** arithmetic did vary, so the test cannot pass vacuously.
+
+## B0 — the realism sheet, seating-marginalized: **nothing moved**
+
+`steps/mock_room_bars.py --label vh_after --shuffle-room`, 40 drafts × 10 seats × 8 seasons,
+against the committed `analysis/mock_room_bars_verify_20260729.json`. Audited leaf-by-leaf rather
+than bar-by-bar (UI-1's lesson: *"all bars pass" is weaker than "nothing moved"*):
+
+| bucket | differing leaves | gate? |
+|---|---|---|
+| `readout_2026` | 71 | **no** — the live-board eyeball, explicitly never a gate |
+| `config` | 11 | no — provenance keys the 07-29 sheet predates (`bench_weight`, `mix[]`) |
+| `generated` / `label` | 2 | no — provenance |
+| **everything else** | **0** | — |
+
+**628 leaves, and every measured gate value is bit-identical to the digit**; all eight `pass` flags
+True on both sides. Round-1 mean 2.6405 → 2.6405, profile distance 0.08935 → 0.08935, avoidable
+illegality 0.000833 → 0.000833. That is what VH.1's k=0 bit-identity predicted, now confirmed at
+scale.
+
+★ **A positive demonstration of what T41 is missing.** The 71 leaves that *did* move are exactly
+"the input moved" — the 2026 board went `ffc-20260724` → `ffc-20260801` — and they separate cleanly
+from the gates **because this harness already labels 2026 a `readout_2026`, never a gate**. T41's
+prescription for the UI sheets (a `vintage_changed` bucket, not a blanket allowance) is a structure
+`mock_room_bars.py` has had all along. Copy it rather than invent it.
+
+## VH.2 — the interventional objective experiment (**T42**): the sim and reality part company
+
+200 seating-marginalized drafts × 4 DEV seasons × 3 arms, one knob (`RiskModel.bench_weight`, and
+1.0 nests the shipped seat pick-for-pick). Outcome and shape reported apart, never combined.
+
+| vs shipped `portfolio_ce` | `starter_aware` (0.0) | `blend_50` (0.5) |
+|---|---|---|
+| **realized points** | **+50.4** CI[+25.0,+76.7] | +18.3 CI[−4.3,+41.0] |
+| `starter_value` | +22.1 CI[+19.3,+25.1] | +19.9 CI[+17.1,+22.7] |
+| **title multiple** | **−0.295** CI[−0.363,−0.230] | **+0.144** CI[+0.079,+0.212] |
+| playoff multiple | −0.064 CI[−0.078,−0.051] | +0.026 CI[+0.015,+0.036] |
+| backups before R12 | −0.175 CI[−0.245,−0.105] | −0.045 CI[−0.100,+0.015] |
+| `capital − startable` | −136.6 CI[−146.5,−127.0] | −19.5 CI[−24.8,−14.4] |
+| RB1 arrival round | −2.01 CI[−2.27,−1.75] | −1.23 CI[−1.50,−0.98] |
+| mean reach | −1.10 CI[−1.63,−0.61] | −0.68 CI[−1.10,−0.25] |
+| **B3** | **SHIP = False** | **SHIP = True** |
+
+### ★ The headline is not which arm wins — it is that the two metrics disagree in sign
+
+`starter_aware` makes the seat **better on realized points (+50)** and **worse on the sim's own
+title probability (−0.295×, i.e. 23.9 % → 21.0 %)**, while improving **every** shape measure. The
+pre-registered ⚠ anticipated exactly this — *"the sim draws injuries and T28 measured bench value
+alone predicting title +0.711, so our own sim may prefer the roster a human calls indefensible;
+report it, do not reweight"* — and it arrived in a sharper form than the warning imagined, because
+**realized points moved the other way**. T28 established the bench↔title relationship
+*correlationally*; this is the interventional version, and it shows the relationship is **the sim's,
+not the world's**: when you actually build the starter-heavy roster, the season it really played
+scored more.
+
+So B3 blocks the ship on `starter_aware` — correctly, by its own pre-registered rule — and the
+blocking metric is the one we have most reason to distrust. **Recorded as a finding about the sim,
+not acted on.** It is a candidate cause of the standing −113 pts/team level bias and belongs with
+T3/T4's residue, not with the value hawk.
+
+### `blend_50` is the arm the rule actually passes
+
+`bench_weight = 0.5` improves title (+0.144), playoff (+0.026), starter value (+19.9) and three of
+four shape measures, degrades **nothing** beyond its CI, and moves realized points nominally
+(+18.3, CI ∋ 0). It is the "bench depth has option value without pretending a QB2 starts" reading
+of T28's own docstring, and it is the first time that middle has been measured rather than argued.
+⚠ T28's *correlational* sweep put the peak at `w = 0.90`; interventionally the useful setting is
+**0.5**. A third instance of *a relationship measured on outcomes is not a specification for the
+mechanism that produced them*.
+
+## VH.3 — the reach window: still unresolved, and that is now a **useful** answer
+
+Grid bracketed on **both** sides of the shipped 1.0 (16.14R only ever asked "reach further?", and
+this repo has shipped twice off an unbracketed edge). 200 drafts per window.
+
+| window | realized | title × | mean reach | p95 reach | realism gate |
+|---|---|---|---|---|---|
+| 0.50 | 2146.4 | 2.380 | **0.70** | 14.43 | pass |
+| 0.75 | 2103.7 | 2.390 | 1.93 | 19.11 | pass |
+| **1.00 (shipped)** | 2127.6 | 2.393 | **3.03** | 24.55 | pass |
+| 1.15 | 2129.0 | 2.361 | 3.47 | 26.86 | pass |
+| 1.25 | 2141.7 | 2.408 | 3.77 | 28.43 | pass |
+
+**B4: unresolved → keep the default 1.0.** Realized points vs the shipped window run +18.8 / −23.9 /
++1.5 / +14.2 across the grid — **non-monotone**, against an se of 9–13. The one CI clear of zero
+(w=0.75, −23.9) sits in the *middle* of that pattern, which is the signature of noise, not signal:
+with four comparisons, one crossing at p<.05 is roughly what chance delivers. Every title-multiple
+CI contains zero. *An argmax is not read off a difference inside its own noise* — 16.14R's dead end,
+declined a second time.
+
+### ★ But the knob is not noisy on the thing the user objects to
+
+Mean reach is **monotone and clean** across the grid: 0.70 → 1.93 → 3.03 → 3.47 → 3.77, and p95
+reach likewise 14.4 → 28.4. So:
+
+> **The reach window is precisely controllable on the user's criterion and unresolvable on outcome.**
+
+That reframes it from an optimization question into a **preference** one — which is this project's
+whole thesis applied to its own opponent model. Tightening to 0.5 cuts mean reach from 3.03 picks to
+0.70 at **no measurable cost in realized points or title probability**, and stays inside the realism
+gate. Whether the seat *should* be that patient is a question about what a "value hawk" is, not a
+question the data can settle — so it is put to the user priced, rather than chosen by argmax.
+
+## ★ A harness bug this session introduced, and what caught it
+
+`--vh-window` was added to `steps/mock_room_bars.py` to price VH.3's window against the realism
+bars. It rewrote the `room` built at the top of `main()` — and **`--shuffle-room` re-draws the
+seating per seed** by calling `mock.full_room(mix, ...)` again, so the mutated room never reached
+the shuffled path, which is the path *every* VH and T24 measurement uses. The first w=0.5 sheet came
+back **byte-identical to the shipped one, bin values included**, while VH.3 had already measured the
+same window moving mean reach 3.03 → 0.70.
+
+**The artifact said `vh_window: 0.5` the entire time.** The smoke test that "verified" the flag
+checked exactly that field — the **label**, not the behaviour — and passed. That is T22's rule
+(*a column's consumers are not only the models that weight it*) and UI-1's (*a grep cannot tell
+doing from describing*) arriving in a **harness**: a config block echoing a flag back is not
+evidence the flag was applied. What caught it was the boring check — *the treatment arm and the
+control arm produced identical numbers, and they were not supposed to*.
+
+Fixed by making the override a **function applied to every room the harness builds** rather than a
+one-off rewrite of one variable, and re-verified the only way that means anything: the two arms now
+differ on **118 measured leaves** (round-1 mean 2.630 → 2.417 at 3 seeds).
+
+⚠ `--bench-weight` was never affected — it rides on `risk`, which the shuffled path rebuilds from
+the same object — so the `bench_weight=0.5` sheet was valid as produced.
+
+## The realism price of the two candidate changes
+
+B0's rule: *a behaviour change that moves a realism bar is **stated**, never absorbed.* Both
+candidates were run through the same seating-marginalized sheet as the baseline.
+
+**`blend_50` (`bench_weight = 0.5`)** — `analysis/mock_room_bars_vh_benchw050.json`:
+
+| bar | shipped 1.0 | bw 0.5 |
+|---|---|---|
+| bar1 round-1 mean | 2.6405 | 2.6405 |
+| **bar1 profile distance** | **0.0894** | **0.0945** *(worse by 0.0051)* |
+| avoidable illegality | 0.000833 | 0.000625 *(better)* |
+| share illegal | 0.1231 | 0.1228 *(better)* |
+| **every hard gate** | PASS | **PASS** |
+
+So the realism cost is **real, small, and monotone in the knob** — 0.0894 (shipped) → 0.0945
+(bw 0.5) → 0.1020 (bw 0.0, measured by T28). For scale: **T30's `autopilot`→`chalk` swap cost
++0.0021 and was not shipped**, under the pre-agreed rule that a mix change ships only if every bar
+holds or improves. This costs **2.4× that** while improving title probability, starter value and
+three of four shape measures.
+
+That is precisely a **judgment call with a stated price**, not a measurement question — so it goes
+to the user rather than to an argmax. It also needs a seam that does not exist: `bench_weight` lives
+on `RiskModel` and the room builds **one** model for all ten seats, so making it per-seat means
+adding a `Personality`-level override (and deciding whether that is a `Personality` field or a
+room-builder argument).
+
+### ★ The window's realism price — and it overturns the "free dial" reading above
+
+`analysis/mock_room_bars_vh_window050.json` (207 measured leaves moved, so the flag is live):
+
+| bar | shipped w=1.0 | w=0.50 |
+|---|---|---|
+| bar1 round-1 mean | 2.6405 | **2.2024** (corpus **2.868**) |
+| **bar1 profile distance** | **0.0894** | **0.1254** *(worse by 0.0360)* |
+| every hard gate | PASS | PASS |
+| legality | 0.000833 / 0.1231 | unchanged |
+
+**The window is free on outcome and expensive on realism.** +0.0360 profile distance is **7× T30's
+unshipped +0.0021**, and 0.1254 is **worse than 16.14R's own shipped baseline of 0.1156** — i.e.
+tightening the window gives back the realism T24 bought. The earlier reading in this section ("no
+measurable cost") was measured on outcome **before** the realism sheet existed; on the full price
+the recommendation is **keep 1.0**, and B4's "unresolved → keep the default" is now doubly supported.
+
+### ★★ What that actually says about the user's objection
+
+Corpus round-1 mean reach is **2.868**; the shipped seat's is **2.6405**. **The seat already reaches
+slightly *less* than a real human drafter**, and tightening it further moves it away from the corpus
+in the direction of a player nobody is. So:
+
+> **The seat is realistic. It just is not a *value hawk*.**
+
+His objection is not that the seat is unrealistic — it is that a seat *named* "value hawk", meant to
+be "one of the most realistic replicas of a genuinely intelligent and knowledgeable fantasy player",
+reaches like an average manager. Those are two different jobs, and one seat is currently asked to do
+both: **be a plausible tenth of a realistic room**, and **be the sharp value-seeker in it**. The
+realism bars price the first; nothing prices the second, because "what a good drafter does" has no
+corpus.
+
+That is the honest frame for the decision, and it is a **design** question, not a measurement one:
+either the seat keeps its window and the room stays calibrated (and "value hawk" is a slightly
+generous name), or a sharper seat is added **beside** it and the room's mix is re-measured — which
+is a T30-shaped change with a T15 re-run attached, not a knob turn. ⚠ Not VH's call: the spec's own
+"⚠ Do not" opens with *do not delete or replace `value_hawk`* — it is 1 of 10 in `REALISTIC_ROOM`
+and every T15/T24 bar was measured with it there.

@@ -1,0 +1,1790 @@
+{
+  "generated": "2026-08-02T03:38:56.766322+00:00",
+  "label": "pinned0724",
+  "season": 2026,
+  "board_vintage": "ffc-20260724",
+  "board_rows": 223,
+  "asof": "2026-07-24",
+  "room": [
+    "balanced",
+    "autopilot",
+    "balanced",
+    "reacher",
+    "upside_chaser",
+    "safe_floor",
+    "balanced",
+    "chalk",
+    "value_hawk",
+    "balanced"
+  ],
+  "value_hawk_seat": 8,
+  "config": {
+    "seed": 0,
+    "room_seed": 17,
+    "rounds": 15,
+    "n_teams": 10,
+    "premium_early_before_round": 6,
+    "single_slot_positions": [
+      "QB",
+      "TE"
+    ]
+  },
+  "turns": [
+    {
+      "round": 1,
+      "overall_pick": 9,
+      "pick": {
+        "player": "Chase Brown",
+        "pos": "RB",
+        "adp": 16.3
+      },
+      "roster_before": {},
+      "base_value": 70.84534864335681,
+      "changed_by": [
+        "board_only",
+        "context_off",
+        "window_half",
+        "window_none",
+        "window_open"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Justin Jefferson",
+          "pos": "WR",
+          "adp": 10.3
+        },
+        "starter_aware": {
+          "player": "Chase Brown",
+          "pos": "RB",
+          "adp": 16.3
+        },
+        "window_none": {
+          "player": "Jonathan Taylor",
+          "pos": "RB",
+          "adp": 7.7
+        },
+        "window_half": {
+          "player": "De'Von Achane",
+          "pos": "RB",
+          "adp": 9.5
+        },
+        "window_open": {
+          "player": "Justin Jefferson",
+          "pos": "WR",
+          "adp": 10.3
+        },
+        "board_only": {
+          "player": "Justin Jefferson",
+          "pos": "WR",
+          "adp": 10.3
+        }
+      },
+      "best_by_adp": {
+        "player": "Jonathan Taylor",
+        "pos": "RB",
+        "adp": 7.7
+      },
+      "context_magnitude": {
+        "eff_base_sd": 52.53219898222478,
+        "context_delta_sd": 4.206298274878593,
+        "context_delta_absmax": 13.520718599761693,
+        "ratio_sd": 0.0800708585662266,
+        "contended_spread": 10.0,
+        "context_delta_absmax_contended": 12.191764021018862,
+        "ratio_contended": 1.2191764021018863
+      },
+      "top5_base_value": [
+        {
+          "player": "Justin Jefferson",
+          "pos": "WR",
+          "adp": 10.3,
+          "base_value": 77.5
+        },
+        {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7,
+          "base_value": 73.8
+        },
+        {
+          "player": "Chase Brown",
+          "pos": "RB",
+          "adp": 16.3,
+          "base_value": 70.8
+        },
+        {
+          "player": "Jonathan Taylor",
+          "pos": "RB",
+          "adp": 7.7,
+          "base_value": 69.2
+        },
+        {
+          "player": "Zay Flowers",
+          "pos": "WR",
+          "adp": 25.6,
+          "base_value": 68.7
+        }
+      ],
+      "reach_picks": 7.3,
+      "reach": true,
+      "redundant": false,
+      "premium_early": false,
+      "fall": false,
+      "objected": true
+    },
+    {
+      "round": 2,
+      "overall_pick": 12,
+      "pick": {
+        "player": "Kenneth Walker III",
+        "pos": "RB",
+        "adp": 22.5
+      },
+      "roster_before": {
+        "RB": 1
+      },
+      "base_value": 63.46236978446184,
+      "changed_by": [
+        "board_only",
+        "context_off",
+        "window_none"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7
+        },
+        "starter_aware": {
+          "player": "Kenneth Walker III",
+          "pos": "RB",
+          "adp": 22.5
+        },
+        "window_none": {
+          "player": "Jonathan Taylor",
+          "pos": "RB",
+          "adp": 7.7
+        },
+        "window_half": {
+          "player": "Kenneth Walker III",
+          "pos": "RB",
+          "adp": 22.5
+        },
+        "window_open": {
+          "player": "Kenneth Walker III",
+          "pos": "RB",
+          "adp": 22.5
+        },
+        "board_only": {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7
+        }
+      },
+      "best_by_adp": {
+        "player": "Jonathan Taylor",
+        "pos": "RB",
+        "adp": 7.7
+      },
+      "context_magnitude": {
+        "eff_base_sd": 51.895693873249265,
+        "context_delta_sd": 4.233285780710953,
+        "context_delta_absmax": 13.642436924291225,
+        "ratio_sd": 0.08157296809732204,
+        "contended_spread": 11.0,
+        "context_delta_absmax_contended": 12.292641786539441,
+        "ratio_contended": 1.1175128896854039
+      },
+      "top5_base_value": [
+        {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7,
+          "base_value": 73.8
+        },
+        {
+          "player": "Jonathan Taylor",
+          "pos": "RB",
+          "adp": 7.7,
+          "base_value": 69.2
+        },
+        {
+          "player": "Zay Flowers",
+          "pos": "WR",
+          "adp": 25.6,
+          "base_value": 68.7
+        },
+        {
+          "player": "De'Von Achane",
+          "pos": "RB",
+          "adp": 9.5,
+          "base_value": 68.7
+        },
+        {
+          "player": "Drake Maye",
+          "pos": "QB",
+          "adp": 63.3,
+          "base_value": 68.5
+        }
+      ],
+      "reach_picks": 10.5,
+      "reach": true,
+      "redundant": false,
+      "premium_early": false,
+      "fall": false,
+      "objected": true
+    },
+    {
+      "round": 3,
+      "overall_pick": 29,
+      "pick": {
+        "player": "Josh Allen",
+        "pos": "QB",
+        "adp": 27.9
+      },
+      "roster_before": {
+        "RB": 2
+      },
+      "base_value": 55.224205067802416,
+      "changed_by": [
+        "board_only",
+        "window_half",
+        "window_none"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Josh Allen",
+          "pos": "QB",
+          "adp": 27.9
+        },
+        "starter_aware": {
+          "player": "Josh Allen",
+          "pos": "QB",
+          "adp": 27.9
+        },
+        "window_none": {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7
+        },
+        "window_half": {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7
+        },
+        "window_open": {
+          "player": "Josh Allen",
+          "pos": "QB",
+          "adp": 27.9
+        },
+        "board_only": {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7
+        }
+      },
+      "best_by_adp": {
+        "player": "Nico Collins",
+        "pos": "WR",
+        "adp": 23.4
+      },
+      "context_magnitude": {
+        "eff_base_sd": 49.171145117186214,
+        "context_delta_sd": 4.166484532849322,
+        "context_delta_absmax": 16.62511147810374,
+        "ratio_sd": 0.08473434008745627,
+        "contended_spread": 18.0,
+        "context_delta_absmax_contended": 7.96172742706144,
+        "ratio_contended": 0.44231819039230225
+      },
+      "top5_base_value": [
+        {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7,
+          "base_value": 73.8
+        },
+        {
+          "player": "Drake Maye",
+          "pos": "QB",
+          "adp": 63.3,
+          "base_value": 68.5
+        },
+        {
+          "player": "DeVonta Smith",
+          "pos": "WR",
+          "adp": 28.2,
+          "base_value": 62.5
+        },
+        {
+          "player": "Tetairoa McMillan",
+          "pos": "WR",
+          "adp": 33.3,
+          "base_value": 62.1
+        },
+        {
+          "player": "Kyren Williams",
+          "pos": "RB",
+          "adp": 32.8,
+          "base_value": 60.9
+        }
+      ],
+      "reach_picks": -1.1,
+      "reach": false,
+      "redundant": false,
+      "premium_early": true,
+      "fall": true,
+      "objected": true
+    },
+    {
+      "round": 4,
+      "overall_pick": 32,
+      "pick": {
+        "player": "Ladd McConkey",
+        "pos": "WR",
+        "adp": 36.7
+      },
+      "roster_before": {
+        "RB": 2,
+        "QB": 1
+      },
+      "base_value": 51.57351767613723,
+      "changed_by": [
+        "board_only",
+        "context_off",
+        "window_none"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7
+        },
+        "starter_aware": {
+          "player": "Ladd McConkey",
+          "pos": "WR",
+          "adp": 36.7
+        },
+        "window_none": {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7
+        },
+        "window_half": {
+          "player": "Ladd McConkey",
+          "pos": "WR",
+          "adp": 36.7
+        },
+        "window_open": {
+          "player": "Ladd McConkey",
+          "pos": "WR",
+          "adp": 36.7
+        },
+        "board_only": {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7
+        }
+      },
+      "best_by_adp": {
+        "player": "Nico Collins",
+        "pos": "WR",
+        "adp": 23.4
+      },
+      "context_magnitude": {
+        "eff_base_sd": 49.17847466885668,
+        "context_delta_sd": 4.147884929979924,
+        "context_delta_absmax": 16.62511147810374,
+        "ratio_sd": 0.08434350511905284,
+        "contended_spread": 20.0,
+        "context_delta_absmax_contended": 8.454592999768277,
+        "ratio_contended": 0.42272964998841384
+      },
+      "top5_base_value": [
+        {
+          "player": "Trey McBride",
+          "pos": "TE",
+          "adp": 28.7,
+          "base_value": 73.8
+        },
+        {
+          "player": "Drake Maye",
+          "pos": "QB",
+          "adp": 63.3,
+          "base_value": 68.5
+        },
+        {
+          "player": "DeVonta Smith",
+          "pos": "WR",
+          "adp": 28.2,
+          "base_value": 62.5
+        },
+        {
+          "player": "Kyren Williams",
+          "pos": "RB",
+          "adp": 32.8,
+          "base_value": 60.9
+        },
+        {
+          "player": "Colston Loveland",
+          "pos": "TE",
+          "adp": 46.8,
+          "base_value": 59.6
+        }
+      ],
+      "reach_picks": 4.7,
+      "reach": true,
+      "redundant": false,
+      "premium_early": false,
+      "fall": false,
+      "objected": true
+    },
+    {
+      "round": 5,
+      "overall_pick": 49,
+      "pick": {
+        "player": "Travis Etienne Jr.",
+        "pos": "RB",
+        "adp": 39.9
+      },
+      "roster_before": {
+        "RB": 2,
+        "QB": 1,
+        "WR": 1
+      },
+      "base_value": 58.41695874512804,
+      "changed_by": [
+        "board_only"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Travis Etienne Jr.",
+          "pos": "RB",
+          "adp": 39.9
+        },
+        "starter_aware": {
+          "player": "Travis Etienne Jr.",
+          "pos": "RB",
+          "adp": 39.9
+        },
+        "window_none": {
+          "player": "Travis Etienne Jr.",
+          "pos": "RB",
+          "adp": 39.9
+        },
+        "window_half": {
+          "player": "Travis Etienne Jr.",
+          "pos": "RB",
+          "adp": 39.9
+        },
+        "window_open": {
+          "player": "Travis Etienne Jr.",
+          "pos": "RB",
+          "adp": 39.9
+        },
+        "board_only": {
+          "player": "Kyren Williams",
+          "pos": "RB",
+          "adp": 32.8
+        }
+      },
+      "best_by_adp": {
+        "player": "Kyren Williams",
+        "pos": "RB",
+        "adp": 32.8
+      },
+      "context_magnitude": {
+        "eff_base_sd": 45.42059479092136,
+        "context_delta_sd": 4.135539180608867,
+        "context_delta_absmax": 20.059871310668072,
+        "ratio_sd": 0.09104986844944346,
+        "contended_spread": 18.0,
+        "context_delta_absmax_contended": 6.421387581231489,
+        "ratio_contended": 0.3567437545128605
+      },
+      "top5_base_value": [
+        {
+          "player": "Kyren Williams",
+          "pos": "RB",
+          "adp": 32.8,
+          "base_value": 60.9
+        },
+        {
+          "player": "Travis Etienne Jr.",
+          "pos": "RB",
+          "adp": 39.9,
+          "base_value": 58.4
+        },
+        {
+          "player": "Tyler Warren",
+          "pos": "TE",
+          "adp": 54.3,
+          "base_value": 57.7
+        },
+        {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2,
+          "base_value": 57.5
+        },
+        {
+          "player": "Jameson Williams",
+          "pos": "WR",
+          "adp": 48.5,
+          "base_value": 57.4
+        }
+      ],
+      "reach_picks": -9.1,
+      "reach": false,
+      "redundant": false,
+      "premium_early": false,
+      "fall": true,
+      "objected": false
+    },
+    {
+      "round": 6,
+      "overall_pick": 52,
+      "pick": {
+        "player": "TreVeyon Henderson",
+        "pos": "RB",
+        "adp": 58.0
+      },
+      "roster_before": {
+        "RB": 3,
+        "QB": 1,
+        "WR": 1
+      },
+      "base_value": 51.08825499011009,
+      "changed_by": [
+        "board_only",
+        "context_off",
+        "starter_aware",
+        "window_half",
+        "window_none"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Kyren Williams",
+          "pos": "RB",
+          "adp": 32.8
+        },
+        "starter_aware": {
+          "player": "Jameson Williams",
+          "pos": "WR",
+          "adp": 48.5
+        },
+        "window_none": {
+          "player": "Kyren Williams",
+          "pos": "RB",
+          "adp": 32.8
+        },
+        "window_half": {
+          "player": "Tyler Warren",
+          "pos": "TE",
+          "adp": 54.3
+        },
+        "window_open": {
+          "player": "TreVeyon Henderson",
+          "pos": "RB",
+          "adp": 58.0
+        },
+        "board_only": {
+          "player": "Kyren Williams",
+          "pos": "RB",
+          "adp": 32.8
+        }
+      },
+      "best_by_adp": {
+        "player": "Kyren Williams",
+        "pos": "RB",
+        "adp": 32.8
+      },
+      "context_magnitude": {
+        "eff_base_sd": 44.78444923806016,
+        "context_delta_sd": 4.1470414708951875,
+        "context_delta_absmax": 19.647930566062954,
+        "ratio_sd": 0.09260003285628922,
+        "contended_spread": 21.0,
+        "context_delta_absmax_contended": 6.421387581231489,
+        "ratio_contended": 0.3057803610110233
+      },
+      "top5_base_value": [
+        {
+          "player": "Kyren Williams",
+          "pos": "RB",
+          "adp": 32.8,
+          "base_value": 60.9
+        },
+        {
+          "player": "Tyler Warren",
+          "pos": "TE",
+          "adp": 54.3,
+          "base_value": 57.7
+        },
+        {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2,
+          "base_value": 57.5
+        },
+        {
+          "player": "Jameson Williams",
+          "pos": "WR",
+          "adp": 48.5,
+          "base_value": 57.4
+        },
+        {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9,
+          "base_value": 55.9
+        }
+      ],
+      "reach_picks": 6.0,
+      "reach": true,
+      "redundant": false,
+      "premium_early": false,
+      "fall": false,
+      "objected": true
+    },
+    {
+      "round": 7,
+      "overall_pick": 69,
+      "pick": {
+        "player": "Dak Prescott",
+        "pos": "QB",
+        "adp": 59.7
+      },
+      "roster_before": {
+        "RB": 4,
+        "QB": 1,
+        "WR": 1
+      },
+      "base_value": 42.847542513809714,
+      "changed_by": [
+        "board_only",
+        "context_off",
+        "starter_aware",
+        "window_open"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9
+        },
+        "starter_aware": {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9
+        },
+        "window_none": {
+          "player": "Dak Prescott",
+          "pos": "QB",
+          "adp": 59.7
+        },
+        "window_half": {
+          "player": "Dak Prescott",
+          "pos": "QB",
+          "adp": 59.7
+        },
+        "window_open": {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9
+        },
+        "board_only": {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2
+        }
+      },
+      "best_by_adp": {
+        "player": "Lamar Jackson",
+        "pos": "QB",
+        "adp": 55.8
+      },
+      "context_magnitude": {
+        "eff_base_sd": 42.033734836129675,
+        "context_delta_sd": 3.920578587150302,
+        "context_delta_absmax": 14.535695237720859,
+        "ratio_sd": 0.09327219202468795,
+        "contended_spread": 29.0,
+        "context_delta_absmax_contended": 9.500041637326609,
+        "ratio_contended": 0.3275876426664348
+      },
+      "top5_base_value": [
+        {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2,
+          "base_value": 57.5
+        },
+        {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9,
+          "base_value": 55.9
+        },
+        {
+          "player": "Trevor Lawrence",
+          "pos": "QB",
+          "adp": 84.9,
+          "base_value": 53.4
+        },
+        {
+          "player": "Jalen Hurts",
+          "pos": "QB",
+          "adp": 95.6,
+          "base_value": 51.0
+        },
+        {
+          "player": "Jake Ferguson",
+          "pos": "TE",
+          "adp": 118.0,
+          "base_value": 43.4
+        }
+      ],
+      "reach_picks": -9.3,
+      "reach": false,
+      "redundant": true,
+      "premium_early": false,
+      "fall": true,
+      "objected": true
+    },
+    {
+      "round": 8,
+      "overall_pick": 72,
+      "pick": {
+        "player": "Harold Fannin Jr.",
+        "pos": "TE",
+        "adp": 68.9
+      },
+      "roster_before": {
+        "RB": 4,
+        "QB": 2,
+        "WR": 1
+      },
+      "base_value": 55.8723072585483,
+      "changed_by": [
+        "board_only"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9
+        },
+        "starter_aware": {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9
+        },
+        "window_none": {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9
+        },
+        "window_half": {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9
+        },
+        "window_open": {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9
+        },
+        "board_only": {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2
+        }
+      },
+      "best_by_adp": {
+        "player": "Marvin Harrison Jr.",
+        "pos": "WR",
+        "adp": 64.4
+      },
+      "context_magnitude": {
+        "eff_base_sd": 39.004012907542496,
+        "context_delta_sd": 4.044416763894919,
+        "context_delta_absmax": 14.566943986297787,
+        "ratio_sd": 0.1036923245175324,
+        "contended_spread": 36.0,
+        "context_delta_absmax_contended": 9.500041637326609,
+        "ratio_contended": 0.2638900454812947
+      },
+      "top5_base_value": [
+        {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2,
+          "base_value": 57.5
+        },
+        {
+          "player": "Harold Fannin Jr.",
+          "pos": "TE",
+          "adp": 68.9,
+          "base_value": 55.9
+        },
+        {
+          "player": "Jake Ferguson",
+          "pos": "TE",
+          "adp": 118.0,
+          "base_value": 43.4
+        },
+        {
+          "player": "Travis Kelce",
+          "pos": "TE",
+          "adp": 93.9,
+          "base_value": 40.7
+        },
+        {
+          "player": "Dallas Goedert",
+          "pos": "TE",
+          "adp": 127.4,
+          "base_value": 31.9
+        }
+      ],
+      "reach_picks": -3.1,
+      "reach": false,
+      "redundant": false,
+      "premium_early": false,
+      "fall": true,
+      "objected": false
+    },
+    {
+      "round": 9,
+      "overall_pick": 89,
+      "pick": {
+        "player": "Kyle Pitts Sr.",
+        "pos": "TE",
+        "adp": 85.2
+      },
+      "roster_before": {
+        "RB": 4,
+        "QB": 2,
+        "WR": 1,
+        "TE": 1
+      },
+      "base_value": 57.48444438090771,
+      "changed_by": [],
+      "alternatives": {
+        "context_off": {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2
+        },
+        "starter_aware": {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2
+        },
+        "window_none": {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2
+        },
+        "window_half": {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2
+        },
+        "window_open": {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2
+        },
+        "board_only": {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2
+        }
+      },
+      "best_by_adp": {
+        "player": "Parker Washington",
+        "pos": "WR",
+        "adp": 73.4
+      },
+      "context_magnitude": {
+        "eff_base_sd": 37.738154005381986,
+        "context_delta_sd": 3.9245791894847097,
+        "context_delta_absmax": 14.248512163180504,
+        "ratio_sd": 0.10399499638813839,
+        "contended_spread": 42.0,
+        "context_delta_absmax_contended": 9.980614854562342,
+        "ratio_contended": 0.2376336870133891
+      },
+      "top5_base_value": [
+        {
+          "player": "Kyle Pitts Sr.",
+          "pos": "TE",
+          "adp": 85.2,
+          "base_value": 57.5
+        },
+        {
+          "player": "Jake Ferguson",
+          "pos": "TE",
+          "adp": 118.0,
+          "base_value": 43.4
+        },
+        {
+          "player": "Travis Kelce",
+          "pos": "TE",
+          "adp": 93.9,
+          "base_value": 40.7
+        },
+        {
+          "player": "Dallas Goedert",
+          "pos": "TE",
+          "adp": 127.4,
+          "base_value": 31.9
+        },
+        {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4,
+          "base_value": 21.0
+        }
+      ],
+      "reach_picks": -3.8,
+      "reach": false,
+      "redundant": true,
+      "premium_early": false,
+      "fall": true,
+      "objected": true
+    },
+    {
+      "round": 10,
+      "overall_pick": 92,
+      "pick": {
+        "player": "Josh Downs",
+        "pos": "WR",
+        "adp": 86.4
+      },
+      "roster_before": {
+        "RB": 4,
+        "QB": 2,
+        "TE": 2,
+        "WR": 1
+      },
+      "base_value": 0.0,
+      "changed_by": [
+        "starter_aware"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Josh Downs",
+          "pos": "WR",
+          "adp": 86.4
+        },
+        "starter_aware": {
+          "player": "Rachaad White",
+          "pos": "RB",
+          "adp": 101.1
+        },
+        "window_none": {
+          "player": "Josh Downs",
+          "pos": "WR",
+          "adp": 86.4
+        },
+        "window_half": {
+          "player": "Josh Downs",
+          "pos": "WR",
+          "adp": 86.4
+        },
+        "window_open": {
+          "player": "Josh Downs",
+          "pos": "WR",
+          "adp": 86.4
+        },
+        "board_only": {
+          "player": "Josh Downs",
+          "pos": "WR",
+          "adp": 86.4
+        }
+      },
+      "best_by_adp": {
+        "player": "Parker Washington",
+        "pos": "WR",
+        "adp": 73.4
+      },
+      "context_magnitude": {
+        "eff_base_sd": 33.68335810891868,
+        "context_delta_sd": 3.9200737329653825,
+        "context_delta_absmax": 14.248512163180504,
+        "ratio_sd": 0.11638013407954788,
+        "contended_spread": 23.0,
+        "context_delta_absmax_contended": 8.25678790995109,
+        "ratio_contended": 0.35899077869352564
+      },
+      "top5_base_value": [
+        {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4,
+          "base_value": 21.0
+        },
+        {
+          "player": "Jason Myers",
+          "pos": "K",
+          "adp": 145.6,
+          "base_value": 18.4
+        },
+        {
+          "player": "Ka'imi Fairbairn",
+          "pos": "K",
+          "adp": 143.5,
+          "base_value": 12.5
+        },
+        {
+          "player": "Cameron Dicker",
+          "pos": "K",
+          "adp": 140.3,
+          "base_value": 12.1
+        },
+        {
+          "player": "Harrison Mevis",
+          "pos": "K",
+          "adp": 149.9,
+          "base_value": 4.9
+        }
+      ],
+      "reach_picks": -5.6,
+      "reach": false,
+      "redundant": false,
+      "premium_early": false,
+      "fall": true,
+      "objected": false
+    },
+    {
+      "round": 11,
+      "overall_pick": 109,
+      "pick": {
+        "player": "Romeo Doubs",
+        "pos": "WR",
+        "adp": 103.8
+      },
+      "roster_before": {
+        "RB": 4,
+        "QB": 2,
+        "WR": 2,
+        "TE": 2
+      },
+      "base_value": -8.838747841059117,
+      "changed_by": [
+        "board_only",
+        "starter_aware"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Romeo Doubs",
+          "pos": "WR",
+          "adp": 103.8
+        },
+        "starter_aware": {
+          "player": "Rachaad White",
+          "pos": "RB",
+          "adp": 101.1
+        },
+        "window_none": {
+          "player": "Romeo Doubs",
+          "pos": "WR",
+          "adp": 103.8
+        },
+        "window_half": {
+          "player": "Romeo Doubs",
+          "pos": "WR",
+          "adp": 103.8
+        },
+        "window_open": {
+          "player": "Romeo Doubs",
+          "pos": "WR",
+          "adp": 103.8
+        },
+        "board_only": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        }
+      },
+      "best_by_adp": {
+        "player": "Brian Thomas Jr.",
+        "pos": "WR",
+        "adp": 83.3
+      },
+      "context_magnitude": {
+        "eff_base_sd": 34.08648429396191,
+        "context_delta_sd": 3.609037117978841,
+        "context_delta_absmax": 12.724119761597157,
+        "ratio_sd": 0.10587883123570321,
+        "contended_spread": 32.41306055557601,
+        "context_delta_absmax_contended": 1.5513133732052502,
+        "ratio_contended": 0.047860749544009915
+      },
+      "top5_base_value": [
+        {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4,
+          "base_value": 21.0
+        },
+        {
+          "player": "Jason Myers",
+          "pos": "K",
+          "adp": 145.6,
+          "base_value": 18.4
+        },
+        {
+          "player": "Ka'imi Fairbairn",
+          "pos": "K",
+          "adp": 143.5,
+          "base_value": 12.5
+        },
+        {
+          "player": "Cameron Dicker",
+          "pos": "K",
+          "adp": 140.3,
+          "base_value": 12.1
+        },
+        {
+          "player": "Harrison Mevis",
+          "pos": "K",
+          "adp": 149.9,
+          "base_value": 4.9
+        }
+      ],
+      "reach_picks": -5.2,
+      "reach": false,
+      "redundant": false,
+      "premium_early": false,
+      "fall": true,
+      "objected": false
+    },
+    {
+      "round": 12,
+      "overall_pick": 112,
+      "pick": {
+        "player": "Jerry Jeudy",
+        "pos": "WR",
+        "adp": 137.7
+      },
+      "roster_before": {
+        "RB": 4,
+        "WR": 3,
+        "QB": 2,
+        "TE": 2
+      },
+      "base_value": -9.38608875111153,
+      "changed_by": [
+        "board_only",
+        "context_off",
+        "starter_aware",
+        "window_half",
+        "window_none"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        },
+        "starter_aware": {
+          "player": "Rachaad White",
+          "pos": "RB",
+          "adp": 101.1
+        },
+        "window_none": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        },
+        "window_half": {
+          "player": "Wan'Dale Robinson",
+          "pos": "WR",
+          "adp": 89.0
+        },
+        "window_open": {
+          "player": "Jerry Jeudy",
+          "pos": "WR",
+          "adp": 137.7
+        },
+        "board_only": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        }
+      },
+      "best_by_adp": {
+        "player": "Brian Thomas Jr.",
+        "pos": "WR",
+        "adp": 83.3
+      },
+      "context_magnitude": {
+        "eff_base_sd": 33.872320565743244,
+        "context_delta_sd": 3.605803295867091,
+        "context_delta_absmax": 13.128403448794879,
+        "ratio_sd": 0.10645279790820764,
+        "contended_spread": 38.088001494283716,
+        "context_delta_absmax_contended": 2.628398035938141,
+        "ratio_contended": 0.06900855736241802
+      },
+      "top5_base_value": [
+        {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4,
+          "base_value": 21.0
+        },
+        {
+          "player": "Jason Myers",
+          "pos": "K",
+          "adp": 145.6,
+          "base_value": 18.4
+        },
+        {
+          "player": "Ka'imi Fairbairn",
+          "pos": "K",
+          "adp": 143.5,
+          "base_value": 12.5
+        },
+        {
+          "player": "Cameron Dicker",
+          "pos": "K",
+          "adp": 140.3,
+          "base_value": 12.1
+        },
+        {
+          "player": "Harrison Mevis",
+          "pos": "K",
+          "adp": 149.9,
+          "base_value": 4.9
+        }
+      ],
+      "reach_picks": 25.7,
+      "reach": true,
+      "redundant": false,
+      "premium_early": false,
+      "fall": false,
+      "objected": true
+    },
+    {
+      "round": 13,
+      "overall_pick": 129,
+      "pick": {
+        "player": "Makai Lemon",
+        "pos": "WR",
+        "adp": 106.3
+      },
+      "roster_before": {
+        "RB": 4,
+        "WR": 4,
+        "QB": 2,
+        "TE": 2
+      },
+      "base_value": -5.8914239880817405,
+      "changed_by": [
+        "starter_aware"
+      ],
+      "alternatives": {
+        "context_off": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        },
+        "starter_aware": {
+          "player": "Tyjae Spears",
+          "pos": "RB",
+          "adp": 128.9
+        },
+        "window_none": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        },
+        "window_half": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        },
+        "window_open": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        },
+        "board_only": {
+          "player": "Makai Lemon",
+          "pos": "WR",
+          "adp": 106.3
+        }
+      },
+      "best_by_adp": {
+        "player": "Jordan Addison",
+        "pos": "WR",
+        "adp": 92.6
+      },
+      "context_magnitude": {
+        "eff_base_sd": 34.59858555214305,
+        "context_delta_sd": 3.498211540159693,
+        "context_delta_absmax": 13.33440929538611,
+        "ratio_sd": 0.10110851308899858,
+        "contended_spread": 39.7,
+        "context_delta_absmax_contended": 0.0,
+        "ratio_contended": 0.0
+      },
+      "top5_base_value": [
+        {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4,
+          "base_value": 21.0
+        },
+        {
+          "player": "Jason Myers",
+          "pos": "K",
+          "adp": 145.6,
+          "base_value": 18.4
+        },
+        {
+          "player": "Ka'imi Fairbairn",
+          "pos": "K",
+          "adp": 143.5,
+          "base_value": 12.5
+        },
+        {
+          "player": "Cameron Dicker",
+          "pos": "K",
+          "adp": 140.3,
+          "base_value": 12.1
+        },
+        {
+          "player": "Harrison Mevis",
+          "pos": "K",
+          "adp": 149.9,
+          "base_value": 4.9
+        }
+      ],
+      "reach_picks": -22.7,
+      "reach": false,
+      "redundant": false,
+      "premium_early": false,
+      "fall": true,
+      "objected": false
+    },
+    {
+      "round": 14,
+      "overall_pick": 132,
+      "pick": {
+        "player": "Brandon Aubrey",
+        "pos": "K",
+        "adp": 128.4
+      },
+      "roster_before": {
+        "WR": 5,
+        "RB": 4,
+        "QB": 2,
+        "TE": 2
+      },
+      "base_value": 21.0,
+      "changed_by": [],
+      "alternatives": {
+        "context_off": {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4
+        },
+        "starter_aware": {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4
+        },
+        "window_none": {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4
+        },
+        "window_half": {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4
+        },
+        "window_open": {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4
+        },
+        "board_only": {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4
+        }
+      },
+      "best_by_adp": {
+        "player": "Seattle Defense",
+        "pos": "DST",
+        "adp": 94.7
+      },
+      "context_magnitude": {
+        "eff_base_sd": 40.13674177317094,
+        "context_delta_sd": 0.0,
+        "context_delta_absmax": 0.0,
+        "ratio_sd": 0.0,
+        "contended_spread": 39.7,
+        "context_delta_absmax_contended": 0.0,
+        "ratio_contended": 0.0
+      },
+      "top5_base_value": [
+        {
+          "player": "Brandon Aubrey",
+          "pos": "K",
+          "adp": 128.4,
+          "base_value": 21.0
+        },
+        {
+          "player": "Jason Myers",
+          "pos": "K",
+          "adp": 145.6,
+          "base_value": 18.4
+        },
+        {
+          "player": "Ka'imi Fairbairn",
+          "pos": "K",
+          "adp": 143.5,
+          "base_value": 12.5
+        },
+        {
+          "player": "Cameron Dicker",
+          "pos": "K",
+          "adp": 140.3,
+          "base_value": 12.1
+        },
+        {
+          "player": "Harrison Mevis",
+          "pos": "K",
+          "adp": 149.9,
+          "base_value": 4.9
+        }
+      ],
+      "reach_picks": -3.6,
+      "reach": false,
+      "redundant": false,
+      "premium_early": false,
+      "fall": true,
+      "objected": false
+    },
+    {
+      "round": 15,
+      "overall_pick": 149,
+      "pick": {
+        "player": "Dallas Defense",
+        "pos": "DST",
+        "adp": 139.3
+      },
+      "roster_before": {
+        "WR": 5,
+        "RB": 4,
+        "QB": 2,
+        "TE": 2,
+        "K": 1
+      },
+      "base_value": NaN,
+      "changed_by": [],
+      "alternatives": {
+        "context_off": {
+          "player": "Dallas Defense",
+          "pos": "DST",
+          "adp": 139.3
+        },
+        "starter_aware": {
+          "player": "Dallas Defense",
+          "pos": "DST",
+          "adp": 139.3
+        },
+        "window_none": {
+          "player": "Dallas Defense",
+          "pos": "DST",
+          "adp": 139.3
+        },
+        "window_half": {
+          "player": "Dallas Defense",
+          "pos": "DST",
+          "adp": 139.3
+        },
+        "window_open": {
+          "player": "Dallas Defense",
+          "pos": "DST",
+          "adp": 139.3
+        },
+        "board_only": {
+          "player": "Dallas Defense",
+          "pos": "DST",
+          "adp": 139.3
+        }
+      },
+      "best_by_adp": {
+        "player": "Dallas Defense",
+        "pos": "DST",
+        "adp": 139.3
+      },
+      "context_magnitude": {
+        "eff_base_sd": 12.497228095028575,
+        "context_delta_sd": 0.0,
+        "context_delta_absmax": 0.0,
+        "ratio_sd": 0.0,
+        "contended_spread": 29.0,
+        "context_delta_absmax_contended": 0.0,
+        "ratio_contended": 0.0
+      },
+      "top5_base_value": [
+        {
+          "player": "Dallas Defense",
+          "pos": "DST",
+          "adp": 139.3,
+          "base_value": NaN
+        },
+        {
+          "player": "Detroit Defense",
+          "pos": "DST",
+          "adp": 140.3,
+          "base_value": NaN
+        },
+        {
+          "player": "Minnesota Defense",
+          "pos": "DST",
+          "adp": 143.2,
+          "base_value": NaN
+        },
+        {
+          "player": "Cincinnati Defense",
+          "pos": "DST",
+          "adp": 149.6,
+          "base_value": NaN
+        },
+        {
+          "player": "Pittsburgh Defense",
+          "pos": "DST",
+          "adp": 151.3,
+          "base_value": NaN
+        }
+      ],
+      "reach_picks": -9.7,
+      "reach": false,
+      "redundant": false,
+      "premium_early": false,
+      "fall": true,
+      "objected": false
+    }
+  ],
+  "n_picks": 15,
+  "n_objected": 8,
+  "slot_driven_share": 0.375,
+  "b1_verdict": "INCONCLUSIVE",
+  "changed_by_knob_all_picks": {
+    "context_off": 6,
+    "starter_aware": 6,
+    "window_none": 6,
+    "window_half": 4,
+    "window_open": 2,
+    "board_only": 10
+  },
+  "changed_by_knob_objected": {
+    "context_off": 6,
+    "starter_aware": 3,
+    "window_none": 6,
+    "window_half": 4,
+    "window_open": 2,
+    "board_only": 7
+  },
+  "context_magnitude_mean": {
+    "ratio_sd": 0.0830100908279071,
+    "absmax_ranks": 13.127185094209947,
+    "contended_k": 10,
+    "contended_spread": 27.126737469990648,
+    "absmax_ranks_contended": 6.3440465896774025,
+    "ratio_contended": 0.3446155138968641,
+    "n_teams_multiplier": 10
+  },
+  "shipped_mean_reach": -1.2666666666666666,
+  "reach_by_knob": {
+    "context_off": {
+      "mean_reach": -4.9466666666666645,
+      "delta_vs_shipped": -3.679999999999998
+    },
+    "starter_aware": {
+      "mean_reach": -1.4199999999999986,
+      "delta_vs_shipped": -0.153333333333332
+    },
+    "window_none": {
+      "mean_reach": -7.079999999999999,
+      "delta_vs_shipped": -5.813333333333333
+    },
+    "window_half": {
+      "mean_reach": -5.159999999999998,
+      "delta_vs_shipped": -3.8933333333333318
+    },
+    "window_open": {
+      "mean_reach": -1.053333333333332,
+      "delta_vs_shipped": 0.2133333333333347
+    },
+    "board_only": {
+      "mean_reach": -3.0266666666666655,
+      "delta_vs_shipped": -1.759999999999999
+    }
+  },
+  "static_verdict_read": {
+    "available": true,
+    "picks": [
+      {
+        "round": 1,
+        "player": "Justin Jefferson",
+        "pos": "WR",
+        "adp": 10.3,
+        "reach_picks": 1.3,
+        "verdict": "bad",
+        "reason": "could've had a higher upside RB or WR in rd 1"
+      },
+      {
+        "round": 2,
+        "player": "Zay Flowers",
+        "pos": "WR",
+        "adp": 25.6,
+        "reach_picks": 13.6,
+        "verdict": "bad",
+        "reason": "much much better rb or wr available in rd 2"
+      },
+      {
+        "round": 3,
+        "player": "Josh Allen",
+        "pos": "QB",
+        "adp": 27.9,
+        "reach_picks": -1.1,
+        "verdict": "bad",
+        "reason": "fine, but late-round QBs tend to be much better value"
+      },
+      {
+        "round": 4,
+        "player": "Colston Loveland",
+        "pos": "TE",
+        "adp": 46.8,
+        "reach_picks": 14.8,
+        "verdict": "bad",
+        "reason": "classic TE premium; value hawk should consider it less"
+      },
+      {
+        "round": 5,
+        "player": "Emeka Egbuka",
+        "pos": "WR",
+        "adp": 45.5,
+        "reach_picks": -3.5,
+        "verdict": "good",
+        "reason": "good"
+      },
+      {
+        "round": 6,
+        "player": "Bhayshul Tuten",
+        "pos": "RB",
+        "adp": 60.2,
+        "reach_picks": 8.2,
+        "verdict": "bad",
+        "reason": "upside but an overpay when other QBs/TEs were the better option"
+      },
+      {
+        "round": 7,
+        "player": "TreVeyon Henderson",
+        "pos": "RB",
+        "adp": 58.0,
+        "reach_picks": -11.0,
+        "verdict": "good",
+        "reason": "good"
+      },
+      {
+        "round": 8,
+        "player": "Drake Maye",
+        "pos": "QB",
+        "adp": 63.3,
+        "reach_picks": -8.7,
+        "verdict": "good",
+        "reason": "a good value pick"
+      },
+      {
+        "round": 9,
+        "player": "Kyle Pitts Sr.",
+        "pos": "TE",
+        "adp": 85.2,
+        "reach_picks": -3.8,
+        "verdict": "bad",
+        "reason": "decent upside but a waste \u2014 already spent early on a TE starter"
+      },
+      {
+        "round": 10,
+        "player": "Jadarian Price",
+        "pos": "RB",
+        "adp": 72.8,
+        "reach_picks": -19.2,
+        "verdict": "good",
+        "reason": "good"
+      },
+      {
+        "round": 11,
+        "player": "Jayden Reed",
+        "pos": "WR",
+        "adp": 84.9,
+        "reach_picks": -24.1,
+        "verdict": "neutral",
+        "reason": "good not great evaluation of talent and situation"
+      },
+      {
+        "round": 12,
+        "player": "Jonathon Brooks",
+        "pos": "RB",
+        "adp": 127.3,
+        "reach_picks": 15.3,
+        "verdict": "neutral",
+        "reason": "good not great evaluation of talent and situation"
+      },
+      {
+        "round": 13,
+        "player": "Rashid Shaheed",
+        "pos": "WR",
+        "adp": 130.7,
+        "reach_picks": 1.7,
+        "verdict": "neutral",
+        "reason": "good not great evaluation of talent and situation"
+      },
+      {
+        "round": 14,
+        "player": "Brandon Aubrey",
+        "pos": "K",
+        "adp": 128.4,
+        "reach_picks": -3.6,
+        "verdict": "neutral",
+        "reason": "good not great evaluation of talent and situation"
+      },
+      {
+        "round": 15,
+        "player": "Jacksonville Defense",
+        "pos": "DST",
+        "adp": 132.4,
+        "reach_picks": -16.6,
+        "verdict": "neutral",
+        "reason": "good not great evaluation of talent and situation"
+      }
+    ],
+    "mean_reach_by_verdict": {
+      "bad": 5.5,
+      "good": -10.6,
+      "neutral": -5.460000000000001
+    },
+    "corr_reach_vs_bad": 0.7670566717946737,
+    "n_bad": 6,
+    "n_good": 4
+  },
+  "bars": {
+    "B1": {
+      "pass": true,
+      "slot_driven_share": 0.375,
+      "verdict": "INCONCLUSIVE"
+    }
+  }
+}

@@ -41,7 +41,11 @@ from fantasy_quant.adp import boards
 from fantasy_quant.adp.drift_panel import build_drift_panel
 from fantasy_quant.draft import mock, optimizer
 from fantasy_quant.draft.config import DraftConfig
-from fantasy_quant.draft.personalities import PRIVATE_KAPPA, REALISTIC_ROOM
+from fantasy_quant.draft.personalities import (
+    PRIVATE_KAPPA,
+    REALISTIC_ROOM,
+    value_hawk_budget,
+)
 
 DB = Path("data/fantasy_quant.duckdb")
 CACHE = Path("analysis/cache")
@@ -79,6 +83,8 @@ def main() -> None:
                          "base_value; 0.0 = pure starting-lineup marginal")
     ap.add_argument("--room", nargs="*", default=None,
                     help="T30: override the ten-seat mix (e.g. swap `autopilot` for `chalk`)")
+    ap.add_argument("--vh-window", type=float, default=None,
+                    help="the value hawk's reach window multiple (VH.3); default = the shipped 1.0")
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args()
     out = args.out or OUT_DIR / f"mock_room_bars_{args.label}.json"
@@ -89,7 +95,26 @@ def main() -> None:
         model.width_curve = replace(model.width_curve, base=float(args.width_base))
     kw = {} if args.kappa is None else {"kappa": float(args.kappa)}
     mix = tuple(args.room) if args.room else REALISTIC_ROOM
-    room = mock.full_room(mix, n_teams=10, seed=args.room_seed)
+
+    # VH.3: the value hawk's reach window, the one knob its budget exposes. `None` leaves the seat
+    # exactly as `personalities()` ships it (`value_hawk_budget(1.0)`), so an unflagged run stays a
+    # true baseline — same contract as `--bench-weight` below.
+    #
+    # ⚠ This MUST be a function applied to every room this harness builds, not a one-off rewrite of
+    # the `room` below. `--shuffle-room` re-draws the seating **per seed** by calling
+    # `mock.full_room(mix, ...)` again, so a room mutated once here never reaches the shuffled path
+    # — which is the path every VH/T24 measurement uses. Caught because the w=0.5 sheet came back
+    # *byte-identical* to the shipped one, bin values included, while VH.3 had already measured the
+    # window moving mean reach 3.03 -> 0.70. **The artifact recorded `vh_window: 0.5` the whole
+    # time**: a config block echoing a flag is not evidence the flag was applied (T22's rule, and
+    # UI-1's "a grep cannot tell doing from describing", arriving in a harness).
+    def with_window(r):
+        if args.vh_window is None:
+            return r
+        return tuple(replace(p, reach_budget=value_hawk_budget(float(args.vh_window)))
+                     if p.name == "value_hawk" else p for p in r)
+
+    room = with_window(mock.full_room(mix, n_teams=10, seed=args.room_seed))
     seasons = tuple(args.seasons) if args.seasons else MATCHED_SEASONS
     # ⚠ The room's κ lives on the **model** (T24 ships it beside the width curve); `PRIVATE_KAPPA`
     # is only the no-op fallback for a hand-built model. Reading the constant here would label a
@@ -135,7 +160,8 @@ def main() -> None:
         # prevent. Run the pair.
         if args.shuffle_room:
             def seating(s: int, mix=mix):
-                return mock.full_room(mix, n_teams=10, seed=args.room_seed + 1000 * s)
+                return with_window(
+                    mock.full_room(mix, n_teams=10, seed=args.room_seed + 1000 * s))
             per = [mock.batch_drafts(
                 attached, seating(s), model, season=season, seeds=[s], n_teams=10,
                 rounds=args.rounds, board_source=src, risk=risk, **kw)
@@ -251,6 +277,9 @@ def main() -> None:
         "room": [p.name for p in room],
         "config": {"seeds": args.seeds, "rounds": args.rounds, "seasons": list(seasons),
                    "bench_weight": (1.0 if args.bench_weight is None else float(args.bench_weight)),
+                   # stated, not defaulted: a sheet that does not record the window it ran is the
+                   # mislabelled-artifact failure the kappa note above is about (F.5).
+                   "vh_window": (1.0 if args.vh_window is None else float(args.vh_window)),
                    "mix": list(mix),
                    "room_seed": args.room_seed, "width_curve": model.width_curve.to_dict(),
                    "kappa": kappa, "shuffle_room": bool(args.shuffle_room)},

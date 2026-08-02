@@ -1,0 +1,261 @@
+{
+  "generated": "2026-08-02T03:44:49.506340+00:00",
+  "season": 2026,
+  "board_vintage": "ffc-20260801",
+  "seeds": 8,
+  "rounds": 15,
+  "comparisons": [
+    {
+      "k": 0,
+      "room_size": 10,
+      "old_divisor": 10,
+      "new_divisor": 10,
+      "n_picks": 1200,
+      "n_different": 0,
+      "share_different": 0.0,
+      "identical": true,
+      "per_seed": [
+        {
+          "seed": 0,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 1,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 2,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 3,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 4,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 5,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 6,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 7,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        }
+      ]
+    },
+    {
+      "k": 1,
+      "room_size": 9,
+      "old_divisor": 9,
+      "new_divisor": 10,
+      "n_picks": 1200,
+      "n_different": 248,
+      "share_different": 0.20666666666666667,
+      "identical": false,
+      "per_seed": [
+        {
+          "seed": 0,
+          "n_picks": 150,
+          "n_different": 85,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 1,
+          "n_picks": 150,
+          "n_different": 91,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 2,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 3,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 4,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 5,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 6,
+          "n_picks": 150,
+          "n_different": 72,
+          "vh_seat_room_index": 8
+        },
+        {
+          "seed": 7,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 8
+        }
+      ]
+    },
+    {
+      "k": 2,
+      "room_size": 8,
+      "old_divisor": 8,
+      "new_divisor": 10,
+      "n_picks": 1200,
+      "n_different": 122,
+      "share_different": 0.10166666666666667,
+      "identical": false,
+      "per_seed": [
+        {
+          "seed": 0,
+          "n_picks": 150,
+          "n_different": 5,
+          "vh_seat_room_index": 7
+        },
+        {
+          "seed": 1,
+          "n_picks": 150,
+          "n_different": 35,
+          "vh_seat_room_index": 7
+        },
+        {
+          "seed": 2,
+          "n_picks": 150,
+          "n_different": 1,
+          "vh_seat_room_index": 7
+        },
+        {
+          "seed": 3,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 7
+        },
+        {
+          "seed": 4,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 7
+        },
+        {
+          "seed": 5,
+          "n_picks": 150,
+          "n_different": 0,
+          "vh_seat_room_index": 7
+        },
+        {
+          "seed": 6,
+          "n_picks": 150,
+          "n_different": 1,
+          "vh_seat_room_index": 7
+        },
+        {
+          "seed": 7,
+          "n_picks": 150,
+          "n_different": 80,
+          "vh_seat_room_index": 7
+        }
+      ]
+    },
+    {
+      "k": 3,
+      "room_size": 7,
+      "old_divisor": 7,
+      "new_divisor": 10,
+      "n_picks": 1200,
+      "n_different": 689,
+      "share_different": 0.5741666666666667,
+      "identical": false,
+      "per_seed": [
+        {
+          "seed": 0,
+          "n_picks": 150,
+          "n_different": 80,
+          "vh_seat_room_index": 6
+        },
+        {
+          "seed": 1,
+          "n_picks": 150,
+          "n_different": 89,
+          "vh_seat_room_index": 6
+        },
+        {
+          "seed": 2,
+          "n_picks": 150,
+          "n_different": 86,
+          "vh_seat_room_index": 6
+        },
+        {
+          "seed": 3,
+          "n_picks": 150,
+          "n_different": 95,
+          "vh_seat_room_index": 6
+        },
+        {
+          "seed": 4,
+          "n_picks": 150,
+          "n_different": 89,
+          "vh_seat_room_index": 6
+        },
+        {
+          "seed": 5,
+          "n_picks": 150,
+          "n_different": 89,
+          "vh_seat_room_index": 6
+        },
+        {
+          "seed": 6,
+          "n_picks": 150,
+          "n_different": 88,
+          "vh_seat_room_index": 6
+        },
+        {
+          "seed": 7,
+          "n_picks": 150,
+          "n_different": 73,
+          "vh_seat_room_index": 6
+        }
+      ]
+    }
+  ],
+  "bars": {
+    "B2": {
+      "pass": true,
+      "k0_identical": true,
+      "k_gt0_moved": [
+        1,
+        2,
+        3
+      ],
+      "one_divisor_both_builders": true
+    }
+  }
+}

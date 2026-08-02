@@ -986,8 +986,18 @@ def _local_z(values, key, pos, *, window: int = 24) -> np.ndarray:
     return out
 
 
-def make_value_hawk_pick_fn(personality: Personality, risk, *, n_teams: int = 10):
+def make_value_hawk_pick_fn(personality: Personality, risk, *, n_teams: int | None = None):
     """``pick(state, team)`` for a seat that drafts the **best available portfolio value**.
+
+    ★ **T33 (fixed in VH.1): ``n_teams`` scales the step-3 context term and is now read from the
+    DRAFT, not from the room.** It used to default to 10 and both room builders passed
+    ``len(seats)`` — the *room* size — so the interactive room (9 modelled seats) and the batch
+    room (10) priced context 10 % apart, and after 16.17 made k human seats reachable the divisor
+    became ``10 − k`` and varied with the room's shape. The seat a human watched was therefore
+    measurably not the seat that was measured. ``None`` (the default) takes ``state.n_teams`` at
+    pick time, which is the league size under every room shape including k > 1; an explicit int
+    pins it, which is what the frozen pre-16.17 control in ``steps/phase16_17_seat_map.py`` and
+    the VH.0 ablations use.
 
     ★ **Why this cannot be a ``signal_weights`` personality, measured rather than argued.**
     ``signal_bonus`` z-scores *within position*, and within position ``corr(vbd, adp)`` is
@@ -1047,9 +1057,10 @@ def make_value_hawk_pick_fn(personality: Personality, risk, *, n_teams: int = 10
         if weights:
             adp = pool["adp"].to_numpy(float)
             pos = pool["pos"].to_numpy()
+            scale = float(state.n_teams if n_teams is None else n_teams)   # T33
             for col, w in weights.items():
                 if col in pool.columns and w:
-                    eff = eff - w * n_teams * _local_z(pool[col], adp, pos)
+                    eff = eff - w * scale * _local_z(pool[col], adp, pos)
         return int(pool.index[int(np.argmin(eff))])
 
     return pick
@@ -1349,12 +1360,12 @@ def make_room_pick_fn(model: OpponentModel, room=None, *, hype: np.ndarray | Non
         assert_room_objectives(seats, risk)
     gains = normalized_hype_gains(seats) if normalize_hype else np.array(
         [p.hype_gain for p in seats], float)
-    # ⚠ `n_teams=len(seats)` is the ROOM size, not the league size, and it has been since 16.14R
-    # step 6 — it scales the value hawk's context weights, so the interactive room (9 modelled
-    # seats) and the batch room (10) already price context 10 % apart. Preserved verbatim because
-    # the done-bar is bit-identity on both; see docs/TECH-DEBT.md T33.
+    # ★ T33 ☑ (VH.1): `n_teams` is no longer passed at all. It used to be `len(seats)` — the ROOM
+    # size — which made the interactive room (9 modelled seats) and the batch room (10) price the
+    # value hawk's context ~10 % apart, and after 16.17 it became `10 − k`. The seat now reads
+    # `state.n_teams`, so one divisor serves every room shape and both builders.
     fns = [
-        (make_value_hawk_pick_fn(replace(p, hype_gain=float(g)), risk, n_teams=len(seats))
+        (make_value_hawk_pick_fn(replace(p, hype_gain=float(g)), risk)
          if p.objective == "portfolio_ce" and risk is not None
          else make_opponent_pick_fn(model, replace(p, hype_gain=float(g)), hype=hype, **kw))
         for p, g in zip(seats, gains, strict=True)

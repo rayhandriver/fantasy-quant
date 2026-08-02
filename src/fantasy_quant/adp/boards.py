@@ -60,7 +60,7 @@ DEF_POSITION = "DEF"
 
 
 def _ffc_board(con, season: int, scoring: str, teams: int,
-               *, include_dst: bool = False) -> pd.DataFrame:
+               *, include_dst: bool = False, asof: str | None = None) -> pd.DataFrame:
     """The FFC board for one cell. ``include_dst`` admits team defenses (T20).
 
     **Default OFF, and that is load-bearing.** `gsis_id IS NOT NULL` is an identity filter that
@@ -72,17 +72,36 @@ def _ffc_board(con, season: int, scoring: str, teams: int,
     So it is opt-in, and only :func:`~fantasy_quant.draft.mock.room_board` opts in — the simulated
     room is the one consumer that has to produce a **legal roster** rather than a comparable
     measurement. See T21 for why the choice model must exclude them again on the way back in.
+
+    ★ **VH.0 — ``asof`` pins the vintage**, i.e. "the newest board *as of* this date" rather than
+    "the newest board". ``None`` (the default) leaves the SQL identical, so every existing caller
+    is bit-identical; the filter narrows the set the ``MAX`` is taken over, so a pinned board is
+    still drawn from exactly one snapshot date and :func:`~fantasy_quant.draft.mock.board_vintage`
+    keeps naming it completely.
+
+    **Why this exists, and it is not a convenience.** The standing Stage-0 chore banks a new 2026
+    board every few days and each one is a *different board* — after the ``ffc-20260801`` pull, the
+    shipped 15-round mock reproduced **10 of 150** picks. So a pick a human looked at last week
+    cannot be re-derived today, and *you cannot attribute a decision to a mechanism if you cannot
+    reproduce the decision*. That is T41's complaint (a sheet cannot tell "the world moved" from
+    "the code broke") met from the other side: T41 asks a measurement to **report** its vintage,
+    this lets a measurement **choose** one.
     """
     identity = ("(gsis_id IS NOT NULL OR position = ?)" if include_dst else "gsis_id IS NOT NULL")
     params: list = [int(season), scoring, int(teams)]
     if include_dst:
         params.append(DEF_POSITION)
+    asof_clause = ""
+    if asof is not None:
+        asof_clause = "AND snapshot_date <= ?"
+        params.append(str(asof))
     return con.execute(
         f"""
         SELECT gsis_id, name, position, team, adp, stdev, pos_rank, snapshot_date
         FROM adp_snapshots
         WHERE season = ? AND source = 'ffc' AND scoring = ? AND teams = ?
           AND {identity}
+          {asof_clause}
         QUALIFY snapshot_date = MAX(snapshot_date) OVER ()
         """,
         params,
@@ -172,7 +191,8 @@ def _ecr_board(con, season: int, scoring: str) -> pd.DataFrame:
 
 def resolve_board(con, season: int, scoring: str, teams: int,
                   *, allow_ecr: bool = True,
-                  include_dst: bool = False) -> tuple[pd.DataFrame, str]:
+                  include_dst: bool = False,
+                  asof: str | None = None) -> tuple[pd.DataFrame, str]:
     """The board for one ``(season, scoring, teams)`` cell, plus the source that answered.
 
     Tries FFC first (the market-realized ADP every earlier phase was built on) and falls back to
@@ -184,8 +204,15 @@ def resolve_board(con, season: int, scoring: str, teams: int,
     different vocabulary and no consumer needs them there yet, so an ECR-boarded season is
     unchanged — a fallback season simply has no defenses, which the roster rule reports rather
     than papers over.
+
+    ``asof`` pins the **FFC** vintage (see :func:`_ffc_board`) — "the newest board as of this
+    date". It is deliberately *not* threaded to the ECR fallback: ECR already selects on its own
+    ``as_of`` and the two are different measurements that must never be pooled into one headline,
+    so a caller that pins a date and silently gets an unpinned ECR board would be reading a
+    number it did not ask for. A pinned call that falls through to ECR therefore returns the
+    ordinary ECR board, and the returned ``source`` says so.
     """
-    ffc = _ffc_board(con, season, scoring, teams, include_dst=include_dst)
+    ffc = _ffc_board(con, season, scoring, teams, include_dst=include_dst, asof=asof)
     if not ffc.empty:
         return ffc, FFC
     if not allow_ecr:

@@ -2968,3 +2968,116 @@ already encodes his view. The annotation surface is ~50 rows on a 250-player boa
 **User reviews + commits** (this joins the still-uncommitted UI-1 / UI-2 / 08-01 tree), then **Session VH**.
 Ordering against K3 and UI-3 is the user's call — VH and MM are independent of both. Stage-0 FFC chore is
 current (`ffc-20260801`), next due after **08-07**.
+
+## 2026-08-01 — SESSION VH (the value-hawk repair): VH.0 attribution + VH.1 / T33
+
+**Scope decisions taken up front (asked, 4 questions):** objected picks = *he gave a verdict on all
+15*, which is better than the spec's "name the ones you object to" because it comes with a control
+group · straight through, hard-stop only if B1 falls under 25 % · T33 fixed **and shipped** if the
+bars hold · everything left **uncommitted**, one tree with UI-1/UI-2/the 08-01 scoping docs.
+
+### The enabling change nobody had asked for: `resolve_board(..., asof=)`
+
+VH.0's first act was to re-run the draft the user judged. It reproduced **10 of 150 picks**. Pinning
+the board back to its own `ffc-20260724` vintage got **33 of 150** — because the CSV also predates
+**T22** (07-29), **T31** (07-30) and the 08-01 situation refresh. *The artifact he formed his
+objection against cannot be produced by the current code on any board.*
+
+So `_ffc_board` / `resolve_board` / `mock.room_board` gained an `asof`. `None` leaves the SQL
+byte-identical (749 tests unmoved); T32's cache key already carries `board_vintage`, so **no cache
+change was needed** — that fix paying for itself. Deliberately **not** threaded into the ECR
+fallback: ECR selects on its own `as_of` and the two must never be pooled into one headline, so a
+pinned call that falls through returns an ordinary ECR board and says so in `source`.
+
+### VH.0 — the attribution demoted the hypothesis it was written to test
+
+B1 = **38 %** slot-driven on the pinned board, **29 %** live. Pre-registered: ≥50 % confirms, <25 %
+kills. **INCONCLUSIVE on both** → continue, but T42 is now a *minority* channel, not the cause.
+
+Three things the ablation settled that argument alone could not:
+
+1. **Kyle Pitts — the exact pick T42 was opened on — is changed by no ablation at all**, including
+   `starter_aware`. **TE is flex-eligible here**, so a TE2 is a legal starter and a slot-aware
+   objective has no complaint. The slot channel owns **QB2** and not TE2; the ticket pooled them.
+2. **The window is the dominant channel** (6 of 7–8 objected picks on both vintages) and the only
+   one aligned with his criterion. His labels track reach at `corr = +0.767`; closing the window
+   cuts mean reach **5–6 picks**, `starter_aware` cuts it **0.2** — and on the live board *raises*
+   it **+5.4**. The prescribed fix moves the seat the wrong way on the thing he objects to.
+3. Dead end recorded: I expected `context_off` and `board_only` to separate the covariance/scarcity
+   machinery from the context weights. They agree almost everywhere (both take McBride at R2, Kyren
+   Williams at R6), so **the deviation from the raw value argmax is essentially all context** —
+   λ and scarcity are not what makes this seat surprising.
+
+### VH.1 — T33, and the register's estimate was of the wrong quantity
+
+Fixed by reading `state.n_teams` at pick time rather than taking the room size; both builders now
+pass nothing. **k=0 bit-identical (0/1200)**, **k=1 moved 20.7 % of picks**. The entry predicted
+"~11 %" — but that was 11 % *in pricing*; the pick is the quantity that matters and it is twice as
+sensitive. Not monotone in k (10.2 % at k=2) — one changed pick cascades, so it is a chaotic
+amplification, not a dose-response.
+
+**Two harness mistakes worth keeping**, both caught by their own controls:
+
+- The first k>0 harness made room for human seats by slicing the room's tail — which **sliced off
+  `value_hawk`** and duly reported that the divisor changed nothing. *A control that removes the
+  treatment is not a control.* Humans now displace `balanced` seats.
+- `steps/phase16_17_seat_map.py::_legacy_fns` had to move to the new divisor **too**. Left verbatim
+  it would have reported a T33 difference as a 16.17 *mapping* difference. *A control has to differ
+  from the thing it controls on exactly one axis.*
+
+The unit test for this needed a control of its own: at k=0..3 the divisor only spans 10→7, and on
+any single synthetic board the top pick can be robust to that. Tuning a fixture until it flips
+measures the fixture — so the test **sweeps 12 boards** and asserts the *old* arithmetic varied on
+at least one, which is what stops it passing vacuously on a seat that ignores context entirely.
+
+**→ T43 opened.** T33 settled *which* count the context scale is; it made visible that nobody has
+justified it being a **count**. `eff` is a priority rank and `_local_z` is a z-score, so the
+multiplier is a ranks-per-SD conversion and a team count is not one. Against the pool it reads
+`0.08` and against the **contended top-10** `0.29–0.34` — see the glossary's *contended set*.
+
+### VH.2 — the arm that passed the bar is not the arm the ticket proposed
+
+Three arms on `RiskModel.bench_weight` (1.0 nests the shipped seat pick-for-pick, so arm A *is* the
+shipped seat, not a re-implementation). Only `value_hawk` reads `risk`, so one knob moves one seat.
+Checked before running that the arms differ on **exactly one axis**: `slots` is passed in all three
+but `_candidate_values` returns `base` before touching it at `bench_weight >= 1.0`, so it is inert
+in arm A.
+
+`starter_aware` improved **every** shape measure and **realized points +50.4** — and dropped the
+sim's title multiple **−0.295**. B3 blocks it, correctly, on its own pre-registered wording. What
+makes it a finding rather than a tuning problem: the blocking metric is the **model's**, the
+improving one is the **world's**, and T28's bench↔title link was only ever measured *correlationally*.
+Filed as a sim finding with the −113 pts/team level bias. **Not reweighted** — the ⚠ says so and it
+was written before the number existed.
+
+`blend_50` is the arm B3 actually passes (+0.144 title, +0.026 playoff, +19.9 starter value, 3 of 4
+shape measures, nothing degraded). Note T28's *correlational* sweep put the peak at `w = 0.90`;
+interventionally the useful setting is **0.5**. Shipping it needs a seam that does not exist —
+`bench_weight` lives on `RiskModel` and the room builds **one** model for all ten seats, so a
+per-`Personality` override would have to be added. Left as the user's call: it is a seat-**character**
+change, and the cadence rule stops here anyway.
+
+### VH.3 — an unresolved sweep that is nonetheless a useful answer
+
+Grid bracketed **below** the shipped 1.0, because 16.14R's `{1.00, 1.15, 1.25}` only ever asked
+"reach further?" and this repo has twice shipped off an unbracketed edge. Also rescored: 16.14R's
+metric was **CE surplus**, which this seat maximizes — and which a wider window can only raise, so
+that sweep's own metric was monotone in the knob **by construction**. CE is kept, labelled
+descriptive; the evaluative columns are realized points and the title multiple.
+
+Realized deltas across the grid run **+18.8 / −23.9 / +1.5 / +14.2** against an se of 9–13 —
+**non-monotone**, with the single CI clear of zero sitting in the *middle*. That is noise wearing a
+result's clothes; four comparisons deliver one crossing at p<.05 about as often as not. **B4:
+unresolved, keep 1.0.**
+
+But mean reach is **monotone and clean**: 0.70 / 1.93 / 3.03 / 3.47 / 3.77. So the knob is
+**precisely controllable on the user's criterion and unresolvable on outcome** — which converts it
+from an optimization question into a preference one, priced rather than argmaxed. Matching the
+`--vh-window` flag into `mock_room_bars.py` (recording itself in `config.vh_window`, per the F.5
+mislabelled-artifact rule) makes the realism side of that price one command.
+
+**Dead end worth recording:** the first realism gate compared the seat's p95 reach against
+`CORPUS_REACH_P95[0]` = 14.6 (the *round-1* p95) and duly failed four of five windows. 16.14R step 6
+uses the **round-pooled mean** = 35.40, and its `p95_reach` is conditional on `reach > 0`. Both were
+matched before any window was judged — *a gate that does not use the shipped gate's definition is a
+different gate.*

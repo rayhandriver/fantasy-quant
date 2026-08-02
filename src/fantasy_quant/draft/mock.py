@@ -149,7 +149,8 @@ def board_vintage(raw: pd.DataFrame, source: str = "") -> str:
 
 def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF,
                allow_ecr: bool = False, enrich: bool = True, include_dst: bool = True,
-               cache_dir: Path | str | None = None) -> tuple[pd.DataFrame, str]:
+               cache_dir: Path | str | None = None,
+               asof: str | None = None) -> tuple[pd.DataFrame, str]:
     """The board a simulated room drafts, and the source that answered — ``(board, source)``.
 
     Deliberately routed through :func:`~fantasy_quant.adp.boards.resolve_board` rather than
@@ -192,9 +193,16 @@ def room_board(con, season: int, *, scoring: str = "ppr", teams: int = TEAMS_REF
     pure column attach (``attach_enrichment`` opens with ``board.copy()``), so a cached board whose
     row count differs from the raw one is stale *by construction* and is rebuilt rather than served.
     That makes the cache self-healing even against an in-place edit that leaves the date alone.
+
+    ``asof`` (VH.0) pins which snapshot answers — see
+    :func:`~fantasy_quant.adp.boards._ffc_board`. It needs **no** cache-key change of its own,
+    and that is T32's fix paying for itself: the key already carries
+    :func:`board_vintage`, which names the snapshot the pinned query actually returned, so a
+    pinned board and a live one cannot collide in the cache even though neither knows the other
+    exists.
     """
     raw, src = boards.resolve_board(con, int(season), str(scoring), int(teams),
-                                    allow_ecr=allow_ecr, include_dst=include_dst)
+                                    allow_ecr=allow_ecr, include_dst=include_dst, asof=asof)
     if raw.empty:
         return raw, src
     if not enrich:

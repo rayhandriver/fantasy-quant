@@ -622,7 +622,30 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
       work with its own sheet) · **the 14.3 Next.js frontend** (get Streamlit to "a friend can use it
       unaided" first) · `streamlit-aggrid` · headshots/logos · mobile-in-Streamlit · LLM board narrative ·
       drag-to-reorder rankings · multiplayer rooms — twelve more with reasons at `docs/UI-PLAN.md` §5.
-- **☐ Session VH — the value-hawk repair** *(scoped 2026-08-01 s5, from a user report; spec
+- **✅ Session VH — the value-hawk repair** *(DONE 2026-08-01; scoped same day. Spec
+  `docs/BUILD_PLAN.md` §"Sessions VH · MM-1 · MM-2"; **T33 ☑**, **T43 opened**, T42 answered)*.
+  **All four bars reported; the session's own leading hypothesis was demoted by its first substep.**
+  The user supplied a verdict on **all 15** picks, which beat the spec's "name the ones you object
+  to" because it came with a control group. **VH.0:** the judged artifact is **unreproducible**
+  (10/150 picks on the live board, 33/150 pinned — it predates T22/T31/the 08-01 refresh) → added
+  `resolve_board(..., asof=)`; his labels track **reach** at `corr = +0.767` (bad picks +5.5, good
+  picks −10.6); **B1 = 38 %/29 % slot-driven → INCONCLUSIVE**, and **T42's flagship pick (the TE2)
+  is changed by no ablation at all because TE is flex-eligible** — the slot channel owns QB2, not
+  TE2. **VH.1:** T33 fixed by reading `state.n_teams`; **k=0 bit-identical, k=1 moved 20.7 % of
+  picks** — the room a human drafts against was never the room that was measured. **VH.2:** the
+  interventional A/B (200 seat-shuffled drafts × 4 DEV seasons) found **realized points and the
+  sim's title probability disagree in sign** — `starter_aware` is **+50 realized** and **−0.295
+  title ×** with every shape measure improving, so B3 blocks it on the metric we least trust
+  (reported as a **finding about the sim**, not acted on); **`blend_50` passes B3** (+0.144 title,
+  +0.026 playoff, +19.9 starter value, nothing degraded). **VH.3:** the window is **still
+  unresolved** on outcome (non-monotone, ±25 against se 9–13) and monotone/clean on reach (0.70 →
+  3.77) — but the realism sheet decides it: **w=0.5 costs +0.0360 profile distance (0.0894 →
+  0.1254), 7× T30's unshipped change and worse than 16.14R's own 0.1156 → free on outcome,
+  EXPENSIVE on realism, keep 1.0.** **★★ And corpus round-1 reach is 2.868 against the shipped
+  seat's 2.6405 — the seat already reaches LESS than a real human, so *the seat is realistic, it
+  just is not a value hawk*: one seat is doing two jobs and only one of them has a corpus.**
+  **B0: 628 leaves, zero gate values moved, all 8 pass flags hold.** 763 tests, ruff clean.
+- *(superseded scope line, kept for the record)* **Session VH** *(scoped 2026-08-01 s5, from a user report; spec
   `docs/BUILD_PLAN.md` §"Sessions VH · MM-1 · MM-2", register **T42** + **T33**)*. The user reported the
   seat "consistently makes picks that are characteristically uncalled for" **and** finishes weak — asked to
   separate them, he said **both, and they feel related**, which is the answer that diagnoses it. **The value

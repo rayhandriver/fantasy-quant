@@ -2540,3 +2540,78 @@ about preference instability**, reported rather than patched.
 **a faithful replica is not a stronger drafter.** A seat that predicts a human's picks well is a **realism**
 deliverable, not an edge one — the spent lockbox already recorded personalization as noise-dominated on
 realized points. Ranking on our own board stays **descriptive**; evaluative claims run on realized points.
+
+## Session VH — the value-hawk repair *(2026-08-01)*
+
+**board-vintage pin (`resolve_board(..., asof=)`).** "The newest FFC board **as of** this date"
+rather than "the newest board". `asof=None` leaves the SQL identical, and T32's cache key already
+carries `board_vintage`, so a pinned board and a live one cannot collide. Exists because the
+standing Stage-0 chore banks a new 2026 board every few days and each one is a *different* board —
+after the `ffc-20260801` pull the shipped 15-round mock reproduced **10 of 150** picks. The rule it
+serves: **you cannot attribute a decision to a mechanism if you cannot reproduce the decision.**
+
+**★ the contended set (the denominator problem).** The handful of candidates an argmax is actually
+decided between — in a draft, roughly the top 10 of a 200-row pool. **A term's size must be judged
+against the spread *here*, not against the pool.** The value hawk's step-3 context term measures
+`sd(context)/sd(eff)` = **0.08** against the whole pool (negligible) and **0.29–0.34** against the
+contended top-10 (decisive), while changing 6 of 15 picks. *A term calibrated against the wrong
+dispersion looks small right up until it decides the pick* — which is how this one survived 16.14R,
+T24, T27, T28 and 16.17 unexamined. See **T43**.
+
+**stale derived artifact.** A committed file that no longer describes the thing it is named after,
+with nothing dating it against the code that produced it. `analysis/mock_16_14R_picks.csv` (07-28)
+predates T22, T31 and the 08-01 situation refresh, so the roster a human formed an objection
+against was unreproducible on **any** board vintage. Worse than having no artifact, because it is
+what a human reads. **T41** is this defect for bar sheets; the CSV is the same defect one surface
+along.
+
+**★ a control must differ on exactly one axis.** When VH.1 changed the value hawk's divisor, the
+frozen pre-16.17 control in `steps/phase16_17_seat_map.py` had to change with it — left verbatim it
+would have reported a **T33** difference as a 16.17 **mapping** difference and failed bars 1–3 for
+something they were never built to test. The corollary: a control that removes the treatment is not
+a control (VH.1's first harness sliced the room to make room for human seats and sliced off
+`value_hawk`, then reported that the divisor changed nothing).
+
+**a bug off the measured path.** T33 was live from 16.14R step 6 through 16.17 and **749 tests
+passed over it**, because every harness that exercised the value hawk ran at k=0 — where the room
+size and the league size coincide. The class: *a defect that is invisible at the configuration you
+measure needs a test at the configuration you ship.*
+
+**chaotic amplification (why a share is not a dose).** T33's picks-changed share is 20.7 % at k=1,
+**10.2 %** at k=2 and 57.4 % at k=3 — not monotone in the divisor gap, because one changed pick
+cascades through every later pick. Read such a number as *"this moved the draft"*, never as a
+dose-response curve.
+
+**★ the reach criterion (what the user's objection actually was).** Across the 15 picks he judged,
+his labels track one mechanical quantity: mean reach **+5.5** picks on the six he called bad,
+**−10.6** on the four he called good, `corr(reach, labelled-bad) = +0.767`. **He objects to
+reaching and approves of waiting** — a single criterion, not a bundle of taste, and the reason the
+reach **window** rather than the objective is the substantive knob in this session.
+
+**flex-eligibility defeats "redundant".** A second TE in this league is a legal **flex starter**, so
+a slot-aware objective has no complaint about one — which is why `starter_aware` does not move the
+Kyle Pitts pick that **T42** was opened on. The slot channel owns **QB2** (QB is not flex-eligible)
+and not TE2; the ticket's headline evidence pooled the two.
+
+**an echoed flag is not an applied flag.** A run artifact that records `vh_window: 0.5` in its
+config block proves the *argument was parsed*, not that it reached the model. VH's `--vh-window`
+recorded itself correctly for a whole run in which it changed nothing, because `--shuffle-room`
+rebuilt the room per seed and discarded the override. The check that works is the boring one: **the
+treatment arm and the control arm must not produce identical numbers.** Third instance of the
+doing-vs-describing family, after T22 (the display layer is a consumer) and UI-1 (a grep counts
+mentions).
+
+**★ one seat, two jobs (the value-hawk frame).** `value_hawk` is asked simultaneously to be a
+**plausible tenth of a calibrated room** and to be **the sharp value-seeker in it**. Only the first
+has a corpus to price it against — the T15 realism bars — so every measurement the repo can run
+scores the seat on the job the user is *not* complaining about. Measured: corpus round-1 mean reach
+**2.868** vs the shipped seat's **2.6405**, i.e. **the seat already reaches slightly less than a
+real human drafter**, and tightening its window further costs **+0.0360 profile distance**. So the
+objection is not "this seat is unrealistic" but "this seat is not what its name promises" — a
+**design** question about which job the seat has, resolvable only by adding a seat beside it and
+re-measuring the mix (T30-shaped), never by turning the window down.
+
+**free on outcome, expensive on realism.** A knob can be unresolvable on the metric you evaluate
+with and still be firmly decided by a *different* bar. VH.3's window moves realized points ±25
+against an se of 9–13 (unresolved) while moving profile distance +0.0360 (decisive). *Price a knob
+on every bar it touches before calling it free.*

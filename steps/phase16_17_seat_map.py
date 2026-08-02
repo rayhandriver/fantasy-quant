@@ -91,12 +91,21 @@ SHIPPED_NINE: tuple[str, ...] = tuple(
 # the deleted arithmetic, re-implemented verbatim — the control for bars 1 and 2
 # ==================================================================================================
 def _legacy_fns(model, room, *, hype=None, normalize_hype=True, risk=None, **kw):
-    """The per-seat function list both deleted builders shared, unchanged."""
+    """The per-seat function list both deleted builders shared.
+
+    ⚠ **One deliberate departure from verbatim, added by VH.1.** The original passed
+    ``n_teams=len(seats)`` to the value hawk — T33, the room-vs-league divisor — and VH.1 fixed
+    that in the shipped builder. This control exists to isolate **the seat→team mapping**, so the
+    divisor has to be held equal on both sides; left verbatim it would report a T33 difference as
+    a 16.17 mapping difference, and bars 1–3 would fail for a reason they were not built to test.
+    *A control has to differ from the thing it controls on exactly one axis.* The mapping
+    arithmetic below is still the deleted formula, untouched.
+    """
     seats = tuple(room)
     gains = (normalized_hype_gains(seats) if normalize_hype
              else np.array([p.hype_gain for p in seats], float))
     return [
-        (make_value_hawk_pick_fn(replace(p, hype_gain=float(g)), risk, n_teams=len(seats))
+        (make_value_hawk_pick_fn(replace(p, hype_gain=float(g)), risk)
          if p.objective == "portfolio_ce" and risk is not None
          else make_opponent_pick_fn(model, replace(p, hype_gain=float(g)), hype=hype, **kw))
         for p, g in zip(seats, gains, strict=True)

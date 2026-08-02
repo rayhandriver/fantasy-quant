@@ -53,7 +53,8 @@ At a glance:
 | **T39** | 🟠 | **the overlap-based tier column — the UI plan's one differentiated feature — does not cut the live board, and the figure that sold it hides its own denominator.** Measured 2026-08-01: **1 tier per position** (62 RBs in one tier), **2 over the whole board**. Cause (a) **scale** — the median RB 80 % band is **228 pts** against a median adjacent gap of **16.3 pts**, so overlap is universal by construction; cause (b) a **category error** — Boris Chen clusters expert rank *dispersion*, we hold a *predictive interval*, and UI-PLAN calls them the same thing. ★ And `COIN`'s published **146 of 199** conflates *distinguishable* with *unknown*: only **147** pairs have both bands, **146** of those overlap, **1** is a genuine break and **52** are missing bands — the honest figure is **99.3 % of evaluable pairs overlap** | **when it is worth a modelling session**, not a display one: a 1-D clustering with model selection, run on a rank-**dispersion** quantity (`adp_stdev` is on the board already), never on a season-points interval. ⚠ The gap cut is **not** a fallback — a threshold at the median is exceeded by half of all pairs *by definition* | ☐ 2026-08-01 — **nothing shipped**: no `TIER` column on any view, `session.tier_series` runnable and unwired with both cuts, mechanism pinned by a unit test, and `coin_flags` + the `COIN` entry now carry the decomposition |
 | **T41** | 🟠 | **a bar sheet records no vintage for the live board it was measured on, so the mandated weekly Stage-0 pull is indistinguishable from a regression.** Measured 2026-08-01, immediately after the chore banked an `ffc-20260801` board: UI-1's and UI-2's B0 went from `all_pass: True` with **zero** unclassified leaves to **122 unclassified in K1's sheet and 23 in K2's** — `app_summary[0].who: 'autopilot' → 'YOU (T7)'`, `grades.YOU: 'C+ 59' → 'D+ 39'`, `adjacent_overlapping_pairs: 146 → 150`. **Nothing broke**: every nested sheet still passes its own bars (`k1/k1_5/k2_all_pass: True`), the ADP board simply moved (3 arrivals, 2 departures, 91 players >2 picks) and the drafts played out differently. But `_ALLOWED_MOVES` classifies display counts, entropy, timings and column lists — it has **no category for *the input moved*** — so B0 fails by construction after every chore run, and the operator must re-derive by hand each week whether the cause was the board or the code. **This is T32 one level up**: there the cache key omitted the board vintage, here the *control* does | **before the next board-dependent session**, and it is cheap: stamp `mock.board_vintage(raw, src)` into each sheet, then have `_classify_moves` report `vintage_changed` and bucket board-driven moves under it — *not* a blanket allowance, which would delete B0's whole purpose. ⚠ Do **not** widen `_ALLOWED_MOVES` to swallow these leaves | ☐ 2026-08-01 — reported, not fixed; pre-pull sheets preserved at `analysis/session_ui_{1,2}.pre_ffc20260801.json` |
 | **T40** | 🟡 | **a bar control that can be satisfied by a single observation, and was.** UI-2's B3 requires `every_glyph_fired_at_least_once` so the row-by-row glyph identity cannot pass vacuously — a good control, and on the 07-30 board `handcuff` fired **exactly once** in 40 rows (`{'bye': 6, 'stack': 8, 'handcuff': 1}`). The 08-01 board took it to **zero** (`{'bye': 13, 'stack': 12, 'handcuff': 0}`) and B3 flipped to FAIL. **Every correctness claim in the bar still holds** — `mismatched: []`, `FLAGS` byte-identical, unknown byes still unknown, zero week-0 rows — so the failure is the control's sampling, not the glyph logic. A control whose n is 1 is one board refresh from reporting a defect that does not exist, which is the same alarm-fatigue failure as T41 and arrives from the opposite direction | with the next UI session. Fix by **constructing** a roster that guarantees each glyph fires (the lead-back + handcuff pair is deterministic from the depth chart) rather than hoping the sampled rows contain one; keep the control, do not loosen it into a pass | ☐ 2026-08-01 |
-| **T42** | 🟠 | **the value hawk maximizes a slot-blind objective, and it is the only seat that fully expresses it** — so the defect T28 measured as a *reporting* artifact is, for this one seat, a **behaviour**. `capital − startable` is negative for every seat except `value_hawk`, where it is **+152**; the shipped mock has it taking a **QB2 in round 8 (ADP 63)** and a **TE2 in round 9 (ADP 85)** in a 10-team 1-QB full-PPR league while its first RB arrives in round 6. **★ T28 did not settle this and could not have:** its bar B5 asked which roster-value definition best *correlates* with title probability (`team_value` +0.8382 > `portfolio_ce` +0.8202 > `starter_value` +0.7971) and used the answer to decide what the seat should **maximize**. *A relationship measured on outcomes is not a specification for the mechanism that produced them* — T24's lesson one level up. The **interventional** experiment (run the seat on each objective, measure the rosters it builds) has never been run | **Session VH.2**, on the user's report that the seat's picks are "characteristically uncalled for" *and* that it finishes weak — one cause, both symptoms. ≥200 seating-marginalized drafts × ≥4 DEV seasons, `RiskModel.bench_weight` as the knob (default 1.0 nests the shipped greedy pick-for-pick). **Report outcome and roster shape separately; ship starter-awareness only if shape improves AND outcome does not degrade beyond its CI.** ⚠ If shape improves and the outcome degrades, that is a finding about the sim (bench value alone predicts title +0.711 because it draws injuries) — report it, do not reweight | ☐ 2026-08-01 |
+| **T42** | ✅ | **the value hawk maximizes a slot-blind objective** — ANSWERED 2026-08-01 (Session VH). The diagnosis is **partly right, its flagship evidence is wrong, and its prescribed fix is blocked by its own bar.** The **TE2** this entry leads with is changed by **no** ablation — **TE is flex-eligible**, so a TE2 is a legal starter, not bench depth; the slot channel owns **QB2** only, and the entry pooled two things. **B1 = 38 %/29 % slot-driven → INCONCLUSIVE**; the **dominant** channel is the reach **window** (6 of 7–8 objected picks), which is also what the user's own labels track (`corr(reach, bad) = +0.767`). The interventional A/B (200 seat-shuffled drafts × 4 DEV seasons) then found **realized points and the sim's title probability disagree in sign**: `starter_aware` is **+50.4 realized** and **−0.295 title ×** with every shape measure improving, so **B3 blocks it on the metric we least trust** — recorded as a **finding about the sim** (T28's bench↔title link is the sim's, not the world's) and filed with the −113 pts/team level bias, **not acted on**. `blend_50` (bw 0.5) passes B3 | **closed as answered.** What is left is a *seat-character* ship decision for the user (`blend_50` needs a new per-`Personality` `bench_weight` seam; `RiskModel` carries it today and the room builds one model for all seats), plus the VH.3 window preference — both priced, neither chosen by argmax | ☑ 2026-08-01 |
+| **T43** | 🟡 | **the value hawk's step-3 context term is scaled by `state.n_teams`, and nothing derives that.** `eff` is a priority rank and `_local_z` is a z-score, so the multiplier is a ranks-per-SD conversion; a league's team count is not that conversion, it is just the number that was there. VH.0 measured the consequence: against the whole pool the term is `sd(context)/sd(eff)` = **0.08** (negligible), but against the **contended top-10** — the only rows an argmax is decided between — it is **0.29–0.34 of the spread** and changes **6 of 15 picks**. *A term calibrated against the wrong dispersion looks small right up until it decides the pick*, which is how it survived 16.14R, T24, T27, T28 and 16.17. T33 fixed *which* count it is and made *why a count* visible | **with the next 11.1 refit, alongside T26** — re-derive the scale from what it should buy (a signal worth *k picks* of board position, the conversion `reach_cap` already does through the model's own ADP coefficient), then **refit `DEFAULT_CONTEXT_WEIGHTS`**, which absorbed the old scale. ⚠ Not before: the weights and the scale are one object | ☐ 2026-08-01 |
 
 ---
 
@@ -2102,7 +2103,42 @@ costs realism on the faithfulness axis and costs nothing on the axis it was susp
 
 ---
 
-## 🟡 T33 — `n_teams` in the value hawk is the room size, not the league size
+## ☑ T33 — `n_teams` in the value hawk is the room size, not the league size
+**Status ☑ DONE 2026-08-01 (Session VH.1) · opened 2026-07-30 (Session I.5 / 16.17).**
+
+> **Resolution.** `make_value_hawk_pick_fn(..., n_teams=None)` now reads **`state.n_teams`** at
+> pick time — the league size under every room shape, including k > 1 human seats — and
+> `make_room_pick_fn` passes nothing at all. An explicit int still pins it, which is what the
+> frozen pre-16.17 control in `steps/phase16_17_seat_map.py` and VH.0's ablations use.
+>
+> **B2, measured (`steps/vh_1_t33_divisor.py`, `analysis/vh_t33_divisor.json`, 8 seeds × 15 rounds
+> on the live 2026 board):**
+>
+> | k humans | room | divisor | picks changed |
+> |---|---|---|---|
+> | **0** | 10 | 10 → 10 | **0 / 1200 — bit-identical** |
+> | 1 | 9 | 9 → 10 | **248 / 1200 (20.7 %)** |
+> | 2 | 8 | 8 → 10 | 122 / 1200 (10.2 %) |
+> | 3 | 7 | 7 → 10 | 689 / 1200 (57.4 %) |
+>
+> **So no committed batch measurement moves** (k = 0 is every T15/T24 bar, the room bar sheet and
+> `phase16_14r_*`), while **one pick in five changed in the room a human actually drafts against**
+> — this entry guessed "~11 % in pricing"; the pricing gap is not the quantity that matters, the
+> **pick** is. The share is **not monotone in k** (10.2 % at k=2 sits under both neighbours)
+> because one changed pick cascades: the number is a chaotic amplification of the divisor gap, not
+> a dose-response, and should not be read as one.
+>
+> ⚠ **The 16.17 control had to move with it.** `_legacy_fns` passed `n_teams=len(seats)` verbatim;
+> left that way it would report a T33 difference as a 16.17 *mapping* difference and fail bars 1–3
+> for a reason they were never built to test. *A control has to differ from the thing it controls
+> on exactly one axis.* The mapping arithmetic itself is untouched.
+>
+> **Covered by** `tests/test_vh.py` — and note **749 tests passed over this bug**, because the only
+> harness that ever exercised the value hawk ran at k = 0, where room size and league size
+> coincide. *A bug that only appears off the measured path needs a test on the unmeasured one.*
+>
+> **→ opened T43:** fixing *which* number the divisor is does not justify it being a **team count**
+> at all.
 
 **Opened 2026-07-30 (Session I.5 / 16.17).** Found while unifying the two room builders: they are
 identical except for the `team -> seat` mapping *and* one argument nobody had lined up.
@@ -2396,6 +2432,25 @@ and already shipped.
 
 ## 🟠 T41 — a control that cannot tell "the world moved" from "the code broke"
 
+> **★ Update 2026-08-01 (Session VH, B0): the structure this entry asks for already exists one
+> harness along — copy it, do not invent it.** VH's B0 re-ran `steps/mock_room_bars.py
+> --shuffle-room` across the same `ffc-20260724 → ffc-20260801` board move that broke the UI
+> sheets, and audited all **628** leaves. **84 differed and not one was a gate:** 71 sat under
+> `readout_2026`, 11 under `config`, 2 under `generated`/`label`. Every measured gate value came
+> back **bit-identical to the digit** and all eight `pass` flags held.
+>
+> The reason is structural, not luck: `mock_room_bars.py` gates on **historical** seasons, whose
+> boards cannot move, and files the live 2026 season under a top-level `readout_2026` that its own
+> docstring calls *"an eyeball readout, never a gate"*. So board-driven movement lands in a named
+> bucket **by construction**, which is exactly the `vintage_changed` category this entry prescribes
+> for `_classify_moves` — and it is a partition of the artifact, not an allowance bolted onto the
+> comparator. That is the shape to port to the UI sheets.
+>
+> Also landed this session and useful here: **`resolve_board(..., asof=)`** (VH.0) lets a
+> measurement *choose* a vintage rather than only report one. T41 is still open — it asks a sheet to
+> **stamp** its vintage and classify against it — but the two halves now exist: pin the input, and
+> partition the output.
+
 Opened 2026-08-01, by the Stage-0 chore itself. The pull banked an `ffc-20260801` board (1,288 rows,
 gsis 98.0 %, every data-health gate PASS) and the reconciliation that followed re-ran the bar sheets.
 
@@ -2476,6 +2531,47 @@ would be tuning a bar to a board.
 ---
 
 ## 🟠 T42 — the value hawk maximizes a slot-blind objective, and it is the only seat that fully expresses it
+
+> **★ ANSWERED 2026-08-01 (Session VH.0 + VH.2). The experiment ran; the ticket's diagnosis is
+> partly right, its flagship evidence is wrong, and its prescribed fix is blocked by its own bar.**
+>
+> **1 — the flagship pick was never slot-driven.** This entry leads with "a QB2 in round 8 **and a
+> TE2 in round 9**". VH.0 re-took every one of the seat's picks under one-knob ablations with the
+> draft state held fixed: the **TE2 is changed by nothing** — not `starter_aware`, not the window,
+> not the context, not the raw board argmax. **TE is flex-eligible** in this league
+> (`flex_groups = ((1, ('RB','WR','TE')))`), so a second TE is a *legal starter*, not bench depth,
+> and a slot-aware objective has no complaint about it. The slot channel owns **QB2** — QB is not
+> flex-eligible — and this entry pooled two different things behind one number.
+>
+> **2 — B1 came back INCONCLUSIVE: 38 % slot-driven (pinned `ffc-20260724`), 29 % (live).**
+> Pre-registered ≥50 % confirms, <25 % kills. Real, minority, narrower than its ticket. The
+> **dominant** channel is the reach **window** (6 of 7–8 objected picks on both vintages), and it is
+> the one aligned with what the user actually objects to: his labels track reach at `corr = +0.767`.
+>
+> **3 — the prescribed fix moves the seat the wrong way on his criterion.** Δ mean reach:
+> `window_none` **−5.8 / −5.2 picks**, `context_off` −3.7 / −2.1, `starter_aware` **−0.2 and, on the
+> live board, +5.4**.
+>
+> **4 — ★ the interventional result, and the reason B3 blocks the ship.** 200 seating-marginalized
+> drafts × 4 DEV seasons (`analysis/vh_objective_ab.json`):
+>
+> | vs shipped | `starter_aware` (bw 0.0) | `blend_50` (bw 0.5) |
+> |---|---|---|
+> | realized points | **+50.4** CI[+25.0,+76.7] | +18.3 CI[−4.3,+41.0] |
+> | title multiple | **−0.295** CI[−0.363,−0.230] | **+0.144** CI[+0.079,+0.212] |
+> | every shape measure | improves | 3 of 4 improve |
+> | **B3** | **SHIP = False** | **SHIP = True** |
+>
+> **Realized points and the sim's title probability disagree in sign.** The ⚠ on this entry
+> anticipated "shape improves, outcome degrades → a finding about the sim" — it arrived in a sharper
+> form, because *realized points improved*. T28 established bench↔title **correlationally**; run
+> interventionally the relationship is **the sim's, not the world's**. Recorded as a sim finding,
+> **not acted on**, and filed as a candidate cause of the standing −113 pts/team level bias.
+>
+> **What remains open is not this ticket.** `blend_50` passes B3 and is a *seat-character* decision
+> the user should take (it needs a new per-`Personality` `bench_weight` seam — `RiskModel` carries
+> it today and the room builds one model for all seats). Realism cost measured separately. **This
+> entry closes as ANSWERED; the ship decision is the user's.**
 
 **Opened 2026-08-01 (session 5), from a user report:** `value_hawk` "is consistently underperforming …
 it consistently makes picks that are characteristically uncalled for", and — asked to separate the two
@@ -2566,3 +2662,42 @@ CI**. B0 holds throughout — the five T15 bars + landing + legality, seating-ma
 watches prices context ~10 % differently from every seat that was ever measured) and the unresolved
 window sweep (`analysis/phase16_14r_value_hawk.json`, `sweep_resolved: false`, +13.1 CE against a pooled
 se of 10.7 — the shipped window is a **default, not a result**).
+
+---
+
+## 🟡 T43 — the context term is scaled by a team count, and nobody has ever said why
+
+**Opened 2026-08-01 (Session VH.1), out of T33's fix.** T33 asked *which* number the value hawk's
+step-3 context scale should be and answered "the league size, not the room size". Fixing it made
+the prior question visible: **why is it a team count at all?**
+
+```python
+eff = eff - w * state.n_teams * _local_z(pool[col], adp, pos)
+```
+
+`eff` is a **priority rank** and `_local_z` is a **z-score**, so the product is "ranks per standard
+deviation" — a units conversion. `n_teams` is not that conversion; it is the number of seats in the
+league, which appears here for no stated reason. Nothing in 16.14R step 6 derives it, and the
+weights (`role_share` +0.30 / `role_delta` +0.25 / `td_regression` −0.30) were chosen *against* it,
+so the two are not separately identified.
+
+**Why it matters, measured (VH.0, `analysis/vh_attribution.json`).** Judged against the whole pool
+the term looks negligible — `sd(context) / sd(eff)` = **0.08**. Judged against the **contended set**
+(the top-10 candidates, the only rows an argmax is ever decided between) it is **0.29–0.34 of the
+spread**, and it changes **6 of 15 picks**. Both numbers are correct; only the second is relevant.
+*A term calibrated against the wrong dispersion looks small right up until it decides the pick* —
+and that is why this sat unexamined through 16.14R, T24, T27, T28 and 16.17.
+
+**The fix is a measurement, not an edit.** Re-derive the scale from what it is supposed to buy — a
+context signal worth *k picks* of board position — the way `reach_cap` already converts picks
+through the model's own ADP coefficient (`personalities.py`, and the pattern is right there). Then
+refit `DEFAULT_CONTEXT_WEIGHTS` against the new scale, because they absorbed the old one.
+
+**When:** with the next 11.1 refit, alongside **T26** — both change what β was estimated against, so
+they should move together and be measured once. ⚠ Not before: the shipped weights and the shipped
+scale are one object, and changing either alone re-prices the seat by an unmeasured amount.
+
+**Done-when:** the scale has a stated derivation, the weights are refit against it, and the T15
+bars + landing + legality are re-run seating-marginalized before/after.
+
+**☐ 2026-08-01.**
