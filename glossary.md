@@ -2615,3 +2615,116 @@ re-measuring the mix (T30-shaped), never by turning the window down.
 with and still be firmly decided by a *different* bar. VH.3's window moves realized points ±25
 against an se of 9–13 (unresolved) while moving profile distance +0.0360 (decisive). *Price a knob
 on every bar it touches before calling it free.*
+
+---
+
+### Data ingest & provenance *(added 2026-08-02, Session DATA-1 scoping)*
+
+**wrapper ceiling.** `nfl_data_py` is a *wrapper* over `nflverse-data` GitHub release assets, so its
+function list bounds what we can see, not what exists. Everything it does not expose is **invisible**
+rather than unavailable — and an absence nobody can see never gets prioritised. Phase 0.9 met a symptom
+("frozen wrapper hits the dead old path") and filed it as a one-off; it was the general case, and it cost
+us `pbp_participation` (ten seasons, play grain). The fix is to read release assets directly and keep the
+wrapper beside it. **T46.** See [[upstream floor]], [[release-asset loader]].
+
+**release-asset loader.** `data/sources/nflverse_release.py` (0.12.1) — `list_releases` /
+`release_assets` / `read_release` over
+`releases/download/<tag>/<asset>.parquet`. Its bar is a **control, not a smoke test**: reproduce an
+already-ingested table bit-identically *and* assert the control can fail on a wrong asset. T31's rule
+verbatim — *assert the control can produce a known difference before trusting it to show none.*
+
+**upstream floor.** The earliest season a source exists at all, as opposed to the earliest season we have
+ingested. participation 2016 · NGS 2016 · PFR 2018 · FTN 2022. **The register's most useful column**,
+because it is what separates *a gap a session can close* from *a fact about the world*, and without it
+the same question gets re-investigated every time someone notices a short panel. Asserted, not
+documented: a request below a floor **raises and names the floor** (the `ecr_asof` pattern).
+
+**a source is not ingested until the question that motivated it returns an answer.** DATA-1's bar B4
+requires the four questions that prompted the session (box counts faced per RB-week; man/zone share faced
+per WR-week; TE/WR snap share *within* 11/12/13 personnel; neutral-script seconds per play per team-week)
+to each return a result from one query. Row counts and gates prove a table landed; they do not prove it
+answers anything. Cf. [[a test that cannot fail]].
+
+**PIT class.** A declared property of every ingested table — `preseason` (available before a draft) ·
+`in_season_weekly` (available only after week *w* is played) · `retrospective` (never a feature).
+Participation and FTN are `in_season_weekly`: native and safe for the Phase-13 co-pilot and for variance
+work, and usable in a **draft** feature *only* through `features/exposures.py`'s season-*t−1* lag. The
+class is read by `assert_panel_pit`/`assert_exposures_pit` rather than trusted to the caller, because PIT
+discipline enforced at the read is the one thing that has never failed here.
+
+**ingest all seasons, analyse DEV only.** Loading lockbox-season data does **not** spend the lockbox;
+building a feature on it does. The wall belongs at the modelling step, where Phase 16 already put it —
+restricting the *ingest* buys no protection and guarantees a re-download later.
+
+**a table nobody reads and a table that does not exist are indistinguishable from the outside.** Why
+`ngs` sat ingested-and-unread for eleven months (**T45**) and why the 0.12.2 inventory carries a
+**consumers** column. [[a column's consumers are not only the models that weight it]] one level up: T22's
+audit looked at the wrong consumer, this one had no artifact that would have shown there were none.
+
+**state a fill rate against its denominator.** Participation's `route`/coverage columns read ~0.38 of all
+rows for 2016–2022, which is the **pass-play share**, not 62 % missing. The unconditional rate and the
+conditional rate are different claims about the same column, and only one of them is about data quality.
+The corollary is the fill-rate **gate**: `ngs_air_yards` went to 0.00 in 2023 with no announcement and no
+downstream error — *silent vendor degradation is indistinguishable from a quiet column until something
+asserts the rate.*
+
+**one DEV season is not a development set.** `DEV_SEASONS` is 2014–2022, so a source with a 2022 floor
+(FTN) contributes exactly one. Twice now this repo has measured what n≈1 produces — T24 calibrated on a
+four-season subsample and failed the full sweep; T40's control passed on a single observation. Such a
+source ships `backtestable: false` as an **assertion**, because *a docstring is not a guard*.
+
+**point the micro-detail at the week.** Seven alpha hunts aimed at season-level draft decisions (16.1,
+16.2, 16.8, 16.9, 16.16, the value-side track, Phase 2) returned seven nulls; the two aimed at weekly
+decisions (12.3/12.4, 13.1/13.2) both paid. The **season is the unit of independence** and DEV holds
+nine of them, while a weekly effect has n ≈ players × weeks ≈ 10⁵ — the same arithmetic that demoted
+"beat ADP". Corollary: aim at the **second moment and availability**, where our own calibration is
+documented as weak and consensus publishes nothing at all.
+
+---
+
+### Data ingest & provenance, part 2 *(added 2026-08-03, Session DATA-1 as run)*
+
+**two tables sharing a name.** A single table holding two different grains, distinguished only by
+*which columns happen to be null*. Found in `depth_charts`: 401,774 weekly rows (2014–2024, keyed
+`season`/`week`) plus 554,215 rows of the 2025 timestamped snapshot series appended with a NULL
+`season` — so `group by season` silently dropped **58 %** of it and reported the data as ending in
+2024. *A table that answers a different question depending on which rows you land on is not a table
+with a missing season.* Diagnostic: a table whose declared grain needs a caveat about nulls.
+The fix is to make the grain a **column**, never an inference. See [[declared grain]].
+
+**declared grain / `key_unique`.** Every source states its row key **and whether that key is
+actually unique**. Five of 0.12.6's thirteen declarations were false on the first run. *A declared
+grain that does not hold is worse than no declared grain* — it invites a downstream join that
+silently fans out. Where a source genuinely has no row key (`contracts` emits byte-identical
+duplicates; `trades` is one row per **asset moved**, not per trade), that is recorded as a fact
+about the source rather than papered over with a synthetic id. The bar checks the declaration in
+**both** directions.
+
+**a join rate needs its denominator.** The sibling of the fill-rate denominator rule, one level
+up, and it produced a false B3 failure before it was noticed. Participation's raw join to `pbp` is
+0.983–0.986 for 2016–2022 and exactly 1.000 from 2023 — which reads like a decaying-backwards data
+problem and is not one: the vendor emits an **empty placeholder row** for plays `pbp` does not
+carry (~780/season, none after 2022) and *there is nothing in those rows to join with*. On
+contentful rows the rate is **1.00000 every season**. Report both; never quietly re-denominate.
+
+**producers vs readers.** The consumers register counts who *queries* a table, excluding the module
+that **writes** it and excluding `tests/`. Its first version counted any mention and reported
+**zero** unread tables — the ingesting step mentions its own table more than anyone, so a mention
+count declares every freshly-landed table well-read. That is [[a grep cannot tell doing from
+describing]] landing on the exact column written to catch T45. Second correction: a file can be
+**both** (`small.py` writes `schedules` and reads it in `bye_weeks`), so the classification is not
+an `elif` chain. **0 readers is a finding** — it found `ngs` (T45, reproduced independently) and
+then `pfr_pass`/`pfr_rec`/`pfr_rush` (**T47**).
+
+**named allowance (B0).** An additive session's bar is *"nothing that already existed moved"*, which
+is strictly stronger than "all gates pass". Where a session *does* intend to change something
+(0.12.7's DOUBLE→INT retype), the change is **declared** and everything else still fails — the same
+shape as UI-1's leaf classifier. An allowance is deliberately narrow: it permits a retype of named
+columns and **nothing else** (row count, column set and every unnamed column must hold), so it
+cannot become a blanket pardon. Cf. [[a test that cannot fail]].
+
+**backtestable flag.** Registered per table and **asserted**, not labelled. `ftn_charting` carries
+`backtestable=False` because of arithmetic, not taste: `DEV_SEASONS` is 2014–2022 and FTN's
+[[upstream floor]] is 2022, so it contributes exactly **one** development season, and this repo has
+twice learned (T24, T40) what an n=1 bar produces. The arithmetic itself is unit-tested, so the flag
+cannot drift from its reason.

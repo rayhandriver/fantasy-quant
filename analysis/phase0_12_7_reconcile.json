@@ -1,0 +1,281 @@
+{
+  "casts_value_preserving": true,
+  "crosswalk_match_rates": [
+    {
+      "id_column": "gsis_id",
+      "match_rate": 0.7542,
+      "n_matched": 137538,
+      "n_rows_with_id": 182352,
+      "table": "participation_player_week",
+      "top_unmatched_positions": [
+        {
+          "n": 16637,
+          "position": "OT"
+        },
+        {
+          "n": 14992,
+          "position": "G"
+        },
+        {
+          "n": 8143,
+          "position": "C"
+        },
+        {
+          "n": 4058,
+          "position": "LS"
+        },
+        {
+          "n": 274,
+          "position": "OL"
+        },
+        {
+          "n": 206,
+          "position": "(unknown)"
+        },
+        {
+          "n": 100,
+          "position": "DB"
+        },
+        {
+          "n": 94,
+          "position": "TE"
+        }
+      ]
+    },
+    {
+      "id_column": "gsis_id",
+      "match_rate": 0.7611,
+      "n_matched": 405944,
+      "n_rows_with_id": 533357,
+      "table": "weekly_rosters",
+      "top_unmatched_positions": [
+        {
+          "n": 37519,
+          "position": "OT"
+        },
+        {
+          "n": 32716,
+          "position": "G"
+        },
+        {
+          "n": 16483,
+          "position": "C"
+        },
+        {
+          "n": 13802,
+          "position": "(unknown)"
+        },
+        {
+          "n": 5635,
+          "position": "LS"
+        },
+        {
+          "n": 3376,
+          "position": "DB"
+        },
+        {
+          "n": 3016,
+          "position": "LB"
+        },
+        {
+          "n": 2491,
+          "position": "WR"
+        }
+      ]
+    },
+    {
+      "id_column": "gsis_id",
+      "match_rate": 0.7321,
+      "n_matched": 34860,
+      "n_rows_with_id": 47616,
+      "table": "contracts",
+      "top_unmatched_positions": [
+        {
+          "n": 2994,
+          "position": "OT"
+        },
+        {
+          "n": 2776,
+          "position": "G"
+        },
+        {
+          "n": 2038,
+          "position": "(unknown)"
+        },
+        {
+          "n": 1283,
+          "position": "C"
+        },
+        {
+          "n": 506,
+          "position": "DB"
+        },
+        {
+          "n": 492,
+          "position": "LB"
+        },
+        {
+          "n": 427,
+          "position": "WR"
+        },
+        {
+          "n": 358,
+          "position": "CB"
+        }
+      ]
+    },
+    {
+      "id_column": "gsis_id",
+      "match_rate": 0.8001,
+      "n_matched": 760596,
+      "n_rows_with_id": 950623,
+      "table": "depth_charts_all",
+      "top_unmatched_positions": [
+        {
+          "n": 69708,
+          "position": "OT"
+        },
+        {
+          "n": 56498,
+          "position": "G"
+        },
+        {
+          "n": 27969,
+          "position": "C"
+        },
+        {
+          "n": 12181,
+          "position": "(unknown)"
+        },
+        {
+          "n": 10436,
+          "position": "LS"
+        },
+        {
+          "n": 3338,
+          "position": "OL"
+        },
+        {
+          "n": 1640,
+          "position": "CB"
+        },
+        {
+          "n": 1488,
+          "position": "DT"
+        }
+      ]
+    },
+    {
+      "id_column": "gsis_id",
+      "match_rate": 0.3078,
+      "n_matched": 7548,
+      "n_rows_with_id": 24519,
+      "table": "players_master",
+      "top_unmatched_positions": [
+        {
+          "n": 1970,
+          "position": "WR"
+        },
+        {
+          "n": 1735,
+          "position": "DB"
+        },
+        {
+          "n": 1663,
+          "position": "LB"
+        },
+        {
+          "n": 1645,
+          "position": "RB"
+        },
+        {
+          "n": 1639,
+          "position": "OT"
+        },
+        {
+          "n": 1537,
+          "position": "G"
+        },
+        {
+          "n": 1158,
+          "position": "DE"
+        },
+        {
+          "n": 953,
+          "position": "TE"
+        }
+      ]
+    }
+  ],
+  "depth_charts_all": {
+    "by_grain": [
+      {
+        "grain": "snapshot",
+        "n": 554215,
+        "n_seasons": 1,
+        "s0": 2025,
+        "s1": 2025
+      },
+      {
+        "grain": "weekly",
+        "n": 401774,
+        "n_seasons": 11,
+        "s0": 2014,
+        "s1": 2024
+      }
+    ],
+    "n_rows": 955989,
+    "n_seasons": 12,
+    "season_complete_2014_2025": true,
+    "seasons": [
+      2014,
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "table": "depth_charts_all"
+  },
+  "double_to_int": [
+    {
+      "action": "cast DOUBLE->INTEGER",
+      "column": "season",
+      "n_nonnull_after": 401774,
+      "n_nonnull_before": 401774,
+      "sum_after": 811211478.0,
+      "sum_before": 811211478.0,
+      "table": "depth_charts",
+      "values_preserved": true
+    },
+    {
+      "action": "cast DOUBLE->INTEGER",
+      "column": "week",
+      "n_nonnull_after": 399376,
+      "n_nonnull_before": 399376,
+      "sum_after": 4049322.0,
+      "sum_before": 4049322.0,
+      "table": "depth_charts",
+      "values_preserved": true
+    },
+    {
+      "action": "cast DOUBLE->INTEGER",
+      "column": "season",
+      "n_nonnull_after": 65866,
+      "n_nonnull_before": 65866,
+      "sum_after": 133030210.0,
+      "sum_before": 133030210.0,
+      "table": "injuries",
+      "values_preserved": true
+    }
+  ],
+  "finding": "depth_charts held TWO grains: 401,774 legacy weekly rows (2014-2024) and 554,215 rows of the 2025 timestamped snapshot series appended with a NULL season \u2014 the latter a duplicate of depth_charts_ts. `group by season` over it silently dropped 58% of the table and reported the data as ending in 2024, which is how the scoping read it as a missing season. depth_charts_all makes the grain an explicit column.",
+  "passed": true,
+  "substep": "0.12.7"
+}

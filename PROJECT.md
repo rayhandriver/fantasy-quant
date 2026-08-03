@@ -101,6 +101,30 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
 - 0.7 PIT panel / feature-store assembly (the join layer) → `data/panel.py`
 - 0.8 Data validation & sanity gates (the hard-gate analog) → `data/validate.py`
 - **Done when** any source is queryable PIT from DuckDB and the panel passes its gates.
+- 0.11 ECR + Underdog ADP ingest *(ECR ☑ Session F; Underdog deferred — no keyless endpoint)* → `data/sources/ecr.py`
+- **0.12 THE COMPLETE FREE-DATA RECONCILIATION** ☑ *(run 2026-08-03 — 9/9 bars PASS, store 27 → 45
+  tables, 800 tests; scoped 2026-08-02, user request — Session DATA-1;
+  full spec `docs/BUILD_PLAN.md` §"Session DATA-1")*. Obtain and perfect **every** free source needed for
+  open-ended micro-detail work, and leave behind a standing register so "do we have X?" is answerable
+  without another investigation. **The constraint turned out to be architectural:** `nfl_data_py` is a
+  frozen wrapper over the `nflverse-data` release assets and we had been reading its surface as the data's
+  surface (**T46**) — behind it, `pbp_participation` (2016–2025, play grain) carries defenders-in-box,
+  offensive/defensive personnel, man/zone coverage, routes, and the gsis IDs of all 22 players on every
+  play, and was never ingested. Also: `ngs` is ingested with **no `features/` consumer** (**T45**) and
+  there is **no `schedules` table** (**T44**).
+  - 0.12.1 release-asset loader → `data/sources/nflverse_release.py` *(bit-identity control + negative control)*
+  - 0.12.2 generated inventory / gap register → `analysis/data_inventory.json` + `reference/DATA-SOURCES.md`
+  - 0.12.3 participation at play grain · 0.12.4 `participation_player_week` *(the explode stays a view)*
+  - 0.12.5 FTN 2022–25 *(one DEV season — `backtestable: false`)* · 0.12.6 schedules · QBR · contracts · officials · trades · rosters
+  - 0.12.7 reconcile `depth_charts`/`depth_charts_ts`, season dtypes, one team-code canon
+  - 0.12.8 coverage / fill-rate / **upstream-floor** gates + a declared **PIT class** per table + backup
+  - **Done when** the four questions that motivated the session — box counts faced per RB-week, man/zone
+    share faced per WR-week, TE/WR snap share **within** 11/12/13 personnel, neutral-script seconds per
+    play per team-week — each return an answer from one query; the register lists every source with its
+    seasons, fill rates, **upstream floor**, PIT class and consumers; and every pre-existing table is
+    byte-identical. *A source is not ingested until the question that motivated it returns an answer.*
+  - ⚠ **Ingest all seasons, analyse DEV only** — loading 2023/24 does not spend the lockbox; building a
+    feature on it does. The wall stays at the modelling step. **No feature is built in this phase.**
 
 ### Phase 1 — Backtest harness (built before any modeling)
 - 1.1 League scoring engine (PPR config) → `backtest/scoring.py`

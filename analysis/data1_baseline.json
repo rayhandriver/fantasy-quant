@@ -1,0 +1,5085 @@
+{
+  "adp_snapshots": {
+    "columns": {
+      "adp": {
+        "hash": "11529783637800664658",
+        "n_nonnull": 37029
+      },
+      "bye": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 19988
+      },
+      "ffc_player_id": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 20070
+      },
+      "format": {
+        "hash": "18328574110269306730",
+        "n_nonnull": 37029
+      },
+      "gsis_id": {
+        "hash": "10164686792716043358",
+        "n_nonnull": 33641
+      },
+      "high": {
+        "hash": "8099596508684230304",
+        "n_nonnull": 37029
+      },
+      "low": {
+        "hash": "3517757841443186935",
+        "n_nonnull": 37029
+      },
+      "name": {
+        "hash": "19363066442077340",
+        "n_nonnull": 37029
+      },
+      "pos_rank": {
+        "hash": "14522125803773716763",
+        "n_nonnull": 37029
+      },
+      "position": {
+        "hash": "3632263651991320051",
+        "n_nonnull": 37029
+      },
+      "pulled_at": {
+        "hash": "8491955124120700172",
+        "n_nonnull": 37029
+      },
+      "scoring": {
+        "hash": "12706662883005152262",
+        "n_nonnull": 37029
+      },
+      "season": {
+        "hash": "5511106622880429039",
+        "n_nonnull": 37029
+      },
+      "snapshot_date": {
+        "hash": "9842987600253756447",
+        "n_nonnull": 37029
+      },
+      "source": {
+        "hash": "18352922038571332127",
+        "n_nonnull": 37029
+      },
+      "start_date": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 20070
+      },
+      "stdev": {
+        "hash": "14426021887693685778",
+        "n_nonnull": 37029
+      },
+      "team": {
+        "hash": "6605877849146164389",
+        "n_nonnull": 34999
+      },
+      "teams": {
+        "hash": "4800297459639118879",
+        "n_nonnull": 37029
+      },
+      "times_drafted": {
+        "hash": "4590899959094818719",
+        "n_nonnull": 37029
+      },
+      "total_drafts": {
+        "hash": "8270309179592360729",
+        "n_nonnull": 37029
+      }
+    },
+    "n_rows": 37029,
+    "row_hash_sum": "341227667085106624655357",
+    "row_hash_xor": "16811893599294332745",
+    "schema": {
+      "adp": "DOUBLE",
+      "bye": "DOUBLE",
+      "ffc_player_id": "BIGINT",
+      "format": "VARCHAR",
+      "gsis_id": "VARCHAR",
+      "high": "BIGINT",
+      "low": "BIGINT",
+      "name": "VARCHAR",
+      "pos_rank": "BIGINT",
+      "position": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "scoring": "VARCHAR",
+      "season": "BIGINT",
+      "snapshot_date": "DATE",
+      "source": "VARCHAR",
+      "start_date": "DATE",
+      "stdev": "DOUBLE",
+      "team": "VARCHAR",
+      "teams": "BIGINT",
+      "times_drafted": "BIGINT",
+      "total_drafts": "BIGINT"
+    }
+  },
+  "combine": {
+    "columns": {
+      "bench": {
+        "hash": "16766549838231669212",
+        "n_nonnull": 2320
+      },
+      "broad_jump": {
+        "hash": "18253881296704476295",
+        "n_nonnull": 3050
+      },
+      "cfb_id": {
+        "hash": "8466989238764010637",
+        "n_nonnull": 3750
+      },
+      "cone": {
+        "hash": "12382174351690380196",
+        "n_nonnull": 2063
+      },
+      "draft_ovr": {
+        "hash": "1819285679164457480",
+        "n_nonnull": 2564
+      },
+      "draft_round": {
+        "hash": "5577159911683147795",
+        "n_nonnull": 2564
+      },
+      "draft_team": {
+        "hash": "16915962075422992260",
+        "n_nonnull": 2564
+      },
+      "draft_year": {
+        "hash": "14127863992662588963",
+        "n_nonnull": 2564
+      },
+      "forty": {
+        "hash": "4041169702698287195",
+        "n_nonnull": 3321
+      },
+      "ht": {
+        "hash": "4541886898104181414",
+        "n_nonnull": 4051
+      },
+      "pfr_id": {
+        "hash": "10663589085076248047",
+        "n_nonnull": 3650
+      },
+      "player_name": {
+        "hash": "13684279157211785231",
+        "n_nonnull": 4080
+      },
+      "pos": {
+        "hash": "18079871487541279159",
+        "n_nonnull": 4080
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 4080
+      },
+      "school": {
+        "hash": "15891015179963583952",
+        "n_nonnull": 4080
+      },
+      "season": {
+        "hash": "1483293984047277676",
+        "n_nonnull": 4080
+      },
+      "shuttle": {
+        "hash": "7166497355642579641",
+        "n_nonnull": 2175
+      },
+      "vertical": {
+        "hash": "14655737406592520579",
+        "n_nonnull": 3126
+      },
+      "wt": {
+        "hash": "16818637909869769237",
+        "n_nonnull": 4056
+      }
+    },
+    "n_rows": 4080,
+    "row_hash_sum": "37657176861417378448560",
+    "row_hash_xor": "10873010491507488750",
+    "schema": {
+      "bench": "DOUBLE",
+      "broad_jump": "DOUBLE",
+      "cfb_id": "VARCHAR",
+      "cone": "DOUBLE",
+      "draft_ovr": "DOUBLE",
+      "draft_round": "DOUBLE",
+      "draft_team": "VARCHAR",
+      "draft_year": "DOUBLE",
+      "forty": "DOUBLE",
+      "ht": "VARCHAR",
+      "pfr_id": "VARCHAR",
+      "player_name": "VARCHAR",
+      "pos": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "school": "VARCHAR",
+      "season": "INTEGER",
+      "shuttle": "DOUBLE",
+      "vertical": "DOUBLE",
+      "wt": "DOUBLE"
+    }
+  },
+  "consensus_projections": {
+    "columns": {
+      "fp_fpts": {
+        "hash": "8391729074003552093",
+        "n_nonnull": 529
+      },
+      "gsis_id": {
+        "hash": "3649701659287504489",
+        "n_nonnull": 526
+      },
+      "interceptions": {
+        "hash": "13233782557489399039",
+        "n_nonnull": 81
+      },
+      "name": {
+        "hash": "10319978676557210237",
+        "n_nonnull": 529
+      },
+      "passing_tds": {
+        "hash": "14535741778382197194",
+        "n_nonnull": 81
+      },
+      "passing_yards": {
+        "hash": "14921689815222164802",
+        "n_nonnull": 81
+      },
+      "position": {
+        "hash": "7042468165105879290",
+        "n_nonnull": 529
+      },
+      "proj_points": {
+        "hash": "664054474489279279",
+        "n_nonnull": 529
+      },
+      "pulled_at": {
+        "hash": "4079605337801670236",
+        "n_nonnull": 529
+      },
+      "receiving_tds": {
+        "hash": "10229140024762514867",
+        "n_nonnull": 438
+      },
+      "receiving_yards": {
+        "hash": "3222643855515085452",
+        "n_nonnull": 438
+      },
+      "receptions": {
+        "hash": "9046606160197509729",
+        "n_nonnull": 438
+      },
+      "rushing_fumbles_lost": {
+        "hash": "15392571682611669729",
+        "n_nonnull": 519
+      },
+      "rushing_tds": {
+        "hash": "14731291954483591624",
+        "n_nonnull": 401
+      },
+      "rushing_yards": {
+        "hash": "15671414750146678509",
+        "n_nonnull": 401
+      },
+      "scoring": {
+        "hash": "3403331001306903194",
+        "n_nonnull": 529
+      },
+      "season": {
+        "hash": "15139599162646193525",
+        "n_nonnull": 529
+      },
+      "snapshot_date": {
+        "hash": "16054118088117636773",
+        "n_nonnull": 529
+      },
+      "source": {
+        "hash": "1416525794977482476",
+        "n_nonnull": 529
+      },
+      "team": {
+        "hash": "5885357131222429986",
+        "n_nonnull": 529
+      }
+    },
+    "n_rows": 529,
+    "row_hash_sum": "4842567225433348217236",
+    "row_hash_xor": "14375593574042797076",
+    "schema": {
+      "fp_fpts": "DOUBLE",
+      "gsis_id": "VARCHAR",
+      "interceptions": "DOUBLE",
+      "name": "VARCHAR",
+      "passing_tds": "DOUBLE",
+      "passing_yards": "DOUBLE",
+      "position": "VARCHAR",
+      "proj_points": "DOUBLE",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "receiving_tds": "DOUBLE",
+      "receiving_yards": "DOUBLE",
+      "receptions": "DOUBLE",
+      "rushing_fumbles_lost": "DOUBLE",
+      "rushing_tds": "DOUBLE",
+      "rushing_yards": "DOUBLE",
+      "scoring": "VARCHAR",
+      "season": "BIGINT",
+      "snapshot_date": "TIMESTAMP_S",
+      "source": "VARCHAR",
+      "team": "VARCHAR"
+    }
+  },
+  "depth_charts": {
+    "columns": {
+      "club_code": {
+        "hash": "13503314534657253038",
+        "n_nonnull": 401774
+      },
+      "depth_position": {
+        "hash": "11842171990552335846",
+        "n_nonnull": 401774
+      },
+      "depth_team": {
+        "hash": "2447656953126284783",
+        "n_nonnull": 401774
+      },
+      "dt": {
+        "hash": "2847239714563313487",
+        "n_nonnull": 554215
+      },
+      "elias_id": {
+        "hash": "5636949682090194322",
+        "n_nonnull": 401718
+      },
+      "espn_id": {
+        "hash": "17913464976420256023",
+        "n_nonnull": 554215
+      },
+      "first_name": {
+        "hash": "5308731395955945646",
+        "n_nonnull": 401774
+      },
+      "football_name": {
+        "hash": "2315988313516522070",
+        "n_nonnull": 401774
+      },
+      "formation": {
+        "hash": "9990704891787442989",
+        "n_nonnull": 401774
+      },
+      "full_name": {
+        "hash": "3942360072314577047",
+        "n_nonnull": 401774
+      },
+      "game_type": {
+        "hash": "14438910084218641757",
+        "n_nonnull": 401774
+      },
+      "gsis_id": {
+        "hash": "13835360532280496678",
+        "n_nonnull": 950412
+      },
+      "jersey_number": {
+        "hash": "3148378088909146117",
+        "n_nonnull": 401774
+      },
+      "last_name": {
+        "hash": "6082609145764592117",
+        "n_nonnull": 401774
+      },
+      "player_name": {
+        "hash": "3894143251183098480",
+        "n_nonnull": 553770
+      },
+      "pos_abb": {
+        "hash": "17949340291883958912",
+        "n_nonnull": 554215
+      },
+      "pos_grp": {
+        "hash": "16277101725591221033",
+        "n_nonnull": 554215
+      },
+      "pos_grp_id": {
+        "hash": "3314421057349501939",
+        "n_nonnull": 554215
+      },
+      "pos_id": {
+        "hash": "180099407920824704",
+        "n_nonnull": 554215
+      },
+      "pos_name": {
+        "hash": "10831446197530285012",
+        "n_nonnull": 554215
+      },
+      "pos_rank": {
+        "hash": "2633193016482314492",
+        "n_nonnull": 554215
+      },
+      "pos_slot": {
+        "hash": "4172297100841230419",
+        "n_nonnull": 554215
+      },
+      "position": {
+        "hash": "17244647702987454807",
+        "n_nonnull": 401774
+      },
+      "pulled_at": {
+        "hash": "6126853884238846245",
+        "n_nonnull": 955989
+      },
+      "season": {
+        "hash": "5062059576108749790",
+        "n_nonnull": 401774
+      },
+      "team": {
+        "hash": "11315344544571274869",
+        "n_nonnull": 554215
+      },
+      "week": {
+        "hash": "14779117060283068521",
+        "n_nonnull": 399376
+      }
+    },
+    "n_rows": 955989,
+    "row_hash_sum": "8807049443336755346847185",
+    "row_hash_xor": "4879784313863779043",
+    "schema": {
+      "club_code": "VARCHAR",
+      "depth_position": "VARCHAR",
+      "depth_team": "VARCHAR",
+      "dt": "VARCHAR",
+      "elias_id": "VARCHAR",
+      "espn_id": "VARCHAR",
+      "first_name": "VARCHAR",
+      "football_name": "VARCHAR",
+      "formation": "VARCHAR",
+      "full_name": "VARCHAR",
+      "game_type": "VARCHAR",
+      "gsis_id": "VARCHAR",
+      "jersey_number": "VARCHAR",
+      "last_name": "VARCHAR",
+      "player_name": "VARCHAR",
+      "pos_abb": "VARCHAR",
+      "pos_grp": "VARCHAR",
+      "pos_grp_id": "VARCHAR",
+      "pos_id": "VARCHAR",
+      "pos_name": "VARCHAR",
+      "pos_rank": "DOUBLE",
+      "pos_slot": "DOUBLE",
+      "position": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "season": "DOUBLE",
+      "team": "VARCHAR",
+      "week": "DOUBLE"
+    }
+  },
+  "depth_charts_ts": {
+    "columns": {
+      "dt": {
+        "hash": "2847239714563313487",
+        "n_nonnull": 554215
+      },
+      "espn_id": {
+        "hash": "17913464976420256023",
+        "n_nonnull": 554215
+      },
+      "gsis_id": {
+        "hash": "6981515950877514934",
+        "n_nonnull": 548638
+      },
+      "player_name": {
+        "hash": "3894143251183098480",
+        "n_nonnull": 553770
+      },
+      "pos_abb": {
+        "hash": "17949340291883958912",
+        "n_nonnull": 554215
+      },
+      "pos_grp": {
+        "hash": "16277101725591221033",
+        "n_nonnull": 554215
+      },
+      "pos_grp_id": {
+        "hash": "3314421057349501939",
+        "n_nonnull": 554215
+      },
+      "pos_id": {
+        "hash": "180099407920824704",
+        "n_nonnull": 554215
+      },
+      "pos_name": {
+        "hash": "10831446197530285012",
+        "n_nonnull": 554215
+      },
+      "pos_rank": {
+        "hash": "7079435627514078659",
+        "n_nonnull": 554215
+      },
+      "pos_slot": {
+        "hash": "13097080473579815199",
+        "n_nonnull": 554215
+      },
+      "pulled_at": {
+        "hash": "14737642584081053504",
+        "n_nonnull": 554215
+      },
+      "source_year": {
+        "hash": "14553026794077177629",
+        "n_nonnull": 554215
+      },
+      "team": {
+        "hash": "11315344544571274869",
+        "n_nonnull": 554215
+      }
+    },
+    "n_rows": 554215,
+    "row_hash_sum": "5111281590026629466457376",
+    "row_hash_xor": "8194404337984054748",
+    "schema": {
+      "dt": "VARCHAR",
+      "espn_id": "VARCHAR",
+      "gsis_id": "VARCHAR",
+      "player_name": "VARCHAR",
+      "pos_abb": "VARCHAR",
+      "pos_grp": "VARCHAR",
+      "pos_grp_id": "VARCHAR",
+      "pos_id": "VARCHAR",
+      "pos_name": "VARCHAR",
+      "pos_rank": "INTEGER",
+      "pos_slot": "INTEGER",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "source_year": "BIGINT",
+      "team": "VARCHAR"
+    }
+  },
+  "draft_picks": {
+    "columns": {
+      "age": {
+        "hash": "6168433211192313282",
+        "n_nonnull": 3071
+      },
+      "allpro": {
+        "hash": "11993786161956126793",
+        "n_nonnull": 3077
+      },
+      "car_av": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 0
+      },
+      "category": {
+        "hash": "17453663673154871207",
+        "n_nonnull": 3077
+      },
+      "cfb_player_id": {
+        "hash": "10197776565963256785",
+        "n_nonnull": 2868
+      },
+      "college": {
+        "hash": "3669419489823177167",
+        "n_nonnull": 3077
+      },
+      "def_ints": {
+        "hash": "14013107402744144271",
+        "n_nonnull": 598
+      },
+      "def_sacks": {
+        "hash": "8497291866194976422",
+        "n_nonnull": 874
+      },
+      "def_solo_tackles": {
+        "hash": "16023096210553088121",
+        "n_nonnull": 1980
+      },
+      "dr_av": {
+        "hash": "2035368976107705944",
+        "n_nonnull": 2715
+      },
+      "games": {
+        "hash": "9091089500804753167",
+        "n_nonnull": 2867
+      },
+      "gsis_id": {
+        "hash": "14930207481201782732",
+        "n_nonnull": 3066
+      },
+      "hof": {
+        "hash": "0",
+        "n_nonnull": 3077
+      },
+      "pass_attempts": {
+        "hash": "3610281607066974766",
+        "n_nonnull": 2867
+      },
+      "pass_completions": {
+        "hash": "7633645321433966815",
+        "n_nonnull": 2867
+      },
+      "pass_ints": {
+        "hash": "11080663620537871799",
+        "n_nonnull": 2867
+      },
+      "pass_tds": {
+        "hash": "9293239917775932116",
+        "n_nonnull": 2867
+      },
+      "pass_yards": {
+        "hash": "5872733039211512712",
+        "n_nonnull": 2867
+      },
+      "pfr_player_id": {
+        "hash": "11963620544158203711",
+        "n_nonnull": 3077
+      },
+      "pfr_player_name": {
+        "hash": "15592507835258753342",
+        "n_nonnull": 3077
+      },
+      "pick": {
+        "hash": "863870248202544669",
+        "n_nonnull": 3077
+      },
+      "position": {
+        "hash": "8898608635631838111",
+        "n_nonnull": 3077
+      },
+      "probowls": {
+        "hash": "12238762463701935768",
+        "n_nonnull": 3077
+      },
+      "pulled_at": {
+        "hash": "15225682623242073849",
+        "n_nonnull": 3077
+      },
+      "rec_tds": {
+        "hash": "15267929388842080318",
+        "n_nonnull": 2867
+      },
+      "rec_yards": {
+        "hash": "10546238335907340395",
+        "n_nonnull": 2867
+      },
+      "receptions": {
+        "hash": "9009711670403554272",
+        "n_nonnull": 2867
+      },
+      "round": {
+        "hash": "8535942711051191036",
+        "n_nonnull": 3077
+      },
+      "rush_atts": {
+        "hash": "9326818005439613872",
+        "n_nonnull": 2867
+      },
+      "rush_tds": {
+        "hash": "1959278572665316727",
+        "n_nonnull": 2867
+      },
+      "rush_yards": {
+        "hash": "16060757152070050211",
+        "n_nonnull": 2867
+      },
+      "season": {
+        "hash": "14298249787650514054",
+        "n_nonnull": 3077
+      },
+      "seasons_started": {
+        "hash": "1772221269464675291",
+        "n_nonnull": 3077
+      },
+      "side": {
+        "hash": "5733250710488577046",
+        "n_nonnull": 3075
+      },
+      "team": {
+        "hash": "281578014121539246",
+        "n_nonnull": 3077
+      },
+      "to": {
+        "hash": "170465286204525122",
+        "n_nonnull": 2867
+      },
+      "w_av": {
+        "hash": "16179598591772231982",
+        "n_nonnull": 2867
+      }
+    },
+    "n_rows": 3077,
+    "row_hash_sum": "28715862618969390224781",
+    "row_hash_xor": "12042562441409436013",
+    "schema": {
+      "age": "DOUBLE",
+      "allpro": "INTEGER",
+      "car_av": "INTEGER",
+      "category": "VARCHAR",
+      "cfb_player_id": "VARCHAR",
+      "college": "VARCHAR",
+      "def_ints": "DOUBLE",
+      "def_sacks": "DOUBLE",
+      "def_solo_tackles": "DOUBLE",
+      "dr_av": "DOUBLE",
+      "games": "DOUBLE",
+      "gsis_id": "VARCHAR",
+      "hof": "BOOLEAN",
+      "pass_attempts": "DOUBLE",
+      "pass_completions": "DOUBLE",
+      "pass_ints": "DOUBLE",
+      "pass_tds": "DOUBLE",
+      "pass_yards": "DOUBLE",
+      "pfr_player_id": "VARCHAR",
+      "pfr_player_name": "VARCHAR",
+      "pick": "INTEGER",
+      "position": "VARCHAR",
+      "probowls": "INTEGER",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "rec_tds": "DOUBLE",
+      "rec_yards": "DOUBLE",
+      "receptions": "DOUBLE",
+      "round": "INTEGER",
+      "rush_atts": "DOUBLE",
+      "rush_tds": "DOUBLE",
+      "rush_yards": "DOUBLE",
+      "season": "INTEGER",
+      "seasons_started": "INTEGER",
+      "side": "VARCHAR",
+      "team": "VARCHAR",
+      "to": "DOUBLE",
+      "w_av": "DOUBLE"
+    }
+  },
+  "ecr_snapshots": {
+    "columns": {
+      "as_of": {
+        "hash": "12764366164479302539",
+        "n_nonnull": 17264
+      },
+      "bye": {
+        "hash": "2979853129341292858",
+        "n_nonnull": 8917
+      },
+      "ecr": {
+        "hash": "12408723872412106921",
+        "n_nonnull": 17264
+      },
+      "ecr_avg": {
+        "hash": "14718817140017664952",
+        "n_nonnull": 17264
+      },
+      "ecr_delta": {
+        "hash": "16731456961609797173",
+        "n_nonnull": 384
+      },
+      "ecr_max": {
+        "hash": "16608943051862282544",
+        "n_nonnull": 17264
+      },
+      "ecr_min": {
+        "hash": "5251380451944520641",
+        "n_nonnull": 17264
+      },
+      "ecr_std": {
+        "hash": "11868514649078088819",
+        "n_nonnull": 17264
+      },
+      "gsis_id": {
+        "hash": "5029785474827747372",
+        "n_nonnull": 16059
+      },
+      "is_preseason": {
+        "hash": "0",
+        "n_nonnull": 17264
+      },
+      "n_players": {
+        "hash": "3125948334206349903",
+        "n_nonnull": 17264
+      },
+      "name": {
+        "hash": "13567721178285529459",
+        "n_nonnull": 17246
+      },
+      "pos_rank": {
+        "hash": "4583844916803342671",
+        "n_nonnull": 17264
+      },
+      "position": {
+        "hash": "13581990296704463355",
+        "n_nonnull": 17246
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 17264
+      },
+      "scoring": {
+        "hash": "17411179544108072281",
+        "n_nonnull": 17264
+      },
+      "season": {
+        "hash": "4337576375743610548",
+        "n_nonnull": 17264
+      },
+      "source": {
+        "hash": "0",
+        "n_nonnull": 17264
+      },
+      "team": {
+        "hash": "2702934262122535573",
+        "n_nonnull": 17246
+      },
+      "tier": {
+        "hash": "4830961126216461204",
+        "n_nonnull": 17264
+      },
+      "total_experts": {
+        "hash": "12056188833443606943",
+        "n_nonnull": 17264
+      }
+    },
+    "n_rows": 17264,
+    "row_hash_sum": "159280607403672016119358",
+    "row_hash_xor": "2953690587757782142",
+    "schema": {
+      "as_of": "DATE",
+      "bye": "DOUBLE",
+      "ecr": "BIGINT",
+      "ecr_avg": "DOUBLE",
+      "ecr_delta": "DOUBLE",
+      "ecr_max": "DOUBLE",
+      "ecr_min": "DOUBLE",
+      "ecr_std": "DOUBLE",
+      "gsis_id": "VARCHAR",
+      "is_preseason": "BOOLEAN",
+      "n_players": "BIGINT",
+      "name": "VARCHAR",
+      "pos_rank": "BIGINT",
+      "position": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "scoring": "VARCHAR",
+      "season": "BIGINT",
+      "source": "VARCHAR",
+      "team": "VARCHAR",
+      "tier": "BIGINT",
+      "total_experts": "BIGINT"
+    }
+  },
+  "game_lines": {
+    "columns": {
+      "away_fair_winprob": {
+        "hash": "5779367240120061888",
+        "n_nonnull": 3294
+      },
+      "away_implied_total": {
+        "hash": "13926440473658206147",
+        "n_nonnull": 3295
+      },
+      "away_moneyline": {
+        "hash": "1550103365753546546",
+        "n_nonnull": 3294
+      },
+      "away_score": {
+        "hash": "10938743083356505474",
+        "n_nonnull": 3295
+      },
+      "away_spread_odds": {
+        "hash": "8604000323590663696",
+        "n_nonnull": 3294
+      },
+      "away_team": {
+        "hash": "12986114480760743353",
+        "n_nonnull": 3295
+      },
+      "captured_at": {
+        "hash": "16247977983467121280",
+        "n_nonnull": 3295
+      },
+      "game_id": {
+        "hash": "5007597647809557727",
+        "n_nonnull": 3295
+      },
+      "game_type": {
+        "hash": "2682769815879537224",
+        "n_nonnull": 3295
+      },
+      "gameday": {
+        "hash": "3645120126511045220",
+        "n_nonnull": 3295
+      },
+      "home_fair_winprob": {
+        "hash": "11162481560353885972",
+        "n_nonnull": 3294
+      },
+      "home_implied_total": {
+        "hash": "13434497435142498708",
+        "n_nonnull": 3295
+      },
+      "home_moneyline": {
+        "hash": "1968784797360865987",
+        "n_nonnull": 3294
+      },
+      "home_score": {
+        "hash": "16227065774654338680",
+        "n_nonnull": 3295
+      },
+      "home_spread_odds": {
+        "hash": "16856204193047283975",
+        "n_nonnull": 3294
+      },
+      "home_team": {
+        "hash": "16423478341230882961",
+        "n_nonnull": 3295
+      },
+      "over_odds": {
+        "hash": "2734193654170573816",
+        "n_nonnull": 3294
+      },
+      "pulled_at": {
+        "hash": "12960403104758949530",
+        "n_nonnull": 3295
+      },
+      "result": {
+        "hash": "11977655751016619307",
+        "n_nonnull": 3295
+      },
+      "roof": {
+        "hash": "1141569186371848147",
+        "n_nonnull": 3295
+      },
+      "season": {
+        "hash": "8691065994829419325",
+        "n_nonnull": 3295
+      },
+      "spread_line": {
+        "hash": "888802881509671847",
+        "n_nonnull": 3295
+      },
+      "temp": {
+        "hash": "12698650082342130628",
+        "n_nonnull": 2196
+      },
+      "total": {
+        "hash": "5493715210583772195",
+        "n_nonnull": 3295
+      },
+      "total_line": {
+        "hash": "17621189585280544585",
+        "n_nonnull": 3295
+      },
+      "under_odds": {
+        "hash": "11936217189015011036",
+        "n_nonnull": 3294
+      },
+      "week": {
+        "hash": "5597940785698230093",
+        "n_nonnull": 3295
+      }
+    },
+    "n_rows": 3295,
+    "row_hash_sum": "30589345842166938380975",
+    "row_hash_xor": "10373821962422896863",
+    "schema": {
+      "away_fair_winprob": "DOUBLE",
+      "away_implied_total": "DOUBLE",
+      "away_moneyline": "DOUBLE",
+      "away_score": "DOUBLE",
+      "away_spread_odds": "DOUBLE",
+      "away_team": "VARCHAR",
+      "captured_at": "DATE",
+      "game_id": "VARCHAR",
+      "game_type": "VARCHAR",
+      "gameday": "VARCHAR",
+      "home_fair_winprob": "DOUBLE",
+      "home_implied_total": "DOUBLE",
+      "home_moneyline": "DOUBLE",
+      "home_score": "DOUBLE",
+      "home_spread_odds": "DOUBLE",
+      "home_team": "VARCHAR",
+      "over_odds": "DOUBLE",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "result": "DOUBLE",
+      "roof": "VARCHAR",
+      "season": "BIGINT",
+      "spread_line": "DOUBLE",
+      "temp": "DOUBLE",
+      "total": "DOUBLE",
+      "total_line": "DOUBLE",
+      "under_odds": "DOUBLE",
+      "week": "BIGINT"
+    }
+  },
+  "injuries": {
+    "columns": {
+      "date_modified": {
+        "hash": "14564107921980559822",
+        "n_nonnull": 59798
+      },
+      "first_name": {
+        "hash": "18204987048851450174",
+        "n_nonnull": 65866
+      },
+      "full_name": {
+        "hash": "4377977436916089369",
+        "n_nonnull": 65866
+      },
+      "game_type": {
+        "hash": "8590923420396206308",
+        "n_nonnull": 65866
+      },
+      "gsis_id": {
+        "hash": "11611455320749397085",
+        "n_nonnull": 65866
+      },
+      "last_name": {
+        "hash": "6474658795664957223",
+        "n_nonnull": 65866
+      },
+      "position": {
+        "hash": "5219583136011094474",
+        "n_nonnull": 65866
+      },
+      "practice_primary_injury": {
+        "hash": "617159760458570244",
+        "n_nonnull": 65601
+      },
+      "practice_secondary_injury": {
+        "hash": "7854985901899120571",
+        "n_nonnull": 4297
+      },
+      "practice_status": {
+        "hash": "8422892374553898172",
+        "n_nonnull": 65821
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 65866
+      },
+      "report_primary_injury": {
+        "hash": "10365256671916302624",
+        "n_nonnull": 36741
+      },
+      "report_secondary_injury": {
+        "hash": "2930560174323085931",
+        "n_nonnull": 2412
+      },
+      "report_status": {
+        "hash": "11834890928602486483",
+        "n_nonnull": 36742
+      },
+      "season": {
+        "hash": "15780814232890933987",
+        "n_nonnull": 65866
+      },
+      "season_type": {
+        "hash": "17736058311971384971",
+        "n_nonnull": 6068
+      },
+      "team": {
+        "hash": "15338998825082728582",
+        "n_nonnull": 65866
+      },
+      "week": {
+        "hash": "14229709218267580216",
+        "n_nonnull": 65866
+      }
+    },
+    "n_rows": 65866,
+    "row_hash_sum": "608139095541939157299252",
+    "row_hash_xor": "12682146096489863266",
+    "schema": {
+      "date_modified": "TIMESTAMP WITH TIME ZONE",
+      "first_name": "VARCHAR",
+      "full_name": "VARCHAR",
+      "game_type": "VARCHAR",
+      "gsis_id": "VARCHAR",
+      "last_name": "VARCHAR",
+      "position": "VARCHAR",
+      "practice_primary_injury": "VARCHAR",
+      "practice_secondary_injury": "VARCHAR",
+      "practice_status": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "report_primary_injury": "VARCHAR",
+      "report_secondary_injury": "VARCHAR",
+      "report_status": "VARCHAR",
+      "season": "DOUBLE",
+      "season_type": "VARCHAR",
+      "team": "VARCHAR",
+      "week": "DOUBLE"
+    }
+  },
+  "news_raw": {
+    "columns": {
+      "captured_at": {
+        "hash": "7068757249338770716",
+        "n_nonnull": 109
+      },
+      "guid": {
+        "hash": "10506426589536217431",
+        "n_nonnull": 109
+      },
+      "link": {
+        "hash": "2889702661981300722",
+        "n_nonnull": 109
+      },
+      "published": {
+        "hash": "9356735894030398637",
+        "n_nonnull": 86
+      },
+      "published_raw": {
+        "hash": "15513223381717289660",
+        "n_nonnull": 109
+      },
+      "pulled_at": {
+        "hash": "13177908666134073908",
+        "n_nonnull": 109
+      },
+      "source": {
+        "hash": "6020351691257301826",
+        "n_nonnull": 109
+      },
+      "summary": {
+        "hash": "15400359740814584244",
+        "n_nonnull": 109
+      },
+      "title": {
+        "hash": "16859793845553960736",
+        "n_nonnull": 109
+      }
+    },
+    "n_rows": 109,
+    "row_hash_sum": "1041736266427971787712",
+    "row_hash_xor": "2434539427743501024",
+    "schema": {
+      "captured_at": "TIMESTAMP WITH TIME ZONE",
+      "guid": "VARCHAR",
+      "link": "VARCHAR",
+      "published": "TIMESTAMP WITH TIME ZONE",
+      "published_raw": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "source": "VARCHAR",
+      "summary": "VARCHAR",
+      "title": "VARCHAR"
+    }
+  },
+  "ngs": {
+    "columns": {
+      "aggressiveness": {
+        "hash": "13016788502736637974",
+        "n_nonnull": 5933
+      },
+      "attempts": {
+        "hash": "12097914374567363937",
+        "n_nonnull": 5933
+      },
+      "avg_air_distance": {
+        "hash": "8469209270205895390",
+        "n_nonnull": 5932
+      },
+      "avg_air_yards_differential": {
+        "hash": "10641963849579468339",
+        "n_nonnull": 5933
+      },
+      "avg_air_yards_to_sticks": {
+        "hash": "2739960618454725987",
+        "n_nonnull": 5933
+      },
+      "avg_completed_air_yards": {
+        "hash": "8613202046581536559",
+        "n_nonnull": 5933
+      },
+      "avg_cushion": {
+        "hash": "4905598898828208652",
+        "n_nonnull": 14728
+      },
+      "avg_expected_yac": {
+        "hash": "17355291730604665262",
+        "n_nonnull": 14673
+      },
+      "avg_intended_air_yards": {
+        "hash": "3801024528460267914",
+        "n_nonnull": 20664
+      },
+      "avg_rush_yards": {
+        "hash": "3432919611324848592",
+        "n_nonnull": 6059
+      },
+      "avg_separation": {
+        "hash": "2074048677685850006",
+        "n_nonnull": 14731
+      },
+      "avg_time_to_los": {
+        "hash": "11214094480171823252",
+        "n_nonnull": 6059
+      },
+      "avg_time_to_throw": {
+        "hash": "6507814101763161318",
+        "n_nonnull": 5933
+      },
+      "avg_yac": {
+        "hash": "11762843500067442965",
+        "n_nonnull": 14684
+      },
+      "avg_yac_above_expectation": {
+        "hash": "6062977530523865398",
+        "n_nonnull": 14673
+      },
+      "catch_percentage": {
+        "hash": "11302085151629581652",
+        "n_nonnull": 14731
+      },
+      "completion_percentage": {
+        "hash": "10659477831104072103",
+        "n_nonnull": 5933
+      },
+      "completion_percentage_above_expectation": {
+        "hash": "2069629895342041860",
+        "n_nonnull": 5932
+      },
+      "completions": {
+        "hash": "4672584021560259490",
+        "n_nonnull": 5933
+      },
+      "efficiency": {
+        "hash": "5255376955450744136",
+        "n_nonnull": 6059
+      },
+      "expected_completion_percentage": {
+        "hash": "1229310813361035110",
+        "n_nonnull": 5932
+      },
+      "expected_rush_yards": {
+        "hash": "985703935203828195",
+        "n_nonnull": 4885
+      },
+      "gsis_id": {
+        "hash": "11335140139554895900",
+        "n_nonnull": 26723
+      },
+      "interceptions": {
+        "hash": "1063574311152860037",
+        "n_nonnull": 5933
+      },
+      "max_air_distance": {
+        "hash": "14800305999127873099",
+        "n_nonnull": 5932
+      },
+      "max_completed_air_distance": {
+        "hash": "9624519686719574294",
+        "n_nonnull": 5932
+      },
+      "pass_touchdowns": {
+        "hash": "14159371293953199178",
+        "n_nonnull": 5933
+      },
+      "pass_yards": {
+        "hash": "13616749473120251931",
+        "n_nonnull": 5933
+      },
+      "passer_rating": {
+        "hash": "16168637968253696377",
+        "n_nonnull": 5933
+      },
+      "percent_attempts_gte_eight_defenders": {
+        "hash": "12340495479795396014",
+        "n_nonnull": 6059
+      },
+      "percent_share_of_intended_air_yards": {
+        "hash": "7949303359251938232",
+        "n_nonnull": 14731
+      },
+      "player_display_name": {
+        "hash": "15828748729928286648",
+        "n_nonnull": 26723
+      },
+      "player_first_name": {
+        "hash": "14025563967003031432",
+        "n_nonnull": 26723
+      },
+      "player_jersey_number": {
+        "hash": "3795646348521356587",
+        "n_nonnull": 26723
+      },
+      "player_last_name": {
+        "hash": "11878193017303938969",
+        "n_nonnull": 26723
+      },
+      "player_position": {
+        "hash": "16077820910775331479",
+        "n_nonnull": 26723
+      },
+      "player_short_name": {
+        "hash": "11730595454501151367",
+        "n_nonnull": 26693
+      },
+      "pulled_at": {
+        "hash": "1739626201267977204",
+        "n_nonnull": 26723
+      },
+      "rec_touchdowns": {
+        "hash": "11598711547278569397",
+        "n_nonnull": 14731
+      },
+      "receptions": {
+        "hash": "3291347366131248041",
+        "n_nonnull": 14731
+      },
+      "rush_attempts": {
+        "hash": "13222162613163236010",
+        "n_nonnull": 6059
+      },
+      "rush_pct_over_expected": {
+        "hash": "3623738437491355093",
+        "n_nonnull": 4885
+      },
+      "rush_touchdowns": {
+        "hash": "4082032557460809081",
+        "n_nonnull": 6059
+      },
+      "rush_yards": {
+        "hash": "4197901767332060641",
+        "n_nonnull": 6059
+      },
+      "rush_yards_over_expected": {
+        "hash": "5881362400247783474",
+        "n_nonnull": 4885
+      },
+      "rush_yards_over_expected_per_att": {
+        "hash": "14445784248393510100",
+        "n_nonnull": 4885
+      },
+      "season": {
+        "hash": "8256704091111251743",
+        "n_nonnull": 26723
+      },
+      "season_type": {
+        "hash": "2682769815879537224",
+        "n_nonnull": 26723
+      },
+      "stat_type": {
+        "hash": "7961969765720857076",
+        "n_nonnull": 26723
+      },
+      "targets": {
+        "hash": "13584931976540237077",
+        "n_nonnull": 14731
+      },
+      "team_abbr": {
+        "hash": "9321223079917804853",
+        "n_nonnull": 26693
+      },
+      "week": {
+        "hash": "14015311125726529901",
+        "n_nonnull": 26723
+      },
+      "yards": {
+        "hash": "10788911854710746466",
+        "n_nonnull": 14692
+      }
+    },
+    "n_rows": 26723,
+    "row_hash_sum": "246310077163437518990917",
+    "row_hash_xor": "16336138727728183561",
+    "schema": {
+      "aggressiveness": "DOUBLE",
+      "attempts": "DOUBLE",
+      "avg_air_distance": "DOUBLE",
+      "avg_air_yards_differential": "DOUBLE",
+      "avg_air_yards_to_sticks": "DOUBLE",
+      "avg_completed_air_yards": "DOUBLE",
+      "avg_cushion": "DOUBLE",
+      "avg_expected_yac": "DOUBLE",
+      "avg_intended_air_yards": "DOUBLE",
+      "avg_rush_yards": "DOUBLE",
+      "avg_separation": "DOUBLE",
+      "avg_time_to_los": "DOUBLE",
+      "avg_time_to_throw": "DOUBLE",
+      "avg_yac": "DOUBLE",
+      "avg_yac_above_expectation": "DOUBLE",
+      "catch_percentage": "DOUBLE",
+      "completion_percentage": "DOUBLE",
+      "completion_percentage_above_expectation": "DOUBLE",
+      "completions": "DOUBLE",
+      "efficiency": "DOUBLE",
+      "expected_completion_percentage": "DOUBLE",
+      "expected_rush_yards": "DOUBLE",
+      "gsis_id": "VARCHAR",
+      "interceptions": "DOUBLE",
+      "max_air_distance": "DOUBLE",
+      "max_completed_air_distance": "DOUBLE",
+      "pass_touchdowns": "DOUBLE",
+      "pass_yards": "DOUBLE",
+      "passer_rating": "DOUBLE",
+      "percent_attempts_gte_eight_defenders": "DOUBLE",
+      "percent_share_of_intended_air_yards": "DOUBLE",
+      "player_display_name": "VARCHAR",
+      "player_first_name": "VARCHAR",
+      "player_jersey_number": "INTEGER",
+      "player_last_name": "VARCHAR",
+      "player_position": "VARCHAR",
+      "player_short_name": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "rec_touchdowns": "DOUBLE",
+      "receptions": "DOUBLE",
+      "rush_attempts": "DOUBLE",
+      "rush_pct_over_expected": "DOUBLE",
+      "rush_touchdowns": "DOUBLE",
+      "rush_yards": "DOUBLE",
+      "rush_yards_over_expected": "DOUBLE",
+      "rush_yards_over_expected_per_att": "DOUBLE",
+      "season": "INTEGER",
+      "season_type": "VARCHAR",
+      "stat_type": "VARCHAR",
+      "targets": "DOUBLE",
+      "team_abbr": "VARCHAR",
+      "week": "INTEGER",
+      "yards": "DOUBLE"
+    }
+  },
+  "pbp": {
+    "columns": {
+      "aborted_play": {
+        "hash": "0",
+        "n_nonnull": 580005
+      },
+      "air_epa": {
+        "hash": "5373346345947923046",
+        "n_nonnull": 225223
+      },
+      "air_wpa": {
+        "hash": "9546173441091182220",
+        "n_nonnull": 225223
+      },
+      "air_yards": {
+        "hash": "3444433392383943608",
+        "n_nonnull": 226049
+      },
+      "assist_tackle": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "assist_tackle_1_player_id": {
+        "hash": "7774352750095286598",
+        "n_nonnull": 83654
+      },
+      "assist_tackle_1_player_name": {
+        "hash": "5859136660766028328",
+        "n_nonnull": 83654
+      },
+      "assist_tackle_1_team": {
+        "hash": "256743273185469733",
+        "n_nonnull": 83655
+      },
+      "assist_tackle_2_player_id": {
+        "hash": "1805671131690896963",
+        "n_nonnull": 56674
+      },
+      "assist_tackle_2_player_name": {
+        "hash": "17566688496889299902",
+        "n_nonnull": 56674
+      },
+      "assist_tackle_2_team": {
+        "hash": "8769440353329995723",
+        "n_nonnull": 56674
+      },
+      "assist_tackle_3_player_id": {
+        "hash": "7596376794890859215",
+        "n_nonnull": 7
+      },
+      "assist_tackle_3_player_name": {
+        "hash": "9680571026585524407",
+        "n_nonnull": 7
+      },
+      "assist_tackle_3_team": {
+        "hash": "6606525637192785437",
+        "n_nonnull": 7
+      },
+      "assist_tackle_4_player_id": {
+        "hash": "18444108072755355529",
+        "n_nonnull": 7
+      },
+      "assist_tackle_4_player_name": {
+        "hash": "1356763939549801231",
+        "n_nonnull": 7
+      },
+      "assist_tackle_4_team": {
+        "hash": "6606525637192785437",
+        "n_nonnull": 7
+      },
+      "away_coach": {
+        "hash": "7227172549371836094",
+        "n_nonnull": 580005
+      },
+      "away_score": {
+        "hash": "18366651614241744391",
+        "n_nonnull": 580005
+      },
+      "away_team": {
+        "hash": "7241009315238940686",
+        "n_nonnull": 580005
+      },
+      "away_timeouts_remaining": {
+        "hash": "6118612425732832616",
+        "n_nonnull": 580005
+      },
+      "away_wp": {
+        "hash": "15182421481431424327",
+        "n_nonnull": 580005
+      },
+      "away_wp_post": {
+        "hash": "11056786118059858150",
+        "n_nonnull": 540089
+      },
+      "blocked_player_id": {
+        "hash": "10255737578018916409",
+        "n_nonnull": 525
+      },
+      "blocked_player_name": {
+        "hash": "16103304991753387484",
+        "n_nonnull": 525
+      },
+      "comp_air_epa": {
+        "hash": "1657262695453036443",
+        "n_nonnull": 562339
+      },
+      "comp_air_wpa": {
+        "hash": "2662900759682872442",
+        "n_nonnull": 562339
+      },
+      "comp_yac_epa": {
+        "hash": "11265993751698988690",
+        "n_nonnull": 562338
+      },
+      "comp_yac_wpa": {
+        "hash": "2821146553044072628",
+        "n_nonnull": 562339
+      },
+      "complete_pass": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "cp": {
+        "hash": "12270108447131722394",
+        "n_nonnull": 218837
+      },
+      "cpoe": {
+        "hash": "7681660452078934575",
+        "n_nonnull": 218837
+      },
+      "def_wp": {
+        "hash": "13118564164325264223",
+        "n_nonnull": 576667
+      },
+      "defensive_extra_point_attempt": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "defensive_extra_point_conv": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "defensive_two_point_attempt": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "defensive_two_point_conv": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "defteam": {
+        "hash": "9138872707833792306",
+        "n_nonnull": 549283
+      },
+      "defteam_score": {
+        "hash": "9254499200554886261",
+        "n_nonnull": 549245
+      },
+      "defteam_score_post": {
+        "hash": "15963887826979381758",
+        "n_nonnull": 549283
+      },
+      "defteam_timeouts_remaining": {
+        "hash": "0",
+        "n_nonnull": 549283
+      },
+      "desc": {
+        "hash": "8313802791872314633",
+        "n_nonnull": 580005
+      },
+      "div_game": {
+        "hash": "4717996019076358352",
+        "n_nonnull": 580005
+      },
+      "down": {
+        "hash": "11558001812613190563",
+        "n_nonnull": 488131
+      },
+      "drive": {
+        "hash": "68767011376652291",
+        "n_nonnull": 573391
+      },
+      "drive_end_transition": {
+        "hash": "4913444358383165227",
+        "n_nonnull": 573385
+      },
+      "drive_end_yard_line": {
+        "hash": "6309984626050078777",
+        "n_nonnull": 572638
+      },
+      "drive_ended_with_score": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 573391
+      },
+      "drive_first_downs": {
+        "hash": "5794625030840203113",
+        "n_nonnull": 573391
+      },
+      "drive_game_clock_end": {
+        "hash": "3280931942254126526",
+        "n_nonnull": 573391
+      },
+      "drive_game_clock_start": {
+        "hash": "5553472874083362673",
+        "n_nonnull": 573391
+      },
+      "drive_inside20": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 573391
+      },
+      "drive_play_count": {
+        "hash": "370668860275413192",
+        "n_nonnull": 573391
+      },
+      "drive_play_id_ended": {
+        "hash": "10068836419649838921",
+        "n_nonnull": 573385
+      },
+      "drive_play_id_started": {
+        "hash": "794370658456657262",
+        "n_nonnull": 573391
+      },
+      "drive_quarter_end": {
+        "hash": "11230136631717236776",
+        "n_nonnull": 573391
+      },
+      "drive_quarter_start": {
+        "hash": "2740598411497418947",
+        "n_nonnull": 573391
+      },
+      "drive_real_start_time": {
+        "hash": "11632351420333681968",
+        "n_nonnull": 567553
+      },
+      "drive_start_transition": {
+        "hash": "1578441464663243748",
+        "n_nonnull": 573391
+      },
+      "drive_start_yard_line": {
+        "hash": "767490314948806232",
+        "n_nonnull": 572638
+      },
+      "drive_time_of_possession": {
+        "hash": "1620436927625270284",
+        "n_nonnull": 573391
+      },
+      "drive_yards_penalized": {
+        "hash": "16136882071341531476",
+        "n_nonnull": 573391
+      },
+      "end_clock_time": {
+        "hash": "6034017065237542086",
+        "n_nonnull": 160957
+      },
+      "end_yard_line": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 0
+      },
+      "ep": {
+        "hash": "8653971314951072276",
+        "n_nonnull": 573371
+      },
+      "epa": {
+        "hash": "7868917643258303828",
+        "n_nonnull": 573368
+      },
+      "extra_point_attempt": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "extra_point_prob": {
+        "hash": "10173490717131053156",
+        "n_nonnull": 580005
+      },
+      "extra_point_result": {
+        "hash": "3855775526700332380",
+        "n_nonnull": 15361
+      },
+      "fantasy": {
+        "hash": "9446245479074113907",
+        "n_nonnull": 412805
+      },
+      "fantasy_id": {
+        "hash": "8049197719803535316",
+        "n_nonnull": 412805
+      },
+      "fantasy_player_id": {
+        "hash": "13958081495570107898",
+        "n_nonnull": 395677
+      },
+      "fantasy_player_name": {
+        "hash": "9103500752273683464",
+        "n_nonnull": 395677
+      },
+      "fg_prob": {
+        "hash": "3218368371912244713",
+        "n_nonnull": 580005
+      },
+      "field_goal_attempt": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "field_goal_result": {
+        "hash": "15808358840089886388",
+        "n_nonnull": 12787
+      },
+      "first_down": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "first_down_pass": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "first_down_penalty": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "first_down_rush": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "fixed_drive": {
+        "hash": "14488368861727243144",
+        "n_nonnull": 580005
+      },
+      "fixed_drive_result": {
+        "hash": "3086526007024636250",
+        "n_nonnull": 579987
+      },
+      "forced_fumble_player_1_player_id": {
+        "hash": "6851504063043819467",
+        "n_nonnull": 5322
+      },
+      "forced_fumble_player_1_player_name": {
+        "hash": "8479230280650869119",
+        "n_nonnull": 5323
+      },
+      "forced_fumble_player_1_team": {
+        "hash": "8584698512612344006",
+        "n_nonnull": 5323
+      },
+      "forced_fumble_player_2_player_id": {
+        "hash": "6852508374839972585",
+        "n_nonnull": 43
+      },
+      "forced_fumble_player_2_player_name": {
+        "hash": "15932861021849311938",
+        "n_nonnull": 43
+      },
+      "forced_fumble_player_2_team": {
+        "hash": "12861162027897010382",
+        "n_nonnull": 43
+      },
+      "fourth_down_converted": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "fourth_down_failed": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "fumble": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "fumble_forced": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "fumble_lost": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "fumble_not_forced": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "fumble_out_of_bounds": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "fumble_recovery_1_player_id": {
+        "hash": "7545189137048514377",
+        "n_nonnull": 7199
+      },
+      "fumble_recovery_1_player_name": {
+        "hash": "16922081772969536249",
+        "n_nonnull": 7199
+      },
+      "fumble_recovery_1_team": {
+        "hash": "7732655587432071714",
+        "n_nonnull": 7199
+      },
+      "fumble_recovery_1_yards": {
+        "hash": "3323331256366768314",
+        "n_nonnull": 7199
+      },
+      "fumble_recovery_2_player_id": {
+        "hash": "18257669397640177711",
+        "n_nonnull": 74
+      },
+      "fumble_recovery_2_player_name": {
+        "hash": "4132199971127373133",
+        "n_nonnull": 74
+      },
+      "fumble_recovery_2_team": {
+        "hash": "7170890139112442736",
+        "n_nonnull": 74
+      },
+      "fumble_recovery_2_yards": {
+        "hash": "12177029349361365949",
+        "n_nonnull": 74
+      },
+      "fumbled_1_player_id": {
+        "hash": "6284815494823003484",
+        "n_nonnull": 7904
+      },
+      "fumbled_1_player_name": {
+        "hash": "6761811351821430802",
+        "n_nonnull": 7904
+      },
+      "fumbled_1_team": {
+        "hash": "1036204525778566330",
+        "n_nonnull": 7904
+      },
+      "fumbled_2_player_id": {
+        "hash": "3289364013410633989",
+        "n_nonnull": 75
+      },
+      "fumbled_2_player_name": {
+        "hash": "9999732103608121457",
+        "n_nonnull": 75
+      },
+      "fumbled_2_team": {
+        "hash": "8791192911030754918",
+        "n_nonnull": 75
+      },
+      "game_date": {
+        "hash": "12386554139266796883",
+        "n_nonnull": 580005
+      },
+      "game_half": {
+        "hash": "5729019926548163127",
+        "n_nonnull": 580005
+      },
+      "game_id": {
+        "hash": "544925824866691858",
+        "n_nonnull": 580005
+      },
+      "game_seconds_remaining": {
+        "hash": "15454101687109526930",
+        "n_nonnull": 579680
+      },
+      "game_stadium": {
+        "hash": "4418774917263448840",
+        "n_nonnull": 580005
+      },
+      "goal_to_go": {
+        "hash": "0",
+        "n_nonnull": 580005
+      },
+      "half_sack_1_player_id": {
+        "hash": "69820104788180900",
+        "n_nonnull": 1621
+      },
+      "half_sack_1_player_name": {
+        "hash": "8821462735157645707",
+        "n_nonnull": 1621
+      },
+      "half_sack_2_player_id": {
+        "hash": "15225733422932691459",
+        "n_nonnull": 1621
+      },
+      "half_sack_2_player_name": {
+        "hash": "16922816994450017999",
+        "n_nonnull": 1621
+      },
+      "half_seconds_remaining": {
+        "hash": "9507471898253402466",
+        "n_nonnull": 579680
+      },
+      "home_coach": {
+        "hash": "9468876314437182219",
+        "n_nonnull": 580005
+      },
+      "home_opening_kickoff": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "home_score": {
+        "hash": "2592840602551606100",
+        "n_nonnull": 580005
+      },
+      "home_team": {
+        "hash": "12823869890562310451",
+        "n_nonnull": 580005
+      },
+      "home_timeouts_remaining": {
+        "hash": "12052817766459166602",
+        "n_nonnull": 580005
+      },
+      "home_wp": {
+        "hash": "9131855348725710538",
+        "n_nonnull": 580005
+      },
+      "home_wp_post": {
+        "hash": "2545020052607199492",
+        "n_nonnull": 540089
+      },
+      "id": {
+        "hash": "12290541508155875581",
+        "n_nonnull": 436355
+      },
+      "incomplete_pass": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "interception": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "interception_player_id": {
+        "hash": "9203354640256665876",
+        "n_nonnull": 5237
+      },
+      "interception_player_name": {
+        "hash": "1058230386299619046",
+        "n_nonnull": 5237
+      },
+      "jersey_number": {
+        "hash": "4119605748563640506",
+        "n_nonnull": 430980
+      },
+      "kick_distance": {
+        "hash": "5146420148524953832",
+        "n_nonnull": 89384
+      },
+      "kicker_player_id": {
+        "hash": "440295500000435271",
+        "n_nonnull": 61829
+      },
+      "kicker_player_name": {
+        "hash": "11051212343236741803",
+        "n_nonnull": 61829
+      },
+      "kickoff_attempt": {
+        "hash": "0",
+        "n_nonnull": 562359
+      },
+      "kickoff_downed": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "kickoff_fair_catch": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "kickoff_in_endzone": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "kickoff_inside_twenty": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "kickoff_out_of_bounds": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "kickoff_returner_player_id": {
+        "hash": "8463448318735010867",
+        "n_nonnull": 13768
+      },
+      "kickoff_returner_player_name": {
+        "hash": "4341695154019683027",
+        "n_nonnull": 13768
+      },
+      "lateral_interception_player_id": {
+        "hash": "8492916782707760926",
+        "n_nonnull": 17
+      },
+      "lateral_interception_player_name": {
+        "hash": "9620337008505341863",
+        "n_nonnull": 17
+      },
+      "lateral_kickoff_returner_player_id": {
+        "hash": "8531810214046492369",
+        "n_nonnull": 28
+      },
+      "lateral_kickoff_returner_player_name": {
+        "hash": "3741282068745541161",
+        "n_nonnull": 28
+      },
+      "lateral_punt_returner_player_id": {
+        "hash": "2360096469258897342",
+        "n_nonnull": 12
+      },
+      "lateral_punt_returner_player_name": {
+        "hash": "1481072489723899270",
+        "n_nonnull": 12
+      },
+      "lateral_receiver_player_id": {
+        "hash": "5239826798429717835",
+        "n_nonnull": 146
+      },
+      "lateral_receiver_player_name": {
+        "hash": "14634536669443542675",
+        "n_nonnull": 146
+      },
+      "lateral_receiving_yards": {
+        "hash": "16273213111938018109",
+        "n_nonnull": 146
+      },
+      "lateral_reception": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "lateral_recovery": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "lateral_return": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "lateral_rush": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "lateral_rusher_player_id": {
+        "hash": "16236898614676830230",
+        "n_nonnull": 29
+      },
+      "lateral_rusher_player_name": {
+        "hash": "13603320538891179979",
+        "n_nonnull": 29
+      },
+      "lateral_rushing_yards": {
+        "hash": "2151264077661047757",
+        "n_nonnull": 29
+      },
+      "lateral_sack_player_id": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 0
+      },
+      "lateral_sack_player_name": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 0
+      },
+      "location": {
+        "hash": "14115302887769046685",
+        "n_nonnull": 580005
+      },
+      "name": {
+        "hash": "10972527514511344433",
+        "n_nonnull": 436355
+      },
+      "nfl_api_id": {
+        "hash": "15573659755780215225",
+        "n_nonnull": 580005
+      },
+      "no_huddle": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "no_score_prob": {
+        "hash": "8639543722088498372",
+        "n_nonnull": 580005
+      },
+      "old_game_id": {
+        "hash": "9412401026642726459",
+        "n_nonnull": 580005
+      },
+      "opp_fg_prob": {
+        "hash": "10177841067623137506",
+        "n_nonnull": 580005
+      },
+      "opp_safety_prob": {
+        "hash": "10857462893241693143",
+        "n_nonnull": 580005
+      },
+      "opp_td_prob": {
+        "hash": "1575468938584884122",
+        "n_nonnull": 580005
+      },
+      "order_sequence": {
+        "hash": "13859771743856486591",
+        "n_nonnull": 580005
+      },
+      "out_of_bounds": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "own_kickoff_recovery": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "own_kickoff_recovery_player_id": {
+        "hash": "9592961863142470351",
+        "n_nonnull": 85
+      },
+      "own_kickoff_recovery_player_name": {
+        "hash": "17732115348145631344",
+        "n_nonnull": 85
+      },
+      "own_kickoff_recovery_td": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "pass": {
+        "hash": "0",
+        "n_nonnull": 580005
+      },
+      "pass_attempt": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "pass_defense_1_player_id": {
+        "hash": "16363421160794738809",
+        "n_nonnull": 27722
+      },
+      "pass_defense_1_player_name": {
+        "hash": "5353577079582820490",
+        "n_nonnull": 27722
+      },
+      "pass_defense_2_player_id": {
+        "hash": "11316532698597889247",
+        "n_nonnull": 960
+      },
+      "pass_defense_2_player_name": {
+        "hash": "7000338984629230850",
+        "n_nonnull": 960
+      },
+      "pass_length": {
+        "hash": "15248620994202396502",
+        "n_nonnull": 225176
+      },
+      "pass_location": {
+        "hash": "15832556504469029999",
+        "n_nonnull": 225176
+      },
+      "pass_oe": {
+        "hash": "2120649189360759868",
+        "n_nonnull": 429720
+      },
+      "pass_touchdown": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "passer": {
+        "hash": "8162826870114478735",
+        "n_nonnull": 267206
+      },
+      "passer_id": {
+        "hash": "6832014432490648565",
+        "n_nonnull": 267206
+      },
+      "passer_jersey_number": {
+        "hash": "2528758268981614200",
+        "n_nonnull": 267233
+      },
+      "passer_player_id": {
+        "hash": "5987387352911865273",
+        "n_nonnull": 242830
+      },
+      "passer_player_name": {
+        "hash": "1465846059440086818",
+        "n_nonnull": 242830
+      },
+      "passing_yards": {
+        "hash": "5678775009660487462",
+        "n_nonnull": 144468
+      },
+      "penalty": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "penalty_player_id": {
+        "hash": "11959373529883632970",
+        "n_nonnull": 38816
+      },
+      "penalty_player_name": {
+        "hash": "6928951999237430311",
+        "n_nonnull": 38817
+      },
+      "penalty_team": {
+        "hash": "9262468529777442487",
+        "n_nonnull": 41288
+      },
+      "penalty_type": {
+        "hash": "4009357021740501736",
+        "n_nonnull": 41271
+      },
+      "penalty_yards": {
+        "hash": "15467111536406884782",
+        "n_nonnull": 41288
+      },
+      "play": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "play_clock": {
+        "hash": "890075851532448231",
+        "n_nonnull": 580005
+      },
+      "play_deleted": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "play_id": {
+        "hash": "11778746520859449592",
+        "n_nonnull": 580005
+      },
+      "play_type": {
+        "hash": "6892115315038180260",
+        "n_nonnull": 562955
+      },
+      "play_type_nfl": {
+        "hash": "10771989646349029429",
+        "n_nonnull": 580005
+      },
+      "posteam": {
+        "hash": "17816632821570250291",
+        "n_nonnull": 549283
+      },
+      "posteam_score": {
+        "hash": "7357644889509897504",
+        "n_nonnull": 549245
+      },
+      "posteam_score_post": {
+        "hash": "9676714764725605650",
+        "n_nonnull": 549283
+      },
+      "posteam_timeouts_remaining": {
+        "hash": "4367717728942514082",
+        "n_nonnull": 549283
+      },
+      "posteam_type": {
+        "hash": "5120255651019996799",
+        "n_nonnull": 549285
+      },
+      "pulled_at": {
+        "hash": "452093919806532876",
+        "n_nonnull": 580005
+      },
+      "punt_attempt": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "punt_blocked": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "punt_downed": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "punt_fair_catch": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "punt_in_endzone": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "punt_inside_twenty": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "punt_out_of_bounds": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "punt_returner_player_id": {
+        "hash": "3950771965323467291",
+        "n_nonnull": 19256
+      },
+      "punt_returner_player_name": {
+        "hash": "7347836025638904248",
+        "n_nonnull": 19256
+      },
+      "punter_player_id": {
+        "hash": "92467905037669835",
+        "n_nonnull": 27554
+      },
+      "punter_player_name": {
+        "hash": "11537519063783865310",
+        "n_nonnull": 27554
+      },
+      "qb_dropback": {
+        "hash": "0",
+        "n_nonnull": 562955
+      },
+      "qb_epa": {
+        "hash": "7106483204463241067",
+        "n_nonnull": 573368
+      },
+      "qb_hit": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "qb_hit_1_player_id": {
+        "hash": "15284917116455330506",
+        "n_nonnull": 35390
+      },
+      "qb_hit_1_player_name": {
+        "hash": "11448886293486636854",
+        "n_nonnull": 35390
+      },
+      "qb_hit_2_player_id": {
+        "hash": "13093243453782353822",
+        "n_nonnull": 1527
+      },
+      "qb_hit_2_player_name": {
+        "hash": "4491087142812290670",
+        "n_nonnull": 1527
+      },
+      "qb_kneel": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "qb_scramble": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "qb_spike": {
+        "hash": "0",
+        "n_nonnull": 580005
+      },
+      "qtr": {
+        "hash": "11311640709874453505",
+        "n_nonnull": 580005
+      },
+      "quarter_end": {
+        "hash": "0",
+        "n_nonnull": 580005
+      },
+      "quarter_seconds_remaining": {
+        "hash": "11718797993234122906",
+        "n_nonnull": 579680
+      },
+      "receiver": {
+        "hash": "6659382130712326442",
+        "n_nonnull": 232229
+      },
+      "receiver_id": {
+        "hash": "2833916866796928043",
+        "n_nonnull": 232229
+      },
+      "receiver_jersey_number": {
+        "hash": "11675906327045149029",
+        "n_nonnull": 233477
+      },
+      "receiver_player_id": {
+        "hash": "14481359444410006267",
+        "n_nonnull": 219877
+      },
+      "receiver_player_name": {
+        "hash": "14921277038304203728",
+        "n_nonnull": 219877
+      },
+      "receiving_yards": {
+        "hash": "14100848226615615193",
+        "n_nonnull": 144468
+      },
+      "replay_or_challenge": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "replay_or_challenge_result": {
+        "hash": "15975882563326946366",
+        "n_nonnull": 4549
+      },
+      "result": {
+        "hash": "2884271177694041121",
+        "n_nonnull": 580005
+      },
+      "return_team": {
+        "hash": "8502751302638353793",
+        "n_nonnull": 65642
+      },
+      "return_touchdown": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "return_yards": {
+        "hash": "16198108065570241320",
+        "n_nonnull": 562347
+      },
+      "roof": {
+        "hash": "1141569186371848147",
+        "n_nonnull": 580005
+      },
+      "run_gap": {
+        "hash": "4590427176026589858",
+        "n_nonnull": 123426
+      },
+      "run_location": {
+        "hash": "15832556504469029999",
+        "n_nonnull": 168952
+      },
+      "rush": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "rush_attempt": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "rush_touchdown": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "rusher": {
+        "hash": "6221255612608351239",
+        "n_nonnull": 169149
+      },
+      "rusher_id": {
+        "hash": "5411270540445202097",
+        "n_nonnull": 169149
+      },
+      "rusher_jersey_number": {
+        "hash": "5140400744757459130",
+        "n_nonnull": 175364
+      },
+      "rusher_player_id": {
+        "hash": "13120474417727689400",
+        "n_nonnull": 175800
+      },
+      "rusher_player_name": {
+        "hash": "1017075426938471009",
+        "n_nonnull": 175800
+      },
+      "rushing_yards": {
+        "hash": "16422233843669133612",
+        "n_nonnull": 175401
+      },
+      "sack": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "sack_player_id": {
+        "hash": "6077270986821846912",
+        "n_nonnull": 13929
+      },
+      "sack_player_name": {
+        "hash": "17053620166248875012",
+        "n_nonnull": 13931
+      },
+      "safety": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "safety_player_id": {
+        "hash": "9834381832303179811",
+        "n_nonnull": 124
+      },
+      "safety_player_name": {
+        "hash": "13200705999598501630",
+        "n_nonnull": 124
+      },
+      "safety_prob": {
+        "hash": "2823911652517777265",
+        "n_nonnull": 580005
+      },
+      "score_differential": {
+        "hash": "6738635130703460649",
+        "n_nonnull": 549245
+      },
+      "score_differential_post": {
+        "hash": "8478727316306452607",
+        "n_nonnull": 549283
+      },
+      "season": {
+        "hash": "8118811093645398724",
+        "n_nonnull": 580005
+      },
+      "season_type": {
+        "hash": "2682769815879537224",
+        "n_nonnull": 580005
+      },
+      "series": {
+        "hash": "18311880546863954371",
+        "n_nonnull": 580005
+      },
+      "series_result": {
+        "hash": "9981092677665541",
+        "n_nonnull": 579987
+      },
+      "series_success": {
+        "hash": "0",
+        "n_nonnull": 580005
+      },
+      "shotgun": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "side_of_field": {
+        "hash": "16974758108705741845",
+        "n_nonnull": 539103
+      },
+      "solo_tackle": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "solo_tackle_1_player_id": {
+        "hash": "13463898429800777175",
+        "n_nonnull": 254428
+      },
+      "solo_tackle_1_player_name": {
+        "hash": "11230857330456924397",
+        "n_nonnull": 254445
+      },
+      "solo_tackle_1_team": {
+        "hash": "12484398978789266381",
+        "n_nonnull": 254447
+      },
+      "solo_tackle_2_player_id": {
+        "hash": "2458618187655274577",
+        "n_nonnull": 2077
+      },
+      "solo_tackle_2_player_name": {
+        "hash": "2484081675536060881",
+        "n_nonnull": 2080
+      },
+      "solo_tackle_2_team": {
+        "hash": "8330692788162843046",
+        "n_nonnull": 2080
+      },
+      "sp": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "special": {
+        "hash": "0",
+        "n_nonnull": 580005
+      },
+      "special_teams_play": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 580005
+      },
+      "spread_line": {
+        "hash": "13579920487531581152",
+        "n_nonnull": 580005
+      },
+      "st_play_type": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 0
+      },
+      "stadium": {
+        "hash": "3412284951142610726",
+        "n_nonnull": 580005
+      },
+      "stadium_id": {
+        "hash": "311692121024988359",
+        "n_nonnull": 580005
+      },
+      "start_time": {
+        "hash": "10208793884699568808",
+        "n_nonnull": 580005
+      },
+      "success": {
+        "hash": "13787848793156543929",
+        "n_nonnull": 573368
+      },
+      "surface": {
+        "hash": "5529860147347008169",
+        "n_nonnull": 580005
+      },
+      "tackle_for_loss_1_player_id": {
+        "hash": "14454936446349270953",
+        "n_nonnull": 30478
+      },
+      "tackle_for_loss_1_player_name": {
+        "hash": "17858289532173446133",
+        "n_nonnull": 30479
+      },
+      "tackle_for_loss_2_player_id": {
+        "hash": "9499516658774033042",
+        "n_nonnull": 2
+      },
+      "tackle_for_loss_2_player_name": {
+        "hash": "7458943429605713748",
+        "n_nonnull": 2
+      },
+      "tackle_with_assist": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "tackle_with_assist_1_player_id": {
+        "hash": "11083123170100930835",
+        "n_nonnull": 26981
+      },
+      "tackle_with_assist_1_player_name": {
+        "hash": "3420121293661973715",
+        "n_nonnull": 26981
+      },
+      "tackle_with_assist_1_team": {
+        "hash": "11489197801166821957",
+        "n_nonnull": 26982
+      },
+      "tackle_with_assist_2_player_id": {
+        "hash": "307452388687082217",
+        "n_nonnull": 1
+      },
+      "tackle_with_assist_2_player_name": {
+        "hash": "16077232635811875093",
+        "n_nonnull": 1
+      },
+      "tackle_with_assist_2_team": {
+        "hash": "16524474128531087531",
+        "n_nonnull": 1
+      },
+      "tackled_for_loss": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "td_player_id": {
+        "hash": "9261823492177653025",
+        "n_nonnull": 16919
+      },
+      "td_player_name": {
+        "hash": "16358768046118800893",
+        "n_nonnull": 16919
+      },
+      "td_prob": {
+        "hash": "5797759739160460335",
+        "n_nonnull": 580005
+      },
+      "td_team": {
+        "hash": "5991138234995808930",
+        "n_nonnull": 16919
+      },
+      "temp": {
+        "hash": "8924750606800361405",
+        "n_nonnull": 386240
+      },
+      "third_down_converted": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "third_down_failed": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "time": {
+        "hash": "7521445081943521943",
+        "n_nonnull": 579680
+      },
+      "time_of_day": {
+        "hash": "3877065173319575416",
+        "n_nonnull": 559234
+      },
+      "timeout": {
+        "hash": "0",
+        "n_nonnull": 562347
+      },
+      "timeout_team": {
+        "hash": "10030724242293794468",
+        "n_nonnull": 25090
+      },
+      "total": {
+        "hash": "5063974760321999594",
+        "n_nonnull": 580005
+      },
+      "total_away_comp_air_epa": {
+        "hash": "5539649556237607674",
+        "n_nonnull": 580005
+      },
+      "total_away_comp_air_wpa": {
+        "hash": "10419737892021713371",
+        "n_nonnull": 580005
+      },
+      "total_away_comp_yac_epa": {
+        "hash": "603395151569068438",
+        "n_nonnull": 580005
+      },
+      "total_away_comp_yac_wpa": {
+        "hash": "3100821024672841006",
+        "n_nonnull": 580005
+      },
+      "total_away_epa": {
+        "hash": "1280898058890075714",
+        "n_nonnull": 580005
+      },
+      "total_away_pass_epa": {
+        "hash": "17945334356671805289",
+        "n_nonnull": 580005
+      },
+      "total_away_pass_wpa": {
+        "hash": "11093899488852819036",
+        "n_nonnull": 580005
+      },
+      "total_away_raw_air_epa": {
+        "hash": "13006150369421187990",
+        "n_nonnull": 580005
+      },
+      "total_away_raw_air_wpa": {
+        "hash": "17740677299747599624",
+        "n_nonnull": 580005
+      },
+      "total_away_raw_yac_epa": {
+        "hash": "11052975915843336198",
+        "n_nonnull": 580005
+      },
+      "total_away_raw_yac_wpa": {
+        "hash": "2732993997427032283",
+        "n_nonnull": 580005
+      },
+      "total_away_rush_epa": {
+        "hash": "4860137890869234576",
+        "n_nonnull": 580005
+      },
+      "total_away_rush_wpa": {
+        "hash": "3216132242733387405",
+        "n_nonnull": 580005
+      },
+      "total_away_score": {
+        "hash": "6689580909921755",
+        "n_nonnull": 580005
+      },
+      "total_home_comp_air_epa": {
+        "hash": "9767693511426521689",
+        "n_nonnull": 580005
+      },
+      "total_home_comp_air_wpa": {
+        "hash": "4757937756058915516",
+        "n_nonnull": 580005
+      },
+      "total_home_comp_yac_epa": {
+        "hash": "1646282609514797709",
+        "n_nonnull": 580005
+      },
+      "total_home_comp_yac_wpa": {
+        "hash": "10540005676802190989",
+        "n_nonnull": 580005
+      },
+      "total_home_epa": {
+        "hash": "10134511855994693273",
+        "n_nonnull": 580005
+      },
+      "total_home_pass_epa": {
+        "hash": "17634756612389298133",
+        "n_nonnull": 580005
+      },
+      "total_home_pass_wpa": {
+        "hash": "14477442229952416276",
+        "n_nonnull": 580005
+      },
+      "total_home_raw_air_epa": {
+        "hash": "2506248342514467375",
+        "n_nonnull": 580005
+      },
+      "total_home_raw_air_wpa": {
+        "hash": "2963468604176477839",
+        "n_nonnull": 580005
+      },
+      "total_home_raw_yac_epa": {
+        "hash": "16360762471668261975",
+        "n_nonnull": 580005
+      },
+      "total_home_raw_yac_wpa": {
+        "hash": "6850815729102303479",
+        "n_nonnull": 580005
+      },
+      "total_home_rush_epa": {
+        "hash": "16504367913460429726",
+        "n_nonnull": 580005
+      },
+      "total_home_rush_wpa": {
+        "hash": "12408850354205636007",
+        "n_nonnull": 580005
+      },
+      "total_home_score": {
+        "hash": "4245449043616133296",
+        "n_nonnull": 580005
+      },
+      "total_line": {
+        "hash": "3699744436966020067",
+        "n_nonnull": 580005
+      },
+      "touchback": {
+        "hash": "0",
+        "n_nonnull": 580005
+      },
+      "touchdown": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "two_point_attempt": {
+        "hash": "1915665494120525665",
+        "n_nonnull": 562347
+      },
+      "two_point_conv_result": {
+        "hash": "6742067827196864025",
+        "n_nonnull": 1465
+      },
+      "two_point_conversion_prob": {
+        "hash": "1790915081409964809",
+        "n_nonnull": 580005
+      },
+      "vegas_home_wp": {
+        "hash": "5069448361869258429",
+        "n_nonnull": 580005
+      },
+      "vegas_home_wpa": {
+        "hash": "10170848493113804313",
+        "n_nonnull": 576710
+      },
+      "vegas_wp": {
+        "hash": "2968601262544757308",
+        "n_nonnull": 576667
+      },
+      "vegas_wpa": {
+        "hash": "2713290367477302002",
+        "n_nonnull": 571426
+      },
+      "weather": {
+        "hash": "11786839753724545096",
+        "n_nonnull": 568804
+      },
+      "week": {
+        "hash": "9638583978783668552",
+        "n_nonnull": 580005
+      },
+      "wind": {
+        "hash": "18227533181699294759",
+        "n_nonnull": 386240
+      },
+      "wp": {
+        "hash": "41476804450518963",
+        "n_nonnull": 576667
+      },
+      "wpa": {
+        "hash": "12144149061181711410",
+        "n_nonnull": 571426
+      },
+      "xpass": {
+        "hash": "10216460481784756105",
+        "n_nonnull": 441680
+      },
+      "xyac_epa": {
+        "hash": "5217695645288023145",
+        "n_nonnull": 204045
+      },
+      "xyac_fd": {
+        "hash": "11810977635725897532",
+        "n_nonnull": 204046
+      },
+      "xyac_mean_yardage": {
+        "hash": "15535583138534932533",
+        "n_nonnull": 204046
+      },
+      "xyac_median_yardage": {
+        "hash": "14253134355488746870",
+        "n_nonnull": 204046
+      },
+      "xyac_success": {
+        "hash": "3448883678321453512",
+        "n_nonnull": 204046
+      },
+      "yac_epa": {
+        "hash": "9352234672261717605",
+        "n_nonnull": 225222
+      },
+      "yac_wpa": {
+        "hash": "4882096392344222701",
+        "n_nonnull": 225223
+      },
+      "yardline_100": {
+        "hash": "16397178710607667332",
+        "n_nonnull": 539487
+      },
+      "yards_after_catch": {
+        "hash": "14031915814116256557",
+        "n_nonnull": 144456
+      },
+      "yards_gained": {
+        "hash": "15161348034410725929",
+        "n_nonnull": 562347
+      },
+      "ydsnet": {
+        "hash": "5015757707623047585",
+        "n_nonnull": 573391
+      },
+      "ydstogo": {
+        "hash": "15739787844100397831",
+        "n_nonnull": 580005
+      },
+      "yrdln": {
+        "hash": "13150639216469469389",
+        "n_nonnull": 575853
+      }
+    },
+    "n_rows": 580005,
+    "row_hash_sum": "5348125543420783945033621",
+    "row_hash_xor": "9432636727475413305",
+    "schema": {
+      "aborted_play": "FLOAT",
+      "air_epa": "FLOAT",
+      "air_wpa": "FLOAT",
+      "air_yards": "FLOAT",
+      "assist_tackle": "FLOAT",
+      "assist_tackle_1_player_id": "VARCHAR",
+      "assist_tackle_1_player_name": "VARCHAR",
+      "assist_tackle_1_team": "VARCHAR",
+      "assist_tackle_2_player_id": "VARCHAR",
+      "assist_tackle_2_player_name": "VARCHAR",
+      "assist_tackle_2_team": "VARCHAR",
+      "assist_tackle_3_player_id": "VARCHAR",
+      "assist_tackle_3_player_name": "VARCHAR",
+      "assist_tackle_3_team": "VARCHAR",
+      "assist_tackle_4_player_id": "VARCHAR",
+      "assist_tackle_4_player_name": "VARCHAR",
+      "assist_tackle_4_team": "VARCHAR",
+      "away_coach": "VARCHAR",
+      "away_score": "INTEGER",
+      "away_team": "VARCHAR",
+      "away_timeouts_remaining": "FLOAT",
+      "away_wp": "FLOAT",
+      "away_wp_post": "FLOAT",
+      "blocked_player_id": "VARCHAR",
+      "blocked_player_name": "VARCHAR",
+      "comp_air_epa": "FLOAT",
+      "comp_air_wpa": "FLOAT",
+      "comp_yac_epa": "FLOAT",
+      "comp_yac_wpa": "FLOAT",
+      "complete_pass": "FLOAT",
+      "cp": "FLOAT",
+      "cpoe": "FLOAT",
+      "def_wp": "FLOAT",
+      "defensive_extra_point_attempt": "FLOAT",
+      "defensive_extra_point_conv": "FLOAT",
+      "defensive_two_point_attempt": "FLOAT",
+      "defensive_two_point_conv": "FLOAT",
+      "defteam": "VARCHAR",
+      "defteam_score": "FLOAT",
+      "defteam_score_post": "FLOAT",
+      "defteam_timeouts_remaining": "FLOAT",
+      "desc": "VARCHAR",
+      "div_game": "INTEGER",
+      "down": "FLOAT",
+      "drive": "FLOAT",
+      "drive_end_transition": "VARCHAR",
+      "drive_end_yard_line": "VARCHAR",
+      "drive_ended_with_score": "FLOAT",
+      "drive_first_downs": "FLOAT",
+      "drive_game_clock_end": "VARCHAR",
+      "drive_game_clock_start": "VARCHAR",
+      "drive_inside20": "FLOAT",
+      "drive_play_count": "FLOAT",
+      "drive_play_id_ended": "FLOAT",
+      "drive_play_id_started": "FLOAT",
+      "drive_quarter_end": "FLOAT",
+      "drive_quarter_start": "FLOAT",
+      "drive_real_start_time": "VARCHAR",
+      "drive_start_transition": "VARCHAR",
+      "drive_start_yard_line": "VARCHAR",
+      "drive_time_of_possession": "VARCHAR",
+      "drive_yards_penalized": "FLOAT",
+      "end_clock_time": "VARCHAR",
+      "end_yard_line": "VARCHAR",
+      "ep": "FLOAT",
+      "epa": "FLOAT",
+      "extra_point_attempt": "FLOAT",
+      "extra_point_prob": "FLOAT",
+      "extra_point_result": "VARCHAR",
+      "fantasy": "VARCHAR",
+      "fantasy_id": "VARCHAR",
+      "fantasy_player_id": "VARCHAR",
+      "fantasy_player_name": "VARCHAR",
+      "fg_prob": "FLOAT",
+      "field_goal_attempt": "FLOAT",
+      "field_goal_result": "VARCHAR",
+      "first_down": "FLOAT",
+      "first_down_pass": "FLOAT",
+      "first_down_penalty": "FLOAT",
+      "first_down_rush": "FLOAT",
+      "fixed_drive": "FLOAT",
+      "fixed_drive_result": "VARCHAR",
+      "forced_fumble_player_1_player_id": "VARCHAR",
+      "forced_fumble_player_1_player_name": "VARCHAR",
+      "forced_fumble_player_1_team": "VARCHAR",
+      "forced_fumble_player_2_player_id": "VARCHAR",
+      "forced_fumble_player_2_player_name": "VARCHAR",
+      "forced_fumble_player_2_team": "VARCHAR",
+      "fourth_down_converted": "FLOAT",
+      "fourth_down_failed": "FLOAT",
+      "fumble": "FLOAT",
+      "fumble_forced": "FLOAT",
+      "fumble_lost": "FLOAT",
+      "fumble_not_forced": "FLOAT",
+      "fumble_out_of_bounds": "FLOAT",
+      "fumble_recovery_1_player_id": "VARCHAR",
+      "fumble_recovery_1_player_name": "VARCHAR",
+      "fumble_recovery_1_team": "VARCHAR",
+      "fumble_recovery_1_yards": "FLOAT",
+      "fumble_recovery_2_player_id": "VARCHAR",
+      "fumble_recovery_2_player_name": "VARCHAR",
+      "fumble_recovery_2_team": "VARCHAR",
+      "fumble_recovery_2_yards": "FLOAT",
+      "fumbled_1_player_id": "VARCHAR",
+      "fumbled_1_player_name": "VARCHAR",
+      "fumbled_1_team": "VARCHAR",
+      "fumbled_2_player_id": "VARCHAR",
+      "fumbled_2_player_name": "VARCHAR",
+      "fumbled_2_team": "VARCHAR",
+      "game_date": "VARCHAR",
+      "game_half": "VARCHAR",
+      "game_id": "VARCHAR",
+      "game_seconds_remaining": "FLOAT",
+      "game_stadium": "VARCHAR",
+      "goal_to_go": "INTEGER",
+      "half_sack_1_player_id": "VARCHAR",
+      "half_sack_1_player_name": "VARCHAR",
+      "half_sack_2_player_id": "VARCHAR",
+      "half_sack_2_player_name": "VARCHAR",
+      "half_seconds_remaining": "FLOAT",
+      "home_coach": "VARCHAR",
+      "home_opening_kickoff": "FLOAT",
+      "home_score": "INTEGER",
+      "home_team": "VARCHAR",
+      "home_timeouts_remaining": "FLOAT",
+      "home_wp": "FLOAT",
+      "home_wp_post": "FLOAT",
+      "id": "VARCHAR",
+      "incomplete_pass": "FLOAT",
+      "interception": "FLOAT",
+      "interception_player_id": "VARCHAR",
+      "interception_player_name": "VARCHAR",
+      "jersey_number": "FLOAT",
+      "kick_distance": "FLOAT",
+      "kicker_player_id": "VARCHAR",
+      "kicker_player_name": "VARCHAR",
+      "kickoff_attempt": "FLOAT",
+      "kickoff_downed": "FLOAT",
+      "kickoff_fair_catch": "FLOAT",
+      "kickoff_in_endzone": "FLOAT",
+      "kickoff_inside_twenty": "FLOAT",
+      "kickoff_out_of_bounds": "FLOAT",
+      "kickoff_returner_player_id": "VARCHAR",
+      "kickoff_returner_player_name": "VARCHAR",
+      "lateral_interception_player_id": "VARCHAR",
+      "lateral_interception_player_name": "VARCHAR",
+      "lateral_kickoff_returner_player_id": "VARCHAR",
+      "lateral_kickoff_returner_player_name": "VARCHAR",
+      "lateral_punt_returner_player_id": "VARCHAR",
+      "lateral_punt_returner_player_name": "VARCHAR",
+      "lateral_receiver_player_id": "VARCHAR",
+      "lateral_receiver_player_name": "VARCHAR",
+      "lateral_receiving_yards": "FLOAT",
+      "lateral_reception": "FLOAT",
+      "lateral_recovery": "FLOAT",
+      "lateral_return": "FLOAT",
+      "lateral_rush": "FLOAT",
+      "lateral_rusher_player_id": "VARCHAR",
+      "lateral_rusher_player_name": "VARCHAR",
+      "lateral_rushing_yards": "FLOAT",
+      "lateral_sack_player_id": "VARCHAR",
+      "lateral_sack_player_name": "VARCHAR",
+      "location": "VARCHAR",
+      "name": "VARCHAR",
+      "nfl_api_id": "VARCHAR",
+      "no_huddle": "FLOAT",
+      "no_score_prob": "FLOAT",
+      "old_game_id": "VARCHAR",
+      "opp_fg_prob": "FLOAT",
+      "opp_safety_prob": "FLOAT",
+      "opp_td_prob": "FLOAT",
+      "order_sequence": "FLOAT",
+      "out_of_bounds": "FLOAT",
+      "own_kickoff_recovery": "FLOAT",
+      "own_kickoff_recovery_player_id": "VARCHAR",
+      "own_kickoff_recovery_player_name": "VARCHAR",
+      "own_kickoff_recovery_td": "FLOAT",
+      "pass": "FLOAT",
+      "pass_attempt": "FLOAT",
+      "pass_defense_1_player_id": "VARCHAR",
+      "pass_defense_1_player_name": "VARCHAR",
+      "pass_defense_2_player_id": "VARCHAR",
+      "pass_defense_2_player_name": "VARCHAR",
+      "pass_length": "VARCHAR",
+      "pass_location": "VARCHAR",
+      "pass_oe": "FLOAT",
+      "pass_touchdown": "FLOAT",
+      "passer": "VARCHAR",
+      "passer_id": "VARCHAR",
+      "passer_jersey_number": "FLOAT",
+      "passer_player_id": "VARCHAR",
+      "passer_player_name": "VARCHAR",
+      "passing_yards": "FLOAT",
+      "penalty": "FLOAT",
+      "penalty_player_id": "VARCHAR",
+      "penalty_player_name": "VARCHAR",
+      "penalty_team": "VARCHAR",
+      "penalty_type": "VARCHAR",
+      "penalty_yards": "FLOAT",
+      "play": "FLOAT",
+      "play_clock": "VARCHAR",
+      "play_deleted": "FLOAT",
+      "play_id": "FLOAT",
+      "play_type": "VARCHAR",
+      "play_type_nfl": "VARCHAR",
+      "posteam": "VARCHAR",
+      "posteam_score": "FLOAT",
+      "posteam_score_post": "FLOAT",
+      "posteam_timeouts_remaining": "FLOAT",
+      "posteam_type": "VARCHAR",
+      "pulled_at": "TIMESTAMP",
+      "punt_attempt": "FLOAT",
+      "punt_blocked": "FLOAT",
+      "punt_downed": "FLOAT",
+      "punt_fair_catch": "FLOAT",
+      "punt_in_endzone": "FLOAT",
+      "punt_inside_twenty": "FLOAT",
+      "punt_out_of_bounds": "FLOAT",
+      "punt_returner_player_id": "VARCHAR",
+      "punt_returner_player_name": "VARCHAR",
+      "punter_player_id": "VARCHAR",
+      "punter_player_name": "VARCHAR",
+      "qb_dropback": "FLOAT",
+      "qb_epa": "FLOAT",
+      "qb_hit": "FLOAT",
+      "qb_hit_1_player_id": "VARCHAR",
+      "qb_hit_1_player_name": "VARCHAR",
+      "qb_hit_2_player_id": "VARCHAR",
+      "qb_hit_2_player_name": "VARCHAR",
+      "qb_kneel": "FLOAT",
+      "qb_scramble": "FLOAT",
+      "qb_spike": "FLOAT",
+      "qtr": "FLOAT",
+      "quarter_end": "FLOAT",
+      "quarter_seconds_remaining": "FLOAT",
+      "receiver": "VARCHAR",
+      "receiver_id": "VARCHAR",
+      "receiver_jersey_number": "FLOAT",
+      "receiver_player_id": "VARCHAR",
+      "receiver_player_name": "VARCHAR",
+      "receiving_yards": "FLOAT",
+      "replay_or_challenge": "FLOAT",
+      "replay_or_challenge_result": "VARCHAR",
+      "result": "INTEGER",
+      "return_team": "VARCHAR",
+      "return_touchdown": "FLOAT",
+      "return_yards": "FLOAT",
+      "roof": "VARCHAR",
+      "run_gap": "VARCHAR",
+      "run_location": "VARCHAR",
+      "rush": "FLOAT",
+      "rush_attempt": "FLOAT",
+      "rush_touchdown": "FLOAT",
+      "rusher": "VARCHAR",
+      "rusher_id": "VARCHAR",
+      "rusher_jersey_number": "FLOAT",
+      "rusher_player_id": "VARCHAR",
+      "rusher_player_name": "VARCHAR",
+      "rushing_yards": "FLOAT",
+      "sack": "FLOAT",
+      "sack_player_id": "VARCHAR",
+      "sack_player_name": "VARCHAR",
+      "safety": "FLOAT",
+      "safety_player_id": "VARCHAR",
+      "safety_player_name": "VARCHAR",
+      "safety_prob": "FLOAT",
+      "score_differential": "FLOAT",
+      "score_differential_post": "FLOAT",
+      "season": "BIGINT",
+      "season_type": "VARCHAR",
+      "series": "FLOAT",
+      "series_result": "VARCHAR",
+      "series_success": "FLOAT",
+      "shotgun": "FLOAT",
+      "side_of_field": "VARCHAR",
+      "solo_tackle": "FLOAT",
+      "solo_tackle_1_player_id": "VARCHAR",
+      "solo_tackle_1_player_name": "VARCHAR",
+      "solo_tackle_1_team": "VARCHAR",
+      "solo_tackle_2_player_id": "VARCHAR",
+      "solo_tackle_2_player_name": "VARCHAR",
+      "solo_tackle_2_team": "VARCHAR",
+      "sp": "FLOAT",
+      "special": "FLOAT",
+      "special_teams_play": "FLOAT",
+      "spread_line": "FLOAT",
+      "st_play_type": "VARCHAR",
+      "stadium": "VARCHAR",
+      "stadium_id": "VARCHAR",
+      "start_time": "VARCHAR",
+      "success": "FLOAT",
+      "surface": "VARCHAR",
+      "tackle_for_loss_1_player_id": "VARCHAR",
+      "tackle_for_loss_1_player_name": "VARCHAR",
+      "tackle_for_loss_2_player_id": "VARCHAR",
+      "tackle_for_loss_2_player_name": "VARCHAR",
+      "tackle_with_assist": "FLOAT",
+      "tackle_with_assist_1_player_id": "VARCHAR",
+      "tackle_with_assist_1_player_name": "VARCHAR",
+      "tackle_with_assist_1_team": "VARCHAR",
+      "tackle_with_assist_2_player_id": "VARCHAR",
+      "tackle_with_assist_2_player_name": "VARCHAR",
+      "tackle_with_assist_2_team": "VARCHAR",
+      "tackled_for_loss": "FLOAT",
+      "td_player_id": "VARCHAR",
+      "td_player_name": "VARCHAR",
+      "td_prob": "FLOAT",
+      "td_team": "VARCHAR",
+      "temp": "FLOAT",
+      "third_down_converted": "FLOAT",
+      "third_down_failed": "FLOAT",
+      "time": "VARCHAR",
+      "time_of_day": "VARCHAR",
+      "timeout": "FLOAT",
+      "timeout_team": "VARCHAR",
+      "total": "INTEGER",
+      "total_away_comp_air_epa": "FLOAT",
+      "total_away_comp_air_wpa": "FLOAT",
+      "total_away_comp_yac_epa": "FLOAT",
+      "total_away_comp_yac_wpa": "FLOAT",
+      "total_away_epa": "FLOAT",
+      "total_away_pass_epa": "FLOAT",
+      "total_away_pass_wpa": "FLOAT",
+      "total_away_raw_air_epa": "FLOAT",
+      "total_away_raw_air_wpa": "FLOAT",
+      "total_away_raw_yac_epa": "FLOAT",
+      "total_away_raw_yac_wpa": "FLOAT",
+      "total_away_rush_epa": "FLOAT",
+      "total_away_rush_wpa": "FLOAT",
+      "total_away_score": "FLOAT",
+      "total_home_comp_air_epa": "FLOAT",
+      "total_home_comp_air_wpa": "FLOAT",
+      "total_home_comp_yac_epa": "FLOAT",
+      "total_home_comp_yac_wpa": "FLOAT",
+      "total_home_epa": "FLOAT",
+      "total_home_pass_epa": "FLOAT",
+      "total_home_pass_wpa": "FLOAT",
+      "total_home_raw_air_epa": "FLOAT",
+      "total_home_raw_air_wpa": "FLOAT",
+      "total_home_raw_yac_epa": "FLOAT",
+      "total_home_raw_yac_wpa": "FLOAT",
+      "total_home_rush_epa": "FLOAT",
+      "total_home_rush_wpa": "FLOAT",
+      "total_home_score": "FLOAT",
+      "total_line": "FLOAT",
+      "touchback": "FLOAT",
+      "touchdown": "FLOAT",
+      "two_point_attempt": "FLOAT",
+      "two_point_conv_result": "VARCHAR",
+      "two_point_conversion_prob": "FLOAT",
+      "vegas_home_wp": "FLOAT",
+      "vegas_home_wpa": "FLOAT",
+      "vegas_wp": "FLOAT",
+      "vegas_wpa": "FLOAT",
+      "weather": "VARCHAR",
+      "week": "INTEGER",
+      "wind": "FLOAT",
+      "wp": "FLOAT",
+      "wpa": "FLOAT",
+      "xpass": "FLOAT",
+      "xyac_epa": "FLOAT",
+      "xyac_fd": "FLOAT",
+      "xyac_mean_yardage": "FLOAT",
+      "xyac_median_yardage": "FLOAT",
+      "xyac_success": "FLOAT",
+      "yac_epa": "FLOAT",
+      "yac_wpa": "FLOAT",
+      "yardline_100": "FLOAT",
+      "yards_after_catch": "FLOAT",
+      "yards_gained": "FLOAT",
+      "ydsnet": "FLOAT",
+      "ydstogo": "FLOAT",
+      "yrdln": "VARCHAR"
+    }
+  },
+  "pfr_pass": {
+    "columns": {
+      "bad_throw_pct": {
+        "hash": "8221230007503119470",
+        "n_nonnull": 842
+      },
+      "bad_throws": {
+        "hash": "6016430134135988268",
+        "n_nonnull": 848
+      },
+      "batted_balls": {
+        "hash": "3102834804482872262",
+        "n_nonnull": 742
+      },
+      "completed_air_yards": {
+        "hash": "7819633927407997585",
+        "n_nonnull": 203
+      },
+      "completed_air_yards_per_completion": {
+        "hash": "17816849761707129199",
+        "n_nonnull": 179
+      },
+      "completed_air_yards_per_pass_attempt": {
+        "hash": "4445314290755692441",
+        "n_nonnull": 203
+      },
+      "drop_pct": {
+        "hash": "5997431896056360525",
+        "n_nonnull": 842
+      },
+      "drops": {
+        "hash": "17791771082550215408",
+        "n_nonnull": 848
+      },
+      "gsis_id": {
+        "hash": "14970734652112746518",
+        "n_nonnull": 848
+      },
+      "intended_air_yards": {
+        "hash": "7206700803028238028",
+        "n_nonnull": 203
+      },
+      "intended_air_yards_per_pass_attempt": {
+        "hash": "17627150519464183438",
+        "n_nonnull": 203
+      },
+      "on_tgt_pct": {
+        "hash": "13079669746920595056",
+        "n_nonnull": 736
+      },
+      "on_tgt_throws": {
+        "hash": "7516024822290268220",
+        "n_nonnull": 742
+      },
+      "pa_pass_att": {
+        "hash": "16868725988853854806",
+        "n_nonnull": 539
+      },
+      "pa_pass_yards": {
+        "hash": "2112064788060665937",
+        "n_nonnull": 539
+      },
+      "pass_attempts": {
+        "hash": "8728497160032646756",
+        "n_nonnull": 848
+      },
+      "pass_yards_after_catch": {
+        "hash": "13330060623654975935",
+        "n_nonnull": 203
+      },
+      "pass_yards_after_catch_per_completion": {
+        "hash": "9302323772704453559",
+        "n_nonnull": 179
+      },
+      "pfr_id": {
+        "hash": "1896319552662186926",
+        "n_nonnull": 848
+      },
+      "player": {
+        "hash": "721848045889609635",
+        "n_nonnull": 848
+      },
+      "pocket_time": {
+        "hash": "4313197581939375615",
+        "n_nonnull": 840
+      },
+      "pressure_pct": {
+        "hash": "9743849218675495085",
+        "n_nonnull": 848
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 848
+      },
+      "rpo_pass_att": {
+        "hash": "7837079441174453133",
+        "n_nonnull": 742
+      },
+      "rpo_pass_yards": {
+        "hash": "15872919298627799934",
+        "n_nonnull": 742
+      },
+      "rpo_plays": {
+        "hash": "2203640638181951190",
+        "n_nonnull": 742
+      },
+      "rpo_rush_att": {
+        "hash": "7089216936183754103",
+        "n_nonnull": 742
+      },
+      "rpo_rush_yards": {
+        "hash": "3985367367711463468",
+        "n_nonnull": 742
+      },
+      "rpo_yards": {
+        "hash": "16165835495192343925",
+        "n_nonnull": 742
+      },
+      "scramble_yards_per_attempt": {
+        "hash": "256566023081563155",
+        "n_nonnull": 138
+      },
+      "scrambles": {
+        "hash": "5742561319360201286",
+        "n_nonnull": 203
+      },
+      "season": {
+        "hash": "10904724559350249368",
+        "n_nonnull": 848
+      },
+      "spikes": {
+        "hash": "938099020395120326",
+        "n_nonnull": 848
+      },
+      "team": {
+        "hash": "4387067051590466893",
+        "n_nonnull": 848
+      },
+      "throwaways": {
+        "hash": "15834084113724105703",
+        "n_nonnull": 848
+      },
+      "times_blitzed": {
+        "hash": "6429455508604681003",
+        "n_nonnull": 848
+      },
+      "times_hit": {
+        "hash": "5341790371236064487",
+        "n_nonnull": 848
+      },
+      "times_hurried": {
+        "hash": "14752592159228656440",
+        "n_nonnull": 848
+      },
+      "times_pressured": {
+        "hash": "3126240557238114251",
+        "n_nonnull": 848
+      }
+    },
+    "n_rows": 848,
+    "row_hash_sum": "7627994751278318756115",
+    "row_hash_xor": "12815753148519852001",
+    "schema": {
+      "bad_throw_pct": "DOUBLE",
+      "bad_throws": "DOUBLE",
+      "batted_balls": "DOUBLE",
+      "completed_air_yards": "DOUBLE",
+      "completed_air_yards_per_completion": "DOUBLE",
+      "completed_air_yards_per_pass_attempt": "DOUBLE",
+      "drop_pct": "DOUBLE",
+      "drops": "DOUBLE",
+      "gsis_id": "VARCHAR",
+      "intended_air_yards": "DOUBLE",
+      "intended_air_yards_per_pass_attempt": "DOUBLE",
+      "on_tgt_pct": "DOUBLE",
+      "on_tgt_throws": "DOUBLE",
+      "pa_pass_att": "DOUBLE",
+      "pa_pass_yards": "DOUBLE",
+      "pass_attempts": "DOUBLE",
+      "pass_yards_after_catch": "DOUBLE",
+      "pass_yards_after_catch_per_completion": "DOUBLE",
+      "pfr_id": "VARCHAR",
+      "player": "VARCHAR",
+      "pocket_time": "DOUBLE",
+      "pressure_pct": "DOUBLE",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "rpo_pass_att": "DOUBLE",
+      "rpo_pass_yards": "DOUBLE",
+      "rpo_plays": "DOUBLE",
+      "rpo_rush_att": "DOUBLE",
+      "rpo_rush_yards": "DOUBLE",
+      "rpo_yards": "DOUBLE",
+      "scramble_yards_per_attempt": "DOUBLE",
+      "scrambles": "DOUBLE",
+      "season": "INTEGER",
+      "spikes": "DOUBLE",
+      "team": "VARCHAR",
+      "throwaways": "DOUBLE",
+      "times_blitzed": "DOUBLE",
+      "times_hit": "DOUBLE",
+      "times_hurried": "DOUBLE",
+      "times_pressured": "DOUBLE"
+    }
+  },
+  "pfr_rec": {
+    "columns": {
+      "adot": {
+        "hash": "14681121364108559696",
+        "n_nonnull": 4123
+      },
+      "age": {
+        "hash": "1377794991037458202",
+        "n_nonnull": 4130
+      },
+      "brk_tkl": {
+        "hash": "17504696709582087899",
+        "n_nonnull": 4129
+      },
+      "drop": {
+        "hash": "1086363081949065891",
+        "n_nonnull": 4129
+      },
+      "drop_percent": {
+        "hash": "5077364191434909397",
+        "n_nonnull": 4123
+      },
+      "g": {
+        "hash": "9557904784768921813",
+        "n_nonnull": 4130
+      },
+      "gs": {
+        "hash": "10424240244036806285",
+        "n_nonnull": 4130
+      },
+      "gsis_id": {
+        "hash": "11941060878288679635",
+        "n_nonnull": 4054
+      },
+      "int": {
+        "hash": "3874844294798809275",
+        "n_nonnull": 4128
+      },
+      "loaded": {
+        "hash": "15281015372952753232",
+        "n_nonnull": 4130
+      },
+      "pfr_id": {
+        "hash": "13339425924026103809",
+        "n_nonnull": 4130
+      },
+      "player": {
+        "hash": "10320737539758172872",
+        "n_nonnull": 4130
+      },
+      "pos": {
+        "hash": "13292808260441680854",
+        "n_nonnull": 4117
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 4130
+      },
+      "rat": {
+        "hash": "14868092139493258604",
+        "n_nonnull": 4123
+      },
+      "rec": {
+        "hash": "6807174422446396601",
+        "n_nonnull": 4130
+      },
+      "rec_br": {
+        "hash": "8277479604294481188",
+        "n_nonnull": 2027
+      },
+      "season": {
+        "hash": "1633613927983344567",
+        "n_nonnull": 4130
+      },
+      "td": {
+        "hash": "8315341738554368513",
+        "n_nonnull": 3076
+      },
+      "tgt": {
+        "hash": "2803258647409057523",
+        "n_nonnull": 4130
+      },
+      "tm": {
+        "hash": "4645671715081772133",
+        "n_nonnull": 4130
+      },
+      "x1d": {
+        "hash": "15784214175871655205",
+        "n_nonnull": 3859
+      },
+      "yac": {
+        "hash": "7513968241608596263",
+        "n_nonnull": 4129
+      },
+      "yac_r": {
+        "hash": "5001249857241392503",
+        "n_nonnull": 3939
+      },
+      "ybc": {
+        "hash": "15978673655087576862",
+        "n_nonnull": 4129
+      },
+      "ybc_r": {
+        "hash": "3593686453215647387",
+        "n_nonnull": 3939
+      },
+      "yds": {
+        "hash": "16588592406539036722",
+        "n_nonnull": 4130
+      }
+    },
+    "n_rows": 4130,
+    "row_hash_sum": "38053975637390574861267",
+    "row_hash_xor": "1193013037747481407",
+    "schema": {
+      "adot": "DOUBLE",
+      "age": "DOUBLE",
+      "brk_tkl": "DOUBLE",
+      "drop": "DOUBLE",
+      "drop_percent": "DOUBLE",
+      "g": "DOUBLE",
+      "gs": "DOUBLE",
+      "gsis_id": "VARCHAR",
+      "int": "DOUBLE",
+      "loaded": "DATE",
+      "pfr_id": "VARCHAR",
+      "player": "VARCHAR",
+      "pos": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "rat": "DOUBLE",
+      "rec": "DOUBLE",
+      "rec_br": "DOUBLE",
+      "season": "INTEGER",
+      "td": "DOUBLE",
+      "tgt": "DOUBLE",
+      "tm": "VARCHAR",
+      "x1d": "DOUBLE",
+      "yac": "DOUBLE",
+      "yac_r": "DOUBLE",
+      "ybc": "DOUBLE",
+      "ybc_r": "DOUBLE",
+      "yds": "DOUBLE"
+    }
+  },
+  "pfr_rush": {
+    "columns": {
+      "age": {
+        "hash": "8905520056554595421",
+        "n_nonnull": 2820
+      },
+      "att": {
+        "hash": "12310679920512631245",
+        "n_nonnull": 2820
+      },
+      "att_br": {
+        "hash": "8810627399851746941",
+        "n_nonnull": 1220
+      },
+      "brk_tkl": {
+        "hash": "10029386476441859797",
+        "n_nonnull": 2819
+      },
+      "g": {
+        "hash": "15190131350320321977",
+        "n_nonnull": 2820
+      },
+      "gs": {
+        "hash": "7286651738942392868",
+        "n_nonnull": 2820
+      },
+      "gsis_id": {
+        "hash": "14487534799943866398",
+        "n_nonnull": 2811
+      },
+      "loaded": {
+        "hash": "15281015372952753232",
+        "n_nonnull": 2820
+      },
+      "pfr_id": {
+        "hash": "431786188733232890",
+        "n_nonnull": 2820
+      },
+      "player": {
+        "hash": "10733216243056938455",
+        "n_nonnull": 2820
+      },
+      "pos": {
+        "hash": "6638090962244756356",
+        "n_nonnull": 2810
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 2820
+      },
+      "season": {
+        "hash": "7512370943135986706",
+        "n_nonnull": 2820
+      },
+      "td": {
+        "hash": "11242905762776296771",
+        "n_nonnull": 2130
+      },
+      "tm": {
+        "hash": "11966544129881638295",
+        "n_nonnull": 2820
+      },
+      "x1d": {
+        "hash": "5631172010560767625",
+        "n_nonnull": 2679
+      },
+      "yac": {
+        "hash": "5568350921123778697",
+        "n_nonnull": 2819
+      },
+      "yac_att": {
+        "hash": "9622907371831580995",
+        "n_nonnull": 2819
+      },
+      "ybc": {
+        "hash": "17231581436578559482",
+        "n_nonnull": 2819
+      },
+      "ybc_att": {
+        "hash": "7963572569423799879",
+        "n_nonnull": 2819
+      },
+      "yds": {
+        "hash": "17507637920664365687",
+        "n_nonnull": 2820
+      }
+    },
+    "n_rows": 2820,
+    "row_hash_sum": "26300779063577211307954",
+    "row_hash_xor": "17273567693157622164",
+    "schema": {
+      "age": "DOUBLE",
+      "att": "DOUBLE",
+      "att_br": "DOUBLE",
+      "brk_tkl": "DOUBLE",
+      "g": "DOUBLE",
+      "gs": "DOUBLE",
+      "gsis_id": "VARCHAR",
+      "loaded": "DATE",
+      "pfr_id": "VARCHAR",
+      "player": "VARCHAR",
+      "pos": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "season": "INTEGER",
+      "td": "DOUBLE",
+      "tm": "VARCHAR",
+      "x1d": "DOUBLE",
+      "yac": "DOUBLE",
+      "yac_att": "DOUBLE",
+      "ybc": "DOUBLE",
+      "ybc_att": "DOUBLE",
+      "yds": "DOUBLE"
+    }
+  },
+  "player_distributions": {
+    "columns": {
+      "boom_prob": {
+        "hash": "15205259463055477150",
+        "n_nonnull": 673
+      },
+      "bust_prob": {
+        "hash": "8062179351129420001",
+        "n_nonnull": 673
+      },
+      "ce_pos_rank": {
+        "hash": "13505514092544610983",
+        "n_nonnull": 673
+      },
+      "ce_rank": {
+        "hash": "13764409926107542882",
+        "n_nonnull": 673
+      },
+      "ce_value": {
+        "hash": "17394214683994296288",
+        "n_nonnull": 673
+      },
+      "games_played_mean": {
+        "hash": "1544652932452975484",
+        "n_nonnull": 673
+      },
+      "mean": {
+        "hash": "9862437963146753929",
+        "n_nonnull": 673
+      },
+      "player_key": {
+        "hash": "9690361229470820940",
+        "n_nonnull": 673
+      },
+      "pos": {
+        "hash": "15980798209274231041",
+        "n_nonnull": 673
+      },
+      "pulled_at": {
+        "hash": "14901757233711181602",
+        "n_nonnull": 673
+      },
+      "q10": {
+        "hash": "11153856805622208183",
+        "n_nonnull": 673
+      },
+      "q50": {
+        "hash": "11620641856944799573",
+        "n_nonnull": 673
+      },
+      "q90": {
+        "hash": "12950454471844751180",
+        "n_nonnull": 673
+      },
+      "risk_premium": {
+        "hash": "8064242151981089404",
+        "n_nonnull": 673
+      },
+      "sd": {
+        "hash": "9465548066366005217",
+        "n_nonnull": 673
+      },
+      "season": {
+        "hash": "14553026794077177629",
+        "n_nonnull": 673
+      }
+    },
+    "n_rows": 673,
+    "row_hash_sum": "6181129498795939594967",
+    "row_hash_xor": "15558112702687546315",
+    "schema": {
+      "boom_prob": "DOUBLE",
+      "bust_prob": "DOUBLE",
+      "ce_pos_rank": "BIGINT",
+      "ce_rank": "BIGINT",
+      "ce_value": "DOUBLE",
+      "games_played_mean": "DOUBLE",
+      "mean": "DOUBLE",
+      "player_key": "VARCHAR",
+      "pos": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "q10": "DOUBLE",
+      "q50": "DOUBLE",
+      "q90": "DOUBLE",
+      "risk_premium": "DOUBLE",
+      "sd": "DOUBLE",
+      "season": "BIGINT"
+    }
+  },
+  "player_ids": {
+    "columns": {
+      "age": {
+        "hash": "16458542840427710895",
+        "n_nonnull": 11191
+      },
+      "birthdate": {
+        "hash": "7650543174605477753",
+        "n_nonnull": 11191
+      },
+      "cbs_id": {
+        "hash": "1332640208368458218",
+        "n_nonnull": 9253
+      },
+      "cfbref_id": {
+        "hash": "15533578081898941996",
+        "n_nonnull": 5627
+      },
+      "college": {
+        "hash": "16683177409784963480",
+        "n_nonnull": 11806
+      },
+      "db_season": {
+        "hash": "15139599162646193525",
+        "n_nonnull": 12465
+      },
+      "draft_ovr": {
+        "hash": "17030829653075008232",
+        "n_nonnull": 6644
+      },
+      "draft_pick": {
+        "hash": "11560332855845660836",
+        "n_nonnull": 7183
+      },
+      "draft_round": {
+        "hash": "2515507313809595822",
+        "n_nonnull": 7289
+      },
+      "draft_year": {
+        "hash": "13626136165227826057",
+        "n_nonnull": 12364
+      },
+      "espn_id": {
+        "hash": "15931040877573053738",
+        "n_nonnull": 8134
+      },
+      "fantasy_data_id": {
+        "hash": "16277140136358862712",
+        "n_nonnull": 5850
+      },
+      "fantasypros_id": {
+        "hash": "16365675545617769952",
+        "n_nonnull": 4779
+      },
+      "fleaflicker_id": {
+        "hash": "1394763798780138603",
+        "n_nonnull": 1136
+      },
+      "gsis_id": {
+        "hash": "12674282709794404650",
+        "n_nonnull": 7981
+      },
+      "height": {
+        "hash": "17141284207768981018",
+        "n_nonnull": 11328
+      },
+      "ktc_id": {
+        "hash": "4202584050287572674",
+        "n_nonnull": 464
+      },
+      "merge_name": {
+        "hash": "11798607123083869855",
+        "n_nonnull": 12465
+      },
+      "mfl_id": {
+        "hash": "4536685622247606753",
+        "n_nonnull": 12465
+      },
+      "name": {
+        "hash": "7641119096223185077",
+        "n_nonnull": 12465
+      },
+      "nfl_id": {
+        "hash": "15485382488985445400",
+        "n_nonnull": 7241
+      },
+      "pff_id": {
+        "hash": "4117367488929102393",
+        "n_nonnull": 7331
+      },
+      "pfr_id": {
+        "hash": "8535736795432961311",
+        "n_nonnull": 9607
+      },
+      "position": {
+        "hash": "3696253542533605161",
+        "n_nonnull": 12465
+      },
+      "pulled_at": {
+        "hash": "3085721749050707743",
+        "n_nonnull": 12465
+      },
+      "rotowire_id": {
+        "hash": "430416899401465909",
+        "n_nonnull": 10530
+      },
+      "rotoworld_id": {
+        "hash": "5776526246074417932",
+        "n_nonnull": 7335
+      },
+      "sleeper_id": {
+        "hash": "16594475394756750159",
+        "n_nonnull": 6349
+      },
+      "sportradar_id": {
+        "hash": "7668942478505752906",
+        "n_nonnull": 7431
+      },
+      "stats_global_id": {
+        "hash": "17215269482164760645",
+        "n_nonnull": 12364
+      },
+      "stats_id": {
+        "hash": "12209543340720659494",
+        "n_nonnull": 10155
+      },
+      "swish_id": {
+        "hash": "5371069652290273656",
+        "n_nonnull": 3426
+      },
+      "team": {
+        "hash": "12078379751130549833",
+        "n_nonnull": 12465
+      },
+      "twitter_username": {
+        "hash": "5262662776177997815",
+        "n_nonnull": 2516
+      },
+      "weight": {
+        "hash": "3704859742958624056",
+        "n_nonnull": 11780
+      },
+      "yahoo_id": {
+        "hash": "9415643752511766368",
+        "n_nonnull": 5488
+      }
+    },
+    "n_rows": 12465,
+    "row_hash_sum": "115216254574370309067632",
+    "row_hash_xor": "18410329836470365644",
+    "schema": {
+      "age": "DOUBLE",
+      "birthdate": "VARCHAR",
+      "cbs_id": "DOUBLE",
+      "cfbref_id": "VARCHAR",
+      "college": "VARCHAR",
+      "db_season": "BIGINT",
+      "draft_ovr": "DOUBLE",
+      "draft_pick": "DOUBLE",
+      "draft_round": "DOUBLE",
+      "draft_year": "DOUBLE",
+      "espn_id": "DOUBLE",
+      "fantasy_data_id": "DOUBLE",
+      "fantasypros_id": "DOUBLE",
+      "fleaflicker_id": "DOUBLE",
+      "gsis_id": "VARCHAR",
+      "height": "DOUBLE",
+      "ktc_id": "DOUBLE",
+      "merge_name": "VARCHAR",
+      "mfl_id": "BIGINT",
+      "name": "VARCHAR",
+      "nfl_id": "DOUBLE",
+      "pff_id": "DOUBLE",
+      "pfr_id": "VARCHAR",
+      "position": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "rotowire_id": "DOUBLE",
+      "rotoworld_id": "DOUBLE",
+      "sleeper_id": "DOUBLE",
+      "sportradar_id": "VARCHAR",
+      "stats_global_id": "DOUBLE",
+      "stats_id": "DOUBLE",
+      "swish_id": "DOUBLE",
+      "team": "VARCHAR",
+      "twitter_username": "VARCHAR",
+      "weight": "DOUBLE",
+      "yahoo_id": "DOUBLE"
+    }
+  },
+  "seasonal": {
+    "columns": {
+      "air_yards_share": {
+        "hash": "15363344188297710382",
+        "n_nonnull": 8702
+      },
+      "attempts": {
+        "hash": "11921015995733307555",
+        "n_nonnull": 8702
+      },
+      "ay_sh": {
+        "hash": "15807173427897343592",
+        "n_nonnull": 6682
+      },
+      "carries": {
+        "hash": "11901203676620792209",
+        "n_nonnull": 8702
+      },
+      "completions": {
+        "hash": "3095016883757542766",
+        "n_nonnull": 8702
+      },
+      "dakota": {
+        "hash": "13276692441983126258",
+        "n_nonnull": 6682
+      },
+      "dom": {
+        "hash": "5814626772868047157",
+        "n_nonnull": 6454
+      },
+      "fantasy_points": {
+        "hash": "14086801468159161696",
+        "n_nonnull": 8702
+      },
+      "fantasy_points_ppr": {
+        "hash": "11530468877696369638",
+        "n_nonnull": 8702
+      },
+      "games": {
+        "hash": "13079064338626943196",
+        "n_nonnull": 8702
+      },
+      "gsis_id": {
+        "hash": "14714536281188934166",
+        "n_nonnull": 8701
+      },
+      "interceptions": {
+        "hash": "744166427194073950",
+        "n_nonnull": 8702
+      },
+      "pacr": {
+        "hash": "9642519205480231219",
+        "n_nonnull": 6777
+      },
+      "passing_2pt_conversions": {
+        "hash": "10654987771693864363",
+        "n_nonnull": 8702
+      },
+      "passing_air_yards": {
+        "hash": "8674872567467903630",
+        "n_nonnull": 8702
+      },
+      "passing_epa": {
+        "hash": "7413996981100112936",
+        "n_nonnull": 6783
+      },
+      "passing_first_downs": {
+        "hash": "6780304303970322409",
+        "n_nonnull": 8702
+      },
+      "passing_tds": {
+        "hash": "5875229600566053769",
+        "n_nonnull": 8702
+      },
+      "passing_yards": {
+        "hash": "10705185667577447060",
+        "n_nonnull": 8702
+      },
+      "passing_yards_after_catch": {
+        "hash": "5788801727261906542",
+        "n_nonnull": 8702
+      },
+      "ppr_sh": {
+        "hash": "5943943973565091951",
+        "n_nonnull": 6682
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 8702
+      },
+      "racr": {
+        "hash": "3926945344694328613",
+        "n_nonnull": 7184
+      },
+      "receiving_2pt_conversions": {
+        "hash": "4717996019076358352",
+        "n_nonnull": 8702
+      },
+      "receiving_air_yards": {
+        "hash": "12115181670867878673",
+        "n_nonnull": 8702
+      },
+      "receiving_epa": {
+        "hash": "18234726082358527284",
+        "n_nonnull": 7184
+      },
+      "receiving_first_downs": {
+        "hash": "14576838360244011721",
+        "n_nonnull": 8702
+      },
+      "receiving_fumbles": {
+        "hash": "9773683242829390908",
+        "n_nonnull": 8702
+      },
+      "receiving_fumbles_lost": {
+        "hash": "18213515482815094569",
+        "n_nonnull": 8702
+      },
+      "receiving_tds": {
+        "hash": "17682440409365228269",
+        "n_nonnull": 8702
+      },
+      "receiving_yards": {
+        "hash": "3146580785802377868",
+        "n_nonnull": 8702
+      },
+      "receiving_yards_after_catch": {
+        "hash": "5200445395493529973",
+        "n_nonnull": 8702
+      },
+      "receptions": {
+        "hash": "3432163093853606142",
+        "n_nonnull": 8702
+      },
+      "rfd_sh": {
+        "hash": "5215953818376473362",
+        "n_nonnull": 6682
+      },
+      "rtd_sh": {
+        "hash": "17299961913316530537",
+        "n_nonnull": 6454
+      },
+      "rtdfd_sh": {
+        "hash": "8311298276910035428",
+        "n_nonnull": 6682
+      },
+      "rushing_2pt_conversions": {
+        "hash": "3575937371036775958",
+        "n_nonnull": 8702
+      },
+      "rushing_epa": {
+        "hash": "3941809280058998244",
+        "n_nonnull": 7017
+      },
+      "rushing_first_downs": {
+        "hash": "8793450010006210734",
+        "n_nonnull": 8702
+      },
+      "rushing_fumbles": {
+        "hash": "11067075171196838039",
+        "n_nonnull": 8702
+      },
+      "rushing_fumbles_lost": {
+        "hash": "16276230387105642177",
+        "n_nonnull": 8702
+      },
+      "rushing_tds": {
+        "hash": "5177416622348253922",
+        "n_nonnull": 8702
+      },
+      "rushing_yards": {
+        "hash": "3635958071006572474",
+        "n_nonnull": 8702
+      },
+      "ry_sh": {
+        "hash": "230883046384364524",
+        "n_nonnull": 6682
+      },
+      "sack_fumbles": {
+        "hash": "17784870251787986369",
+        "n_nonnull": 8702
+      },
+      "sack_fumbles_lost": {
+        "hash": "10787348638253047852",
+        "n_nonnull": 8702
+      },
+      "sack_yards": {
+        "hash": "17530648922105188267",
+        "n_nonnull": 8702
+      },
+      "sacks": {
+        "hash": "595104881980281722",
+        "n_nonnull": 8702
+      },
+      "season": {
+        "hash": "7815465734243641160",
+        "n_nonnull": 8702
+      },
+      "season_type": {
+        "hash": "0",
+        "n_nonnull": 8702
+      },
+      "special_teams_tds": {
+        "hash": "2899963209884371696",
+        "n_nonnull": 8702
+      },
+      "target_share": {
+        "hash": "15510394400740247769",
+        "n_nonnull": 8702
+      },
+      "targets": {
+        "hash": "14538935601648109684",
+        "n_nonnull": 8702
+      },
+      "tgt_sh": {
+        "hash": "1091970168430403782",
+        "n_nonnull": 6682
+      },
+      "w8dom": {
+        "hash": "10464593463488226637",
+        "n_nonnull": 6454
+      },
+      "wopr_x": {
+        "hash": "4661777566353464616",
+        "n_nonnull": 6682
+      },
+      "wopr_y": {
+        "hash": "5922720430037444041",
+        "n_nonnull": 6682
+      },
+      "yac_sh": {
+        "hash": "9350073766421669433",
+        "n_nonnull": 6682
+      },
+      "yptmpa": {
+        "hash": "11109358640875038058",
+        "n_nonnull": 6682
+      }
+    },
+    "n_rows": 8702,
+    "row_hash_sum": "79771151411696549467039",
+    "row_hash_xor": "10301268584039637285",
+    "schema": {
+      "air_yards_share": "DOUBLE",
+      "attempts": "INTEGER",
+      "ay_sh": "DOUBLE",
+      "carries": "INTEGER",
+      "completions": "INTEGER",
+      "dakota": "DOUBLE",
+      "dom": "DOUBLE",
+      "fantasy_points": "DOUBLE",
+      "fantasy_points_ppr": "DOUBLE",
+      "games": "BIGINT",
+      "gsis_id": "VARCHAR",
+      "interceptions": "DOUBLE",
+      "pacr": "DOUBLE",
+      "passing_2pt_conversions": "INTEGER",
+      "passing_air_yards": "DOUBLE",
+      "passing_epa": "DOUBLE",
+      "passing_first_downs": "DOUBLE",
+      "passing_tds": "INTEGER",
+      "passing_yards": "DOUBLE",
+      "passing_yards_after_catch": "DOUBLE",
+      "ppr_sh": "DOUBLE",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "racr": "DOUBLE",
+      "receiving_2pt_conversions": "INTEGER",
+      "receiving_air_yards": "DOUBLE",
+      "receiving_epa": "DOUBLE",
+      "receiving_first_downs": "DOUBLE",
+      "receiving_fumbles": "DOUBLE",
+      "receiving_fumbles_lost": "DOUBLE",
+      "receiving_tds": "INTEGER",
+      "receiving_yards": "DOUBLE",
+      "receiving_yards_after_catch": "DOUBLE",
+      "receptions": "INTEGER",
+      "rfd_sh": "DOUBLE",
+      "rtd_sh": "DOUBLE",
+      "rtdfd_sh": "DOUBLE",
+      "rushing_2pt_conversions": "INTEGER",
+      "rushing_epa": "DOUBLE",
+      "rushing_first_downs": "DOUBLE",
+      "rushing_fumbles": "DOUBLE",
+      "rushing_fumbles_lost": "DOUBLE",
+      "rushing_tds": "INTEGER",
+      "rushing_yards": "DOUBLE",
+      "ry_sh": "DOUBLE",
+      "sack_fumbles": "INTEGER",
+      "sack_fumbles_lost": "INTEGER",
+      "sack_yards": "DOUBLE",
+      "sacks": "DOUBLE",
+      "season": "INTEGER",
+      "season_type": "VARCHAR",
+      "special_teams_tds": "DOUBLE",
+      "target_share": "DOUBLE",
+      "targets": "INTEGER",
+      "tgt_sh": "DOUBLE",
+      "w8dom": "DOUBLE",
+      "wopr_x": "DOUBLE",
+      "wopr_y": "DOUBLE",
+      "yac_sh": "DOUBLE",
+      "yptmpa": "DOUBLE"
+    }
+  },
+  "sleeper_crawl_leagues": {
+    "columns": {
+      "done_at": {
+        "hash": "13743993129243632226",
+        "n_nonnull": 8207
+      },
+      "league_id": {
+        "hash": "13916155290549783052",
+        "n_nonnull": 8207
+      }
+    },
+    "n_rows": 8207,
+    "row_hash_sum": "75213723906243539402155",
+    "row_hash_xor": "9807557950568913045",
+    "schema": {
+      "done_at": "TIMESTAMP",
+      "league_id": "VARCHAR"
+    }
+  },
+  "sleeper_crawl_queue": {
+    "columns": {
+      "draft_id": {
+        "hash": "17862392761040120710",
+        "n_nonnull": 11149
+      },
+      "seen_at": {
+        "hash": "870537099753589625",
+        "n_nonnull": 11149
+      },
+      "status": {
+        "hash": "12508238121530012436",
+        "n_nonnull": 11149
+      }
+    },
+    "n_rows": 11149,
+    "row_hash_sum": "103082670468496605415001",
+    "row_hash_xor": "4227261725258677165",
+    "schema": {
+      "draft_id": "VARCHAR",
+      "seen_at": "TIMESTAMP",
+      "status": "VARCHAR"
+    }
+  },
+  "sleeper_crawl_users": {
+    "columns": {
+      "done_at": {
+        "hash": "3808882493989385163",
+        "n_nonnull": 370
+      },
+      "user_id": {
+        "hash": "15958954728713997849",
+        "n_nonnull": 370
+      }
+    },
+    "n_rows": 370,
+    "row_hash_sum": "3263810734269967908923",
+    "row_hash_xor": "940866017623345671",
+    "schema": {
+      "done_at": "TIMESTAMP",
+      "user_id": "VARCHAR"
+    }
+  },
+  "sleeper_draft_picks": {
+    "columns": {
+      "draft_id": {
+        "hash": "5683725810675392503",
+        "n_nonnull": 1207687
+      },
+      "draft_slot": {
+        "hash": "10576774803656520101",
+        "n_nonnull": 1207687
+      },
+      "dst_team": {
+        "hash": "17407544363112348772",
+        "n_nonnull": 22216
+      },
+      "gsis_id": {
+        "hash": "17212589099141419599",
+        "n_nonnull": 1177013
+      },
+      "is_human_slot": {
+        "hash": "0",
+        "n_nonnull": 1207687
+      },
+      "is_keeper": {
+        "hash": "0",
+        "n_nonnull": 1207687
+      },
+      "nfl_team": {
+        "hash": "7672174862184912320",
+        "n_nonnull": 1178070
+      },
+      "pick_no": {
+        "hash": "577315433752757602",
+        "n_nonnull": 1207687
+      },
+      "picked_by": {
+        "hash": "10867383714847114941",
+        "n_nonnull": 1139150
+      },
+      "player_name": {
+        "hash": "1779746327436682321",
+        "n_nonnull": 1207687
+      },
+      "position": {
+        "hash": "5594521568197491093",
+        "n_nonnull": 1207687
+      },
+      "pulled_at": {
+        "hash": "6850835803140371717",
+        "n_nonnull": 1207687
+      },
+      "roster_id": {
+        "hash": "17099272988727926579",
+        "n_nonnull": 1207102
+      },
+      "round": {
+        "hash": "15896894560250046545",
+        "n_nonnull": 1207687
+      },
+      "season": {
+        "hash": "10171012832072573910",
+        "n_nonnull": 1207687
+      },
+      "sleeper_player_id": {
+        "hash": "8744728065034991785",
+        "n_nonnull": 1207687
+      },
+      "years_exp": {
+        "hash": "9757605057777864799",
+        "n_nonnull": 1149148
+      }
+    },
+    "n_rows": 1207687,
+    "row_hash_sum": "11136782354667928569544429",
+    "row_hash_xor": "8472799149988644077",
+    "schema": {
+      "draft_id": "VARCHAR",
+      "draft_slot": "BIGINT",
+      "dst_team": "VARCHAR",
+      "gsis_id": "VARCHAR",
+      "is_human_slot": "BOOLEAN",
+      "is_keeper": "BOOLEAN",
+      "nfl_team": "VARCHAR",
+      "pick_no": "BIGINT",
+      "picked_by": "VARCHAR",
+      "player_name": "VARCHAR",
+      "position": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "roster_id": "DOUBLE",
+      "round": "BIGINT",
+      "season": "BIGINT",
+      "sleeper_player_id": "VARCHAR",
+      "years_exp": "DOUBLE"
+    }
+  },
+  "sleeper_drafts": {
+    "columns": {
+      "draft_id": {
+        "hash": "18045654194933376903",
+        "n_nonnull": 8521
+      },
+      "draft_type": {
+        "hash": "3694247436514915415",
+        "n_nonnull": 8521
+      },
+      "human_slot": {
+        "hash": "12141701399817259457",
+        "n_nonnull": 8505
+      },
+      "human_user_id": {
+        "hash": "15933572441652506356",
+        "n_nonnull": 8505
+      },
+      "is_human": {
+        "hash": "4717996019076358352",
+        "n_nonnull": 8521
+      },
+      "league_id": {
+        "hash": "9186035817136927885",
+        "n_nonnull": 8518
+      },
+      "n_drafters": {
+        "hash": "16917619746679840147",
+        "n_nonnull": 8521
+      },
+      "pulled_at": {
+        "hash": "2311784818030504545",
+        "n_nonnull": 8521
+      },
+      "rounds": {
+        "hash": "16479245208842701495",
+        "n_nonnull": 8521
+      },
+      "scoring": {
+        "hash": "10386126593823012440",
+        "n_nonnull": 8521
+      },
+      "season": {
+        "hash": "11208739833980897377",
+        "n_nonnull": 8521
+      },
+      "source": {
+        "hash": "17538096525147419293",
+        "n_nonnull": 8521
+      },
+      "sport": {
+        "hash": "2605035979947804205",
+        "n_nonnull": 8521
+      },
+      "start_time_ms": {
+        "hash": "1349282075770349722",
+        "n_nonnull": 8298
+      },
+      "status": {
+        "hash": "10673460998038578475",
+        "n_nonnull": 8521
+      },
+      "teams": {
+        "hash": "5212615940767520239",
+        "n_nonnull": 8521
+      }
+    },
+    "n_rows": 8521,
+    "row_hash_sum": "78850336764410357185313",
+    "row_hash_xor": "11287730743346100969",
+    "schema": {
+      "draft_id": "VARCHAR",
+      "draft_type": "VARCHAR",
+      "human_slot": "DOUBLE",
+      "human_user_id": "VARCHAR",
+      "is_human": "BOOLEAN",
+      "league_id": "VARCHAR",
+      "n_drafters": "DOUBLE",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "rounds": "BIGINT",
+      "scoring": "VARCHAR",
+      "season": "BIGINT",
+      "source": "VARCHAR",
+      "sport": "VARCHAR",
+      "start_time_ms": "DOUBLE",
+      "status": "VARCHAR",
+      "teams": "BIGINT"
+    }
+  },
+  "sleeper_manager_profiles": {
+    "columns": {
+      "avg_reach_rounds": {
+        "hash": "14153649344648889564",
+        "n_nonnull": 8212
+      },
+      "fav_teams": {
+        "hash": "12974099711871465100",
+        "n_nonnull": 24696
+      },
+      "manager": {
+        "hash": "14293033689844325708",
+        "n_nonnull": 24696
+      },
+      "n_drafts": {
+        "hash": "1208775792112224133",
+        "n_nonnull": 24696
+      },
+      "n_picks": {
+        "hash": "13908074740673190975",
+        "n_nonnull": 24696
+      },
+      "n_reach_picks": {
+        "hash": "7607501718223756402",
+        "n_nonnull": 24696
+      },
+      "pos_share_QB": {
+        "hash": "16527888903449536853",
+        "n_nonnull": 24696
+      },
+      "pos_share_RB": {
+        "hash": "11025651354864415683",
+        "n_nonnull": 24696
+      },
+      "pos_share_TE": {
+        "hash": "17730103543201928222",
+        "n_nonnull": 24696
+      },
+      "pos_share_WR": {
+        "hash": "7678126588657052222",
+        "n_nonnull": 24696
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 24696
+      }
+    },
+    "n_rows": 24696,
+    "row_hash_sum": "226988046859411781173503",
+    "row_hash_xor": "7111422684065752731",
+    "schema": {
+      "avg_reach_rounds": "DOUBLE",
+      "fav_teams": "VARCHAR",
+      "manager": "VARCHAR",
+      "n_drafts": "BIGINT",
+      "n_picks": "BIGINT",
+      "n_reach_picks": "BIGINT",
+      "pos_share_QB": "DOUBLE",
+      "pos_share_RB": "DOUBLE",
+      "pos_share_TE": "DOUBLE",
+      "pos_share_WR": "DOUBLE",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE"
+    }
+  },
+  "sleeper_tendencies": {
+    "columns": {
+      "avg_reach": {
+        "hash": "494348591693717083",
+        "n_nonnull": 105125
+      },
+      "avg_round": {
+        "hash": "13890564550203343668",
+        "n_nonnull": 122162
+      },
+      "drafter": {
+        "hash": "13741681265880336643",
+        "n_nonnull": 122150
+      },
+      "key_type": {
+        "hash": "0",
+        "n_nonnull": 122162
+      },
+      "n_picked": {
+        "hash": "12273686342786440148",
+        "n_nonnull": 122162
+      },
+      "position": {
+        "hash": "11382513564868767048",
+        "n_nonnull": 122162
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 122162
+      }
+    },
+    "n_rows": 122162,
+    "row_hash_sum": "1129425767715566157533633",
+    "row_hash_xor": "6849860884811790327",
+    "schema": {
+      "avg_reach": "DOUBLE",
+      "avg_round": "DOUBLE",
+      "drafter": "VARCHAR",
+      "key_type": "VARCHAR",
+      "n_picked": "BIGINT",
+      "position": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE"
+    }
+  },
+  "snaps": {
+    "columns": {
+      "defense_pct": {
+        "hash": "486464923910587913",
+        "n_nonnull": 300812
+      },
+      "defense_snaps": {
+        "hash": "2310721599449902422",
+        "n_nonnull": 300812
+      },
+      "game_id": {
+        "hash": "9145507432547429034",
+        "n_nonnull": 300812
+      },
+      "game_type": {
+        "hash": "1720107962039534059",
+        "n_nonnull": 300812
+      },
+      "gsis_id": {
+        "hash": "2303064912095527818",
+        "n_nonnull": 247215
+      },
+      "offense_pct": {
+        "hash": "17747812126445900332",
+        "n_nonnull": 300812
+      },
+      "offense_snaps": {
+        "hash": "9642113780388285999",
+        "n_nonnull": 300812
+      },
+      "opponent": {
+        "hash": "8271391711374162491",
+        "n_nonnull": 300812
+      },
+      "pfr_game_id": {
+        "hash": "5678484227975002067",
+        "n_nonnull": 300812
+      },
+      "pfr_id": {
+        "hash": "8572607469683217796",
+        "n_nonnull": 247215
+      },
+      "pfr_player_id": {
+        "hash": "5577488300353492361",
+        "n_nonnull": 300812
+      },
+      "player": {
+        "hash": "14891148558226555451",
+        "n_nonnull": 300812
+      },
+      "position": {
+        "hash": "6800785793244077575",
+        "n_nonnull": 300812
+      },
+      "pulled_at": {
+        "hash": "0",
+        "n_nonnull": 300812
+      },
+      "season": {
+        "hash": "2154057004508047282",
+        "n_nonnull": 300812
+      },
+      "st_pct": {
+        "hash": "14064345906380601860",
+        "n_nonnull": 300812
+      },
+      "st_snaps": {
+        "hash": "14163603673746207031",
+        "n_nonnull": 300812
+      },
+      "team": {
+        "hash": "14513425995126541889",
+        "n_nonnull": 300812
+      },
+      "week": {
+        "hash": "1527788976258079621",
+        "n_nonnull": 300812
+      }
+    },
+    "n_rows": 300812,
+    "row_hash_sum": "2775744834468007054969761",
+    "row_hash_xor": "5341046309938508423",
+    "schema": {
+      "defense_pct": "DOUBLE",
+      "defense_snaps": "DOUBLE",
+      "game_id": "VARCHAR",
+      "game_type": "VARCHAR",
+      "gsis_id": "VARCHAR",
+      "offense_pct": "DOUBLE",
+      "offense_snaps": "DOUBLE",
+      "opponent": "VARCHAR",
+      "pfr_game_id": "VARCHAR",
+      "pfr_id": "VARCHAR",
+      "pfr_player_id": "VARCHAR",
+      "player": "VARCHAR",
+      "position": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "season": "INTEGER",
+      "st_pct": "DOUBLE",
+      "st_snaps": "DOUBLE",
+      "team": "VARCHAR",
+      "week": "INTEGER"
+    }
+  },
+  "weekly": {
+    "columns": {
+      "air_yards_share": {
+        "hash": "4034945892757567136",
+        "n_nonnull": 67846
+      },
+      "attempts": {
+        "hash": "7686437692756865030",
+        "n_nonnull": 79250
+      },
+      "carries": {
+        "hash": "15705381173395057465",
+        "n_nonnull": 79250
+      },
+      "completions": {
+        "hash": "3849154934630581450",
+        "n_nonnull": 79250
+      },
+      "dakota": {
+        "hash": "18209182434985777071",
+        "n_nonnull": 6416
+      },
+      "fantasy_points": {
+        "hash": "2874621007781132297",
+        "n_nonnull": 79250
+      },
+      "fantasy_points_ppr": {
+        "hash": "11751004709104328432",
+        "n_nonnull": 79250
+      },
+      "gsis_id": {
+        "hash": "11320882546265364909",
+        "n_nonnull": 79228
+      },
+      "headshot_url": {
+        "hash": "15980627381787988590",
+        "n_nonnull": 78095
+      },
+      "interceptions": {
+        "hash": "12810840258392957378",
+        "n_nonnull": 79250
+      },
+      "opponent_team": {
+        "hash": "2436239288570524617",
+        "n_nonnull": 79250
+      },
+      "pacr": {
+        "hash": "5238019162552051525",
+        "n_nonnull": 7913
+      },
+      "passing_2pt_conversions": {
+        "hash": "2060787363917578834",
+        "n_nonnull": 79250
+      },
+      "passing_air_yards": {
+        "hash": "13487359947935390159",
+        "n_nonnull": 79250
+      },
+      "passing_epa": {
+        "hash": "13923540571614095607",
+        "n_nonnull": 8013
+      },
+      "passing_first_downs": {
+        "hash": "14279937348791715715",
+        "n_nonnull": 79250
+      },
+      "passing_tds": {
+        "hash": "1375077908685822297",
+        "n_nonnull": 79250
+      },
+      "passing_yards": {
+        "hash": "8149945516582449042",
+        "n_nonnull": 79250
+      },
+      "passing_yards_after_catch": {
+        "hash": "15198194342526678234",
+        "n_nonnull": 79250
+      },
+      "player_display_name": {
+        "hash": "15638585162253620196",
+        "n_nonnull": 79228
+      },
+      "player_name": {
+        "hash": "4826421504467689796",
+        "n_nonnull": 76018
+      },
+      "position": {
+        "hash": "3839730142454850341",
+        "n_nonnull": 79208
+      },
+      "position_group": {
+        "hash": "16208024867920085260",
+        "n_nonnull": 79208
+      },
+      "pulled_at": {
+        "hash": "13365760773479129178",
+        "n_nonnull": 79250
+      },
+      "racr": {
+        "hash": "3422749047087600126",
+        "n_nonnull": 52561
+      },
+      "receiving_2pt_conversions": {
+        "hash": "0",
+        "n_nonnull": 79250
+      },
+      "receiving_air_yards": {
+        "hash": "10033123185537539588",
+        "n_nonnull": 79250
+      },
+      "receiving_epa": {
+        "hash": "11842185472465177742",
+        "n_nonnull": 52962
+      },
+      "receiving_first_downs": {
+        "hash": "17308515335875008056",
+        "n_nonnull": 79250
+      },
+      "receiving_fumbles": {
+        "hash": "13677988938446676203",
+        "n_nonnull": 79250
+      },
+      "receiving_fumbles_lost": {
+        "hash": "12052817766459166602",
+        "n_nonnull": 79250
+      },
+      "receiving_tds": {
+        "hash": "480823984174830650",
+        "n_nonnull": 79250
+      },
+      "receiving_yards": {
+        "hash": "14996820982463692184",
+        "n_nonnull": 79250
+      },
+      "receiving_yards_after_catch": {
+        "hash": "16218796869914172757",
+        "n_nonnull": 79250
+      },
+      "recent_team": {
+        "hash": "9796356803470450613",
+        "n_nonnull": 79250
+      },
+      "receptions": {
+        "hash": "2155388844114066590",
+        "n_nonnull": 79250
+      },
+      "rushing_2pt_conversions": {
+        "hash": "4717996019076358352",
+        "n_nonnull": 79250
+      },
+      "rushing_epa": {
+        "hash": "6440377004730492785",
+        "n_nonnull": 26984
+      },
+      "rushing_first_downs": {
+        "hash": "8069321704782224547",
+        "n_nonnull": 79250
+      },
+      "rushing_fumbles": {
+        "hash": "4305213289093841803",
+        "n_nonnull": 79250
+      },
+      "rushing_fumbles_lost": {
+        "hash": "12052817766459166602",
+        "n_nonnull": 79250
+      },
+      "rushing_tds": {
+        "hash": "1276017063020424855",
+        "n_nonnull": 79250
+      },
+      "rushing_yards": {
+        "hash": "11222246774198542932",
+        "n_nonnull": 79250
+      },
+      "sack_fumbles": {
+        "hash": "480823984174830650",
+        "n_nonnull": 79250
+      },
+      "sack_fumbles_lost": {
+        "hash": "0",
+        "n_nonnull": 79250
+      },
+      "sack_yards": {
+        "hash": "7122551996932180277",
+        "n_nonnull": 79250
+      },
+      "sacks": {
+        "hash": "9695193927725021666",
+        "n_nonnull": 79250
+      },
+      "season": {
+        "hash": "6138598830171096868",
+        "n_nonnull": 79250
+      },
+      "season_type": {
+        "hash": "0",
+        "n_nonnull": 79250
+      },
+      "special_teams_tds": {
+        "hash": "0",
+        "n_nonnull": 79250
+      },
+      "target_share": {
+        "hash": "14907226148869694489",
+        "n_nonnull": 67846
+      },
+      "targets": {
+        "hash": "5691698853284215391",
+        "n_nonnull": 79250
+      },
+      "week": {
+        "hash": "14168264440298426850",
+        "n_nonnull": 79250
+      },
+      "wopr": {
+        "hash": "4669876023867659731",
+        "n_nonnull": 67846
+      }
+    },
+    "n_rows": 79250,
+    "row_hash_sum": "730947191140115922174888",
+    "row_hash_xor": "1329970198092878410",
+    "schema": {
+      "air_yards_share": "FLOAT",
+      "attempts": "INTEGER",
+      "carries": "INTEGER",
+      "completions": "INTEGER",
+      "dakota": "FLOAT",
+      "fantasy_points": "FLOAT",
+      "fantasy_points_ppr": "FLOAT",
+      "gsis_id": "VARCHAR",
+      "headshot_url": "VARCHAR",
+      "interceptions": "FLOAT",
+      "opponent_team": "VARCHAR",
+      "pacr": "FLOAT",
+      "passing_2pt_conversions": "INTEGER",
+      "passing_air_yards": "FLOAT",
+      "passing_epa": "FLOAT",
+      "passing_first_downs": "FLOAT",
+      "passing_tds": "INTEGER",
+      "passing_yards": "FLOAT",
+      "passing_yards_after_catch": "FLOAT",
+      "player_display_name": "VARCHAR",
+      "player_name": "VARCHAR",
+      "position": "VARCHAR",
+      "position_group": "VARCHAR",
+      "pulled_at": "TIMESTAMP WITH TIME ZONE",
+      "racr": "FLOAT",
+      "receiving_2pt_conversions": "INTEGER",
+      "receiving_air_yards": "FLOAT",
+      "receiving_epa": "FLOAT",
+      "receiving_first_downs": "FLOAT",
+      "receiving_fumbles": "FLOAT",
+      "receiving_fumbles_lost": "FLOAT",
+      "receiving_tds": "INTEGER",
+      "receiving_yards": "FLOAT",
+      "receiving_yards_after_catch": "FLOAT",
+      "recent_team": "VARCHAR",
+      "receptions": "INTEGER",
+      "rushing_2pt_conversions": "INTEGER",
+      "rushing_epa": "FLOAT",
+      "rushing_first_downs": "FLOAT",
+      "rushing_fumbles": "FLOAT",
+      "rushing_fumbles_lost": "FLOAT",
+      "rushing_tds": "INTEGER",
+      "rushing_yards": "FLOAT",
+      "sack_fumbles": "INTEGER",
+      "sack_fumbles_lost": "INTEGER",
+      "sack_yards": "FLOAT",
+      "sacks": "FLOAT",
+      "season": "INTEGER",
+      "season_type": "VARCHAR",
+      "special_teams_tds": "FLOAT",
+      "target_share": "FLOAT",
+      "targets": "INTEGER",
+      "week": "INTEGER",
+      "wopr": "FLOAT"
+    }
+  }
+}

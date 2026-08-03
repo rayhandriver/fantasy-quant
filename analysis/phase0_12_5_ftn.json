@@ -1,0 +1,48 @@
+{
+  "backtestable": false,
+  "dev_seasons_covered": [
+    2022
+  ],
+  "ingest": {
+    "n_cols": 29,
+    "n_rows": 185215,
+    "seasons": [
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "table": "ftn_charting"
+  },
+  "join_to_pbp": [
+    {
+      "match_rate": 1.0,
+      "n": 41643,
+      "n_matched": 41643,
+      "season": 2022
+    },
+    {
+      "match_rate": 1.0,
+      "n": 48225,
+      "n_matched": 48225,
+      "season": 2023
+    },
+    {
+      "match_rate": 1.0,
+      "n": 48031,
+      "n_matched": 48031,
+      "season": 2024
+    },
+    {
+      "match_rate": 1.0,
+      "n": 47316,
+      "n_matched": 47316,
+      "season": 2025
+    }
+  ],
+  "n_dev_seasons_covered": 1,
+  "passed": true,
+  "substep": "0.12.5",
+  "upstream_floor": 2022,
+  "why_not_backtestable": "DEV_SEASONS is 2014-2022 and FTN's upstream floor is 2022, so the overlap is [2022] \u2014 n=1 development season(s). Descriptive and live-2026 use only; never a backtest feature. 0.12.8 asserts this rather than trusting the label."
+}

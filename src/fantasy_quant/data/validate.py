@@ -47,6 +47,171 @@ VALUE_SCALE_MIN_N = 8           # below this a per-position rho is noise, not ev
 
 
 # --------------------------------------------------------------------------------------------
+# Session DATA-1 / B0 — store fingerprints
+# --------------------------------------------------------------------------------------------
+# An ingest session is *additive by construction*: it lands new tables and must not disturb one
+# byte of the sixteen (now twenty-seven) that were already there. That makes the usual bar sheet
+# the wrong instrument — nothing downstream should move, so "all gates PASS" is satisfied by a
+# session that silently rewrote a table. B0 inverts it: fingerprint every pre-existing table
+# *before* the session, re-fingerprint after, and require an exact match.
+#
+# The fingerprint is deliberately **order-independent** (`bit_xor`/`sum` over a row hash) because
+# DuckDB does not promise a stable scan order and an ORDER BY over `pbp` would cost more than the
+# ingest. Two aggregates, not one: `bit_xor` alone is blind to a *pair* of identical rows being
+# added or removed (they cancel), and `sum` alone is blind to a permutation of hash bits that
+# preserves the total. Together with the row count they have no cheap collision we can construct.
+
+
+def table_fingerprint(con, table: str) -> dict:
+    """Order-independent content fingerprint of one table: rows, per-column hashes, schema."""
+    cols = con.execute(
+        "select column_name, data_type from information_schema.columns "
+        "where table_name = ? order by ordinal_position",
+        [table],
+    ).fetchall()
+    n_rows, xor_h, sum_h = con.execute(
+        f'select count(*), bit_xor(hash(t)), sum(hash(t)::HUGEINT) from "{table}" t'
+    ).fetchone()
+    col_hashes = {}
+    if cols:
+        parts = ", ".join(
+            f'bit_xor(hash("{c}")), count("{c}")' for c, _ in cols
+        )
+        vals = con.execute(f'select {parts} from "{table}"').fetchone()
+        for i, (c, _t) in enumerate(cols):
+            col_hashes[c] = {"hash": _u64(vals[2 * i]), "n_nonnull": int(vals[2 * i + 1])}
+    return {
+        "n_rows": int(n_rows),
+        "row_hash_xor": _u64(xor_h),
+        "row_hash_sum": None if sum_h is None else str(sum_h),
+        "schema": {c: t for c, t in cols},
+        "columns": col_hashes,
+    }
+
+
+def _u64(v) -> str | None:
+    """Hashes come back as UBIGINT; JSON-safe as a string so no float rounding can touch them."""
+    return None if v is None else str(v)
+
+
+def fingerprint_store(con, tables: Sequence[str] | None = None) -> dict:
+    """Fingerprint every table in the store (or the named subset)."""
+    if tables is None:
+        tables = [
+            r[0]
+            for r in con.execute(
+                "select table_name from information_schema.tables "
+                "where table_schema = 'main' and table_type = 'BASE TABLE' order by 1"
+            ).fetchall()
+        ]
+    return {t: table_fingerprint(con, t) for t in tables}
+
+
+# ★ B0's named allowances. UI-1's durable lesson was that *"all bars pass" is weaker than
+# "nothing moved"* — so B0 requires nothing to move. But DATA-1's 0.12.7 deliberately retypes two
+# season columns from DOUBLE to INTEGER, and a bar that cannot express "this change, and only
+# this change, is intended" would have to be either disabled or lied to. So each intended change
+# is DECLARED here, and B0 **fails on an unclassified one** — which is the same shape as UI-1's
+# leaf classifier, and the reason it caught `worst_seat` there.
+#
+# An allowance is deliberately narrow: it permits a *retype* of named columns and nothing else.
+# The row count must hold, the column set must hold, and no unnamed column may move. The value
+# preservation itself is proven separately, before the rewrite, in
+# `reconcile.double_to_int_seasons`.
+B0_ALLOWANCES: dict[str, dict] = {
+    "depth_charts": {
+        "retyped_columns": ["season", "week"],
+        "reason": (
+            "DATA-1 / 0.12.7 — DOUBLE(2014.0) -> INTEGER(2014). A season stored as a float joins "
+            "an integer season only by implicit cast, and every such cast is somewhere a future "
+            "join can silently return nothing. Value-preserving; proven by count+sum before and "
+            "after, with non-integral values asserted absent BEFORE the rewrite."
+        ),
+    },
+    "injuries": {
+        "retyped_columns": ["season"],
+        "reason": "DATA-1 / 0.12.7 — DOUBLE -> INTEGER, as depth_charts above.",
+    },
+}
+
+
+def compare_fingerprints(before: dict, after: dict, allowances: dict | None = None) -> dict:
+    """Compare two store fingerprints. ``passed`` iff every *pre-existing* table is unchanged,
+    except for changes that match a **declared allowance**.
+
+    New tables are expected (that is the session) and are reported, never failed. A *missing*
+    table is a failure: an additive session cannot drop one. An **unclassified** change is a
+    failure even if it looks harmless — that is the whole point of the instrument.
+    """
+    allowances = B0_ALLOWANCES if allowances is None else allowances
+    changed, allowed, missing = [], [], []
+    for t, fp in before.items():
+        cur = after.get(t)
+        if cur is None:
+            missing.append(t)
+            continue
+        if cur == fp:
+            continue
+        detail = {"table": t}
+        if cur["n_rows"] != fp["n_rows"]:
+            detail["n_rows"] = [fp["n_rows"], cur["n_rows"]]
+        if cur["schema"] != fp["schema"]:
+            detail["schema_added"] = sorted(set(cur["schema"]) - set(fp["schema"]))
+            detail["schema_removed"] = sorted(set(fp["schema"]) - set(cur["schema"]))
+            detail["retyped"] = sorted(
+                c for c, ty in fp["schema"].items()
+                if c in cur["schema"] and cur["schema"][c] != ty
+            )
+        moved = [
+            c
+            for c, h in fp["columns"].items()
+            if c in cur["columns"] and cur["columns"][c] != h
+        ]
+        if moved:
+            detail["columns_changed"] = sorted(moved)
+
+        rule = allowances.get(t)
+        if rule and _matches_allowance(fp, cur, detail, rule):
+            allowed.append({**detail, "allowance": rule["reason"]})
+        else:
+            changed.append(detail)
+    return _gate(
+        "b0_store_unchanged",
+        not changed and not missing,
+        n_baseline=len(before),
+        n_after=len(after),
+        n_new=len(set(after) - set(before)),
+        new_tables=sorted(set(after) - set(before)),
+        missing_tables=sorted(missing),
+        n_unchanged=len(before) - len(changed) - len(allowed) - len(missing),
+        changed=changed,
+        allowed_changes=allowed,
+    )
+
+
+def _matches_allowance(fp: dict, cur: dict, detail: dict, rule: dict) -> bool:
+    """True iff the observed change is *exactly* a retype of the allowance's named columns."""
+    named = set(rule.get("retyped_columns", ()))
+    if detail.get("n_rows"):                       # row count moved — never allowed
+        return False
+    if detail.get("schema_added") or detail.get("schema_removed"):
+        return False
+    if set(detail.get("retyped", ())) - named:     # something else was retyped
+        return False
+    if not detail.get("retyped"):                  # allowance claimed but nothing retyped
+        return False
+    # a column whose *type* changed will also hash differently; any OTHER moved column is a real
+    # change wearing an allowance's coat
+    if set(detail.get("columns_changed", ())) - named:
+        return False
+    # values must still be present in the same quantity — a retype must not null anything out
+    return all(
+        fp["columns"][c]["n_nonnull"] == cur["columns"][c]["n_nonnull"] for c in named
+        if c in fp["columns"] and c in cur["columns"]
+    )
+
+
+# --------------------------------------------------------------------------------------------
 # small query helpers
 # --------------------------------------------------------------------------------------------
 def _count(con, sql: str) -> int:
@@ -543,6 +708,104 @@ def _board_vintage_gates(con, season: int | None = None) -> list[dict]:
     missing = [n for k, n in zip(board_player_key(raw).astype(str), raw["name"].astype(str),
                                  strict=False) if k not in have]
     return [board_vintage_gate(name, n_served=len(served), n_resolved=len(raw), missing=missing)]
+
+
+# --------------------------------------------------------------------------------------------
+# Session DATA-1 / 0.12.8 — coverage, fill-rate and registry gates
+# --------------------------------------------------------------------------------------------
+# The store went from 16 tables to 44 without anything anywhere recording what a table is
+# supposed to contain. These three turn the registry's declarations into things that fail:
+#
+#   * coverage   — the seasons a table declares it has, it has.
+#   * fill rate  — a column that was populated last time is still populated. ⚠ This is the one
+#                  that would have caught `ngs_air_yards` going to 0.00 in 2023, a field that
+#                  silently stopped being populated and that nothing in the store noticed for
+#                  three seasons. **Silent vendor degradation is the failure mode a data layer
+#                  is least equipped to see**, because nothing errors and every count is a
+#                  plausible number.
+#   * registry   — every table in the store is declared, and every declared table exists.
+FILL_RATE_BASELINE = PROJECT_ROOT / "analysis" / "fill_rate_baseline.json"
+FILL_RATE_TOL = 0.10   # a registered column may lose this much fill before it is a failure
+
+
+def coverage_gate(con, table: str, expected_seasons) -> dict:
+    """Every declared season is present in ``table``."""
+    if not db.table_exists(con, table):
+        return _gate(f"coverage:{table}", False, reason="table missing")
+    have = {
+        int(s) for (s,) in con.execute(
+            f'select distinct season from "{table}" where season is not null'
+        ).fetchall()
+    }
+    missing = sorted(set(expected_seasons) - have)
+    return _gate(f"coverage:{table}", not missing,
+                 expected=[min(expected_seasons), max(expected_seasons)],
+                 n_present=len(have), missing_seasons=missing)
+
+
+def registry_gate(con) -> dict:
+    """Every base table in the store is declared, and every declared table exists.
+
+    Both directions matter. An undeclared table has no PIT class, so nothing stops it being used
+    as a feature; a declared table that does not exist is a stale promise the inventory will
+    print as fact.
+    """
+    from fantasy_quant.data import registry
+
+    live = set(db.list_tables(con))
+    declared = set(registry.BY_TABLE)
+    undeclared = sorted(live - declared)
+    phantom = sorted(declared - live)
+    return _gate("registry:complete", not undeclared and not phantom,
+                 n_live=len(live), n_declared=len(declared),
+                 undeclared_tables=undeclared, declared_but_absent=phantom)
+
+
+def fill_rate_gate(con, current: dict, baseline: dict | None = None,
+                   tol: float = FILL_RATE_TOL) -> dict:
+    """Compare per-column fill rates against the registered baseline; drops beyond ``tol`` fail.
+
+    ``current``/``baseline`` are ``{table: {column: rate}}``. On the first run there is no
+    baseline, so the gate **records** and passes — and says so, rather than passing silently as
+    though it had checked something.
+    """
+    if not baseline:
+        return _gate("fill_rate:vs_baseline", True, status="baseline recorded (first run)",
+                     n_tables=len(current))
+    drops = []
+    for table, cols in current.items():
+        base = baseline.get(table)
+        if not base:
+            continue
+        for col, rate in cols.items():
+            was = base.get(col)
+            if was is None or rate is None:
+                continue
+            if was - rate > tol:
+                drops.append({"table": table, "column": col,
+                              "was": round(was, 4), "now": round(rate, 4),
+                              "drop": round(was - rate, 4)})
+    return _gate("fill_rate:vs_baseline", not drops, tol=tol,
+                 n_columns_checked=sum(len(c) for c in current.values()), degraded=drops)
+
+
+def store_fill_rates(con, tables=None) -> dict:
+    """``{table: {column: nonnull share}}`` for the whole store — the fill-rate gate's input."""
+    out = {}
+    for t in (tables or db.list_tables(con)):
+        n = db.row_count(con, t)
+        if not n:
+            continue
+        cols = [
+            c for (c,) in con.execute(
+                "select column_name from information_schema.columns where table_name = ? "
+                "order by ordinal_position", [t]
+            ).fetchall()
+        ]
+        sel = ", ".join(f'count("{c}")' for c in cols)
+        vals = con.execute(f'select {sel} from "{t}"').fetchone()
+        out[t] = {c: round(v / n, 4) for c, v in zip(cols, vals, strict=True)}
+    return out
 
 
 def data_health_report(con, write: bool = True, value_scale_season: int | None = None) -> dict:

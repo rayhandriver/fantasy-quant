@@ -69,6 +69,132 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
+> **★★★ Next-session pointer (2026-08-03 — ✅ SESSION DATA-1 (Phase 0.12) RUN AND COMPLETE. 9/9 bars
+> PASS. READ THIS FIRST.)**
+>
+> **State: 800 tests (was 765), ruff clean. Store 27 → 45 tables. Still UNCOMMITTED**, on top of
+> `54114bc`, now one tree with Session VH, the DATA-1 scoping docs and this. **No refit, no lockbox
+> read, no model number moved, the frozen value stack untouched.**
+>
+> **New code:** `src/fantasy_quant/data/sources/{nflverse_release,participation,small}.py`,
+> `data/{registry,reconcile}.py`, `steps/phase0_12_*.py` (8 done-bars), `tests/test_data1.py` (35).
+> **Modified:** `data/validate.py` (fingerprints + B0 allowances + coverage/fill-rate/registry gates),
+> `data/cache.py` (`archive_bytes`). **Generated:** `reference/DATA-SOURCES.md` — *the standing answer
+> to "do we have X?"; read it before investigating whether we have a source.*
+>
+> **★★ THE SESSION IN ONE LINE: the binding constraint was never the modelling, it was that nothing
+> recorded what we had** — and every defect found is that one defect wearing a different hat.
+>
+> **Register: T46 ☑** (release loader ships beside `nflverse.py`, which is untouched) · **T44 ☑**
+> (`schedules` landed; byes derive from the fixture list, 32 teams × 1 bye × 4 seasons — the 14.F
+> repoint off `ecr_snapshots` is a one-line app change still owed) · **T45 ◐** (register half done;
+> **M-1 still owes the wiring**) · **T47 opened 🟠** — `pfr_pass`/`pfr_rec`/`pfr_rush` are ingested
+> and read by **nothing**. Three more T45s, found by the instrument built for the first one.
+>
+> **★ Four findings a later reader must not re-derive** (full text: `findings.md` §"SESSION DATA-1"):
+> - **`depth_charts` was never missing 2025.** It held **two grains** — 554,215 of its 955,989 rows
+>   ARE the ts series, appended with a **NULL `season`** — so `group by season` dropped 58 % of it and
+>   reported the data as ending in 2024, *which is how the scoping mis-read it.* Read
+>   **`depth_charts_all`** (season-complete 2014–2025, grain is a column).
+> - **A join rate needs its denominator too.** B3 failed at 0.983 on its first run; the residual is
+>   entirely the vendor's **empty placeholder rows** (~780/season, none after 2022). On contentful
+>   rows it is **1.00000 every season**. The empty rows are KEPT — filter with `n_offense > 0`.
+> - **The consumers column was blind to its own purpose** in v1 (counted mentions; the ingesting step
+>   mentions a table most). Now producers/readers/tests, and a file can be both.
+> - **The explode is 9.9M rows, not ~100M** — the scope multiplied by seasons twice. Still a **view**,
+>   for the same reason (1.5× the rest of the store).
+>
+> **⚠ Standing rules that did not change:** ingest all seasons, **analyse DEV only** (2023/24 is on
+> disk; loading it does not spend the lockbox, a feature on it does) · **DATA-1 built NO feature** ·
+> `data/sources/nflverse.py` is still the provenance of sixteen tables, do not bypass it · stop
+> Streamlit before any step (DuckDB is single-writer).
+>
+> **★ NEXT: user reviews + commits.** Then, all independent and the user's call: **M-1** (now owes
+> **two** wirings — NGS T45 *and* `pfr_*` T47 — same session, same bars, since both change the
+> exposure matrix) · **VH's two open decisions** · **Sessions MM-1 · MM-2**. The M-0…M-6 mining
+> program is unblocked but **still unscoped**. Stage-0 FFC chore current (`ffc-20260801`), next due
+> after **08-07**.
+>
+> _(The DATA-1 scoping pointer, still the authority on what was planned and why, follows.)_
+>
+> **★★★ Next-session pointer (2026-08-02 — the micro-detail deep dive → SESSION DATA-1 (Phase 0.12) SCOPED. Docs-only, no code, nothing ran.)**
+>
+> **State: 765 tests (unchanged), ruff clean. Still UNCOMMITTED**, on top of `c712f86`, now one tree with
+> Session VH and this. **No `src/` change, no refit, no lockbox read, the frozen value stack untouched.**
+> Edited: `docs/BUILD_PLAN.md` §"Session DATA-1" (the plan of record), `docs/TECH-DEBT.md` (**T44** ·
+> **T45** · **T46**), `ROADMAP.md` (Phase 0.12 line + ★ SESSION PLAN ← NOW), `PROJECT.md` §5 Phase 0,
+> `PLAN.md` §2026-08-02, `findings.md` §"THE DATA AUDIT", `glossary.md`.
+>
+> **What happened.** The user asked for a scope of sessions dedicated to finding "the proverbial chinks in
+> the armor" — the position-group micro-detail he sees on TikTok/Reels: **opponent box stacking for RBs,
+> coverage schemes for WRs, usage of 1–3 TE sets, play-calling tempo.** Then, after the data audit, he
+> asked for **one session dedicated solely to obtaining and perfecting all of it** — *"not just for the
+> categories I mentioned but also for anything I may think of down the line."* That is **DATA-1 = Phase
+> 0.12**. The mining half (Sessions M-0 … M-6) is sketched in `PLAN.md` and is **NOT scoped**.
+>
+> **★★ THE FINDING — the binding constraint is our ingest architecture, not our modelling.**
+> `nfl_data_py` is a **wrapper** over `nflverse-data` GitHub release assets, and we have been reading its
+> surface as the data's surface. Phase 0.9 met a symptom of this and filed it as a one-off; it is the
+> general case. Verified live against the release API on 2026-08-02:
+>
+> > **`pbp_participation` — 2016–2025, one row per play, no wrapper function, never ingested.**
+> > `defenders_in_box` · `offense_personnel`/`defense_personnel` · `offense_formation` ·
+> > `defense_man_zone_type`/`defense_coverage_type` · `route` · `was_pressure` · `time_to_throw` ·
+> > `number_of_pass_rushers` · **and the gsis IDs of all 22 men on the field for every play.**
+>
+> That is his first three questions, as columns, at play grain, for ten seasons, free — plus the on-field
+> record that lets each be computed **per player conditional on personnel grouping**, which no public site
+> publishes. → **T46.**
+>
+> **Two more, both found by asking "who reads this?":** **`ngs` is ingested and effectively unread**
+> (26,723 rows 2016–2025; one consumer at `data/panel.py:93`, receiving only; **no `features/` module
+> reads it**) → **T45**. **There is no `schedules` table** — K2's bye readout takes byes from
+> `ecr_snapshots`, a rankings feed → **T44**.
+>
+> **⚠ A correction that is on the record.** Earlier the same day the user was told participation data was
+> cut off after 2023 and that man/zone coverage was not free. **Both wrong** — the release is current
+> through 2025 and the coverage fields are in it. Stated from recall about a vendor policy; the check was
+> one API call.
+>
+> **★ Do not re-derive these, they are measured:**
+> - **Upstream floors are permanent:** participation **2016** · NGS **2016** · PFR **2018** · FTN
+>   **2022**. With `DEV_SEASONS` = 2014–22, **FTN contributes exactly ONE development season** → it ships
+>   `backtestable: false` as an *assertion*. The user's "pre-2022 is missing" read is **right for FTN and
+>   wrong for everything else**, and that distinction is the register's most useful column. **A session
+>   that ends with "still missing pre-2022 FTN" has misunderstood the register.**
+> - **Fill rates need their denominator.** `route`/`defense_man_zone_type`/`was_pressure` at ~0.38 of all
+>   rows (2016–22) is the **pass-play share**, not 62 % missing. Personnel/box ~0.76 (2016–22) → **1.00**
+>   (2023–25). Real holes: `defense_coverage_type` ~0.50 throughout, and **`ngs_air_yards` = 0.00 from
+>   2023** — a field that silently stopped being populated, which is what the 0.12.8 fill-rate gate is for.
+> - **The explode is ~100M rows** (`offense_players` × 22 × 10 seasons), larger than the rest of the store
+>   combined. **Land play grain, materialize `participation_player_week`, keep the exploded form a view.**
+> - **DATA-1 builds NO feature.** Wiring NGS into `features/` changes a matrix the rookie ridge, the
+>   QuantReg fits and the Phase-6 softness regression all read → that is **M-1**, with its own bars.
+> - **Ingest all seasons, analyse DEV only.** Loading 2023/24 does **not** spend the lockbox; building a
+>   feature on it does. The wall stays at the modelling step.
+> - **Do not fold in the consensus-projection re-pull** (moves every value number in the app; own step).
+> - **Do not delete or bypass `data/sources/nflverse.py`** — it is the provenance of sixteen tables.
+>
+> **★ THREE DECISIONS MUST BE ASKED before a straight run** (`docs/BUILD_PLAN.md` §"Session DATA-1"):
+> (1) participation grain — **recommend play**; (2) storage shape — **recommend one DuckDB file**;
+> (3) small-source scope — **recommend all of 0.12.6**.
+>
+> **★ Nine pre-registered bars, and the headline is B4:** the four questions that motivated the session
+> each return an answer from one query, on real data. *A source is not ingested until the question that
+> motivated it returns an answer.* B0 is the usual rule inverted for an additive session — **every
+> pre-existing table byte-identical, all existing gates PASS, one committed sheet re-runs**; ingest is
+> additive by construction, so if a number moved it was not an ingest.
+>
+> **⚠ Stop the Streamlit app before running anything** — `db.connect()` is read-write, DuckDB is
+> single-writer, and a running `app/main.py` holds the lock (hit live while scoping: PID 925712).
+>
+> **★ NEXT: user reviews + commits, then Session DATA-1.** VH's two open decisions and Sessions MM-1 ·
+> MM-2 are **independent of this and stay unblocked** — ordering is the user's call. Open register:
+> **T44** · **T45** · **T46** (new), T43, T41, T40, T39, T36, T26. Stage-0 FFC chore current
+> (`ffc-20260801`), next due after **08-07**.
+>
+> _(Session VH's pointer, still the authority on the value hawk and the two open decisions, follows.)_
+>
 > **★★★ Next-session pointer (2026-08-01 session 6 — ✅ SESSION VH RUN AND COMPLETE. READ THIS FIRST.)**
 >
 > **State: 765 tests (was 749), ruff clean. UNCOMMITTED** on top of `c712f86` (UI-1+2, which the user

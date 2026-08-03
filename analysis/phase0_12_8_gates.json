@@ -1,0 +1,236 @@
+{
+  "B6": {
+    "bar": "B6 \u2014 the floors are asserted, not documented",
+    "cases": [
+      {
+        "expected_raise": true,
+        "names_the_floor": true,
+        "ok": true,
+        "raised": true,
+        "season": 2019,
+        "tag": "ftn_charting"
+      },
+      {
+        "expected_raise": false,
+        "names_the_floor": false,
+        "ok": true,
+        "raised": false,
+        "season": 2022,
+        "tag": "ftn_charting"
+      },
+      {
+        "expected_raise": true,
+        "names_the_floor": true,
+        "ok": true,
+        "raised": true,
+        "season": 2014,
+        "tag": "pbp_participation"
+      },
+      {
+        "expected_raise": false,
+        "names_the_floor": false,
+        "ok": true,
+        "raised": false,
+        "season": 2016,
+        "tag": "pbp_participation"
+      },
+      {
+        "expected_raise": true,
+        "names_the_floor": true,
+        "ok": true,
+        "raised": true,
+        "season": 2017,
+        "tag": "pfr_advstats"
+      },
+      {
+        "expected_raise": false,
+        "names_the_floor": false,
+        "ok": true,
+        "raised": false,
+        "season": 2018,
+        "tag": "pfr_advstats"
+      }
+    ],
+    "passed": true
+  },
+  "B7": {
+    "backtestable_assertion": {
+      "ftn_charting_raises": true,
+      "weekly_does_not_raise": true
+    },
+    "bar": "B7 \u2014 PIT classes hold",
+    "cases": [
+      {
+        "expected_raise": true,
+        "lagged": true,
+        "ok": true,
+        "pit_class": "retrospective",
+        "raised": true,
+        "table": "qbr_season"
+      },
+      {
+        "expected_raise": true,
+        "lagged": false,
+        "ok": true,
+        "pit_class": "retrospective",
+        "raised": true,
+        "table": "seasonal"
+      },
+      {
+        "expected_raise": true,
+        "lagged": false,
+        "ok": true,
+        "pit_class": "in_season_weekly",
+        "raised": true,
+        "table": "participation"
+      },
+      {
+        "expected_raise": false,
+        "lagged": true,
+        "ok": true,
+        "pit_class": "in_season_weekly",
+        "raised": false,
+        "table": "participation"
+      },
+      {
+        "expected_raise": false,
+        "lagged": false,
+        "ok": true,
+        "pit_class": "preseason",
+        "raised": false,
+        "table": "schedules"
+      },
+      {
+        "expected_raise": false,
+        "lagged": false,
+        "ok": true,
+        "pit_class": "preseason",
+        "raised": false,
+        "table": "combine"
+      }
+    ],
+    "passed": true,
+    "undeclared_table_raises": true
+  },
+  "coverage_all_pass": true,
+  "coverage_gates": [
+    {
+      "expected": [
+        2014,
+        2025
+      ],
+      "gate": "coverage:weekly",
+      "missing_seasons": [],
+      "n_present": 12,
+      "passed": true
+    },
+    {
+      "expected": [
+        2014,
+        2025
+      ],
+      "gate": "coverage:seasonal",
+      "missing_seasons": [],
+      "n_present": 12,
+      "passed": true
+    },
+    {
+      "expected": [
+        2014,
+        2025
+      ],
+      "gate": "coverage:pbp",
+      "missing_seasons": [],
+      "n_present": 12,
+      "passed": true
+    },
+    {
+      "expected": [
+        2014,
+        2025
+      ],
+      "gate": "coverage:snaps",
+      "missing_seasons": [],
+      "n_present": 12,
+      "passed": true
+    },
+    {
+      "expected": [
+        2016,
+        2025
+      ],
+      "gate": "coverage:ngs",
+      "missing_seasons": [],
+      "n_present": 10,
+      "passed": true
+    },
+    {
+      "expected": [
+        2014,
+        2025
+      ],
+      "gate": "coverage:depth_charts_all",
+      "missing_seasons": [],
+      "n_present": 12,
+      "passed": true
+    },
+    {
+      "expected": [
+        2016,
+        2025
+      ],
+      "gate": "coverage:participation",
+      "missing_seasons": [],
+      "n_present": 10,
+      "passed": true
+    },
+    {
+      "expected": [
+        2016,
+        2025
+      ],
+      "gate": "coverage:participation_player_week",
+      "missing_seasons": [],
+      "n_present": 10,
+      "passed": true
+    },
+    {
+      "expected": [
+        2022,
+        2025
+      ],
+      "gate": "coverage:ftn_charting",
+      "missing_seasons": [],
+      "n_present": 4,
+      "passed": true
+    },
+    {
+      "expected": [
+        2014,
+        2026
+      ],
+      "gate": "coverage:weekly_rosters",
+      "missing_seasons": [],
+      "n_present": 13,
+      "passed": true
+    }
+  ],
+  "estimated_store_rows": 6987790,
+  "fill_rate_baseline_written": true,
+  "fill_rate_gate": {
+    "gate": "fill_rate:vs_baseline",
+    "n_tables": 45,
+    "passed": true,
+    "status": "baseline recorded (first run)"
+  },
+  "passed": true,
+  "registry_gate": {
+    "declared_but_absent": [],
+    "gate": "registry:complete",
+    "n_declared": 45,
+    "n_live": 45,
+    "passed": true,
+    "undeclared_tables": []
+  },
+  "substep": "0.12.8"
+}

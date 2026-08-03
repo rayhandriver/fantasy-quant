@@ -3081,3 +3081,148 @@ mislabelled-artifact rule) makes the realism side of that price one command.
 uses the **round-pooled mean** = 35.40, and its `p95_reach` is conditional on `reach > 0`. Both were
 matched before any window was judged — *a gate that does not use the shipped gate's definition is a
 different gate.*
+
+---
+
+## 2026-08-02 — the micro-detail deep dive → SESSION DATA-1 SCOPED (docs-only, no code, nothing ran)
+
+The user asked for a scope of sessions dedicated to finding "the proverbial chinks in the armor" — the
+position-group micro-detail that fills fantasy TikTok: **opponent box stacking for RBs, coverage schemes
+for WRs, usage of 1–3 TE sets, play-calling tempo**. Then, after the data audit, asked for **one session
+dedicated solely to obtaining and perfecting all of it** — "not just for the categories I mentioned but
+also for anything I may think of down the line." That session is **DATA-1 = Phase 0.12**; the mining half
+(Sessions M-0 … M-6) is sketched below but **not** scoped, and is gated on it.
+
+### The recommendation that came first, because it reframes what the mining is for
+
+**Point the micro-detail at the week, not at the draft.** The repo's own scoreboard: seven alpha hunts
+aimed at season-level draft decisions (16.1, 16.2, 16.8, 16.9, 16.16, the value-side track, Phase 2) →
+**seven nulls**. Two aimed at weekly decisions → **both paid** (12.3's injury lag +5.86 pts/start; 13.1
++0.396 ppg/wk, 13.2 +2.08 pts/lineup-week, 12.4 +3.4→4.3 on the designated subset). The cause is sample
+size and it is already written down as the reason "beat ADP" was demoted: the **season is the unit of
+independence** and DEV has nine of them, while a weekly effect has n ≈ players × weeks ≈ 10⁵.
+
+Corollary for where to aim: consensus is sharp on the **mean** (Phase 2, settled) and our own numbers say
+we are *not* calibrated on the **tails** (unconditional coverage 77 % vs 80 %, sim level bias −113
+pts/team, `SPREAD_KAPPA` four hand-tuned constants). **The second moment and availability are where the
+documented holes are, and nobody is competing there** — consensus does not publish a variance at all.
+
+### The audit — and it found an architecture problem, not a missing file
+
+> **★★ `nfl_data_py` is a frozen wrapper over `nflverse-data` GitHub release assets, and we have been
+> treating the wrapper's surface as the data's surface.** Phase 0.9 already recorded a symptom of this
+> ("nflverse restructured stats releases post-2024; frozen `nfl_data_py` hits the dead old path") and it
+> was written off as a one-off. It is the general case. → **T46.**
+
+Verified live (GitHub release API + reading sample parquets), 2026-08-02:
+
+- **`pbp_participation`, 2016–2025, play grain, no wrapper function, never ingested.** Columns:
+  `defenders_in_box` · `offense_personnel`/`defense_personnel` · `offense_formation` ·
+  `defense_man_zone_type`/`defense_coverage_type` · `route` · `was_pressure` · `time_to_throw` ·
+  `number_of_pass_rushers` · `offense_players`/`defense_players`/`players_on_play` (**the gsis IDs of all
+  22 men on the field for every play**). That is, in order, every single thing the user asked about —
+  plus the on-field record that lets each of them be computed *per player conditional on personnel
+  grouping*, which no public site publishes.
+  ⚠ **This overturned a claim I had made to the user hours earlier in the same session** — that
+  participation was cut off after 2023 and that man/zone coverage was not free. Both wrong.
+- **`ngs` is ingested and effectively unread** — 26,723 rows, 2016–2025, one consumer
+  (`data/panel.py:93`, receiving only), **no `features/` module**. → **T45.**
+- **No `schedules` table**; K2's bye readout takes byes from `ecr_snapshots`. → **T44.**
+
+### Fill rates and floors — the two things that will be misread if not written down
+
+**Fill rates need the right denominator.** Participation's `route`/`defense_man_zone_type`/`was_pressure`
+read ~0.38 *of all rows* for 2016–2022, which looks like 62 % missing and is actually **the pass-play
+share of the row count** (≈18k charted routes against ≈19k pass attempts/season; `number_of_pass_rushers`
+0.419 and `time_to_throw` 0.395 cluster in the same place, which is the tell). Personnel/box are ~0.76 for
+2016–22 and **1.00 for 2023–25**. Genuine holes: `defense_coverage_type` ~0.50 throughout, and
+`ngs_air_yards` is **0.00 from 2023** — a field that silently stopped being populated, which is precisely
+what 0.12.8's fill-rate gate exists to catch.
+
+**★ Upstream floors are permanent and must stop being re-investigated.** participation **2016** · NGS
+**2016** · PFR **2018** · FTN **2022**. With `DEV_SEASONS` = 2014–2022, **FTN contributes exactly ONE
+development season** — so it is a live-2026 descriptive layer, never a backtest input, and it ships
+`backtestable: false` with an assertion rather than a caveat. The user's instinct that "pre-2022 is
+missing" is right for FTN and wrong for everything else, and the difference matters: one is a gap we can
+close, the other is a fact about the world.
+
+### Decisions taken while scoping (recorded; the three open ones are in BUILD_PLAN)
+
+- **The explode is not materialized.** `offense_players` × 10 seasons ≈ **100M rows**, larger than the
+  rest of the store combined. Land play grain, materialize **`participation_player_week`**, keep the
+  exploded form as a view — so a novel question is still askable at play grain without a re-ingest, which
+  is the entire point of banking play grain.
+- **DATA-1 builds no feature.** Wiring NGS into `features/` changes a matrix the rookie ridge, the
+  QuantReg fits and the Phase-6 softness regression all read. That is **M-1**, with its own bars and its
+  own before/after. DATA-1 ends at the register.
+- **The consensus-projection re-pull is not folded in** (moves every value number in the app; own step).
+- **Ingest all seasons, analyse DEV only.** Loading 2023/24 participation does not spend the lockbox;
+  building a feature on it does. Said out loud so a later reader does not "helpfully" restrict the ingest.
+
+### The mining program the register unlocks (sketch, NOT scoped, not committed)
+
+**M-0** pre-registration + protocol · **M-1** wire NGS/participation into `features/` · **M-2** RB box &
+run-fit *(the hypothesis is the **residual** — box rate above what the team's pass rate and spread imply —
+because raw box rate is a proxy for a bad offense, which ADP prices)* · **M-3** WR/TE separation, cushion,
+air-yards share · **M-4** pace and the play-caller *(joins 16.4's regimes, which already measured
+`plays_pg` as portable at k≈1.8 and `wr1_tgt_share` as **not** at k=17.9)* · **M-5** do any of these
+predict weekly **dispersion** — *the strongest candidate* · **M-6** survivors → does anything move a
+decision.
+
+⚠ **M-0 has a blocker to solve before any of it counts: there is no clean holdout left.** 2023+2024 spent
+exactly once by design; 2025 read repeatedly (dress rehearsal, T3, T31). The proposal on the table is
+**2026 as a pre-registered forward holdout** — it is the one genuinely unspent season, the season starts
+in ~5 weeks, and a holdout in the future is causally impossible to contaminate. Also owed at M-0: FDR over
+a 200-feature sweep (~10 false hits at p<.05 by construction), and Session F's rule that a
+sibling-derived feature gets a **mandatory ablation**.
+
+⚠ **And the level trap, for the fourth time.** Box rate, separation and cushion are rate/efficiency
+columns; 16.14 (`q90`/`q10`), T17 (`games_played_mean`), T19 (`floor`) and T31 all died the same way.
+Residualize on the projected level *before* reading any of them as a shape signal, and report each new
+column's correlation with the level.
+
+## 2026-08-03 — SESSION DATA-1 RUN (Phase 0.12, the complete free-data reconciliation)
+
+**Ran straight through per the user's instruction**, sub-step gate waived, tree left uncommitted.
+Streamlit was stopped first (PID 925708 held the DuckDB write lock, as the scoping warned).
+Stage-0 FFC chore **not due** (`ffc-20260801`, next after 08-07) so it was not run.
+
+**Three decisions taken up front, all as recommended:** participation at **play grain** · **one
+DuckDB file** · **all** of 0.12.6's small sources. A fourth was asked and declined: the tree was
+**not** committed first, so DATA-1 sits on top of the uncommitted VH + scoping work at `54114bc`.
+
+**Result: 9/9 bars PASS. Store 27 → 45 tables. 800 tests (was 765), ruff clean.** No refit, no
+lockbox read, no model number moved. Full write-up in `findings.md` §"SESSION DATA-1".
+
+### Decisions and dead ends recorded here
+
+- **B0 gained *named allowances*.** 0.12.7 is the one non-additive substep (DOUBLE→INT on
+  `depth_charts`/`injuries`), so a bar demanding "nothing moved" had to be either disabled or
+  lied to. Instead each intended change is **declared**, and B0 **fails on an unclassified one** —
+  the same shape as UI-1's leaf classifier. Value preservation is proven *before* the rewrite
+  (non-integral values asserted absent), not asserted after it.
+- **The empty participation rows are KEPT, not dropped.** Dropping them would have made B3 pass
+  trivially and cost B2's exact reproduction of the source row counts. Reporting both denominators
+  was strictly better than filtering.
+- **`depth_charts` was NOT rewritten.** `depth_charts_all` sits beside it — same
+  loader-beside-the-wrapper principle as 0.12.1, for the same reason: the old table is the
+  provenance of existing readers.
+- **Dead end — the first consumers column.** Counting mentions reported zero unread tables. Fixed
+  twice (producers-vs-readers, then allowing a file to be both). *The instrument written to catch
+  T45 was, in its first form, blind to T45.*
+- **Dead end — five false grain declarations** in 0.12.6's first run. Two were my error, three are
+  properties of the source and are now declared `key_unique=False`.
+- **A scope number was wrong by 10×**: the exploded view is **9.9M rows, not ~100M** (the estimate
+  applied "10 seasons" twice). The view-not-table decision is unchanged; the justification is now
+  "1.5× the rest of the store", which is still decisive.
+
+### What was deliberately NOT done
+
+No feature built (M-1 owes NGS **and** now `pfr_*`). No consensus re-pull. `nflverse.py` untouched.
+2023/24 ingested but not analysed — **loading does not spend the lockbox, a feature on it does.**
+
+### Next
+
+**M-1 now owes two wirings** (T45 NGS + T47 `pfr_*`), same session and same bars. The mining
+program M-0…M-6 is unblocked but still unscoped. VH's two open decisions and MM-1/MM-2 remain
+independent. **User reviews + commits.**

@@ -55,6 +55,10 @@ At a glance:
 | **T40** | 🟡 | **a bar control that can be satisfied by a single observation, and was.** UI-2's B3 requires `every_glyph_fired_at_least_once` so the row-by-row glyph identity cannot pass vacuously — a good control, and on the 07-30 board `handcuff` fired **exactly once** in 40 rows (`{'bye': 6, 'stack': 8, 'handcuff': 1}`). The 08-01 board took it to **zero** (`{'bye': 13, 'stack': 12, 'handcuff': 0}`) and B3 flipped to FAIL. **Every correctness claim in the bar still holds** — `mismatched: []`, `FLAGS` byte-identical, unknown byes still unknown, zero week-0 rows — so the failure is the control's sampling, not the glyph logic. A control whose n is 1 is one board refresh from reporting a defect that does not exist, which is the same alarm-fatigue failure as T41 and arrives from the opposite direction | with the next UI session. Fix by **constructing** a roster that guarantees each glyph fires (the lead-back + handcuff pair is deterministic from the depth chart) rather than hoping the sampled rows contain one; keep the control, do not loosen it into a pass | ☐ 2026-08-01 |
 | **T42** | ✅ | **the value hawk maximizes a slot-blind objective** — ANSWERED 2026-08-01 (Session VH). The diagnosis is **partly right, its flagship evidence is wrong, and its prescribed fix is blocked by its own bar.** The **TE2** this entry leads with is changed by **no** ablation — **TE is flex-eligible**, so a TE2 is a legal starter, not bench depth; the slot channel owns **QB2** only, and the entry pooled two things. **B1 = 38 %/29 % slot-driven → INCONCLUSIVE**; the **dominant** channel is the reach **window** (6 of 7–8 objected picks), which is also what the user's own labels track (`corr(reach, bad) = +0.767`). The interventional A/B (200 seat-shuffled drafts × 4 DEV seasons) then found **realized points and the sim's title probability disagree in sign**: `starter_aware` is **+50.4 realized** and **−0.295 title ×** with every shape measure improving, so **B3 blocks it on the metric we least trust** — recorded as a **finding about the sim** (T28's bench↔title link is the sim's, not the world's) and filed with the −113 pts/team level bias, **not acted on**. `blend_50` (bw 0.5) passes B3 | **closed as answered.** What is left is a *seat-character* ship decision for the user (`blend_50` needs a new per-`Personality` `bench_weight` seam; `RiskModel` carries it today and the room builds one model for all seats), plus the VH.3 window preference — both priced, neither chosen by argmax | ☑ 2026-08-01 |
 | **T43** | 🟡 | **the value hawk's step-3 context term is scaled by `state.n_teams`, and nothing derives that.** `eff` is a priority rank and `_local_z` is a z-score, so the multiplier is a ranks-per-SD conversion; a league's team count is not that conversion, it is just the number that was there. VH.0 measured the consequence: against the whole pool the term is `sd(context)/sd(eff)` = **0.08** (negligible), but against the **contended top-10** — the only rows an argmax is decided between — it is **0.29–0.34 of the spread** and changes **6 of 15 picks**. *A term calibrated against the wrong dispersion looks small right up until it decides the pick*, which is how it survived 16.14R, T24, T27, T28 and 16.17. T33 fixed *which* count it is and made *why a count* visible | **with the next 11.1 refit, alongside T26** — re-derive the scale from what it should buy (a signal worth *k picks* of board position, the conversion `reach_cap` already does through the model's own ADP coefficient), then **refit `DEFAULT_CONTEXT_WEIGHTS`**, which absorbed the old scale. ⚠ Not before: the weights and the scale are one object | ☐ 2026-08-01 |
+| **T44** | ✅ | **there is no `schedules` table in the store.** Session K2's 14.F bye-week readout needed a schedule and there was none, so it takes byes out of `ecr_snapshots` — a *ranking* feed — and that workaround is still shipping. Byes are consequently unknown for any player without an ECR row, which the surface honestly renders as unknown rather than as week 0, so nothing is wrong on screen; the defect is that a first-class fact about the season is being inferred from a third-party board that has no obligation to carry it | **Session DATA-1 / 0.12.6** — ingest the `schedules` release (small, full history) and repoint 14.F. It is also the cheapest real proof of the 0.12.1 loader | ☑ 2026-08-03 — `schedules` landed (7,548 games, 1999–2026) and `small.bye_weeks(con, season)` derives byes from the fixture list: **32 teams, exactly one bye each, weeks 5–14, in 2023/24/25 and 2026**. The 14.F repoint off `ecr_snapshots` is a one-line app change left for the next app session |
+| **T45** | ◐ | **`ngs` is ingested and effectively unread — 26,723 weekly rows, 2016–2025, one consumer.** `data/panel.py:93` reads `stat_type='receiving'` only; **no `features/` module reads the table at all**, so the 48-column exposure matrix is built from `weekly`/`pbp`/`snaps`/`combine`/`game_lines`/`player_ids` and `percent_attempts_gte_eight_defenders`, `avg_separation`, `avg_cushion`, `rush_yards_over_expected_per_att`, `avg_yac_above_expectation` and CPOE are banked and unused. Ten seasons of the exact micro-detail the 2026-08-02 deep-dive scope is about, already on disk, already PIT-clean, already paid for. **It survived because nothing anywhere records a table's consumers** — the same blind spot as T22 (*a column's consumers are not only the models that weight it*), one level up: there the audit missed the display layer, here it missed that there was no reader at all | **register it in DATA-1 (0.12.2, the inventory carries a consumer column), wire it in M-1** — deliberately two sessions, because wiring changes a matrix that downstream models read and needs its own bars | ◐ 2026-08-03 — **register half ☑, wiring still open.** `reference/DATA-SOURCES.md` now carries a **readers** column and independently reproduces the hand-found result: `ngs` = **1 reader** (`data/panel.py`), zero in `features/`. ⚠ The column's *first* version counted any mention and reported **zero** unread tables — the ingesting step mentions a table more than anyone (UI-1 lesson 2). Split into producers/readers/tests, and a file can be both. **M-1 still owes the wiring.** |
+| **T46** | ✅ | **the frozen `nfl_data_py` wrapper is our ingest ceiling, and we have been reading it as the data's ceiling.** The package is a wrapper over `nflverse-data` GitHub release assets; anything it does not expose is invisible to us. Already bit once and written off as a one-off — Phase 0.9's *"nflverse restructured stats releases post-2024; frozen `nfl_data_py` hits the dead old path"*. It is the general case. Verified 2026-08-02: **`pbp_participation` (2016–2025, play-level — `defenders_in_box`, `offense_personnel`, `defense_man_zone_type`, `route`, `was_pressure`, and the gsis IDs of all 22 players on every play) has no wrapper function and is absent from a store with sixteen tables.** Every future nflverse release is invisible on the same mechanism | **Session DATA-1 / 0.12.1** — a direct release-asset loader beside the wrapper (not replacing it; it is the provenance of sixteen tables), with the bit-identity control on an already-ingested table. Permanently decouples us from the wrapper's release cadence | ☑ 2026-08-03 — `data/sources/nflverse_release.py` ships beside `nflverse.py` (untouched, still the provenance of sixteen tables). B1: `combine` reproduces **bit-identically** through the new path (4,080 rows, dtypes included) with **two** negative controls — wrong-asset *and* single-perturbed-cell, since the first only proves schema detection. 25 release tags reachable; `participation` + `ftn_charting` + 13 small sources landed through it |
+| **T47** | 🟠 | **`pfr_pass`, `pfr_rec` and `pfr_rush` are ingested and read by NOTHING — three more T45s, found by the instrument built for the first one.** 7,798 rows of PFR advanced receiving/rushing/passing charting (2018–2025: aDOT, YAC, broken tackles, air yards, pressure) sitting on disk with **zero readers** in `src/`, `steps/` or `app/`. The 48-column exposure matrix does not touch them. They cost a scrape, a source module and a place in the Phase-0 story, and then nobody wired them up. **The pattern is now confirmed as systemic rather than incidental**: T45 was not a one-off any more than T46's wrapper ceiling was — *a store with no consumer register accumulates paid-for, unread tables silently*, and this repo has now found four | **M-1, with the NGS wiring** — the same session, the same bars, and for the same reason: both change the exposure matrix that the rookie ridge, the QuantReg fits and the Phase-6 softness regression read. ⚠ Do **not** wire them opportunistically inside a data session | ☐ 2026-08-03 |
 
 ---
 
@@ -2701,3 +2705,102 @@ scale are one object, and changing either alone re-prices the seat by an unmeasu
 bars + landing + legality are re-run seating-marginalized before/after.
 
 **☐ 2026-08-01.**
+
+---
+
+## 🟡 T44 — there is no `schedules` table, and the bye weeks come out of a rankings feed
+
+Session K2 built the 14.F roster-risk readout, which clusters a roster's starters by bye week, and
+discovered the store has **no schedule table**. The workaround — take byes from `ecr_snapshots` —
+still ships.
+
+It is 🟡 and not 🟠 because the surface is *honest* about it: a player with no ECR row has an unknown
+bye and is rendered unknown, never as week 0 (K2's B3 asserts exactly that). Nothing on screen is
+wrong. The defect is upstream of the display: **a first-class, free, immutable fact about the season
+is being inferred from a third-party ranking board that has no obligation to carry it**, and the
+coverage of that inference silently tracks the vendor's board depth.
+
+**Fix:** ingest the `schedules` release (game grain, full history, tiny) in **DATA-1 / 0.12.6** and
+repoint 14.F. It is also the cheapest honest proof of the 0.12.1 loader — a *new* table, small enough
+to eyeball, unlike the bit-identity control which only proves the loader reproduces what we have.
+
+**Done-when:** `schedules` is in the store with a coverage gate; `session.py`'s bye read comes from it;
+K2's 14.F bar re-runs with byes known for **every** rostered player, and the "unknown stays unknown"
+branch is kept and unit-tested rather than deleted (it is still correct for a player with no game).
+
+**☐ 2026-08-02.**
+
+---
+
+## 🟠 T45 — `ngs` is ingested and effectively unread
+
+`ngs` holds **26,723 weekly rows, 2016–2025**. Its only consumer is `data/panel.py:93`, which reads
+`stat_type='receiving'`. **No module in `features/` reads the table at all** — `build_exposures`
+assembles its 48 columns from `weekly`, `pbp`, `snaps`, `combine`, `game_lines` and `player_ids`.
+
+So the following are on disk, PIT-clean, ten seasons deep, and feed nothing:
+`percent_attempts_gte_eight_defenders` (box counts faced, per RB per week) · `avg_separation` /
+`avg_cushion` (the free coverage proxy) · `rush_yards_over_expected_per_att` · `avg_time_to_los` ·
+`avg_yac_above_expectation` · `percent_share_of_intended_air_yards` · `cpoe` · `avg_time_to_throw`.
+
+**Why it survived.** Nothing anywhere records which modules consume a table. This is **T22 one level
+up** — T22's lesson was *a column's consumers are not only the models that weight it* (the audit
+grepped `signal_weights` and never looked at the display layer). Here the audit never happened at
+all, because there was no artifact that would have shown a table with one reader sitting next to
+tables with fifteen. *A table nobody reads and a table that does not exist are indistinguishable from
+the outside.*
+
+**Fix, deliberately split across two sessions:**
+- **DATA-1 / 0.12.2** — the generated inventory carries a **consumers** column, so this class of
+  defect is visible by construction rather than by someone happening to look.
+- **M-1** — wire the NGS families into `features/` as weekly matchup exposures. Held back from DATA-1
+  on purpose: it changes a matrix that the rookie ridge, the QuantReg quantile fits and the Phase-6
+  softness regression all read, so it needs its own pre-registered bars and its own before/after.
+
+⚠ **Expect the level trap.** These are rate/efficiency columns and this repo has hit level-vs-shape
+four times (16.14 `q90`/`q10`, T17 `games_played_mean`, T19 `floor`, T31). Residualize on the
+projected level *before* reading any of them as a shape signal.
+
+**Done-when:** the inventory shows consumers for every table; M-1 lands the NGS exposures with the
+level control in place and reports the correlation of each new column with the level.
+
+**☐ 2026-08-02.**
+
+---
+
+## 🟠 T46 — the frozen `nfl_data_py` wrapper is our ingest ceiling
+
+`nfl_data_py` is a **wrapper** over the `nflverse-data` GitHub release assets. We have been treating
+its function list as the boundary of what exists. Anything the wrapper does not expose is not
+unavailable — it is **invisible**, which is worse, because an absence nobody can see never gets
+prioritised.
+
+This already bit once and was recorded as a one-off. Phase 0.9: *"nflverse restructured stats releases
+post-2024; frozen `nfl_data_py` hits the dead old path."* That was not a one-off; it is the general
+failure mode, and the wrapper's release cadence is not ours to control.
+
+**The measurement, 2026-08-02.** The `nflverse-data` repo publishes **25 release tags**. The wrapper
+exposes a subset. Missing entirely, with no wrapper function: **`pbp_participation`, 2016–2025, play
+grain** — `defenders_in_box`, `offense_personnel`/`defense_personnel`, `offense_formation`,
+`defense_man_zone_type`, `defense_coverage_type`, `route`, `was_pressure`, `time_to_throw`,
+`number_of_pass_rushers`, and `offense_players`/`defense_players`/`players_on_play`, the **gsis IDs of
+all 22 men on the field for every play**. Also missing: `schedules` (T44), `espn_data`, `officials`,
+`trades`, `players_components`, `contracts`.
+
+**Fix: DATA-1 / 0.12.1** — `data/sources/nflverse_release.py`, reading
+`releases/download/<tag>/<asset>.parquet` directly, cached under `data/raw/nflverse/**`.
+⚠ **It sits beside `data/sources/nflverse.py`, which is not deleted or bypassed** — that module is the
+provenance of sixteen ingested tables, and migrating them is opportunistic, not a goal.
+
+⚠ **The bar is a control, not a smoke test.** Reproduce an already-ingested table (`combine`)
+bit-identically through the new path, **and assert the control can fail** by pointing it at a wrong
+asset. T31's method warning, verbatim: *assert the control can produce a known difference before
+trusting it to show none.*
+
+**Done-when:** the loader enumerates every release tag; the bit-identity control passes and its
+negative control fails; participation, FTN and the small sources land through it; and
+`reference/DATA-SOURCES.md` is generated with each source's **upstream floor**, so the difference
+between *we have not ingested it* and *it does not exist* is written down once instead of
+re-investigated.
+
+**☐ 2026-08-02.**

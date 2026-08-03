@@ -1,0 +1,924 @@
+{
+  "B2": {
+    "bar": "B2 \u2014 participation lands complete",
+    "drift_cols_2023": [
+      "offense_names",
+      "defense_names",
+      "offense_positions",
+      "defense_positions",
+      "offense_numbers",
+      "defense_numbers"
+    ],
+    "drop_reason": "missing (game_id, play_id) \u2014 cannot join or be attributed",
+    "n_cols": 29,
+    "n_dropped": 0,
+    "n_rows": 478989,
+    "passed": true,
+    "per_season": [
+      {
+        "delta": 0,
+        "n_source": 48434,
+        "n_stored": 48434,
+        "season": 2016,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 47998,
+        "n_stored": 47998,
+        "season": 2017,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 47875,
+        "n_stored": 47875,
+        "season": 2018,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 48034,
+        "n_stored": 48034,
+        "season": 2019,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 48513,
+        "n_stored": 48513,
+        "season": 2020,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 50714,
+        "n_stored": 50714,
+        "season": 2021,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 50150,
+        "n_stored": 50150,
+        "season": 2022,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 46168,
+        "n_stored": 46168,
+        "season": 2023,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 45919,
+        "n_stored": 45919,
+        "season": 2024,
+        "within_tol": true
+      },
+      {
+        "delta": 0,
+        "n_source": 45184,
+        "n_stored": 45184,
+        "season": 2025,
+        "within_tol": true
+      }
+    ],
+    "seasons": [
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ]
+  },
+  "B3": {
+    "bar": "B3 \u2014 participation joins pbp",
+    "floor": 0.99,
+    "floor_applies_to": "match_rate_content",
+    "passed": true,
+    "per_season": [
+      {
+        "match_rate": 0.98383,
+        "match_rate_content": 1.0,
+        "n_content_rows": 44345,
+        "n_empty_rows": 4089,
+        "n_matched": 47651,
+        "n_participation": 48434,
+        "season": 2016
+      },
+      {
+        "match_rate": 0.98425,
+        "match_rate_content": 0.99998,
+        "n_content_rows": 43950,
+        "n_empty_rows": 4048,
+        "n_matched": 47242,
+        "n_participation": 47998,
+        "season": 2017
+      },
+      {
+        "match_rate": 0.984,
+        "match_rate_content": 0.99993,
+        "n_content_rows": 43722,
+        "n_empty_rows": 4153,
+        "n_matched": 47109,
+        "n_participation": 47875,
+        "season": 2018
+      },
+      {
+        "match_rate": 0.98389,
+        "match_rate_content": 1.0,
+        "n_content_rows": 43976,
+        "n_empty_rows": 4058,
+        "n_matched": 47260,
+        "n_participation": 48034,
+        "season": 2019
+      },
+      {
+        "match_rate": 0.98332,
+        "match_rate_content": 1.0,
+        "n_content_rows": 44362,
+        "n_empty_rows": 4151,
+        "n_matched": 47704,
+        "n_participation": 48513,
+        "season": 2020
+      },
+      {
+        "match_rate": 0.98438,
+        "match_rate_content": 1.0,
+        "n_content_rows": 46328,
+        "n_empty_rows": 4386,
+        "n_matched": 49922,
+        "n_participation": 50714,
+        "season": 2021
+      },
+      {
+        "match_rate": 0.98572,
+        "match_rate_content": 1.0,
+        "n_content_rows": 45859,
+        "n_empty_rows": 4291,
+        "n_matched": 49434,
+        "n_participation": 50150,
+        "season": 2022
+      },
+      {
+        "match_rate": 1.0,
+        "match_rate_content": 1.0,
+        "n_content_rows": 46168,
+        "n_empty_rows": 0,
+        "n_matched": 46168,
+        "n_participation": 46168,
+        "season": 2023
+      },
+      {
+        "match_rate": 1.0,
+        "match_rate_content": 1.0,
+        "n_content_rows": 45919,
+        "n_empty_rows": 0,
+        "n_matched": 45919,
+        "n_participation": 45919,
+        "season": 2024
+      },
+      {
+        "match_rate": 1.0,
+        "match_rate_content": 1.0,
+        "n_content_rows": 45184,
+        "n_empty_rows": 0,
+        "n_matched": 45184,
+        "n_participation": 45184,
+        "season": 2025
+      }
+    ],
+    "residual": {
+      "cause": "Every game is present in pbp (n_in_games_absent_from_pbp = 0), so the residual is entirely play-level. It is the vendor's EMPTY PLACEHOLDER row \u2014 n_offense = n_defense = 0, no possession_team, no personnel, no player lists \u2014 emitted for plays pbp does not carry, ~780 per season in 2016-2022 and none from 2023 onward. There is nothing in those rows to join with. Measured on rows carrying participation content the match rate is 1.00000 in every season, with four exceptions in 344k rows. The rows are KEPT, not dropped: they are faithful to the source (B2 reproduces the parquet row counts exactly) and they are trivially filterable by n_offense > 0.",
+      "n_in_games_absent_from_pbp": 0,
+      "n_in_pbp_games_but_play_id_absent": 5396,
+      "n_unmatched": 5396,
+      "n_unmatched_that_are_empty_placeholders": 5392,
+      "n_unmatched_with_content": 4
+    }
+  },
+  "B5": {
+    "bar": "B5 \u2014 fill rates are conditional and recorded",
+    "headline": [
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7543,
+        "n_pass": 20294,
+        "n_rows": 48434,
+        "season": 2016
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7367,
+        "n_pass": 20294,
+        "n_rows": 48434,
+        "season": 2016
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9373,
+        "fill_unconditional": 0.3942,
+        "n_pass": 20294,
+        "n_rows": 48434,
+        "season": 2016
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.938,
+        "fill_unconditional": 0.3945,
+        "n_pass": 20294,
+        "n_rows": 48434,
+        "season": 2016
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9248,
+        "fill_unconditional": 0.3875,
+        "n_pass": 20294,
+        "n_rows": 48434,
+        "season": 2016
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.0,
+        "fill_unconditional": 0.0,
+        "n_pass": 20294,
+        "n_rows": 48434,
+        "season": 2016
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.0,
+        "fill_unconditional": 0.0,
+        "n_pass": 20294,
+        "n_rows": 48434,
+        "season": 2016
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7529,
+        "n_pass": 19581,
+        "n_rows": 47998,
+        "season": 2017
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7376,
+        "n_pass": 19581,
+        "n_rows": 47998,
+        "season": 2017
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.933,
+        "fill_unconditional": 0.3807,
+        "n_pass": 19581,
+        "n_rows": 47998,
+        "season": 2017
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9333,
+        "fill_unconditional": 0.3808,
+        "n_pass": 19581,
+        "n_rows": 47998,
+        "season": 2017
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9172,
+        "fill_unconditional": 0.3742,
+        "n_pass": 19581,
+        "n_rows": 47998,
+        "season": 2017
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.0,
+        "fill_unconditional": 0.0,
+        "n_pass": 19581,
+        "n_rows": 47998,
+        "season": 2017
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.0,
+        "fill_unconditional": 0.0,
+        "n_pass": 19581,
+        "n_rows": 47998,
+        "season": 2017
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7565,
+        "n_pass": 19828,
+        "n_rows": 47875,
+        "season": 2018
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7364,
+        "n_pass": 19828,
+        "n_rows": 47875,
+        "season": 2018
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9267,
+        "fill_unconditional": 0.3838,
+        "n_pass": 19828,
+        "n_rows": 47875,
+        "season": 2018
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9283,
+        "fill_unconditional": 0.3845,
+        "n_pass": 19828,
+        "n_rows": 47875,
+        "season": 2018
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.904,
+        "fill_unconditional": 0.3744,
+        "n_pass": 19828,
+        "n_rows": 47875,
+        "season": 2018
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9237,
+        "fill_unconditional": 0.3842,
+        "n_pass": 19828,
+        "n_rows": 47875,
+        "season": 2018
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9237,
+        "fill_unconditional": 0.3842,
+        "n_pass": 19828,
+        "n_rows": 47875,
+        "season": 2018
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.761,
+        "n_pass": 19905,
+        "n_rows": 48034,
+        "season": 2019
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7419,
+        "n_pass": 19905,
+        "n_rows": 48034,
+        "season": 2019
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.8958,
+        "fill_unconditional": 0.3712,
+        "n_pass": 19905,
+        "n_rows": 48034,
+        "season": 2019
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9281,
+        "fill_unconditional": 0.3846,
+        "n_pass": 19905,
+        "n_rows": 48034,
+        "season": 2019
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.8928,
+        "fill_unconditional": 0.37,
+        "n_pass": 19905,
+        "n_rows": 48034,
+        "season": 2019
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.925,
+        "fill_unconditional": 0.3849,
+        "n_pass": 19905,
+        "n_rows": 48034,
+        "season": 2019
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.925,
+        "fill_unconditional": 0.3849,
+        "n_pass": 19905,
+        "n_rows": 48034,
+        "season": 2019
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7611,
+        "n_pass": 20184,
+        "n_rows": 48513,
+        "season": 2020
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7437,
+        "n_pass": 20184,
+        "n_rows": 48513,
+        "season": 2020
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9044,
+        "fill_unconditional": 0.3763,
+        "n_pass": 20184,
+        "n_rows": 48513,
+        "season": 2020
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9362,
+        "fill_unconditional": 0.3895,
+        "n_pass": 20184,
+        "n_rows": 48513,
+        "season": 2020
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9024,
+        "fill_unconditional": 0.3754,
+        "n_pass": 20184,
+        "n_rows": 48513,
+        "season": 2020
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9335,
+        "fill_unconditional": 0.3901,
+        "n_pass": 20184,
+        "n_rows": 48513,
+        "season": 2020
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9335,
+        "fill_unconditional": 0.3901,
+        "n_pass": 20184,
+        "n_rows": 48513,
+        "season": 2020
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7624,
+        "n_pass": 21010,
+        "n_rows": 50714,
+        "season": 2021
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.744,
+        "n_pass": 21010,
+        "n_rows": 50714,
+        "season": 2021
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9032,
+        "fill_unconditional": 0.3742,
+        "n_pass": 21010,
+        "n_rows": 50714,
+        "season": 2021
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9321,
+        "fill_unconditional": 0.3861,
+        "n_pass": 21010,
+        "n_rows": 50714,
+        "season": 2021
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9013,
+        "fill_unconditional": 0.3734,
+        "n_pass": 21010,
+        "n_rows": 50714,
+        "season": 2021
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9301,
+        "fill_unconditional": 0.3867,
+        "n_pass": 21010,
+        "n_rows": 50714,
+        "season": 2021
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9301,
+        "fill_unconditional": 0.3867,
+        "n_pass": 21010,
+        "n_rows": 50714,
+        "season": 2021
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7623,
+        "n_pass": 20393,
+        "n_rows": 50150,
+        "season": 2022
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.7438,
+        "n_pass": 20393,
+        "n_rows": 50150,
+        "season": 2022
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.8929,
+        "fill_unconditional": 0.3631,
+        "n_pass": 20393,
+        "n_rows": 50150,
+        "season": 2022
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9289,
+        "fill_unconditional": 0.3777,
+        "n_pass": 20393,
+        "n_rows": 50150,
+        "season": 2022
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.8913,
+        "fill_unconditional": 0.3624,
+        "n_pass": 20393,
+        "n_rows": 50150,
+        "season": 2022
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9274,
+        "fill_unconditional": 0.3784,
+        "n_pass": 20393,
+        "n_rows": 50150,
+        "season": 2022
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9274,
+        "fill_unconditional": 0.3784,
+        "n_pass": 20393,
+        "n_rows": 50150,
+        "season": 2022
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 1.0,
+        "n_pass": 20723,
+        "n_rows": 46168,
+        "season": 2023
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 1.0,
+        "n_pass": 20723,
+        "n_rows": 46168,
+        "season": 2023
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.0,
+        "fill_unconditional": 0.0,
+        "n_pass": 20723,
+        "n_rows": 46168,
+        "season": 2023
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 1.0,
+        "fill_unconditional": 1.0,
+        "n_pass": 20723,
+        "n_rows": 46168,
+        "season": 2023
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9008,
+        "fill_unconditional": 0.4249,
+        "n_pass": 20723,
+        "n_rows": 46168,
+        "season": 2023
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9964,
+        "fill_unconditional": 0.4964,
+        "n_pass": 20723,
+        "n_rows": 46168,
+        "season": 2023
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9964,
+        "fill_unconditional": 0.4964,
+        "n_pass": 20723,
+        "n_rows": 46168,
+        "season": 2023
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 1.0,
+        "n_pass": 20006,
+        "n_rows": 45919,
+        "season": 2024
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.9997,
+        "n_pass": 20006,
+        "n_rows": 45919,
+        "season": 2024
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.0,
+        "fill_unconditional": 0.0,
+        "n_pass": 20006,
+        "n_rows": 45919,
+        "season": 2024
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 1.0,
+        "fill_unconditional": 0.9997,
+        "n_pass": 20006,
+        "n_rows": 45919,
+        "season": 2024
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9,
+        "fill_unconditional": 0.4162,
+        "n_pass": 20006,
+        "n_rows": 45919,
+        "season": 2024
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9983,
+        "fill_unconditional": 0.488,
+        "n_pass": 20006,
+        "n_rows": 45919,
+        "season": 2024
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9983,
+        "fill_unconditional": 0.488,
+        "n_pass": 20006,
+        "n_rows": 45919,
+        "season": 2024
+      },
+      {
+        "column": "offense_personnel",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 1.0,
+        "n_pass": 19735,
+        "n_rows": 45184,
+        "season": 2025
+      },
+      {
+        "column": "defenders_in_box",
+        "denominator": "all_plays",
+        "fill_conditional": NaN,
+        "fill_unconditional": 0.9998,
+        "n_pass": 19735,
+        "n_rows": 45184,
+        "season": 2025
+      },
+      {
+        "column": "ngs_air_yards",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.0,
+        "fill_unconditional": 0.0,
+        "n_pass": 19735,
+        "n_rows": 45184,
+        "season": 2025
+      },
+      {
+        "column": "was_pressure",
+        "denominator": "pass_plays",
+        "fill_conditional": 1.0,
+        "fill_unconditional": 0.9998,
+        "n_pass": 19735,
+        "n_rows": 45184,
+        "season": 2025
+      },
+      {
+        "column": "route",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9062,
+        "fill_unconditional": 0.4176,
+        "n_pass": 19735,
+        "n_rows": 45184,
+        "season": 2025
+      },
+      {
+        "column": "defense_man_zone_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9992,
+        "fill_unconditional": 0.4881,
+        "n_pass": 19735,
+        "n_rows": 45184,
+        "season": 2025
+      },
+      {
+        "column": "defense_coverage_type",
+        "denominator": "pass_plays",
+        "fill_conditional": 0.9992,
+        "fill_unconditional": 0.4881,
+        "n_pass": 19735,
+        "n_rows": 45184,
+        "season": 2025
+      }
+    ],
+    "n_rates": 250,
+    "pass_play_columns": [
+      "route",
+      "was_pressure",
+      "time_to_throw",
+      "number_of_pass_rushers",
+      "defense_man_zone_type",
+      "defense_coverage_type",
+      "ngs_air_yards"
+    ],
+    "passed": true
+  },
+  "ingest": {
+    "drop_reason": "missing (game_id, play_id) \u2014 cannot join or be attributed",
+    "n_cols": 29,
+    "n_dropped": 0,
+    "n_raw": 478989,
+    "n_rows": 478989,
+    "per_season": [
+      {
+        "n_rows": 48434,
+        "season": 2016
+      },
+      {
+        "n_rows": 47998,
+        "season": 2017
+      },
+      {
+        "n_rows": 47875,
+        "season": 2018
+      },
+      {
+        "n_rows": 48034,
+        "season": 2019
+      },
+      {
+        "n_rows": 48513,
+        "season": 2020
+      },
+      {
+        "n_rows": 50714,
+        "season": 2021
+      },
+      {
+        "n_rows": 50150,
+        "season": 2022
+      },
+      {
+        "n_rows": 46168,
+        "season": 2023
+      },
+      {
+        "n_rows": 45919,
+        "season": 2024
+      },
+      {
+        "n_rows": 45184,
+        "season": 2025
+      }
+    ],
+    "seasons": [
+      2016,
+      2017,
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024,
+      2025
+    ],
+    "table": "participation"
+  },
+  "player_week": {
+    "n_players": 5216,
+    "n_rows": 182303,
+    "n_seasons": 10,
+    "table": "participation_player_week",
+    "view": "participation_player_play"
+  },
+  "substep": "0.12.3 / 0.12.4"
+}

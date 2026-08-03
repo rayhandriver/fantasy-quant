@@ -1,0 +1,117 @@
+{
+  "bar": "B1 \u2014 the loader control",
+  "floor_assertion_raises": true,
+  "floors": {
+    "ftn_charting": {
+      "declared": 2022,
+      "published": [
+        2022
+      ]
+    },
+    "pbp": {
+      "declared": 1999,
+      "published": [
+        1999
+      ]
+    },
+    "pbp_participation": {
+      "declared": 2016,
+      "published": [
+        2016
+      ]
+    },
+    "pfr_advstats": {
+      "declared": 2018,
+      "published": [
+        2018
+      ]
+    },
+    "weekly_rosters": {
+      "declared": 2002,
+      "published": [
+        2002
+      ]
+    }
+  },
+  "floors_declared_match_published": true,
+  "n_release_tags": 25,
+  "negative_control_perturbed_cell": {
+    "dtype_mismatch": [],
+    "equal": false,
+    "must_be_unequal": true,
+    "n_cols": 18,
+    "n_rows": 4080
+  },
+  "negative_control_wrong_asset": {
+    "equal": false,
+    "must_be_unequal": true,
+    "only_release": [
+      "age",
+      "allpro",
+      "car_av",
+      "category",
+      "cfb_player_id",
+      "college",
+      "def_ints",
+      "def_sacks",
+      "def_solo_tackles",
+      "dr_av",
+      "games",
+      "gsis_id",
+      "hof",
+      "pass_attempts",
+      "pass_completions",
+      "pass_ints",
+      "pass_tds",
+      "pass_yards",
+      "pfr_player_id",
+      "pfr_player_name",
+      "pick",
+      "position",
+      "probowls",
+      "rec_tds",
+      "rec_yards",
+      "receptions",
+      "round",
+      "rush_atts",
+      "rush_tds",
+      "rush_yards",
+      "seasons_started",
+      "side",
+      "team",
+      "to",
+      "w_av"
+    ],
+    "only_stored": [
+      "bench",
+      "broad_jump",
+      "cfb_id",
+      "cone",
+      "draft_ovr",
+      "draft_round",
+      "draft_team",
+      "draft_year",
+      "forty",
+      "ht",
+      "pfr_id",
+      "player_name",
+      "pos",
+      "school",
+      "shuttle",
+      "vertical",
+      "wt"
+    ],
+    "reason": "column sets differ"
+  },
+  "passed": true,
+  "positive_control_combine": {
+    "dtype_mismatch": [],
+    "equal": true,
+    "n_cols": 18,
+    "n_rows": 4080
+  },
+  "seasons_matched": [
+    2014,
+    2025
+  ]
+}

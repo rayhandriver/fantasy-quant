@@ -55,6 +55,9 @@ bayes = [
 ui = [
   "streamlit>=1.38",
 ]
+reports = [
+    "openpyxl>=3.1.5",
+]
 
 [dependency-groups]
 dev = [

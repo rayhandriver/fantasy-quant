@@ -51,3 +51,27 @@ def archive_text(dir_path: Path, stem: str, text: str, ext: str = "html") -> Pat
     except OSError as e:  # a full disk / permissions issue must not sink the ingest
         log.warning("could not archive raw payload %s: %s", stem, e)
         return None
+
+
+def archive_bytes(dir_path: Path, name: str, payload: bytes) -> Path | None:
+    """T7's :func:`archive_text`, extended to **binary** payloads (DATA-1 / 0.12.1).
+
+    The release assets are parquet, so the text archiver cannot hold them, and the reason to keep
+    a raw copy is stronger here than for a scrape: these are versioned GitHub release assets that
+    the vendor **overwrites in place**. A re-download after an upstream correction silently gives
+    different bytes for the same URL, and without the archived copy there is nothing to diff
+    against. Unlike :func:`archive_text` this is *not* date-stamped-and-overwritten within a day —
+    the caller owns the name, because the season is the natural key and re-pulling a season is
+    exactly the event we want to be able to inspect.
+    """
+    if not payload:
+        return None
+    try:
+        dir_path = Path(dir_path)
+        dir_path.mkdir(parents=True, exist_ok=True)
+        path = dir_path / name
+        path.write_bytes(payload)
+        return path
+    except OSError as e:  # a full disk / permissions issue must not sink the ingest
+        log.warning("could not archive raw payload %s: %s", name, e)
+        return None

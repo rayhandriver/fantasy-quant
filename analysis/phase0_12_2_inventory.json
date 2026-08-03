@@ -1,0 +1,38 @@
+{
+  "bar": "B8 \u2014 the inventory is generated and complete",
+  "hand_edited_rows": 0,
+  "n_tables": 45,
+  "n_undeclared": 0,
+  "n_unread": 23,
+  "outputs": [
+    "reference/DATA-SOURCES.md",
+    "analysis/data_inventory.json"
+  ],
+  "passed": true,
+  "reproducible": true,
+  "unread_tables": [
+    "contracts",
+    "depth_charts_all",
+    "draft_values",
+    "ftn_charting",
+    "officials",
+    "otc_player_ids",
+    "participation",
+    "participation_player_play",
+    "pfr_pass",
+    "pfr_rec",
+    "pfr_rush",
+    "player_distributions",
+    "qbr_season",
+    "qbr_week",
+    "sc_lines",
+    "sleeper_crawl_leagues",
+    "sleeper_crawl_queue",
+    "sleeper_crawl_users",
+    "sleeper_tendencies",
+    "teams_meta",
+    "trades",
+    "weekly_rosters",
+    "win_totals"
+  ]
+}

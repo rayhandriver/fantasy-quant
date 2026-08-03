@@ -1,0 +1,368 @@
+{
+  "T44_byes_from_schedule": {
+    "2023": {
+      "bye_week_range": [
+        5,
+        14
+      ],
+      "n_teams": 32,
+      "n_teams_with_exactly_one_bye": 32,
+      "ok": true
+    },
+    "2024": {
+      "bye_week_range": [
+        5,
+        14
+      ],
+      "n_teams": 32,
+      "n_teams_with_exactly_one_bye": 32,
+      "ok": true
+    },
+    "2025": {
+      "bye_week_range": [
+        5,
+        14
+      ],
+      "n_teams": 32,
+      "n_teams_with_exactly_one_bye": 32,
+      "ok": true
+    },
+    "2026": {
+      "bye_week_range": [
+        5,
+        14
+      ],
+      "n_teams": 32,
+      "n_teams_with_exactly_one_bye": 32,
+      "ok": true
+    }
+  },
+  "T44_closed": true,
+  "errors": [],
+  "n_ok": 13,
+  "n_sources": 13,
+  "passed": true,
+  "reports": [
+    {
+      "backtestable": true,
+      "grain": "game",
+      "key": [
+        "game_id"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 46,
+      "n_duplicate_keys": 0,
+      "n_rows": 7548,
+      "n_seasons": 28,
+      "note": "The season's fixture list: kickoff, teams, result, and \u2014 the reason it is first \u2014 the structure byes are derived from. Closes T44, which had 14.F reading byes out of ecr_snapshots. Available before a draft, hence pit_class=preseason.",
+      "pit_class": "preseason",
+      "seasons": [
+        1999,
+        2026
+      ],
+      "source": "schedules/games",
+      "table": "schedules"
+    },
+    {
+      "backtestable": true,
+      "grain": "player-week",
+      "key": [
+        "season",
+        "game_id",
+        "player_id"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 30,
+      "n_duplicate_keys": 0,
+      "n_rows": 10709,
+      "n_seasons": 20,
+      "note": "ESPN QBR at week grain, 2006-. A QB quality read independent of our own scoring.",
+      "pit_class": "in_season_weekly",
+      "seasons": [
+        2006,
+        2025
+      ],
+      "source": "espn_data/qbr_week_level",
+      "table": "qbr_week"
+    },
+    {
+      "backtestable": true,
+      "grain": "player-season-type",
+      "key": [
+        "season",
+        "season_type",
+        "player_id"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 23,
+      "n_duplicate_keys": 0,
+      "n_rows": 1523,
+      "n_seasons": 20,
+      "note": "ESPN QBR at season grain. Retrospective: complete only once the season is over. `season_type` is part of the grain \u2014 regular season and postseason are separate rows, which is what made (season, player_id) non-unique on the first run.",
+      "pit_class": "retrospective",
+      "seasons": [
+        2006,
+        2025
+      ],
+      "source": "espn_data/qbr_season_level",
+      "table": "qbr_season"
+    },
+    {
+      "backtestable": true,
+      "grain": "contract",
+      "key": [
+        "otc_id",
+        "year_signed"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": false,
+      "n_cols": 25,
+      "n_duplicate_keys": 20219,
+      "n_rows": 51793,
+      "n_seasons": 0,
+      "note": "OverTheCap contract history, native gsis_id. The role-security hypothesis (T3's open hole) lives here: guaranteed money and contract year as a proxy for how safe a starter's job is. Ingested, NOT tested \u2014 that is M-series work.\n\u26a0 NO UNIQUE ROW KEY, and this is a property of the source, not of our load: a practice-squad churner signs many small deals in one year and OTC emits some of them as byte-identical rows (3,339 fully-duplicate rows overall; one 2022 WR has eleven). Any per-player aggregate here must aggregate deliberately \u2014 a naive join on otc_id fans out.",
+      "pit_class": "preseason",
+      "seasons": null,
+      "source": "contracts/historical_contracts",
+      "table": "contracts"
+    },
+    {
+      "backtestable": true,
+      "grain": "player",
+      "key": [
+        "otc_id"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 6,
+      "n_duplicate_keys": 0,
+      "n_rows": 13782,
+      "n_seasons": 0,
+      "note": "OTC id -> gsis crosswalk, so contracts join the rest of the store.",
+      "pit_class": "preseason",
+      "seasons": null,
+      "source": "players_components/otc_players",
+      "table": "otc_player_ids"
+    },
+    {
+      "backtestable": true,
+      "grain": "player",
+      "key": [
+        "gsis_id"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 39,
+      "n_duplicate_keys": 0,
+      "n_rows": 24509,
+      "n_seasons": 0,
+      "note": "nflverse's own player master (24.5k rows, every id system + birth_date + position group). Wider than our player_ids crosswalk; kept beside it, not merged \u2014 player_ids is the provenance of every existing join.",
+      "pit_class": "preseason",
+      "seasons": null,
+      "source": "players_components/players",
+      "table": "players_master"
+    },
+    {
+      "backtestable": true,
+      "grain": "game-official",
+      "key": [
+        "game_id",
+        "official_id"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 9,
+      "n_duplicate_keys": 0,
+      "n_rows": 21900,
+      "n_seasons": 11,
+      "note": "Officiating crews, 2015-. Crew-level penalty tendency is the standing hypothesis.",
+      "pit_class": "retrospective",
+      "seasons": [
+        2015,
+        2025
+      ],
+      "source": "officials/officials",
+      "table": "officials"
+    },
+    {
+      "backtestable": true,
+      "grain": "trade-asset",
+      "key": [
+        "trade_id"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": false,
+      "n_cols": 11,
+      "n_duplicate_keys": 3300,
+      "n_rows": 4975,
+      "n_seasons": 25,
+      "note": "Trade transactions, 2002-. ONE ROW PER ASSET MOVED, not per trade \u2014 `trade_id` is a group key (up to 10 rows share one). Relevant to 16.5, whose `mechanism` is the one irreducibly-human field on a table that is otherwise derived (111 rows still `unknown`) \u2014 this is the feed that could answer trade-vs-free-agent.",
+      "pit_class": "preseason",
+      "seasons": [
+        2002,
+        2026
+      ],
+      "source": "trades/trades",
+      "table": "trades"
+    },
+    {
+      "backtestable": true,
+      "grain": "player-week-status",
+      "key": [
+        "season",
+        "week",
+        "gsis_id",
+        "team",
+        "status",
+        "position"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": false,
+      "n_cols": 36,
+      "n_duplicate_keys": 5,
+      "n_rows": 533275,
+      "n_seasons": 13,
+      "note": "Roster status per player-week (active/inactive/IR), 2014-2026. The honest availability record: distinguishes 'did not play' from 'was not on the roster', which is the distinction T3's cohort availability prior is built around.\n\u26a0 The grain is player-week-STATUS, not player-week: one player-week carries a row per roster transaction (ACT/TRC/TRT/TRD), so a player-week join must pick a status or it fans out. Five residual duplicates remain even on the full key, and six 2026 week-1 rows have a null gsis_id (unsigned players).",
+      "pit_class": "in_season_weekly",
+      "seasons": [
+        2014,
+        2026
+      ],
+      "source": "weekly_rosters/roster_weekly",
+      "table": "weekly_rosters"
+    },
+    {
+      "backtestable": true,
+      "grain": "team",
+      "key": [
+        "team_abbr"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 16,
+      "n_duplicate_keys": 0,
+      "n_rows": 36,
+      "n_seasons": 0,
+      "note": "Team codes, conference/division, colours. Division structure feeds playoff SOS (14.H).",
+      "pit_class": "preseason",
+      "seasons": null,
+      "source": "teams/teams_colors_logos",
+      "table": "teams_meta"
+    },
+    {
+      "backtestable": true,
+      "grain": "pick",
+      "key": [
+        "pick"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 6,
+      "n_duplicate_keys": 0,
+      "n_rows": 262,
+      "n_seasons": 0,
+      "note": "Draft-pick trade-value charts (Stuart/Johnson/Hill/OTC/PFF). Not an NFL-draft table \u2014 it is the pick-value curve, and the natural prior for a FANTASY pick's value in the 13.5 trade evaluator.",
+      "pit_class": "preseason",
+      "seasons": null,
+      "source": "import_draft_values",
+      "table": "draft_values"
+    },
+    {
+      "backtestable": true,
+      "grain": "game-side-line",
+      "key": [
+        "game_id",
+        "side",
+        "line"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 7,
+      "n_duplicate_keys": 0,
+      "n_rows": 4092,
+      "n_seasons": 8,
+      "note": "Scoring-market lines by side. Beside game_lines, which stays the spine.",
+      "pit_class": "preseason",
+      "seasons": [
+        2013,
+        2020
+      ],
+      "source": "import_sc_lines",
+      "table": "sc_lines"
+    },
+    {
+      "backtestable": true,
+      "grain": "game-market-book",
+      "key": [
+        "game_id",
+        "market_type",
+        "abbr",
+        "book"
+      ],
+      "key_columns_missing": [],
+      "key_declaration_holds": true,
+      "key_declared_unique": true,
+      "n_cols": 9,
+      "n_duplicate_keys": 0,
+      "n_rows": 470217,
+      "n_seasons": 16,
+      "note": "\u26a0 nfl_data_py itself warns this source 'is currently in flux and may be out of date'. Landed for completeness and registered with that warning; it is NOT a substitute for game_lines, which is the validated market spine.",
+      "pit_class": "preseason",
+      "seasons": [
+        2006,
+        2021
+      ],
+      "source": "import_win_totals",
+      "table": "win_totals"
+    }
+  ],
+  "sources_whose_grain_declaration_is_false": [],
+  "sources_without_a_unique_row_key": [
+    {
+      "grain": "contract",
+      "key": [
+        "otc_id",
+        "year_signed"
+      ],
+      "n_dup": 20219,
+      "table": "contracts"
+    },
+    {
+      "grain": "trade-asset",
+      "key": [
+        "trade_id"
+      ],
+      "n_dup": 3300,
+      "table": "trades"
+    },
+    {
+      "grain": "player-week-status",
+      "key": [
+        "season",
+        "week",
+        "gsis_id",
+        "team",
+        "status",
+        "position"
+      ],
+      "n_dup": 5,
+      "table": "weekly_rosters"
+    }
+  ],
+  "substep": "0.12.6"
+}

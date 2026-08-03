@@ -3209,6 +3209,262 @@ unplanned. Designed pairs target exactly those.
 
 ---
 
+# ★★ Session DATA-1 — PHASE 0.12, THE COMPLETE FREE-DATA RECONCILIATION
+
+> **✅ RUN 2026-08-03 — 9/9 bars PASS. Store 27 → 45 tables, 800 tests (was 765), ruff clean.**
+> Decisions taken as recommended (**play grain · one DuckDB file · all** small sources); the
+> sub-step gate was waived and it ran straight through; the tree was left **uncommitted**.
+> **Register: T46 ☑ · T44 ☑ · T45 ◐ (register half; M-1 owes the wiring) · T47 opened.**
+> **Four things this spec got wrong, corrected by the run** — read `findings.md` §"SESSION DATA-1"
+> before trusting the text below:
+> 1. *"`depth_charts` stops at 2024 and 2025 lives separately"* — **no.** `depth_charts` already
+>    **contained** the ts series: 554,215 of its 955,989 rows, appended with a NULL `season`. Two
+>    grains in one table; `group by season` dropped 58 % of it, which is what produced the "stops
+>    at 2024" reading in the first place.
+> 2. *"the explode is ~100M rows"* — **it is 9.9M.** The estimate applied "10 seasons" twice.
+>    The view-not-table decision is unchanged (1.5× the rest of the store), the justification is not.
+> 3. **B3 needed a denominator.** The raw join rate is 0.983 for 2016–2022 because the vendor emits
+>    ~780 empty placeholder rows a season; on contentful rows it is 1.00000 everywhere.
+> 4. **B0 needed *named allowances*** — 0.12.7's DOUBLE→INT is the one non-additive change, so the
+>    bar declares it and still fails on anything unclassified.
+
+*(scoped **2026-08-02**, docs-only, no code, nothing ran. User request: a session "dedicated solely to
+reconciling, developing, cleaning, and doing everything necessary to obtain and perfect all the data we'll
+need to do these full-on deep dives — not just for the categories I mentioned but also for anything I may
+think of down the line." Motivating context: the 2026-08-02 micro-detail alpha scoping, `PLAN.md`
+§2026-08-02. This is the ingest half; the mining half is Sessions M-0 … M-6, which are **not** scoped yet
+and are gated on this.)*
+
+## Why this session exists — and it is not "we forgot to download some files"
+
+The user asked about position-group micro-detail: **opponent box stacking for RBs, coverage schemes for
+WRs, 1–3 TE personnel sets, play-calling tempo.** Auditing whether we could answer those turned up a
+finding about the *architecture of our ingest*, not about a missing file.
+
+> **★★ THE FINDING: `nfl_data_py` is a frozen wrapper over the `nflverse-data` GitHub release assets, and
+> we have been treating the wrapper's surface as if it were the data's surface.** Everything the wrapper
+> does not expose is invisible to us — not unavailable, *invisible*. This has already bitten once and was
+> written off as a one-off: Phase 0.9's note that *"nflverse restructured stats releases post-2024; frozen
+> `nfl_data_py` hits the dead old path."* That was not a one-off. It is the general case, and it is why
+> the single richest free NFL dataset in existence is absent from a repo that has ingested sixteen tables.
+
+Three concrete consequences, all verified live on 2026-08-02:
+
+1. **`pbp_participation` — 2016–2025, ten seasons, play-level — is not ingested and has no wrapper
+   function.** It carries `defenders_in_box`, `offense_personnel`/`defense_personnel`,
+   `offense_formation`, `defense_man_zone_type`, `defense_coverage_type`, `route`, `was_pressure`,
+   `time_to_throw`, `number_of_pass_rushers`, and `offense_players`/`defense_players`/`players_on_play`
+   — **the gsis IDs of all 22 men on the field for every play.** That is, in order, every single thing
+   the user asked about, plus the on-field participation record that lets any of it be computed *per
+   player conditional on personnel grouping*, which no public site publishes.
+   ⚠ **This corrects a claim made to the user earlier the same day** — that participation data was cut
+   off after 2023 and that man/zone coverage was not available free. Both were wrong. The release is
+   current through 2025 and the coverage fields are in it.
+2. **`ngs` IS ingested — 26,723 weekly rows, 2016–2025 — and is read by exactly one consumer**
+   (`data/panel.py:93`, `stat_type='receiving'` only). **No `features/` module reads it at all.** The
+   48-column exposure matrix is built from `weekly`, `pbp`, `snaps`, `combine`, `game_lines`,
+   `player_ids`. `percent_attempts_gte_eight_defenders`, `avg_separation`, `avg_cushion`,
+   `rush_yards_over_expected_per_att`, `avg_yac_above_expectation` and CPOE are **banked and unused**.
+   → **T45.**
+3. **There is no `schedules` table.** Session K2 discovered this the hard way and worked around it by
+   reading byes out of `ecr_snapshots`; the workaround is still shipping. → **T44.**
+
+**So the deliverable is not a download script. It is (a) a loader that reads the release assets directly,
+so the wrapper's surface stops being our ceiling, and (b) a standing inventory that answers "do we have
+X?" without another investigation — which is the literal ask, "anything I may think of down the line."**
+
+## What is actually obtainable — the three-way triage, and the third column is the important one
+
+Verified against the GitHub release API and by reading sample parquets on 2026-08-02. **The session must
+carry this table forward into `reference/DATA-SOURCES.md` and keep it current.**
+
+**(a) Exists, free, not ingested — go get it.**
+
+| source | tag / call | grain | seasons |
+|---|---|---|---|
+| **participation** | `pbp_participation` | play | **2016–2025** |
+| **FTN charting** | `ftn_charting` | play | 2022–2025 |
+| **schedules** | `schedules` | game | full history |
+| ESPN QBR | `espn_data` | week + season | 2006– |
+| contracts (OTC) | `players_components` / `contracts` | player | current |
+| officials | `officials` | game | 2015– |
+| trades | `trades` | transaction | 2002– |
+| weekly rosters | `weekly_rosters` | player-week | 2002– |
+| win totals · scoring lines · draft values | `nfl_data_py` importers | season / game | varies |
+
+**(b) Ingested but incomplete — reconcile.**
+- `depth_charts` stops at **2024**; 2025 lives separately in `depth_charts_ts` (no `season` column).
+- `depth_charts.season` and `injuries.season` are stored **DOUBLE** (`2014.0`), everything else is INT.
+- `consensus_projections` is 2026-only and dated **2026-07-05** — 27 days stale, an open decision since
+  the 08-01 Stage-0 reconciliation. **Deliberately NOT folded into this session** (see the decisions).
+
+**(c) ★ Upstream hard floors — these do not exist, at any price, from nflverse. Do not spend a session
+trying to fill them.** The user's instinct that pre-2022 data is "missing" is right for FTN and wrong for
+everything else, and the difference matters because one is a gap we can close and the other is a fact
+about the world:
+
+| source | earliest season | consequence |
+|---|---|---|
+| participation | **2016** | 7 DEV seasons (2016–2022) — workable |
+| NGS | **2016** | 7 DEV seasons — workable |
+| PFR advanced | **2018** | 5 DEV seasons |
+| **FTN charting** | **2022** | **ONE DEV season.** Descriptive/live-2026 use only — **never a backtest input** |
+
+**★ The DEV-season arithmetic is the whole reason to write this down.** `DEV_SEASONS` is 2014–2022 and
+the lockbox is 2023+2024. A source starting in 2022 contributes exactly one usable development season.
+Any bar built on FTN is a bar built on n=1, and this repo has already learned twice (T24's four-season
+subsample; T40's n=1 control) what that produces.
+
+## Substeps
+
+### 0.12.1 — the release-asset loader *(build this first; everything else rides on it)*
+`src/fantasy_quant/data/sources/nflverse_release.py` — `list_releases()` · `release_assets(tag)` ·
+`read_release(tag, asset)` → DataFrame, over
+`https://github.com/nflverse/nflverse-data/releases/download/<tag>/<asset>.parquet`. Raw payloads cached
+date-stamped under `data/raw/nflverse/**` (the T7 `cache.archive_text` pattern, extended to binary), so a
+re-run is free and a vendor deletion is survivable.
+
+> **★ The bar is a CONTROL, not a smoke test.** Re-read an **already-ingested** table (`combine`) through
+> the new path and assert it reproduces the stored table **bit-identically** — *and* assert the control
+> can fail, by pointing it at a wrong asset and requiring a mismatch. T31's method warning applies
+> verbatim: *assert the control can produce a known difference before trusting it to show none.*
+
+### 0.12.2 — the inventory + gap register *(the "anything I think of later" deliverable)*
+`steps/phase0_12_inventory.py` → `analysis/data_inventory.json` + a generated
+`reference/DATA-SOURCES.md`. One row per source × season: row count, column fill rates, gsis match rate,
+grain, **upstream floor**, **PIT class** (see 0.12.8), and which `src/` modules consume it. Generated, not
+hand-written — the 16.5 **derived-vs-curated** rule: this is a question a feed can answer, so no human
+maintains it.
+
+> **★ It must include the consumer column.** T45 exists because nothing anywhere recorded that `ngs` had
+> one reader. *A table nobody reads and a table that does not exist are indistinguishable from the
+> outside, and the inventory is what makes them distinguishable.*
+
+### 0.12.3 — participation, at play grain
+`participation` table, 2016–2025, one row per play, conformed to `pbp`'s `game_id`/`play_id` so it joins.
+Team codes routed through `adp.panel._canon_team` (**the `LA`/`LAR` lesson — a missing entity and a failed
+join look identical**; 16.4's first run silently deleted Sean McVay's entire Rams tenure). Schema drift is
+real and must be handled, not assumed away: **2016–2022 files have 20 columns, 2023–2025 have 26**
+(`offense_names`/`defense_names`/`offense_positions`/`defense_positions`/`offense_numbers`/
+`defense_numbers` are new), so the loader unions on the superset with explicit NULLs.
+
+**Fill rates are not uniform and the report must say so, per season, per column:** personnel/box run
+~0.76 for 2016–2022 and **1.00 for 2023–2025**; `route`/`defense_man_zone_type`/`was_pressure` sit at
+~0.38 of all rows across 2016–2022, which is the **pass-play share of the row count, not a data gap** —
+confirm that at ingest by conditioning on `pbp.play_type`, and record the conditional rate, because the
+unconditional one will otherwise be read as 62 % missing by the next person who looks.
+⚠ `defense_coverage_type` is genuinely ~0.50 even in 2023–2025, and `ngs_air_yards` is **0.00 from 2023**
+— a field that stopped being populated. Both go in the register as known holes.
+
+### 0.12.4 — the player-play view *(the highest-value derivation, and the one that will blow up the DB)*
+`offense_players`/`defense_players` are `;`-delimited gsis lists. Exploded, that is **~46k plays × 22
+players × 10 seasons ≈ 100M rows** — larger than every other table in the store combined.
+
+> **⚠ Do NOT materialize the exploded table.** Land the play-grain table (0.12.3), and materialize only
+> **`participation_player_week`** — per player-week: offensive snaps, snap share, snaps **by personnel
+> grouping** (11/12/13/21…), routes run, route participation rate, mean `defenders_in_box` faced on his
+> team's carries, man/zone share faced, alignment mix. That is the grain every downstream question is
+> actually asked at, and it is ~5k rows/week rather than 1M.
+
+The exploded form stays available as a **view / generator function**, so a novel question can still be
+asked at play grain without a re-ingest — which is the point of banking play grain in 0.12.3.
+
+### 0.12.5 — FTN charting 2022–2025
+`is_play_action` · `is_motion` · `is_rpo` · `is_screen_pass` · `is_no_huddle` · `n_blitzers` ·
+`n_offense_backfield` · `n_defense_box` · `qb_location` · `read_thrown`. Ships **labelled**: one DEV
+season. It answers "what is this offense doing in 2026" and must never silently become a backtest feature
+— the register carries `backtestable: false` and 0.12.8 asserts it.
+
+### 0.12.6 — the small sources
+`schedules` **first** (it is small, it closes T44's shipped workaround, and it proves 0.12.1 on a real
+new table). Then QBR, contracts/OTC, officials, trades, weekly rosters, win totals, scoring lines, draft
+values. **Contracts deserve a note beyond completeness:** guaranteed money and contract year are a
+plausible *role-security* signal, and role security is exactly the documented hole T3 left open
+(unconditional coverage, role attrition). It is the one small source with a live hypothesis attached.
+
+### 0.12.7 — reconciliation and cleaning
+Unify `depth_charts` + `depth_charts_ts` into one season-complete table (2014–2025) with a declared grain;
+fix the DOUBLE `season` columns to INT; re-run the gsis crosswalk over every new table and report match
+rates per position (the 100 % skill / 80 % K / DEF→`dst_team` bridge pattern from 0.10); canonicalize
+every team code through one function.
+
+### 0.12.8 — gates, PIT classes, backup
+Extend `data/validate.py`: a per-table **coverage gate** (expected seasons present), a **fill-rate gate**
+(per column, per season, against the registered baseline, so silent vendor degradation fails loudly —
+`ngs_air_yards` going to zero is precisely this failure and nothing would have caught it), an **upstream-
+floor assertion** (a request below a source's floor raises, naming the floor, rather than returning empty
+— the `ecr_asof` pattern), and a **`backtestable` flag** per table.
+
+> **★ Every new table declares a PIT class**, and this is the substep that keeps the ingest from
+> poisoning the modelling: `preseason` (available before a draft) · `in_season_weekly` (available after
+> week *w* is played) · `retrospective` (end-of-season, never a feature). Participation and FTN are
+> **`in_season_weekly`**. That is native and safe for the Phase-13 co-pilot and the M-5 variance work; it
+> is **only** usable in a draft feature through the `features/exposures.py` season-*t−1* lag. Extend
+> `assert_panel_pit` / `assert_exposures_pit` to read the class rather than trusting the caller.
+
+Then `steps/backup_db.py` — the store roughly doubles and the backup is the T2 discipline.
+
+## Pre-registered bars *(state before running — the T5 habit)*
+
+- **B0 — nothing that exists moves.** All existing `data/validate.py` gates still PASS; every already-
+  ingested table is **byte-identical** (row counts + column hashes banked before the session starts);
+  the 765-test suite passes; **one committed bar sheet re-runs** to prove no model number moved. *Ingest
+  is additive by construction — if a number moved, it was not an ingest.*
+- **B1 — the loader control.** `combine` reproduces bit-identically through `nflverse_release`, **and**
+  the deliberately-wrong-asset control fails.
+- **B2 — participation lands complete.** 2016–2025 present, per-season row counts within 2 % of the
+  source parquet, schema union explicit, **zero rows dropped silently** (dropped rows are counted and
+  reasoned, per the `assert_regime_coverage` rule).
+- **B3 — participation joins `pbp`.** ≥99 % of participation plays match a `pbp` row on
+  (`game_id`,`play_id`), reported per season; the residual is enumerated by cause.
+- **B4 — the four user questions are answerable, on real data, end to end.** One query each, printed:
+  (i) box counts faced per RB per week; (ii) man/zone share faced per WR per week; (iii) each TE's and
+  WR's snap share **within** 11/12/13 personnel; (iv) neutral-script seconds-per-play per team per week.
+  **A source is not ingested until the question that motivated it returns an answer.**
+- **B5 — fill rates are conditional and recorded.** Every rate in the register is stated against its
+  correct denominator (pass plays for `route`/coverage), with the unconditional rate shown beside it.
+- **B6 — the floors are asserted, not documented.** A request for FTN 2019 or NGS 2014 **raises**, naming
+  the floor. A prose warning is not a guard (UI-1's lesson 4).
+- **B7 — PIT classes hold.** A `retrospective` or unlagged `in_season_weekly` column routed into
+  `build_exposures` fails a test. Written as a test that **can** fail, verified by making it fail.
+- **B8 — the inventory is generated and complete.** Every table in the store appears with seasons, fill
+  rates, floor, PIT class and consumers; re-running the step reproduces it; **zero hand-edited rows.**
+
+## ⚠ Constraints and do-nots
+
+- **Ingest all seasons; analyse DEV only.** Loading 2023/2024 participation does not spend the lockbox —
+  **building a feature on it does.** The wall stays at the modelling step, exactly where Phase 16 put it.
+  Say this out loud in the session write-up so a later reader does not "helpfully" restrict the ingest.
+- **⚠ Stop the Streamlit app before running anything.** `db.connect()` is read-write and DuckDB is
+  single-writer; a running `app/main.py` holds the lock. *(Hit live during this scoping: PID 925712.)*
+- **No feature is built in this session.** Wiring NGS into `features/` is **M-1**, not DATA-1 — it
+  changes a matrix downstream models read, and it needs its own bars. DATA-1 ends at the register.
+- **Do not delete or bypass `data/sources/nflverse.py`.** It is the provenance of sixteen tables. The new
+  loader sits beside it; migration is opportunistic, not a goal of this session.
+- **Do not fold in the consensus-projection re-pull.** It moves every value number in the app and is its
+  own step, per the 08-01 pointer.
+- **Do not chase (c).** FTN before 2022, NGS before 2016 and PFR before 2018 **do not exist**. A session
+  that ends with "still missing pre-2022 FTN" has misunderstood the register.
+
+## ★ Decisions to ASK before a straight run
+
+1. **Participation grain — play-level (recommended) or pre-aggregated weekly only?** Play grain is bigger
+   and lets any future question be asked without a re-ingest; weekly-only is smaller and re-pays the
+   download every time a cut was not anticipated. Given the ask is explicitly *"anything I may think of
+   down the line"*, **recommend play grain**.
+2. **Storage shape** — one DuckDB file (simple, and it roughly doubles) or participation as
+   parquet-on-disk with DuckDB views (keeps the main store small, adds a path dependency). **Recommend
+   one file** until it hurts, then split.
+3. **Scope of the small sources** — all of 0.12.6, or `schedules` + contracts now and the rest deferred?
+   **Recommend all**: they are individually tiny and the point of the session is to stop re-visiting this.
+
+## Sizing
+
+~600–900 lines / 8–12 files / ~15–20 new tests. Full-phase-sized, one concept, no modelling. The long
+pole is 0.12.3/0.12.4 (schema drift, the explode, the fill-rate accounting), not the download.
+
+---
+
 # Personalization spine *(NEW — the reframe's MVP-critical track; spec: `docs/PERSONALIZATION.md`)*
 *Goal of the group: the direct-indexing machinery — a constraint object, a constrained optimizer, and an
 honest cost report — layered on Phases 0–5. Cross-phase; this is what the near-term MVP is built around.*
