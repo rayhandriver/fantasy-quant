@@ -1,0 +1,189 @@
+{
+  "step": "0.13.3 \u2014 coverage shells and the secondary",
+  "table": {
+    "table": "defense_coverage_week",
+    "n_rows": 5522,
+    "n_teams": 32,
+    "n_seasons": 10,
+    "charted_floor": 2018
+  },
+  "tier1_charted": {
+    "floor": 2018,
+    "rows_with_shells_before_floor": 0,
+    "B6_floor_raises_naming_2018": true,
+    "B6_floor_allows_its_own_floor_season": true
+  },
+  "tier2_proxy": {
+    "provenance_by_era": [
+      {
+        "safety_provenance": "roster_lookup",
+        "lo": 2016,
+        "hi": 2022,
+        "team_weeks": 3812
+      },
+      {
+        "safety_provenance": "charted_positions",
+        "lo": 2023,
+        "hi": 2025,
+        "team_weeks": 1710
+      }
+    ],
+    "note": "a PERSONNEL proxy: who was on the field, never where he lined up",
+    "validated_against_charted": [
+      {
+        "season": 2023,
+        "plays": 35600,
+        "exact_agree": 0.9947,
+        "charted_mean": 2.237,
+        "roster_mean": 2.232,
+        "bias": -0.005,
+        "two_high_agree": 0.9987
+      },
+      {
+        "season": 2024,
+        "plays": 35050,
+        "exact_agree": 1.0,
+        "charted_mean": 2.215,
+        "roster_mean": 2.215,
+        "bias": 0.0,
+        "two_high_agree": 1.0
+      },
+      {
+        "season": 2025,
+        "plays": 34628,
+        "exact_agree": 0.9981,
+        "charted_mean": 2.247,
+        "roster_mean": 2.249,
+        "bias": 0.002,
+        "two_high_agree": 0.9995
+      }
+    ]
+  },
+  "tier3_not_obtainable_free": [
+    "pre-snap safety alignment depth (yards off the ball)",
+    "post-snap safety rotation (the actual single-high/two-high disguise)",
+    "individual defender alignment coordinates"
+  ],
+  "per_season": [
+    {
+      "season": 2016,
+      "charted_share": 0.0,
+      "cover1": NaN,
+      "cover3": NaN,
+      "cover2": NaN,
+      "safeties_mean": 2.033,
+      "single_high": 0.1137,
+      "two_high": 0.7258,
+      "unresolved": 0.0,
+      "provenance": "roster_lookup"
+    },
+    {
+      "season": 2017,
+      "charted_share": 0.0,
+      "cover1": NaN,
+      "cover3": NaN,
+      "cover2": NaN,
+      "safeties_mean": 2.18,
+      "single_high": 0.0431,
+      "two_high": 0.7461,
+      "unresolved": 0.0,
+      "provenance": "roster_lookup"
+    },
+    {
+      "season": 2018,
+      "charted_share": 0.5485,
+      "cover1": 0.2901,
+      "cover3": 0.3479,
+      "cover2": 0.1207,
+      "safeties_mean": 1.945,
+      "single_high": 0.1993,
+      "two_high": 0.6462,
+      "unresolved": 0.0,
+      "provenance": "roster_lookup"
+    },
+    {
+      "season": 2019,
+      "charted_share": 0.5475,
+      "cover1": 0.3052,
+      "cover3": 0.3048,
+      "cover2": 0.1295,
+      "safeties_mean": 1.817,
+      "single_high": 0.2322,
+      "two_high": 0.6344,
+      "unresolved": 0.0,
+      "provenance": "roster_lookup"
+    },
+    {
+      "season": 2020,
+      "charted_share": 0.5484,
+      "cover1": 0.278,
+      "cover3": 0.3153,
+      "cover2": 0.1286,
+      "safeties_mean": 2.026,
+      "single_high": 0.163,
+      "two_high": 0.6398,
+      "unresolved": 0.0,
+      "provenance": "roster_lookup"
+    },
+    {
+      "season": 2021,
+      "charted_share": 0.5451,
+      "cover1": 0.2386,
+      "cover3": 0.3304,
+      "cover2": 0.1339,
+      "safeties_mean": 2.183,
+      "single_high": 0.0614,
+      "two_high": 0.7008,
+      "unresolved": 0.0,
+      "provenance": "roster_lookup"
+    },
+    {
+      "season": 2022,
+      "charted_share": 0.5319,
+      "cover1": 0.2315,
+      "cover3": 0.3262,
+      "cover2": 0.1355,
+      "safeties_mean": 2.204,
+      "single_high": 0.058,
+      "two_high": 0.6942,
+      "unresolved": 0.0,
+      "provenance": "roster_lookup"
+    },
+    {
+      "season": 2023,
+      "charted_share": 0.6112,
+      "cover1": 0.3259,
+      "cover3": 0.1808,
+      "cover2": 0.1555,
+      "safeties_mean": 2.238,
+      "single_high": 0.0371,
+      "two_high": 0.7161,
+      "unresolved": 0.0,
+      "provenance": "charted_positions"
+    },
+    {
+      "season": 2024,
+      "charted_share": 0.6021,
+      "cover1": 0.372,
+      "cover3": 0.1773,
+      "cover2": 0.2025,
+      "safeties_mean": 2.212,
+      "single_high": 0.0483,
+      "two_high": 0.7009,
+      "unresolved": 0.0,
+      "provenance": "charted_positions"
+    },
+    {
+      "season": 2025,
+      "charted_share": 0.602,
+      "cover1": 0.2261,
+      "cover3": 0.2782,
+      "cover2": 0.2289,
+      "safeties_mean": 2.251,
+      "single_high": 0.0353,
+      "two_high": 0.6887,
+      "unresolved": 0.0,
+      "provenance": "charted_positions"
+    }
+  ]
+}

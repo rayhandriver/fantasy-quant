@@ -1,0 +1,43 @@
+season,team,head_coach,defensive_coordinator,play_caller,hc_calls_defense,in_house,confidence,notes
+# Phase 0.13.1 2026 defensive play-caller regime table - USER-SIGNED-OFF 2026-08-03.
+# Verbatim sign-off artifact. This file is the 2026 half only and is never edited again; the live
+#   table is reference/defense_coaches.csv, which carries these rows plus the historical regimes.
+# All 32 rows recorded at confidence=high on the user's sign-off (his recording decision, taken
+#   with the alternative - per-row confidence matching the depth of his pass - visible and declined).
+# Four rows carried an explicit 'verify this' ask in the draft (ARI, MIA, NE, NYG). Their doubt
+#   text is preserved verbatim in the notes column behind a PRE-SIGN-OFF DOUBT prefix, because a
+#   sign-off that erases what was doubted cannot be audited later.
+# The three cross-reference findings (TB has no DC; BAL's Weaver holds the title while Minter
+#   calls it; 7 of 32 HCs call the defense) are recorded in findings.md and the live table.
+2026,ARI,Mike LaFleur,Nick Rallis,Nick Rallis,0,1,high,"PRE-SIGN-OFF DOUBT, CONFIRMED AS WRITTEN BY USER 2026-08-03: Rallis DC since 2023; retained under the new head coach. Verify the retention — a new HC keeping the incumbent DC is common but not automatic."
+2026,ATL,Kevin Stefanski,Jeff Ulbrich,Jeff Ulbrich,0,1,high,Ulbrich DC since 2025; Stefanski arrives from CLE as an offensive head coach so the defense stays with the coordinator.
+2026,BAL,Jesse Minter,Anthony Weaver,Jesse Minter,1,0,high,"★ Minter (HC) confirmed he is the defensive play-caller; Weaver holds the DC title. Both are new to this staff in 2026 — Minter as head coach, Weaver from the MIA DC job."
+2026,BUF,Joe Brady,Jim Leonhard,Jim Leonhard,0,0,high,"Brady is an offensive head coach (promoted from OC), so the defense sits with Leonhard, who arrives from Denver (assistant HC / defensive pass game coordinator)."
+2026,CAR,Dave Canales,Ejiro Evero,Ejiro Evero,0,1,high,Evero DC since 2023 under an offensive head coach.
+2026,CHI,Ben Johnson,Dennis Allen,Dennis Allen,0,1,high,Allen DC since 2025 under an offensive head coach; a former NO head coach running his own defense.
+2026,CIN,Zac Taylor,Al Golden,Al Golden,0,1,high,Golden DC since 2025 under an offensive head coach.
+2026,CLE,Todd Monken,Mike Rutenberg,Mike Rutenberg,0,0,high,Monken (offensive) arrives as head coach; Rutenberg from ATL (defensive pass game coordinator). ⚠ First-time DC — likely a defense_lineage.csv row.
+2026,DAL,Brian Schottenheimer,Christian Parker,Christian Parker,0,0,high,Parker arrives from PHI (DBs / pass game coordinator). ⚠ First-time DC — likely a lineage row (Fangio tree).
+2026,DEN,Sean Payton,Vance Joseph,Vance Joseph,0,1,high,Joseph DC since 2023 under an offensive head coach.
+2026,DET,Dan Campbell,Kelvin Sheppard,Kelvin Sheppard,0,1,high,Sheppard DC since 2025; internally promoted from the LB room in 2025 so 2026 is his second season.
+2026,GB,Matt LaFleur,Jonathan Gannon,Jonathan Gannon,0,0,high,"Gannon arrives having been ARI's head coach; a former PHI DC, so he has prior play-calling regimes to fingerprint."
+2026,HOU,DeMeco Ryans,Matt Burke,DeMeco Ryans,1,1,high,★ Ryans (HC) calls the defense; Burke has held the DC title since 2023 without the calls.
+2026,IND,Shane Steichen,Lou Anarumo,Lou Anarumo,0,1,high,Anarumo DC since 2025 under an offensive head coach; long prior CIN regime to fingerprint.
+2026,JAX,Liam Coen,Anthony Campanile,Anthony Campanile,0,1,high,Campanile DC since 2025 under an offensive head coach.
+2026,KC,Andy Reid,Steve Spagnuolo,Steve Spagnuolo,0,1,high,Spagnuolo DC since 2019 — the longest unbroken defensive regime in the league and the easiest row in the file.
+2026,LAC,Jim Harbaugh,Chris O'Leary,Chris O'Leary,0,0,high,"O'Leary arrives from Western Michigan (college DC). ⚠ No NFL play-calling history — a lineage row, and 0.13.8 must stay silent on him rather than invent a prior."
+2026,LAR,Sean McVay,Chris Shula,Chris Shula,0,1,high,Shula DC since 2024 under an offensive head coach.
+2026,LV,Klint Kubiak,Rob Leonard,Rob Leonard,0,1,high,Kubiak (offensive) is the new head coach; Leonard internally promoted from DL / run game coordinator. ⚠ First-time DC.
+2026,MIA,Jeff Hafley,Sean Duggan,Sean Duggan,0,0,high,"PRE-SIGN-OFF DOUBT, CONFIRMED AS WRITTEN BY USER 2026-08-03: ⚠ THE ROW MOST LIKELY TO BE WRONG. Hafley is a defensive head coach (ex-GB DC), so he may well call it himself, which would make play_caller=Hafley and hc_calls_defense=1. Not verified either way. Duggan arrives from the GB LB room and would be a first-time DC."
+2026,MIN,Kevin O'Connell,Brian Flores,Brian Flores,0,1,high,Flores DC since 2023 under an offensive head coach; a heavy-blitz identity that 0.13.2 should reproduce as a validation of the whole pipeline.
+2026,NE,Mike Vrabel,Zak Kuhr,Zak Kuhr,0,1,high,"PRE-SIGN-OFF DOUBT, CONFIRMED AS WRITTEN BY USER 2026-08-03: Kuhr internally promoted from the NE ILB room. ⚠ Vrabel is a defensive head coach — check whether he takes the calls. First-time DC either way."
+2026,NO,Kellen Moore,Brandon Staley,Brandon Staley,0,1,high,Staley DC since 2025 under an offensive head coach; prior LAR DC regime and a LAC head-coaching stint to fingerprint.
+2026,NYG,John Harbaugh,Dennard Wilson,Dennard Wilson,0,0,high,"PRE-SIGN-OFF DOUBT, CONFIRMED AS WRITTEN BY USER 2026-08-03: ★ Harbaugh to NYG after 18 seasons at BAL — verify. Wilson arrives from the TEN DC job, so he has a prior regime."
+2026,NYJ,Aaron Glenn,Brian Duker,Aaron Glenn,1,1,high,★ Glenn (HC) confirmed as the 2026 defensive play-caller; Duker holds the DC title.
+2026,PHI,Nick Sirianni,Vic Fangio,Vic Fangio,0,1,high,Fangio DC since 2024 under an offensive head coach — the tree the lineage file will lean on most.
+2026,PIT,Mike McCarthy,Patrick Graham,Patrick Graham,0,0,high,"★ Tomlin stepped down after 19 seasons (verified); McCarthy hired. Graham arrives from the LV DC job with prior regimes at LV, NYG and MIA."
+2026,SEA,Mike Macdonald,Aden Durde,Mike Macdonald,1,1,high,★ Macdonald (HC) calls the defense; Durde has held the DC title since 2024 without the calls.
+2026,SF,Kyle Shanahan,Raheem Morris,Raheem Morris,0,0,high,Morris arrives having been ATL's head coach; extensive prior DC regimes (ATL/LAR) to fingerprint.
+2026,TB,Todd Bowles,(none),Todd Bowles,1,1,high,"★ NO defensive coordinator hired for 2026 (verified). Bowles retains the calls; George Edwards is pass game coordinator and Larry Foote run game coordinator, neither calling. (none) is the correct sentinel — there is no such job, as distinct from (unknown)."
+2026,TEN,Robert Saleh,Gus Bradley,Robert Saleh,1,0,high,★ Saleh (HC) reported as the defensive play-caller; Bradley holds the DC title. Saleh is new to the staff so in_house=0.
+2026,WAS,Dan Quinn,Daronte Jones,Dan Quinn,1,1,high,★ Quinn (HC) calls the defense; Jones arrives from MIN (DBs / pass game coordinator) holding the title.

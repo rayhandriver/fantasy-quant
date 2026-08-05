@@ -1,0 +1,14 @@
+{
+  "bar": "B7 \u2014 the shipped room reproduces the pre-16.18 room on every uncovered season",
+  "seasons": [
+    2017,
+    2018
+  ],
+  "seeds": 6,
+  "shuffle_room": true,
+  "leaves_compared": 133,
+  "leaves_differing": 0,
+  "differing": {},
+  "pass": true,
+  "why_this_is_a_construction_proof": "make_room degrades a requires_profile seat to `balanced` on a season its profile does not cover, and `balanced` is the seat 16.18 took the chair from \u2014 so an uncovered season is the pre-16.18 room bit-for-bit. The control can fail: if the gate stopped firing, the gated arm would seat the manager and these numbers would separate."
+}

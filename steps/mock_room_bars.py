@@ -114,7 +114,19 @@ def main() -> None:
         return tuple(replace(p, reach_budget=value_hawk_budget(float(args.vh_window)))
                      if p.name == "value_hawk" else p for p in r)
 
-    room = with_window(mock.full_room(mix, n_teams=10, seed=args.room_seed))
+    # ⚠ 16.18 — the room is now built PER SEASON, because `fitted_manager` carries a belief board
+    # that describes exactly one season and a batch sweeping 2017-2024 with a 2026 profile is
+    # look-ahead. `make_room(season=)` degrades the seat to `balanced` on an uncovered season, so
+    # every historical season here reproduces the pre-16.18 room bit-for-bit and only the 2026
+    # readout seats the manager. The un-gated run is measured and small (profile distance 0.0894 ->
+    # 0.0887, every gate passing both ways) — **which is exactly why it needed a structural fix and
+    # not a judgement call: a defect this size is invisible to every bar in this file.**
+    def build_room(season=None, seed=None):
+        return with_window(mock.full_room(mix, n_teams=10,
+                                          seed=args.room_seed if seed is None else seed,
+                                          season=season))
+
+    room = build_room()
     seasons = tuple(args.seasons) if args.seasons else MATCHED_SEASONS
     # ⚠ The room's κ lives on the **model** (T24 ships it beside the width curve); `PRIVATE_KAPPA`
     # is only the no-op fallback for a hand-built model. Reading the constant here would label a
@@ -159,9 +171,8 @@ def main() -> None:
         # produced by different code than its before column is the thing this harness exists to
         # prevent. Run the pair.
         if args.shuffle_room:
-            def seating(s: int, mix=mix):
-                return with_window(
-                    mock.full_room(mix, n_teams=10, seed=args.room_seed + 1000 * s))
+            def seating(s: int, season=season):
+                return build_room(season=season, seed=args.room_seed + 1000 * s)
             per = [mock.batch_drafts(
                 attached, seating(s), model, season=season, seeds=[s], n_teams=10,
                 rounds=args.rounds, board_source=src, risk=risk, **kw)
@@ -169,7 +180,8 @@ def main() -> None:
             panel = pd.concat([p for p, _ in per], ignore_index=True)
             log = pd.concat([lg for _, lg in per], ignore_index=True)
         else:
-            panel, log = mock.batch_drafts(attached, room, model, season=season,
+            panel, log = mock.batch_drafts(attached, build_room(season=season), model,
+                                           season=season,
                                            seeds=range(args.seeds), n_teams=10, rounds=args.rounds,
                                            board_source=src, risk=risk, **kw)
         sim_frames.append(panel)

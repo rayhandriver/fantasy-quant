@@ -768,6 +768,11 @@ def fill_rate_gate(con, current: dict, baseline: dict | None = None,
     ``current``/``baseline`` are ``{table: {column: rate}}``. On the first run there is no
     baseline, so the gate **records** and passes — and says so, rather than passing silently as
     though it had checked something.
+
+    ⚠ **SUPERSEDED by :func:`fill_rate_gate_by_season` (T50).** This one is whole-table and fails
+    only on drops, so it cannot see a null→sentinel re-encoding (a *rise*) or a break confined to
+    part of the history. Kept because the recorded baseline is in its shape and because it still
+    catches the ``ngs_air_yards`` mode it was written for.
     """
     if not baseline:
         return _gate("fill_rate:vs_baseline", True, status="baseline recorded (first run)",
@@ -789,8 +794,120 @@ def fill_rate_gate(con, current: dict, baseline: dict | None = None,
                  n_columns_checked=sum(len(c) for c in current.values()), degraded=drops)
 
 
+def store_fill_rates_by_season(con, tables=None) -> dict:
+    """``{table: {column: {season: nonnull share}}}`` — the per-season fill-rate measurement.
+
+    ★ **The whole-table rate is the third of T50's three blindnesses, and it is the one that
+    already did damage.** ``pfr_rec.td`` is 518/518 populated for six seasons and 0/523 for two,
+    and the whole-table baseline recorded it as **0.7448** — a number that looks like an ordinary
+    partially-filled column. A degradation averaged over the seasons that preceded it is laundered
+    into the norm, and no drop-detecting gate will ever fire on it again.
+    """
+    out: dict[str, dict] = {}
+    for t in (tables or db.list_tables(con)):
+        if not con.execute(
+            "select count(*) from information_schema.columns "
+            "where table_name = ? and column_name = 'season'", [t]
+        ).fetchone()[0]:
+            continue
+        cols = [
+            c for (c,) in con.execute(
+                "select column_name from information_schema.columns where table_name = ? "
+                "order by ordinal_position", [t]
+            ).fetchall()
+        ]
+        if not cols:
+            continue
+        sel = ", ".join(f'count("{c}")' for c in cols)
+        rows = con.execute(
+            f'select season, count(*), {sel} from "{t}" where season is not null group by 1'
+        ).fetchall()
+        per_col: dict[str, dict[int, float]] = {c: {} for c in cols}
+        for row in rows:
+            season, n = int(row[0]), row[1]
+            if not n:
+                continue
+            for c, v in zip(cols, row[2:], strict=True):
+                per_col[c][season] = round(v / n, 4)
+        out[t] = per_col
+    return out
+
+
+def fill_rate_gate_by_season(current: dict, baseline: dict | None = None,
+                             tol: float = FILL_RATE_TOL,
+                             break_map=None) -> dict:
+    """The two-sided, per-season fill-rate gate (T50).
+
+    Two changes from :func:`fill_rate_gate`, each fixing one of the three blindnesses:
+
+    * **per season**, so a mid-history break cannot average away;
+    * **two-sided**, so a *rise* is examined rather than assumed to be good news. Null→sentinel
+      re-encoding is a rise, and it inverts a column's meaning while every drop-detector applauds.
+
+    A move that a classified break in ``break_map`` already explains is expected and passes — the
+    map is the record, and recording is what makes the difference between a known discontinuity
+    and an unexamined one. (The third blindness, counting sentinels as filled, cannot be fixed in
+    a fill rate at all; it needs :func:`encoding_break_gate`.)
+    """
+    if not baseline:
+        return _gate("fill_rate:by_season", True, status="baseline recorded (first run)",
+                     n_tables=len(current))
+    explained = set()
+    if break_map is not None:
+        for b in break_map.breaks:
+            for s in (b.season, b.season - 1):
+                explained.add((b.table, b.column, s))
+
+    moves = []
+    for table, cols in current.items():
+        base = baseline.get(table) or {}
+        for col, by_season in cols.items():
+            was_by_season = base.get(col) or {}
+            for season, rate in by_season.items():
+                was = was_by_season.get(season, was_by_season.get(str(season)))
+                if was is None or rate is None:
+                    continue
+                delta = rate - was
+                if abs(delta) <= tol:
+                    continue
+                if (table, col, int(season)) in explained:
+                    continue
+                moves.append({"table": table, "column": col, "season": int(season),
+                              "was": round(was, 4), "now": round(rate, 4),
+                              "delta": round(delta, 4),
+                              "direction": "drop" if delta < 0 else "rise"})
+    return _gate("fill_rate:by_season", not moves, tol=tol,
+                 n_cells_checked=sum(len(s) for c in current.values() for s in c.values()),
+                 moved=moves)
+
+
+def encoding_break_gate(con, break_map=None) -> dict:
+    """The distributional check — fail on an **unclassified** encoding break.
+
+    A column whose null share collapses while one value's share explodes by the same amount has
+    been re-encoded, not improved. :mod:`fantasy_quant.data.breaks` finds those by probing, and
+    this gate fails on any it finds that nobody has examined. Classified breaks are listed, not
+    forgiven: every rate computed over one still has to route its denominator through the map.
+    """
+    from fantasy_quant.data import breaks as brk
+
+    bm = break_map if break_map is not None else brk.build_break_map(con)
+    unknown = bm.unclassified()
+    stale = bm.stale_classifications()
+    return _gate("encoding:breaks_classified", not unknown and not stale,
+                 n_breaks=len(bm.breaks),
+                 n_classified=len(brk.KNOWN_BREAKS),
+                 unclassified=[b.describe() for b in unknown],
+                 stale_classifications=[f'{k["table"]}.{k["column"]}@{k["season"]}' for k in stale])
+
+
 def store_fill_rates(con, tables=None) -> dict:
-    """``{table: {column: nonnull share}}`` for the whole store — the fill-rate gate's input."""
+    """``{table: {column: nonnull share}}`` for the whole store — the fill-rate gate's input.
+
+    ⚠ Whole-table and nonnull-counting: kept because the recorded baseline is in this shape, but
+    it is **two of T50's three blindnesses by construction**. Prefer
+    :func:`store_fill_rates_by_season`.
+    """
     out = {}
     for t in (tables or db.list_tables(con)):
         n = db.row_count(con, t)

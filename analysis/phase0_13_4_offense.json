@@ -1,0 +1,488 @@
+{
+  "step": "0.13.4 \u2014 the offensive completion",
+  "team_week": {
+    "table": "offense_team_week",
+    "n_rows": 5522,
+    "n_teams": 32,
+    "n_seasons": 10
+  },
+  "player_week": {
+    "table": "offense_player_week",
+    "n_rows": 102368,
+    "n_players": 3520,
+    "n_seasons": 10
+  },
+  "personnel_strings": 4001,
+  "high_cardinality_blind_spot": {
+    "naive_fill_pre2023": 0.7586,
+    "naive_fill_post2023": 1.0,
+    "scrimmage_fill_pre2023": 0.9999,
+    "scrimmage_fill_post2023": 1.0,
+    "n_strings_pre2023": 106,
+    "n_strings_post2023": 1522,
+    "naive_break_size": 0.2414,
+    "scrimmage_break_size": 0.0001,
+    "population_filter_closes_it": true,
+    "break_map_sees_it": false
+  },
+  "B4a_play_for_play": {
+    "plays": 478989,
+    "offense_claims_11": 443596,
+    "offense_resolves": 443596,
+    "defense_claims_11": 442557,
+    "defense_resolves": 442557,
+    "missing_lists": 29184,
+    "offense_resolve_rate": 1.0,
+    "defense_resolve_rate": 1.0,
+    "PASS": true
+  },
+  "B4a_per_season": [
+    {
+      "season": 2016,
+      "plays": 48434,
+      "offense_claims_11": 41286,
+      "offense_resolves": 41286,
+      "defense_claims_11": 40798,
+      "defense_resolves": 40798,
+      "missing_lists": 4093
+    },
+    {
+      "season": 2017,
+      "plays": 47998,
+      "offense_claims_11": 43933,
+      "offense_resolves": 43933,
+      "defense_claims_11": 43791,
+      "defense_resolves": 43791,
+      "missing_lists": 4048
+    },
+    {
+      "season": 2018,
+      "plays": 47875,
+      "offense_claims_11": 41558,
+      "offense_resolves": 41558,
+      "defense_claims_11": 42763,
+      "defense_resolves": 42763,
+      "missing_lists": 4153
+    },
+    {
+      "season": 2019,
+      "plays": 48034,
+      "offense_claims_11": 43102,
+      "offense_resolves": 43102,
+      "defense_claims_11": 42437,
+      "defense_resolves": 42437,
+      "missing_lists": 4058
+    },
+    {
+      "season": 2020,
+      "plays": 48513,
+      "offense_claims_11": 44342,
+      "offense_resolves": 44342,
+      "defense_claims_11": 44183,
+      "defense_resolves": 44183,
+      "missing_lists": 4152
+    },
+    {
+      "season": 2021,
+      "plays": 50714,
+      "offense_claims_11": 46314,
+      "offense_resolves": 46314,
+      "defense_claims_11": 46131,
+      "defense_resolves": 46131,
+      "missing_lists": 4388
+    },
+    {
+      "season": 2022,
+      "plays": 50150,
+      "offense_claims_11": 45843,
+      "offense_resolves": 45843,
+      "defense_claims_11": 45677,
+      "defense_resolves": 45677,
+      "missing_lists": 4292
+    },
+    {
+      "season": 2023,
+      "plays": 46168,
+      "offense_claims_11": 46150,
+      "offense_resolves": 46150,
+      "defense_claims_11": 46008,
+      "defense_resolves": 46008,
+      "missing_lists": 0
+    },
+    {
+      "season": 2024,
+      "plays": 45919,
+      "offense_claims_11": 45906,
+      "offense_resolves": 45906,
+      "defense_claims_11": 45744,
+      "defense_resolves": 45744,
+      "missing_lists": 0
+    },
+    {
+      "season": 2025,
+      "plays": 45184,
+      "offense_claims_11": 45162,
+      "offense_resolves": 45162,
+      "defense_claims_11": 45025,
+      "defense_resolves": 45025,
+      "missing_lists": 0
+    }
+  ],
+  "B4b_eleven_men_per_play": {
+    "offense_ratio_min": 1.0,
+    "offense_ratio_max": 1.0,
+    "defense_ratio_min": 0.999,
+    "defense_ratio_max": 1.0,
+    "dropped_offense_lists": 7,
+    "dropped_defense_lists": 7,
+    "offense_plays_not_eleven": 4923,
+    "defense_plays_not_eleven": 4345,
+    "PASS": true
+  },
+  "B4b_per_season": [
+    {
+      "season": 2016,
+      "plays": 33790,
+      "no_offense_list": 4,
+      "no_defense_list": 4,
+      "offense_not_eleven": 2162,
+      "defense_not_eleven": 2219,
+      "offense_expected": 369471.0,
+      "offense_actual": 369471.0,
+      "defense_expected": 369328.0,
+      "defense_actual": 369328.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    },
+    {
+      "season": 2017,
+      "plays": 33503,
+      "no_offense_list": 1,
+      "no_defense_list": 1,
+      "offense_not_eleven": 2,
+      "defense_not_eleven": 38,
+      "offense_expected": 368520.0,
+      "offense_actual": 368520.0,
+      "defense_expected": 368490.0,
+      "defense_actual": 368490.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    },
+    {
+      "season": 2018,
+      "plays": 33292,
+      "no_offense_list": 2,
+      "no_defense_list": 2,
+      "offense_not_eleven": 1960,
+      "defense_not_eleven": 666,
+      "offense_expected": 368150.0,
+      "offense_actual": 368150.0,
+      "defense_expected": 366810.0,
+      "defense_actual": 366810.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    },
+    {
+      "season": 2019,
+      "plays": 33513,
+      "no_offense_list": 0,
+      "no_defense_list": 0,
+      "offense_not_eleven": 780,
+      "defense_not_eleven": 1240,
+      "offense_expected": 369419.0,
+      "offense_actual": 369419.0,
+      "defense_expected": 369821.0,
+      "defense_actual": 369448.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 0.999
+    },
+    {
+      "season": 2020,
+      "plays": 34238,
+      "no_offense_list": 0,
+      "no_defense_list": 0,
+      "offense_not_eleven": 3,
+      "defense_not_eleven": 34,
+      "offense_expected": 376615.0,
+      "offense_actual": 376615.0,
+      "defense_expected": 376590.0,
+      "defense_actual": 376590.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    },
+    {
+      "season": 2021,
+      "plays": 35766,
+      "no_offense_list": 0,
+      "no_defense_list": 0,
+      "offense_not_eleven": 0,
+      "defense_not_eleven": 29,
+      "offense_expected": 393426.0,
+      "offense_actual": 393426.0,
+      "defense_expected": 393401.0,
+      "defense_actual": 393401.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    },
+    {
+      "season": 2022,
+      "plays": 35430,
+      "no_offense_list": 0,
+      "no_defense_list": 0,
+      "offense_not_eleven": 3,
+      "defense_not_eleven": 37,
+      "offense_expected": 389727.0,
+      "offense_actual": 389727.0,
+      "defense_expected": 389699.0,
+      "defense_actual": 389699.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    },
+    {
+      "season": 2023,
+      "plays": 35600,
+      "no_offense_list": 0,
+      "no_defense_list": 0,
+      "offense_not_eleven": 4,
+      "defense_not_eleven": 25,
+      "offense_expected": 391596.0,
+      "offense_actual": 391596.0,
+      "defense_expected": 391577.0,
+      "defense_actual": 391577.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    },
+    {
+      "season": 2024,
+      "plays": 35050,
+      "no_offense_list": 0,
+      "no_defense_list": 0,
+      "offense_not_eleven": 0,
+      "defense_not_eleven": 26,
+      "offense_expected": 385550.0,
+      "offense_actual": 385550.0,
+      "defense_expected": 385524.0,
+      "defense_actual": 385523.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    },
+    {
+      "season": 2025,
+      "plays": 34628,
+      "no_offense_list": 0,
+      "no_defense_list": 0,
+      "offense_not_eleven": 9,
+      "defense_not_eleven": 31,
+      "offense_expected": 380901.0,
+      "offense_actual": 380901.0,
+      "defense_expected": 380879.0,
+      "defense_actual": 380879.0,
+      "offense_ratio": 1.0,
+      "defense_ratio": 1.0
+    }
+  ],
+  "ftn_guard": {
+    "raises_below_floor": true,
+    "raises_on_dev_only_request": true,
+    "allows_descriptive_live_use": true
+  },
+  "route_tree_by_season": [
+    {
+      "season": 2016,
+      "charted": 18604.0,
+      "deep": 6520.0,
+      "intermediate": 3476.0,
+      "short": 3663.0,
+      "behind_los": 4945.0
+    },
+    {
+      "season": 2017,
+      "charted": 17959.0,
+      "deep": 4337.0,
+      "intermediate": 3593.0,
+      "short": 4881.0,
+      "behind_los": 5148.0
+    },
+    {
+      "season": 2018,
+      "charted": 17924.0,
+      "deep": 3408.0,
+      "intermediate": 5841.0,
+      "short": 3889.0,
+      "behind_los": 4786.0
+    },
+    {
+      "season": 2019,
+      "charted": 17772.0,
+      "deep": 3282.0,
+      "intermediate": 5909.0,
+      "short": 4066.0,
+      "behind_los": 4515.0
+    },
+    {
+      "season": 2020,
+      "charted": 18214.0,
+      "deep": 3235.0,
+      "intermediate": 6106.0,
+      "short": 4252.0,
+      "behind_los": 4621.0
+    },
+    {
+      "season": 2021,
+      "charted": 18937.0,
+      "deep": 3279.0,
+      "intermediate": 6018.0,
+      "short": 4563.0,
+      "behind_los": 5077.0
+    },
+    {
+      "season": 2022,
+      "charted": 18176.0,
+      "deep": 3295.0,
+      "intermediate": 5782.0,
+      "short": 4093.0,
+      "behind_los": 5006.0
+    },
+    {
+      "season": 2023,
+      "charted": 18189.0,
+      "deep": 4332.0,
+      "intermediate": 4792.0,
+      "short": 6038.0,
+      "behind_los": 3027.0
+    },
+    {
+      "season": 2024,
+      "charted": 17610.0,
+      "deep": 4542.0,
+      "intermediate": 4739.0,
+      "short": 5459.0,
+      "behind_los": 2870.0
+    },
+    {
+      "season": 2025,
+      "charted": 17447.0,
+      "deep": 4585.0,
+      "intermediate": 4766.0,
+      "short": 5480.0,
+      "behind_los": 2616.0
+    }
+  ],
+  "alignment_not_obtainable_free": [
+    "slot / wide / inline alignment (PFF-charted; offense_positions is the LISTED roster position, never where the man lined up)",
+    "pre-snap receiver split and stack/bunch identification"
+  ],
+  "checks": {
+    "null_team": 0.0,
+    "share_overflow": 0.0,
+    "ftn_before_floor": 0.0,
+    "ftn_missing_after": 0.0,
+    "max_snap_share": 1.0,
+    "teams_2024": 32.0,
+    "unparsed_strings": 95.0,
+    "unparsed_plays": 999.0,
+    "unparsed_scrimmage_plays": 13.0
+  },
+  "fill_by_season": [
+    {
+      "season": 2016,
+      "plays": 48434,
+      "scrimmage_plays": 33790,
+      "n_personnel_strings": 93,
+      "offense_personnel_naive": 0.7543,
+      "offense_personnel_scrimmage": 0.9996,
+      "offense_formation_naive": 0.7226,
+      "offense_formation_scrimmage": 0.9902
+    },
+    {
+      "season": 2017,
+      "plays": 47998,
+      "scrimmage_plays": 33503,
+      "n_personnel_strings": 91,
+      "offense_personnel_naive": 0.7529,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.7227,
+      "offense_formation_scrimmage": 0.9919
+    },
+    {
+      "season": 2018,
+      "plays": 47875,
+      "scrimmage_plays": 33292,
+      "n_personnel_strings": 106,
+      "offense_personnel_naive": 0.7565,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.7205,
+      "offense_formation_scrimmage": 0.991
+    },
+    {
+      "season": 2019,
+      "plays": 48034,
+      "scrimmage_plays": 33513,
+      "n_personnel_strings": 101,
+      "offense_personnel_naive": 0.761,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.7314,
+      "offense_formation_scrimmage": 0.9989
+    },
+    {
+      "season": 2020,
+      "plays": 48513,
+      "scrimmage_plays": 34238,
+      "n_personnel_strings": 91,
+      "offense_personnel_naive": 0.7611,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.7306,
+      "offense_formation_scrimmage": 0.9962
+    },
+    {
+      "season": 2021,
+      "plays": 50714,
+      "scrimmage_plays": 35766,
+      "n_personnel_strings": 97,
+      "offense_personnel_naive": 0.7624,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.73,
+      "offense_formation_scrimmage": 0.993
+    },
+    {
+      "season": 2022,
+      "plays": 50150,
+      "scrimmage_plays": 35430,
+      "n_personnel_strings": 103,
+      "offense_personnel_naive": 0.7623,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.7336,
+      "offense_formation_scrimmage": 0.9991
+    },
+    {
+      "season": 2023,
+      "plays": 46168,
+      "scrimmage_plays": 35600,
+      "n_personnel_strings": 1468,
+      "offense_personnel_naive": 1.0,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.8005,
+      "offense_formation_scrimmage": 0.9972
+    },
+    {
+      "season": 2024,
+      "plays": 45919,
+      "scrimmage_plays": 35050,
+      "n_personnel_strings": 1458,
+      "offense_personnel_naive": 1.0,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.7988,
+      "offense_formation_scrimmage": 0.9991
+    },
+    {
+      "season": 2025,
+      "plays": 45184,
+      "scrimmage_plays": 34628,
+      "n_personnel_strings": 1522,
+      "offense_personnel_naive": 1.0,
+      "offense_personnel_scrimmage": 1.0,
+      "offense_formation_naive": 0.7984,
+      "offense_formation_scrimmage": 0.9983
+    }
+  ]
+}

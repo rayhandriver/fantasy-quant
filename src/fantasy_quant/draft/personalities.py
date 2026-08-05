@@ -55,6 +55,13 @@ from dataclasses import dataclass, field, replace
 import numpy as np
 import pandas as pd
 
+from fantasy_quant.draft.manager_profile import (
+    PROFILE_DIR,
+    ManagerProfile,
+    avoid_mask,
+    default_profile,
+    personal_adp,
+)
 from fantasy_quant.draft.opponent_model import (
     _ADP_SCALE,
     SKILL_POSITIONS,
@@ -555,8 +562,21 @@ class Personality:
     reach_budget: ReachBudget | None = None
     objective: str = "behavioral"
     context_weights: dict = field(default_factory=dict)
+    #: 16.18 — this seat's :class:`~fantasy_quant.draft.manager_profile.ManagerProfile`, i.e. one
+    #: named human's beliefs about players. ``None`` for every seat but ``fitted_manager``.
+    manager_profile: ManagerProfile | None = None
+    #: ``True`` for a seat that is **meaningless without a profile**. Checked where the seat is
+    #: requested rather than where it is defined, because ``personalities()`` legitimately returns
+    #: the whole library on a machine that has no profile on disk — but a *room* containing this
+    #: seat with nothing loaded would draft as an unnamed ``balanced``, which is the "an inert
+    #: personality still completes a legal draft" failure this repo has now met five times.
+    requires_profile: bool = False
 
     def __post_init__(self) -> None:
+        if self.manager_profile is not None and not self.requires_profile:
+            raise ValueError(f"{self.name}: carries a manager_profile but requires_profile is "
+                             f"False — the guard that checks a profile was loaded keys on that "
+                             f"flag, so a seat with one and not the other is unguarded")
         unknown = set(self.signal_weights) - set(SIGNAL_COLS)
         if unknown:
             raise ValueError(f"{self.name}: unknown signal_weights {sorted(unknown)} — "
@@ -621,8 +641,18 @@ class Personality:
 HEADLINERS: tuple[str, ...] = ("autopilot", "balanced", "upside_chaser", "safe_floor", "homer")
 
 
-def personalities() -> dict[str, Personality]:
-    """The shipped roster: the five 16.14 headliners first, then the 11.3 library extras."""
+def personalities(profile: ManagerProfile | None = None, *,
+                  season: int | None = None) -> dict[str, Personality]:
+    """The shipped roster: the five 16.14 headliners, the 11.3 library extras, then 16.18's seat.
+
+    ``profile`` supplies the ``fitted_manager`` seat's beliefs. Left ``None`` it is read from
+    ``reference/manager_profiles/`` (:func:`~fantasy_quant.draft.manager_profile.default_profile`),
+    and if there is none the seat is still *listed* — carrying ``requires_profile=True`` and no
+    profile, so asking a room for it raises rather than seating an unnamed ``balanced``. Listing it
+    unloaded is deliberate: a caller has to be able to discover the seat exists in order to be told
+    what it needs.
+    """
+    profile = profile if profile is not None else default_profile(season)
     zero_out = {c: 0.0 for c in ("is_RB", "is_WR", "is_TE", "is_QB", "pos_run3",
                                  "mgr_lean", "rookie", "fandom", "need")}
     return {
@@ -741,6 +771,25 @@ def personalities() -> dict[str, Personality]:
             hype_gain=2.5, temperature=2.2, width_mult=WIDTH_REACHER,
             reach_budget=ReachBudget()),
         "rookie_hawk": Personality("rookie_hawk", scale={"rookie": 3.0}),
+        # -- 16.18 — the fitted manager -----------------------------------------------------------
+        # ★ A named human, loaded from a file. See `draft/manager_profile.py` for the beliefs /
+        # policy split; the short version is that this seat holds ONE person's opinions about
+        # PLAYERS (a board) and, until an elicitation session fills `profile.policy`, the corpus
+        # average manager's TRADEOFFS (a decision rule).
+        #
+        # Everything else here is deliberately the fitted average:
+        #   width_mult 1.0    he is not measurably wider or narrower than the room, and inventing a
+        #                     character for him would be exactly the "describe your own weights"
+        #                     dead end the spec rules out. Width is a POLICY parameter and waits
+        #                     for the elicitation session with the rest of them.
+        #   hype_gain 1.0     no evidence either way about how much he chases a story.
+        #   no signal_weights his risk preferences live in the per-player deltas already; adding a
+        #                     shape tilt on top would price the same opinion twice.
+        # ⚠ The one thing that must NOT be added here is a positional lean. The measured
+        # QB/TE/WR-over-RB tilt is *inside* the per-player deltas, because it was estimated from
+        # them; expressing it structurally as well would double-count it.
+        "fitted_manager": Personality(
+            "fitted_manager", requires_profile=True, manager_profile=profile),
     }
 
 
@@ -829,15 +878,34 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
     kappa_room = (float(getattr(model, "private_kappa", PRIVATE_KAPPA)) if kappa is None
                   else float(kappa))
     kappa_seat = kappa_room * float(pers.width_mult)
+    if pers.requires_profile and pers.manager_profile is None:
+        raise ValueError(
+            f"personality {pers.name!r} needs a manager profile and has none — it would otherwise "
+            f"draft as an unnamed `balanced` and every number downstream would look plausible. "
+            f"Put one in {PROFILE_DIR}/ or pass `personalities(profile=...)`.")
+    if pers.manager_profile is not None and kappa_seat:
+        # Both rewrite `cand['adp']`, so running them together would silently discard one. κ ships
+        # at 0 and was measured HARMFUL (T24), so refusing is free; combining a stated board with a
+        # noise board is an unmeasured object and would need its own before/after.
+        raise ValueError(
+            f"{pers.name}: a manager profile and a T24 private board (κ={kappa_seat:g}) both "
+            f"rewrite this seat's ADP — pick one. κ is 0 by default and measured harmful.")
     #: board-wide within-position level z for `level_floor`, computed once (see the note at use).
     level_z: np.ndarray | None = None
     #: this seat's private ADP, and the state it was drawn for — held by identity so a *new* draft
     #: (or a 9.5 rollout `clone`) redraws, while every pick inside one draft sees the same opinion.
     priv: np.ndarray | None = None
     priv_state = None
+    # 16.18 — the fitted manager's own board. Unlike `priv` this is DETERMINISTIC (a stated
+    # opinion, not a draw), so it is computed once per board rather than once per draft and a 9.5
+    # rollout `clone` reuses it correctly by construction.
+    mp = pers.manager_profile
+    mp_adp: np.ndarray | None = None
+    mp_avoid: np.ndarray | None = None
+    mp_board = None
 
     def pick(state, team) -> int:
-        nonlocal level_z, priv, priv_state
+        nonlocal level_z, priv, priv_state, mp_adp, mp_avoid, mp_board
         if level_z is None and pers.level_floor is not None and "mean" in state.board.columns:
             # once per draft, over the whole board — see the note where it is applied
             level_z = np.zeros(len(state.board), float)
@@ -845,6 +913,10 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
         if kappa_seat and priv_state is not state:
             priv_state = state
             priv = private_adp(state.board, kappa_seat, rng or state.rng)
+        if mp is not None and mp_board is not state.board:
+            mp_board = state.board
+            mp_adp = personal_adp(state.board, mp)
+            mp_avoid = avoid_mask(state.board, mp)
         pool = state.draftable_pool(team)
         # T21 — the choice-set contract's *position* half. β was fit under `skill_only=True`, so
         # the simulation must offer the same four positions. Applied AFTER `draftable_pool` and
@@ -854,6 +926,18 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
         skill = pool[pool["pos"].isin(SKILL_POSITIONS)]
         if not skill.empty:
             pool = skill
+        # 16.18 — this manager's declared hard avoids, as a FILTER and not a weight. "I will not
+        # draft this player" is not a tradeoff, and a large negative utility is exactly a tradeoff:
+        # it loses to a strong enough opinion somewhere else on the board. Same class of object as
+        # T20's mandatory needs and the reach budget, applied the same way and in the same place.
+        #
+        # ⚠ It can never empty the pool. A roster has to be completable, and an avoid list that
+        # could deadlock a draft would surface as a crash three rounds into a mock rather than as
+        # the preference it is; when nothing else is left the manager takes the best available.
+        if mp_avoid is not None:
+            keep = ~mp_avoid[pool.index.to_numpy()]
+            if keep.any():
+                pool = pool[keep]
         # 16.14R step 5b — the reach budget, a hard filter before utility (see `ReachBudget`).
         # Kept ahead of the band so the budget bounds the *candidate set* rather than fighting the
         # softmax, and always leaves the least-reachy candidate so a draft can never stall.
@@ -865,8 +949,26 @@ def make_opponent_pick_fn(model: OpponentModel, personality: Personality | None 
             pool = within if not within.empty else pool.nsmallest(1, "adp")
         k = (band.top_k(state.overall_pick, state.n_teams) if band is not None else fixed_k)
         if k is not None and len(pool) > k:
-            pool = pool.nsmallest(k, "adp")
+            # ★ 16.18 — a fitted manager's candidate set is chosen on HIS board, and this is the
+            # one place his beliefs are allowed ahead of the public ADP. 16.9 measured why it has
+            # to be: `top_k` is a hard rank filter applied BEFORE utility, so no additive offset
+            # can pull a player into the candidate set, and that is exactly why the narrative
+            # shock came back unidentified. A stated "I take him two rounds early" that cannot
+            # reach the set it is scored over is not an opinion, it is a no-op with a note
+            # attached — the fifth inert-mechanism failure this repo would otherwise ship.
+            #
+            # The band's SIZE is untouched, so β still normalizes over k candidates ranked by an
+            # ADP; only *whose* ADP moves. The reach budget above deliberately stays on the public
+            # board, because `CORPUS_REACH_P95` is a measured fact about what real humans do and a
+            # private opinion must not be a way around it.
+            if mp_adp is not None:
+                take = np.argsort(mp_adp[pool.index.to_numpy()], kind="stable")[:k]
+                pool = pool.iloc[np.sort(take)]
+            else:
+                pool = pool.nsmallest(k, "adp")
         cand = pool.rename(columns={})[["adp", "pos"]].copy()
+        if mp_adp is not None:
+            cand["adp"] = mp_adp[pool.index.to_numpy()]
         # T24 — from here down the seat reads its **own** board. Deliberately after the band and the
         # reach budget, which stay on the public ADP: the budget is T25's room-wide discipline and
         # `CORPUS_REACH_P95` is measured in *public* picks, so a private opinion must not be a way
@@ -1107,15 +1209,36 @@ DEFAULT_ROOM: tuple[str, ...] = (
 #: ``homer`` is out because 16.14R retired it (its narrative channel moved to ``reacher``, and its
 #: ``fandom`` weight is fitted-but-unused rather than deleted); ``chalk`` replaces one ``balanced``
 #: because a near-ADP drafter who is not a *bot* is a real and common seat.
+#: ★ **16.18 (2026-08-05, user decision): one ``balanced`` gives its seat to ``fitted_manager``.**
+#: The seat that steps aside is a ``balanced`` for the same reason :data:`REALISTIC_NINE` gives one
+#: up — it is the modal fitted manager, so dropping it costs the least composition; giving up a
+#: *character* seat would quietly change the mix 16.14R step 7 validated.
+#:
+#: ⚠ **This moves the default room, so it moves every committed bar sheet measured on it.** The
+#: spec's bar **B7** is the one that applies: *adding the seat must not move the T15 realism bars
+#: beyond a **stated** allowance.* A movement here is reported, never absorbed — and note the seat
+#: only differs from the ``balanced`` it replaced on the ~150 players its profile actually rates,
+#: so a large movement would itself be the finding.
 REALISTIC_ROOM: tuple[str, ...] = (
     "autopilot",                                       # exactly one, see above
-    "balanced", "balanced", "balanced", "balanced",    # the modal manager
+    "balanced", "balanced", "balanced",                # the modal manager
+    "fitted_manager",                                  # 16.18 — a named human, loaded from a file
     "value_hawk", "safe_floor", "reacher", "upside_chaser", "chalk",
 )
 
 
+#: What a ``requires_profile`` seat degrades to when its profile does not describe the season being
+#: drafted. ``balanced`` and not a refusal, because a historical measurement legitimately wants the
+#: room *minus* the seat rather than an error — and ``balanced`` is exactly what the seat was before
+#: 16.18 took its chair, so a season the profile does not cover reproduces the pre-16.18 room
+#: **bit-for-bit**.
+PROFILE_FALLBACK: str = "balanced"
+
+
 def make_room(mix: tuple[str, ...] | None = None, *, n_opponents: int = 9,
-              seed: int | None = None, fav_teams: tuple[str, ...] = ()) -> tuple[Personality, ...]:
+              seed: int | None = None, fav_teams: tuple[str, ...] = (),
+              profile: ManagerProfile | None = None,
+              season: int | None = None) -> tuple[Personality, ...]:
     """Assign ``n_opponents`` seats from a personality ``mix`` (defaults to :data:`DEFAULT_ROOM`).
 
     Seats are **shuffled** under ``seed`` rather than taken in listed order, so a personality is not
@@ -1137,11 +1260,27 @@ def make_room(mix: tuple[str, ...] | None = None, *, n_opponents: int = 9,
     if len(names) != n_opponents:
         raise ValueError(f"room has {len(names)} seats for {n_opponents} modelled seats — "
                          f"pass a mix of exactly {n_opponents}")
-    lib = personalities()
+    lib = personalities(profile)
     unknown = [n for n in names if n not in lib]
     if unknown:
         raise ValueError(f"unknown personalities {sorted(set(unknown))}; "
                          f"available: {sorted(lib)}")
+    # ★★ 16.18 — the season gate, and it is a PIT guard rather than a convenience.
+    # A belief board describes ONE season's board on one date, and the profile in this repo was
+    # written in August 2026 by someone who watched 2017–2025 happen. Seating it in a 2020
+    # simulation is look-ahead, and the leak is graded (6 board rows fire in 2017, 55 in 2024), so
+    # it presents as "a seat with a mild opinion" rather than as anything broken. Room composition
+    # is the last place the season is still known, so the gate lives here.
+    #
+    # It degrades to `balanced` instead of raising because a historical measurement legitimately
+    # wants the room *without* this seat — and since `balanced` is precisely the seat 16.18 took the
+    # chair from, an uncovered season reproduces the pre-16.18 room bit-for-bit. That is what keeps
+    # every committed realism sheet a valid reference.
+    swapped = [n for n in names
+               if lib[n].requires_profile
+               and not (lib[n].manager_profile and lib[n].manager_profile.covers(season))]
+    if swapped:
+        names = [PROFILE_FALLBACK if n in swapped else n for n in names]
     if seed is not None:
         np.random.default_rng(seed).shuffle(names)
     seats = []
@@ -1196,6 +1335,25 @@ def assert_room_objectives(room: Sequence[Personality], risk) -> None:
         raise ValueError(
             f"room contains objective='portfolio_ce' seats {needy} but no risk model — pass "
             f"`risk=` (see steps/phase16_14r_6_value_hawk.py) or they silently draft as balanced")
+    assert_room_profiles(room)
+
+
+def assert_room_profiles(room: Sequence[Personality]) -> None:
+    """Fail loudly when a room seats a ``requires_profile`` personality with no profile loaded.
+
+    The 16.18 sibling of :func:`assert_room_objectives`, and it exists for the identical reason: a
+    ``fitted_manager`` with an empty profile is not a broken seat, it is a **``balanced`` wearing
+    somebody's name**. It completes a legal draft, its rosters look fine, and every realism bar
+    passes — so nothing downstream can tell you the room you measured is not the room you asked
+    for. *An inert thing still passes*, now for the fifth time in this repo.
+    """
+    empty = sorted({p.name for p in room if p.requires_profile and p.manager_profile is None})
+    if empty:
+        raise ValueError(
+            f"room seats {empty}, which need a manager profile and have none. Add one under "
+            f"{PROFILE_DIR}/ (see steps/mm1_profile.py) or build the room with "
+            f"`make_room(..., profile=...)`. Seating it unloaded would draft as `balanced` under "
+            f"another name and every number downstream would look plausible.")
 
 
 # ==================================================================================================
@@ -1303,7 +1461,8 @@ class SeatMap:
     @classmethod
     def of(cls, n_teams: int = 10, *, human_teams: Sequence[int] | frozenset[int] = (),
            mix: Sequence[str] | None = None, room: Sequence[Personality] | None = None,
-           seed: int | None = None, fav_teams: tuple[str, ...] = ()) -> SeatMap:
+           seed: int | None = None, fav_teams: tuple[str, ...] = (),
+           profile: ManagerProfile | None = None, season: int | None = None) -> SeatMap:
         """Build a seat map for ``n_teams`` with ``human_teams`` (0-indexed) driven by hand.
 
         The room is either passed in (``room=``, already-built personalities) or assembled from a
@@ -1322,7 +1481,7 @@ class SeatMap:
             seats_room = tuple(room)
         else:
             seats_room = make_room(tuple(mix) if mix is not None else None, n_opponents=n_sim,
-                                   seed=seed, fav_teams=fav_teams)
+                                   seed=seed, fav_teams=fav_teams, profile=profile, season=season)
         if len(seats_room) != n_sim:
             raise ValueError(
                 f"room has {len(seats_room)} seats for a {n_teams}-team draft with "

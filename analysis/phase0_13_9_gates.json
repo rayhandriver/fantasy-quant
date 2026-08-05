@@ -1,0 +1,434 @@
+{
+  "step": "0.13.9 \u2014 floors, PIT classes, register, backup",
+  "B5_deep_dive_questions": {
+    "PASS": true,
+    "most_played_front_and_coverage_per_team_season": {
+      "rows": 5,
+      "answered": true,
+      "sample": [
+        {
+          "team": "PHI",
+          "season": 2024,
+          "nickel": 0.828,
+          "base": 0.123,
+          "dime": 0.043,
+          "man": 0.57,
+          "cover3": 0.144,
+          "cover1": 0.428
+        },
+        {
+          "team": "WAS",
+          "season": 2024,
+          "nickel": 0.813,
+          "base": 0.058,
+          "dime": 0.112,
+          "man": 0.559,
+          "cover3": 0.101,
+          "cover1": 0.449
+        },
+        {
+          "team": "HOU",
+          "season": 2024,
+          "nickel": 0.81,
+          "base": 0.141,
+          "dime": 0.045,
+          "man": 0.498,
+          "cover3": 0.15,
+          "cover1": 0.417
+        },
+        {
+          "team": "CHI",
+          "season": 2024,
+          "nickel": 0.788,
+          "base": 0.2,
+          "dime": 0.006,
+          "man": 0.406,
+          "cover3": 0.213,
+          "cover1": 0.343
+        },
+        {
+          "team": "BUF",
+          "season": 2024,
+          "nickel": 0.788,
+          "base": 0.051,
+          "dime": 0.153,
+          "man": 0.401,
+          "cover3": 0.223,
+          "cover1": 0.275
+        }
+      ]
+    },
+    "blitz_pct_per_team_week": {
+      "rows": 5,
+      "answered": true,
+      "sample": [
+        {
+          "season": 2024,
+          "week": 16,
+          "team": "PIT",
+          "blitz_rate": 0.68,
+          "rushers_denom": 25
+        },
+        {
+          "season": 2024,
+          "week": 19,
+          "team": "MIN",
+          "blitz_rate": 0.655,
+          "rushers_denom": 29
+        },
+        {
+          "season": 2024,
+          "week": 6,
+          "team": "DEN",
+          "blitz_rate": 0.632,
+          "rushers_denom": 38
+        },
+        {
+          "season": 2024,
+          "week": 11,
+          "team": "NE",
+          "blitz_rate": 0.63,
+          "rushers_denom": 27
+        },
+        {
+          "season": 2024,
+          "week": 14,
+          "team": "DET",
+          "blitz_rate": 0.625,
+          "rushers_denom": 24
+        }
+      ]
+    },
+    "single_high_vs_two_high_share": {
+      "rows": 5,
+      "answered": true,
+      "sample": [
+        {
+          "team": "CHI",
+          "single_high": 0.001,
+          "two_high": 0.999,
+          "safeties_mean": 2.0
+        },
+        {
+          "team": "SF",
+          "single_high": 0.002,
+          "two_high": 0.989,
+          "safeties_mean": 2.01
+        },
+        {
+          "team": "IND",
+          "single_high": 0.001,
+          "two_high": 0.978,
+          "safeties_mean": 2.02
+        },
+        {
+          "team": "DET",
+          "single_high": 0.014,
+          "two_high": 0.966,
+          "safeties_mean": 2.0
+        },
+        {
+          "team": "PHI",
+          "single_high": 0.034,
+          "two_high": 0.962,
+          "safeties_mean": 1.97
+        }
+      ]
+    },
+    "cap_allocation_by_position_group": {
+      "rows": 5,
+      "answered": true,
+      "sample": [
+        {
+          "team": "LV",
+          "qb": 0.061,
+          "rb": 0.033,
+          "wr": 0.218,
+          "te": 0.052,
+          "ol": 0.098,
+          "def_": 0.494
+        },
+        {
+          "team": "MIA",
+          "qb": 0.147,
+          "rb": 0.045,
+          "wr": 0.205,
+          "te": 0.033,
+          "ol": 0.139,
+          "def_": 0.398
+        },
+        {
+          "team": "NYJ",
+          "qb": 0.138,
+          "rb": 0.026,
+          "wr": 0.194,
+          "te": 0.042,
+          "ol": 0.131,
+          "def_": 0.433
+        },
+        {
+          "team": "SEA",
+          "qb": 0.098,
+          "rb": 0.029,
+          "wr": 0.183,
+          "te": 0.063,
+          "ol": 0.089,
+          "def_": 0.501
+        },
+        {
+          "team": "SF",
+          "qb": 0.015,
+          "rb": 0.073,
+          "wr": 0.18,
+          "te": 0.058,
+          "ol": 0.148,
+          "def_": 0.502
+        }
+      ]
+    },
+    "backfield_carry_split": {
+      "rows": 5,
+      "answered": true,
+      "sample": [
+        {
+          "team": "PHI",
+          "display_name": "Saquon Barkley",
+          "carries": 439.0,
+          "carry_share": 0.591
+        },
+        {
+          "team": "PHI",
+          "display_name": "Jalen Hurts",
+          "carries": 164.0,
+          "carry_share": 0.221
+        },
+        {
+          "team": "PHI",
+          "display_name": "Kenneth Gainwell",
+          "carries": 88.0,
+          "carry_share": 0.118
+        },
+        {
+          "team": "PHI",
+          "display_name": "Will Shipley",
+          "carries": 34.0,
+          "carry_share": 0.046
+        },
+        {
+          "team": "PHI",
+          "display_name": "Kenny Pickett",
+          "carries": 7.0,
+          "carry_share": 0.009
+        }
+      ]
+    },
+    "target_share_within_personnel_grouping": {
+      "rows": 5,
+      "answered": true,
+      "sample": [
+        {
+          "team": "CIN",
+          "display_name": "Ja'Marr Chase",
+          "tgt_11": 114.0,
+          "tgt_12": 50.0,
+          "share_in_11": 0.28
+        },
+        {
+          "team": "CIN",
+          "display_name": "Tee Higgins",
+          "tgt_11": 78.0,
+          "tgt_12": 24.0,
+          "share_in_11": 0.192
+        },
+        {
+          "team": "CIN",
+          "display_name": "Mike Gesicki",
+          "tgt_11": 60.0,
+          "tgt_12": 16.0,
+          "share_in_11": 0.147
+        },
+        {
+          "team": "CIN",
+          "display_name": "Andrei Iosivas",
+          "tgt_11": 51.0,
+          "tgt_12": 6.0,
+          "share_in_11": 0.125
+        },
+        {
+          "team": "CIN",
+          "display_name": "Chase Brown",
+          "tgt_11": 32.0,
+          "tgt_12": 31.0,
+          "share_in_11": 0.079
+        }
+      ]
+    }
+  },
+  "B6_per_column_floors": {
+    "manzone_2016_raises": true,
+    "manzone_2018_allowed": true,
+    "table_floor_column_allowed_at_2016": true,
+    "ftn_2021_raises": true,
+    "declared_vs_measured": [
+      {
+        "table": "participation",
+        "column": "defense_man_zone_type",
+        "declared": 2018,
+        "measured": 2018
+      },
+      {
+        "table": "participation",
+        "column": "defense_coverage_type",
+        "declared": 2018,
+        "measured": 2018
+      },
+      {
+        "table": "participation",
+        "column": "defense_positions",
+        "declared": 2016,
+        "measured": null
+      },
+      {
+        "table": "participation",
+        "column": "offense_positions",
+        "declared": 2016,
+        "measured": null
+      },
+      {
+        "table": "ftn_charting",
+        "column": "is_motion",
+        "declared": 2022,
+        "measured": 2022
+      },
+      {
+        "table": "ftn_charting",
+        "column": "is_play_action",
+        "declared": 2022,
+        "measured": 2022
+      },
+      {
+        "table": "ftn_charting",
+        "column": "is_rpo",
+        "declared": 2022,
+        "measured": 2022
+      },
+      {
+        "table": "ftn_charting",
+        "column": "is_screen_pass",
+        "declared": 2022,
+        "measured": 2022
+      },
+      {
+        "table": "ftn_charting",
+        "column": "n_blitzers",
+        "declared": 2022,
+        "measured": 2022
+      }
+    ],
+    "declaration_matches_measurement": true,
+    "PASS": true
+  },
+  "B8_pit_classes": {
+    "every_data2_table_declared": [
+      {
+        "table": "defense_team_week",
+        "pit_class": "in_season_weekly",
+        "floor": 2016,
+        "backtestable": true
+      },
+      {
+        "table": "defense_player_week",
+        "pit_class": "in_season_weekly",
+        "floor": 2016,
+        "backtestable": true
+      },
+      {
+        "table": "defense_coverage_week",
+        "pit_class": "in_season_weekly",
+        "floor": 2016,
+        "backtestable": true
+      },
+      {
+        "table": "offense_team_week",
+        "pit_class": "in_season_weekly",
+        "floor": 2016,
+        "backtestable": true
+      },
+      {
+        "table": "offense_player_week",
+        "pit_class": "in_season_weekly",
+        "floor": 2016,
+        "backtestable": true
+      },
+      {
+        "table": "team_construction_season",
+        "pit_class": "preseason",
+        "floor": 2014,
+        "backtestable": true
+      },
+      {
+        "table": "st_team_season",
+        "pit_class": "in_season_weekly",
+        "floor": 2014,
+        "backtestable": true
+      },
+      {
+        "table": "kicking_env_week",
+        "pit_class": "in_season_weekly",
+        "floor": 2014,
+        "backtestable": true
+      },
+      {
+        "table": "team_scheme_week",
+        "pit_class": "in_season_weekly",
+        "floor": 2016,
+        "backtestable": true
+      },
+      {
+        "table": "team_scheme_season",
+        "pit_class": "in_season_weekly",
+        "floor": 2016,
+        "backtestable": true
+      }
+    ],
+    "undeclared": [],
+    "unlagged_use_raises": true,
+    "lagged_use_allowed": true,
+    "backtestable_false_raises": true,
+    "PASS": true
+  },
+  "per_season_fill_gate": {
+    "tables": 10,
+    "result": {
+      "gate": "fill_rate:by_season",
+      "passed": true,
+      "status": "baseline recorded (first run)",
+      "n_tables": 10
+    }
+  },
+  "encoding_break_gate": {
+    "gate": "encoding:breaks_classified",
+    "passed": true,
+    "n_breaks": 41,
+    "n_classified": 13,
+    "unclassified": [],
+    "stale_classifications": []
+  },
+  "column_register": [
+    {
+      "grain": "team-season",
+      "columns_": 106,
+      "metrics": 92,
+      "with_floor": 19,
+      "not_backtestable": 6
+    },
+    {
+      "grain": "team-week",
+      "columns_": 84,
+      "metrics": 71,
+      "with_floor": 20,
+      "not_backtestable": 0
+    }
+  ],
+  "registry_size": 63
+}

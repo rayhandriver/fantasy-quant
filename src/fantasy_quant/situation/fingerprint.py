@@ -292,15 +292,18 @@ def regime_profiles(rst: pd.DataFrame, tend: pd.DataFrame, usage: pd.DataFrame,
     return pd.DataFrame(rows)
 
 
-def eb_weights(rp: pd.DataFrame) -> dict[str, float]:
+def eb_weights(rp: pd.DataFrame, metrics: tuple[str, ...] = METRICS) -> dict[str, float]:
     """Per-metric shrinkage constant ``k = sigma^2 / tau^2`` by method of moments.
 
     `sigma^2` is season-to-season noise **within** a play-caller, `tau^2` the spread of true
     play-caller means. A regime of length n then keeps weight ``n / (n + k)``: one season of a
     noisy metric is mostly league average, a long tenure is nearly raw.
+
+    `metrics` defaults to the offensive vector, so every existing caller is unchanged; 0.13.8
+    passes the **defensive** vector to run the identical shrinkage on the other side of the ball.
     """
     out = {}
-    for c in METRICS:
+    for c in metrics:
         g = rp.groupby("play_caller")[c]
         within = g.var(ddof=1).dropna()
         n = g.count()
@@ -314,7 +317,8 @@ def eb_weights(rp: pd.DataFrame) -> dict[str, float]:
 
 
 def fingerprints(rp: pd.DataFrame, k: dict[str, float] | None = None,
-                 by: tuple[str, ...] = ("play_caller",)) -> pd.DataFrame:
+                 by: tuple[str, ...] = ("play_caller",),
+                 metrics: tuple[str, ...] = METRICS) -> pd.DataFrame:
     """The deliverable: one EB-shrunk fingerprint per group, plus the raw mean and n.
 
     Columns: `<by> · n_seasons · teams · <metric> (shrunk) · <metric>_raw · <metric>_w`.
@@ -323,7 +327,7 @@ def fingerprints(rp: pd.DataFrame, k: dict[str, float] | None = None,
     `coaches.coverage`/`fingerprint_source` count prior seasons at, so `prior_seasons` and
     `n_seasons` mean the same thing. Pass `("play_caller", "team")` for the per-spell table.
     """
-    k = eb_weights(rp) if k is None else k
+    k = eb_weights(rp, metrics) if k is None else k
     rows = []
     for key, g in rp.groupby(list(by)):
         key = key if isinstance(key, tuple) else (key,)
@@ -331,7 +335,7 @@ def fingerprints(rp: pd.DataFrame, k: dict[str, float] | None = None,
                "teams": ",".join(sorted(g["team"].unique())),
                "seasons": ",".join(str(s) for s in sorted(g["season"].unique())),
                "any_partial": bool(g["partial"].any())}
-        for c in METRICS:
+        for c in metrics:
             vals = g[c].dropna()
             n = len(vals)
             raw = float(vals.mean()) if n else np.nan
@@ -473,10 +477,11 @@ def player_board(con, tr: pd.DataFrame, fp: pd.DataFrame, prof: pd.DataFrame, mo
 # ------------------------------------------------------------------------------------------------
 # gates
 # ------------------------------------------------------------------------------------------------
-def assert_fingerprints_sane(fp: pd.DataFrame) -> None:
+def assert_fingerprints_sane(fp: pd.DataFrame,
+                            metrics: tuple[str, ...] = METRICS) -> None:
     """Structural gate: shrinkage is a real contraction and nothing escaped to a silly z."""
     assert len(fp), "no fingerprints built"
-    for c in METRICS:
+    for c in metrics:
         w = fp[f"{c}_w"].to_numpy(dtype=float)
         assert ((w >= 0) & (w <= 1)).all(), f"{c}: shrink weight outside [0,1]"
         v = fp[c].to_numpy(dtype=float)

@@ -258,14 +258,22 @@ def attach_proj_points(con, season: int, board: pd.DataFrame, *, n_teams: int = 
 # a fully simulated room
 # ------------------------------------------------------------------------------------------------
 def full_room(mix: Sequence[str] | None = None, *, n_teams: int = TEAMS_REF,
-              seed: int | None = None, fav_teams: tuple[str, ...] = ()) -> tuple[Personality, ...]:
+              seed: int | None = None, fav_teams: tuple[str, ...] = (),
+              season: int | None = None) -> tuple[Personality, ...]:
     """A room with a personality in **every** seat (default :data:`DEFAULT_FULL_ROOM`).
 
     Thin over :func:`~fantasy_quant.draft.personalities.make_room` — same shuffle-under-seed
     semantics, so a personality is never confounded with a draft slot across a batch.
+
+    ★ **Pass ``season`` in any measurement loop.** 16.18's ``fitted_manager`` carries a belief board
+    that describes exactly one season, and a batch harness that sweeps 2017–2024 with a 2026 profile
+    is committing look-ahead — the workbook was written by someone who watched those seasons happen.
+    ``make_room`` degrades the seat to ``balanced`` on a season its profile does not cover, so a
+    harness that passes ``season`` reproduces the pre-16.18 room **bit-for-bit** on every historical
+    season and only seats the manager on the one he actually rated.
     """
     return make_room(tuple(mix or DEFAULT_FULL_ROOM), n_opponents=int(n_teams), seed=seed,
-                     fav_teams=fav_teams)
+                     fav_teams=fav_teams, season=season)
 
 
 def full_room_pick_fn(model: OpponentModel, room: Sequence[Personality], *,

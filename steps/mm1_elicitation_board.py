@@ -79,7 +79,8 @@ FREE_TEXT_COLUMNS = {"Why (short reason)", "Notes — what you actually believe"
 # 5-point ordinal: how the player's true value compares to where the market has him. Chosen over
 # a "like/dislike" scale because it is directly a signed magnitude — undervalued = a target,
 # overvalued = a fade — and it is what "Value Score" below turns into a number without any typing.
-VALUE_OPTIONS = ["Very undervalued", "Undervalued", "Evenly valued", "Overvalued", "Very overvalued"]
+VALUE_OPTIONS = ["Very undervalued", "Undervalued", "Evenly valued",
+                 "Overvalued", "Very overvalued"]
 VALUE_SCORE = {"Very undervalued": 2, "Undervalued": 1, "Evenly valued": 0,
                "Overvalued": -1, "Very overvalued": -2}
 CONFIDENCE_OPTIONS = ["1", "2", "3", "4", "5"]  # 1 = pure gut, 5 = would bet on it
@@ -100,7 +101,9 @@ def _situation_text(row: pd.Series) -> tuple[str, str]:
     if pd.isna(row.get("event_type")):
         return "", ""
     tag = {"team_change": "New team", "new_to_league": "Rookie/new to league",
-           "room_change": "Room change", "context_only": "Context"}.get(row["event_type"], row["event_type"])
+           "room_change": "Room change", "context_only": "Context"}.get(
+        row["event_type"], row["event_type"]
+    )
     bits = []
     if row.get("event_type") == "team_change" and pd.notna(row.get("prev_team")):
         bits.append(f"Moved from {row['prev_team']} to {row['team']}.")
@@ -116,6 +119,11 @@ def _situation_text(row: pd.Series) -> tuple[str, str]:
     if pd.notna(row.get("notes")):
         bits.append(str(row["notes"]))
     return tag, " ".join(bits)
+
+
+def _num(row: pd.Series, key: str, nd: int) -> float | None:
+    """Rounded float for a column that may be absent or NaN — the board's cells are optional."""
+    return round(float(row[key]), nd) if pd.notna(row.get(key)) else None
 
 
 def build_frame(con, season: int, n: int) -> pd.DataFrame:
@@ -151,19 +159,22 @@ def build_frame(con, season: int, n: int) -> pd.DataFrame:
             "Rookie": "Yes" if r.get("rookie") == 1.0 else "",
             "ADP": round(float(r["adp"]), 1),
             "Round (10-tm)": math.ceil(float(r["adp"]) / TEAMS),
-            "Proj Pts": round(float(r["proj_points"]), 1) if pd.notna(r.get("proj_points")) else None,
-            "Model Mean": round(float(r["mean"]), 1) if pd.notna(r.get("mean")) else None,
-            "Games Est /17": round(float(r["games_played_mean"]), 1) if pd.notna(r.get("games_played_mean")) else None,
+            "Proj Pts": _num(r, "proj_points", 1),
+            "Model Mean": _num(r, "mean", 1),
+            "Games Est /17": _num(r, "games_played_mean", 1),
             "Our Value Rank": int(r["overall_rank"]) if pd.notna(r.get("overall_rank")) else None,
-            "Model vs ADP": (int(r["rank_adp"]) - int(r["overall_rank"])) if pd.notna(r.get("overall_rank")) else None,
-            "TD Regression": round(float(r["td_regression"]), 2) if pd.notna(r.get("td_regression")) else None,
-            "Role Trend": round(float(r["role_delta"]), 2) if pd.notna(r.get("role_delta")) else None,
-            "Upside": round(float(r["upside"]), 2) if pd.notna(r.get("upside")) else None,
-            "Floor": round(float(r["floor"]), 2) if pd.notna(r.get("floor")) else None,
-            "Boom/Bust Spread": round(float(r["tail_risk"]), 2) if pd.notna(r.get("tail_risk")) else None,
-            "Boom % (live)": round(float(r["boom_prob_live"]), 2) if pd.notna(r.get("boom_prob_live")) else None,
-            "Bust % (live)": round(float(r["bust_prob_live"]), 2) if pd.notna(r.get("bust_prob_live")) else None,
-            "Durability": round(float(r["durability"]), 2) if pd.notna(r.get("durability")) else None,
+            "Model vs ADP": (
+                int(r["rank_adp"]) - int(r["overall_rank"])
+                if pd.notna(r.get("overall_rank")) else None
+            ),
+            "TD Regression": _num(r, "td_regression", 2),
+            "Role Trend": _num(r, "role_delta", 2),
+            "Upside": _num(r, "upside", 2),
+            "Floor": _num(r, "floor", 2),
+            "Boom/Bust Spread": _num(r, "tail_risk", 2),
+            "Boom % (live)": _num(r, "boom_prob_live", 2),
+            "Bust % (live)": _num(r, "bust_prob_live", 2),
+            "Durability": _num(r, "durability", 2),
             "Situation": tag,
             "Situation Notes": note,
             "Personal Value": None, "Value Score": None, "Personal ADP (optional #)": None,
@@ -279,7 +290,8 @@ def write_workbook(df: pd.DataFrame, out_path: Path) -> None:
         "",
         "The only two columns where you type your own words are \"Why (short reason)\" and "
         "\"Notes\". Everything else in YOUR TAKE is a dropdown or a plain number, so it is quick "
-        "to fill in and lands as a clean value with no interpretation needed on the read-back side.",
+        "to fill in and lands as a clean value with no interpretation needed on the read-back "
+        "side.",
         "",
         "Personal Value — click the cell for a dropdown. Very undervalued / Undervalued / Evenly "
         "valued / Overvalued / Very overvalued, i.e. how his TRUE value compares to where the "
@@ -292,8 +304,8 @@ def write_workbook(df: pd.DataFrame, out_path: Path) -> None:
         "pick number or round you would actually draft him at. Personal Value already carries the "
         "direction and rough size of your disagreement, so leave this blank unless a number adds "
         "something the dropdown didn't.",
-        "Confidence (1-5) — dropdown, 1 = pure gut feel, 5 = you would bet on it. This is about how "
-        "sure you are of THIS opinion, not about how good the player is.",
+        "Confidence (1-5) — dropdown, 1 = pure gut feel, 5 = you would bet on it. This is about "
+        "how sure you are of THIS opinion, not about how good the player is.",
         "Why (short reason) — type a few words for the main driver of your take (e.g. \"new "
         "offense\", \"injury history\", \"model is sleeping on his role\").",
         "Notes — free text, as long as you want. Say exactly what you believe and why — this is "

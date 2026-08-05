@@ -1,0 +1,162 @@
+{
+  "step": "0.13.6 \u2014 special teams and the kicking environment",
+  "st_team_season": {
+    "table": "st_team_season",
+    "n_rows": 384,
+    "n_teams": 32,
+    "n_seasons": 12,
+    "n_head_coaches": 96
+  },
+  "kicking_env_week": {
+    "table": "kicking_env_week",
+    "n_rows": 6590,
+    "n_teams": 32,
+    "n_seasons": 12
+  },
+  "coach_attribution": {
+    "mismatches_vs_coaches_csv": 0,
+    "rows": [],
+    "PASS": true
+  },
+  "aggression_denominator_trap": {
+    "naive_go_rate_mean": 0.1696,
+    "conditioned_go_rate_mean": 0.2957,
+    "ratio": 1.74
+  },
+  "by_season": [
+    {
+      "season": 2014,
+      "go_rate": 0.1931,
+      "two_point_rate": 0.0488,
+      "rz_stall_rate": 0.4336,
+      "fg_pct": 0.8401,
+      "fg_pct_long": 0.5831
+    },
+    {
+      "season": 2015,
+      "go_rate": 0.2199,
+      "two_point_rate": 0.0785,
+      "rz_stall_rate": 0.4197,
+      "fg_pct": 0.8483,
+      "fg_pct_long": 0.6448
+    },
+    {
+      "season": 2016,
+      "go_rate": 0.206,
+      "two_point_rate": 0.0804,
+      "rz_stall_rate": 0.42,
+      "fg_pct": 0.8448,
+      "fg_pct_long": 0.5174
+    },
+    {
+      "season": 2017,
+      "go_rate": 0.194,
+      "two_point_rate": 0.0704,
+      "rz_stall_rate": 0.4338,
+      "fg_pct": 0.8337,
+      "fg_pct_long": 0.6723
+    },
+    {
+      "season": 2018,
+      "go_rate": 0.2676,
+      "two_point_rate": 0.0986,
+      "rz_stall_rate": 0.3888,
+      "fg_pct": 0.8412,
+      "fg_pct_long": 0.6316
+    },
+    {
+      "season": 2019,
+      "go_rate": 0.2779,
+      "two_point_rate": 0.0909,
+      "rz_stall_rate": 0.4027,
+      "fg_pct": 0.812,
+      "fg_pct_long": 0.5801
+    },
+    {
+      "season": 2020,
+      "go_rate": 0.3479,
+      "two_point_rate": 0.0985,
+      "rz_stall_rate": 0.3742,
+      "fg_pct": 0.8437,
+      "fg_pct_long": 0.6246
+    },
+    {
+      "season": 2021,
+      "go_rate": 0.3526,
+      "two_point_rate": 0.1159,
+      "rz_stall_rate": 0.3982,
+      "fg_pct": 0.8471,
+      "fg_pct_long": 0.6062
+    },
+    {
+      "season": 2022,
+      "go_rate": 0.3237,
+      "two_point_rate": 0.0975,
+      "rz_stall_rate": 0.4133,
+      "fg_pct": 0.8554,
+      "fg_pct_long": 0.6943
+    },
+    {
+      "season": 2023,
+      "go_rate": 0.3557,
+      "two_point_rate": 0.1032,
+      "rz_stall_rate": 0.4265,
+      "fg_pct": 0.8556,
+      "fg_pct_long": 0.6841
+    },
+    {
+      "season": 2024,
+      "go_rate": 0.3876,
+      "two_point_rate": 0.1127,
+      "rz_stall_rate": 0.4042,
+      "fg_pct": 0.841,
+      "fg_pct_long": 0.697
+    },
+    {
+      "season": 2025,
+      "go_rate": 0.4197,
+      "two_point_rate": 0.0944,
+      "rz_stall_rate": 0.396,
+      "fg_pct": 0.8556,
+      "fg_pct_long": 0.6717
+    }
+  ],
+  "kicking_environment": [
+    {
+      "venue": "outdoors",
+      "team_weeks": 4752,
+      "temp_observed": 4390,
+      "temp_mean": 57.7,
+      "wind_observed": 4390,
+      "wind_mean": 8.2,
+      "fg_pct": 0.8425,
+      "fg_att_per_week": 1.918
+    },
+    {
+      "venue": "dome",
+      "team_weeks": 1838,
+      "temp_observed": 2,
+      "temp_mean": 46.0,
+      "wind_observed": 2,
+      "wind_mean": 2.0,
+      "fg_pct": 0.8558,
+      "fg_att_per_week": 1.999
+    }
+  ],
+  "dome_weather_encoding": {
+    "dome_team_weeks": 1838,
+    "temp_zero_filled": 0,
+    "wind_zero_filled": 0,
+    "temp_populated": 2,
+    "temp_null": 1836
+  },
+  "no_st_coordinator_table": "user decision at scoping: 4th-down and 2-point aggression are head-coach decisions and pbp carries the head coach exactly and PIT, so a curated ST-coordinator CSV would spend human verification on a variable already attributable",
+  "checks": {
+    "null_head_coach": 0.0,
+    "teams_2024": 32.0,
+    "impossible_rate": 0.0,
+    "more_made_than_att": 0.0,
+    "wind_inside_a_closed_roof": 2.0,
+    "null_team": 0.0
+  }
+}

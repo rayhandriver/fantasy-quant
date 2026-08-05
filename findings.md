@@ -6597,3 +6597,514 @@ schema detection) · **B2 PASS** (10 seasons, per-season counts exact, 0 dropped
 (1.00000 on contentful rows) · **B4 PASS** (4/4) · **B5 PASS** · **B6 PASS** (floors raise below,
 silent at and above) · **B7 PASS** (PIT classes and `backtestable` raise; undeclared table raises)
 · **B8 PASS** (45/45 declared, reproducible, 0 hand-edited rows).
+
+---
+
+## SESSION DATA-2 (Phase 0.13) — COMPLETE, 0.13.0–0.13.9, all 10 bars PASS (2026-08-03)
+
+**0.13.0 — the break map. All bars PASS.** `src/fantasy_quant/data/breaks.py` +
+`validate.{store_fill_rates_by_season,fill_rate_gate_by_season,encoding_break_gate}` +
+`steps/phase0_13_0_breaks.py` + 22 tests. 822 tests, ruff clean, **B0 PASS** (25/27 bit-identical,
+2 changed exactly as DATA-1 declared, 0 unclassified).
+
+**★ The detector keys on CONSERVATION, not on the level.** A re-encoding moves mass out of NULL
+into one in-domain value, so `Δnull ≈ −Δvalue`; a real trend moves a distribution without touching
+the null share, and a real backfill raises fill without concentrating on one value. Requiring the
+deltas to *cancel* is the whole discriminator, and it is why nothing in the module names a column.
+
+**★ T50 was opened on two columns. There are FOUR, and the two nobody had are the ones that
+matter more.**
+- `participation.defenders_in_box` @2023 — verified: the 2024 rows at 0 are kickoffs/punts/XP/FG/
+  kneels, i.e. exactly the non-scrimmage set that was NULL in 2022. **Naive box mean 6.37 → 4.87;
+  scrimmage-only 6.37 → 6.10.** The naive read overstates a real, modest decline ~5×. Box stacking
+  was the user's *first* motivating question, so this is the column the mining program would have
+  tripped on first.
+- `ftn_charting.read_thrown` @2023 — same shape, a **second vendor**, so this is not an nflverse
+  quirk.
+
+**★ B2 — the trap, stated.** Naive league blitz rate 2022 **0.2699 → 2023 0.1300**: a 52 % collapse
+that would read as the largest defensive scheme shift in modern NFL history. Gated: 0.2699 →
+0.2549 → 0.2703 → 0.2729, flat. Before the break the two series are **bit-identical**, so the gate
+is a no-op exactly where it should be.
+
+**★ NEW — T51 🟠: `pfr_rec.td` and `pfr_rush.td` are 100 % NULL from 2024.** 518/518 populated
+through 2023, 0/523 in 2024 and 0/531 in 2025. This is the `ngs_air_yards` failure again, in a
+table T47 already flags as ingested-and-unread. **And the old gate can never fire on it**: the
+whole-table baseline recorded `td = 0.7448` — six full seasons averaged with two empty ones — so
+the degradation is already laundered into the norm. *A baseline recorded after a degradation
+launders it into the norm.*
+
+**★ Not every break is a vendor artefact.** `injuries.report_status` @2016 is the **NFL abolishing
+the "Probable" designation** after 2015 (2,702 rows → zero). The detector cannot tell a rule change
+from an encoding change and should not try: both are discontinuities a pooled rate must respect.
+Relevant to Phase 12's injury-designation event study, which pools across that boundary.
+
+**★ T49 falls out of the same probe, and is bigger than the ticket.** A column entirely NULL in
+2016–17 and populated from 2018 *is* a column whose floor is 2018 — so `BreakMap.floor` measures
+per-column floors instead of maintaining a second hand list. **19 columns disagree with their
+table's registered floor**, not two: participation coverage (2016→2018, confirming T49), plus
+`pfr_pass` ×5 (2018→2019/2024), `schedules` odds (1999→2006), `weekly_rosters` ×2, `depth_charts_all`
+×5, `injuries.season_type`.
+
+**★ Two calibration lessons the first draft got wrong, both about thresholds:**
+1. *`absent` must mean literally zero non-null rows*, not `>= 0.9999`. At the near-threshold
+   definition, pbp's rare-event columns (`forced_fumble_player_2_*`, `fumble_recovery_2_*`) flap
+   between absent and observed on a handful of rows a season and reported ~30 breaks that were an
+   artefact of the cutoff. **A floor is a categorical claim; measure it categorically.**
+2. *A floor transition needs materiality.* Without `MIN_PRESENCE`, `tackle_for_loss_2_player_id`
+   "appears" for going from 0 to 2 non-null rows in 400,000 — technically a transition, useless.
+3. Also: **views inherit their parent's breaks**, so probing `participation_player_play` alongside
+   `participation` reported every finding twice as though independent. Base tables only.
+
+**0.13.1 — the defensive regime table. 2026 HALF ONLY (32 rows); the historical regimes are NOT
+in the file yet and 0.13.8 can therefore fingerprint nobody.** New `situation/defense_coaches.py`
+**reuses four of the offensive module's functions verbatim** (`head_coach_scaffold`,
+`audit_against_pbp`, `move_graph_check`, `playcaller_regimes`/`new_regimes`) — they touch only
+`season`/`team`/`play_caller`/`in_house`/`head_coach`, which both schemas share, so the move-graph
+logic that found every error in the offensive table is maintained once.
+
+**★ The cross-reference earned its keep on the first pass, twice:**
+1. **TB** — the consolidated coaches list gives Tampa Bay's DC as "Danny Smith", a career **special
+   teams** coordinator. Verified: the Buccaneers hired **no DC at all** for 2026; Bowles keeps the
+   calls with Edwards (pass game) and Foote (run game) beneath him. A column misalignment, caught
+   only because two sources disagreed.
+2. **BAL** — Anthony Weaver holds the DC title and **Jesse Minter (HC) calls the plays**. This is
+   the offensive table's Monken case exactly: *the title is not the job.*
+
+**★ 7 of 32 head coaches call the defense themselves** (BAL, HOU, NYJ, SEA, TB, TEN, WAS) — more
+than double the offensive rate, and the reason `hc_calls_defense` is a column rather than an
+assumption. 11 transport events (`in_house=0`). Confidence 10 high / 22 med.
+
+**0.13.1 — COMPLETE (the header above is superseded).** The historical half landed:
+`reference/defense_coaches.csv` is **153 rows** — 121 historical (2014–2025) plus the 32
+user-signed-off 2026 rows, passed through verbatim — **33 play-callers, 52 regimes**, confidence
+**78 high / 74 med / 1 low**. The pbp head-coach audit compares the researcher's expectation
+against the scaffold on all 121 auditable rows: **0 mismatches**. 2026 coverage: **25 of 32**
+play-callers have prior history (median 4 seasons); **7 are first-time**, of whom 3 have no mentor
+either and are labelled rather than given an invented prior. Per the user's decision, the
+historical rows are **accepted at recorded confidence** rather than put through a correction loop;
+0.13.8 carries `confidence` through and reports regime coverage instead of hiding it.
+
+---
+
+## 0.13.4 — the offensive completion
+
+`situation/offense_scheme.py` + `steps/phase0_13_4_offense.py`. `offense_team_week` (5,522 rows,
+42 cols) and `offense_player_week` (102,368 rows) — formation, personnel, tempo, the **19-route**
+tree and usage *within* a personnel grouping.
+
+**★ The third two-encodings column, and the first one the break map cannot see.**
+`offense_personnel` is `1 RB, 1 TE, 3 WR` through 2022 and a full-22 `1 C, 2 G, 1 QB, 1 RB, 2 T,
+1 TE, 3 WR` from 2023, exactly like `defense_personnel`. Its naive fill climbs **0.7586 → 1.0000**
+at the same 2023 seam that T50 is about — and **0.13.0's map reports no break on it**, for two
+independent reasons:
+
+1. `probeable_columns` skips anything above `MAX_CARDINALITY` (64); this column has **1,468**
+   distinct strings from 2023 against 106 before.
+2. The conservation test could not have fired anyway. A re-encoding that lands on **one** sentinel
+   conserves mass (`Δnull ≈ −Δvalue`); this one **spreads across hundreds** of new special-teams
+   personnel strings, so there is no single value whose share explodes.
+
+> **★ A detector that keys on a single value is blind to a re-encoding that arrives as a
+> population.** The instrument built for the 2023 seam misses the 2023 seam on the column this
+> substep is built from.
+
+The measurement that closes it is B2's shape with a different denominator: conditioned on
+**scrimmage plays**, `offense_personnel` fill is **1.0000 in every season** (naive break 0.2414 →
+gated break **0.0001**). The whole jump is non-scrimmage plays gaining strings in 2023. So
+`play_type in ('pass','run')` — which every builder in this session already shared — is a
+**provable** no-op on the rates rather than an assumption.
+
+**★ B4 PASSES, after both halves of it turned out to be measuring the wrong thing.**
+
+- **B4a** first divided the offensive resolve count by the plays claiming 11-*and*-11, a numerator
+  counted over a wider set than its denominator. It reported a "resolve rate" of **1.016** — *a
+  rate whose numerator is not a subset of its denominator is not a rate*, and a bar that can exceed
+  1.0 cannot fail. With each side against its own denominator: **1.000000 exactly**, both sides,
+  443,596 and 442,557 plays.
+- **B4b** compared each exploded table against **11 × plays** and failed at ratio 1.0054. The
+  expected side was wrong, not the table: the vendor lists **twelve** men on 2,739 scrimmage plays
+  and **ten** on 2,171. *Eleven-a-side is football's rule, not the file's.* Against the lists the
+  vendor actually emitted, offense is **1.0000** and defense **0.999–1.0** (the deduped
+  double-listings 0.13.2 found), with 4,923 / 4,345 off-eleven plays counted rather than filtered.
+
+**★ Two corrections to the spec, both in the direction of less.**
+
+- **Slot / wide / inline alignment does not exist free and is NOT derived.** The spec asked for it
+  "from `offense_positions`" — but that column carries the **listed roster position**, the exact
+  fact 0.13.2 learned when a two-way player read as an offensive one. Roster position says a man is
+  a WR, never that he lined up in the slot. This is **0.13.3 tier 3 in the offensive register**:
+  PFF-paid, registered as a floor, do not chase. The honest free substitutes are NGS
+  `avg_cushion`/`avg_separation` and the personnel context the module does derive.
+- **The route tree is 19 values, not the spec's 14.** Enumerated in `ROUTES` rather than counted,
+  so a vendor adding a 20th surfaces as an unlisted string instead of joining an "other" bucket.
+  The route is attributed to the **targeted receiver only** — the vendor gives one route per play,
+  and spreading it over the other four eligibles would invent four routes nobody charted.
+
+95 personnel strings parse to no package. All 95 are **kick units** (K/LS/P among the eleven),
+which the parser refuses a package label on purpose — 999 plays, of which only **13 are scrimmage**
+(fakes). Reported as plays split by population, not as a bare string count.
+
+---
+
+## 0.13.5 — team construction
+
+`situation/construction.py` + `data/teams.py` + `steps/phase0_13_5_construction.py`.
+`team_construction_season` (416 rows, 32 teams, 2014–2026, 59 cols) and `contract_season`.
+
+**★★ `contracts.team` is not a team code, and using it would have produced a per-team cap sheet
+that is wrong in a way that looks right.** It is an OTC **nickname** ("Ravens", "49ers") for 50,134
+rows and a **career-path string** ("ARI/ATL/NYJ") for the other 1,659 — 90 distinct values out of a
+32-team league. The architecture that works instead: **the roster names the team, the contract
+names the money.** Team membership comes from `weekly_rosters` (real codes, per season, per week)
+and the contract joins to the **player**. **88–97 % of rostered players resolve to a contract in
+force**, per season, and that rate ships as a column rather than a footnote.
+
+**★★ The store speaks FOUR franchise vocabularies, and "we normalized the team codes" was true of
+two of them.** Each was found the same way — a join came up short and the shortfall had a pattern:
+
+| vocabulary | example | where |
+|---|---|---|
+| pbp / participation (the 32 modern codes) | `LA`, `LV`, `JAX` | `pbp`, everything derived from it |
+| nflverse alternates | `ARZ`, `BLT`, `CLV`, `HST`, `SL` | `weekly_rosters`, `snaps` |
+| **PFR codes** | `GNB`, `KAN`, `LVR`, `NOR`, `NWE`, `SDG`, `SFO`, `TAM` | `draft_picks` |
+| **OTC nicknames** | `Ravens`, `49ers` | `contracts` |
+
+New `data/teams.py` is the pbp-side canon. `nickname_map` **derives** the 32 nicknames from
+`teams_meta` rather than hand-listing them (the 16.5 rule: the test is not "is this hard to look
+up" but "does a feed we already have contain it"), and raises if a nickname ever resolves to two
+franchises after canonization.
+
+> **★ And there are TWO legitimate canons, disagreeing on one team.** `adp/panel._TEAM_ALIAS` is
+> the ADP-side canon and collapses `LA`/`STL` → **`LAR`**, because the fantasy boards write LAR.
+> `pbp` writes **`LA`** in every season. Applying the ADP canon to a pbp-keyed table renames the
+> Rams and the join silently drops that franchise — 32 teams in, 31 out, no error, because a
+> missing team is just an absent row. `assert_canons_disagree_only_on_la` pins it so a future edit
+> to either is loud. **`fingerprint.assert_regime_coverage`'s own docstring already records this
+> failure** ("Sean McVay's entire nine-season Rams tenure went missing on the first run") — the
+> repo had met it before, which is why the fix is a named canon and not another local patch.
+
+**★ `weekly_rosters.position` is TWO vocabularies, seam at 2016** — fine-grained (CB/FS/SS/DE/DT/
+NT/ILB/MLB/OLB/C/G/T/FB) through 2015, already-grouped (DB/DL/LB/OL) after. Unmapped, the
+fine-grained positions fell into **no** group and vanished, which is how **64 team-seasons** came
+to have position shares that did not sum to 1. **The break map does not flag this one either** —
+at 27 distinct values it is *under* the cardinality ceiling, but the change is a **vocabulary swap
+among observed values**, so the conservation test has nothing to conserve.
+
+> **★★ Two of this session's three encoding seams are invisible to the detector built for encoding
+> seams** — one over the cardinality ceiling, one under the conservation test. 0.13.0 is not wrong;
+> its stated failure mode is null→sentinel, and these are re-encodings of a different shape. But
+> "we have a break detector" is not "we would notice a break." → **T52.**
+
+**B7, all three parts.**
+
+- **B7b — draft capital sums back to the pick list at ratio 1.0000 exactly**, and only after the
+  PFR codes were mapped: before, 7 franchises' picks failed to join and the identity read 0.8105.
+  Every one of 3,077 picks maps to a curve row; max pick 262.
+- **B7a took two corrections.** It first measured the **season-cumulative** roster (~102 bodies by
+  churn), which has no reason to be 53 — the limit is a **weekly** fact. Then, weekly, it read ~80,
+  because `weekly_rosters` carries practice squad (DEV), reserve (RES), cut (CUT) and inactive
+  (INA) alongside ACT. `status='ACT'` per week gives **44–57**, season means 47.0–55.1. **2016 is
+  an upstream roster-convention transition** (a team-week reaches 94) and 2015 dips to 36 —
+  recorded as a floor, not smoothed.
+- **B7c — the cap, honestly.** Accounted APY sums to **1.2324** of the cap on average, not 1.0,
+  because APY is not a cap hit and a traded player is on two rosters. So `cap_pct_*` is *accounted
+  APY as a share of cap* and **`cap_share_*` — normalized within accounted money — is the column a
+  deep dive should read**: it answers "how much of its money does this team put in the receiver
+  room", which survives the coverage gap where "what fraction of the cap" does not. Shares are a
+  valid distribution on all 416 rows (0 not summing, 0 impossible).
+
+`contracts` has **4,794 duplicated groups / 6,384 excess rows / worst group 9**, deduplicated
+before anything aggregates. Continuity (snap-weighted, from `snaps`, all three phases) averages
+**0.67** returning.
+
+---
+
+## 0.13.6 — special teams and the kicking environment
+
+`situation/special_teams.py`. `st_team_season` (384 rows, 96 head coaches) and `kicking_env_week`
+(6,590 rows). **No ST-coordinator table**, per the user's scoping decision: 4th-down and 2-point
+aggression are head-coach decisions and `pbp` carries the head coach exactly and PIT, so a third
+curated CSV would spend human verification on a variable already attributable.
+
+**★ The attribution cross-check is the bar with content, and it passes at 0.** This module derives
+the head coach from `pbp` independently of `reference/coaches.csv`, which 0.13.1 audited against
+the same source. **0 mismatches over every shared team-season.** Two independent derivations
+agreeing is worth more than either asserting.
+
+**★ The denominator trap here is behavioural, not a vendor encoding.** Unconditional 4th-down
+go-rate is **0.1696**; conditioned on the situation that offered the choice (4th and ≤5, opponent's
+30 to own 30, inside two scores) it is **0.2957** — **1.74×**. The naive number is dominated by
+4th-and-12 from your own 20, where nobody goes, so it measures how often a team faced a hopeless
+down rather than how aggressive its coach is. Same shape as B2, different mechanism.
+
+**★ A negative result worth recording: dome weather is NULL, not zero-filled.** Checked rather
+than assumed, because this is exactly where T50 would bite: 1,838 dome team-weeks, **0
+zero-filled temps, 0 zero-filled winds, 1,836 nulls**. Zero degrees and zero wind would have read
+as the coldest, stillest venues in the league. The 2 populated rows are one 2025 game where the
+vendor logged outdoor conditions under a closed roof.
+
+⚠ A reporting defect this caught in itself: the first readout printed a dome mean temp of **46.0
+°F**, which was the mean of **two rows**. Every mean in the artifact now ships with the count it
+was taken over — *a mean without its n is a number without a claim*, which is a fill rate without
+its denominator one level down.
+
+---
+
+## 0.13.7 — the unified scheme panel
+
+`situation/scheme_panel.py`. `team_scheme_week` (5,522 × 190 registered columns) and
+`team_scheme_season`, each with a `_z` twin z-scored **within season**, plus `team_scheme_columns`
+— the per-column register T49 asked for.
+
+**★ Rates are ratios of sums, never means of weekly ratios.** A season blitz rate is total blitzes
+over total dropbacks; the mean of seventeen weekly rates differs whenever the weekly denominators
+differ, which they always do. Where a stored rate has a stored denominator the pair is
+re-multiplied before dividing; where it does not, the aggregate is snap-weighted and named so. FTN
+columns weight on **FTN-charted** snaps, not all snaps — weighting a 2022+ column by a 2016+
+denominator dilutes it with never-charted plays.
+
+**★★ The distinction the floor bar forced, and it is the constructive half of T50: does this column
+measure football, or does it measure our coverage of football?**
+
+- A column that measures **football** (`man_share`, `share_cover_3`) must be **NULL** below its
+  floor. A team that was never charted did not play zero man coverage.
+- A column that measures **coverage** (`charted_share`, every `*_denom`) is honestly **0**. "None
+  of this team's snaps were charted in 2016" is true, and it is the only column that *explains* the
+  nulls beside it.
+
+Conflating them made the bar fire on four columns doing exactly the right thing. Verified in the
+data: `man_share` and `share_cover_3` are NULL in 2016–17 and populated from 2018; `man_zone_denom`
+is 0. **0 floor violations, 0 dead columns**, 39 columns carrying a declared floor.
+
+**★ A NULL z is never filled with 0.** A z of 0.0 means *exactly league average*; filling an absent
+measurement with it would put every 2017 team at the league mean for man coverage — the single most
+misleading thing this panel could do. `z_before_floor = 0`, and the z-scores are z-scores
+(mean 0.0000, sd 1.0000, n=32 per season). Side symmetry is exact: **0 offense-only, 0
+defense-only** over 5,522 team-weeks.
+
+---
+
+## 0.13.8 — the fingerprint, extended to defense (T48 closes)
+
+`situation/defense_fingerprint.py`. **26 defensive play-callers over 116 regime-seasons**, 21
+metrics; plus a **widened offensive** vector (18 metrics, 42 play-callers, 162 regime-seasons) —
+`fingerprint.METRICS`' original 14 read `pbp` + `weekly` only and are left exactly as they were.
+
+**The machinery is reused, not reimplemented.** `eb_weights`, `fingerprints` and
+`assert_fingerprints_sane` gained one optional `metrics` argument defaulting to the offensive
+vector, so every pre-existing caller is byte-identical and the defensive side passes its own
+vector to the *same* method-of-moments shrinkage.
+
+**★★ The LAR/LA canon bug, met a second time by the person who had just read about it.** The first
+run dropped **six LAR defensive regime-seasons (2020–2025)** and nine offensive ones, because both
+coaches CSVs are LAR-keyed and the panel is LA-keyed. Fixing the join recovered them: defense went
+24 → **26** play-callers and 110 → **116** regime-seasons; offense 41 → **42** and 153 → **162**.
+
+> **★★ And it passed the guard — which is the more useful half.** The drop carried the reason
+> *"no panel row for this team-season"*, which satisfied "a drop must have a stated reason" while
+> being **true of every possible drop**. It distinguishes a floor from a join failure not at all.
+> **A reason that is always available is not a reason.** The guard now checks that a drop is
+> *below the panel's floor* — something that can be false. All 5 remaining drops are 2014–2015,
+> genuinely below the 2016 panel floor.
+
+**★ Face validity, unprompted and checkable against football:** Todd Bowles **blitz_rate +1.14**
+over 7 TB seasons (the league's signature blitz-heavy coordinator); Vance Joseph **+1.05**;
+Steve Spagnuolo **+0.46 blitz / +0.59 man** over 9 KC/NYG seasons; Dan Quinn **man_share +0.77**.
+
+**★ The shrinkage is doing exactly what the floors imply.** `man_share` — a 2018-floor column with
+the fewest seasons behind it — has the largest `k` (2.25) and keeps only **28 %** weight at one
+season; `blitz_rate` (k=0.73, 2016 floor) keeps **58 %**. A one-season coordinator sits near the
+league mean *because* his coverage history is short, which is the correct behaviour and not a bug.
+
+**Descriptive only, as a guard.** `assert_not_wired_into_the_optimizer` AST-parses
+`draft/optimizer.py`, `valuation/value_board.py` and `valuation/cost_report.py` and fails if any
+imports this module. A future session that wants the wiring deletes the assertion deliberately.
+
+---
+
+## 0.13.9 — floors, PIT classes, register, backup
+
+Registry **45 → 63 tables** (16 DATA-2 tables + the 2 exploded views, which were the `n_undeclared`
+the inventory bar caught). `reference/DATA-SOURCES.md` regenerated (232 lines).
+
+**T49 lands as a mechanism, not a note:** `registry.COLUMN_FLOORS` + `column_floor` +
+`assert_column_floor`, and the error names the column *and* how it differs from its table —
+`participation.defense_man_zone_type has no data before 2018; requested 2016 (the TABLE's floor is
+2016 — this is a per-COLUMN floor, T49)`. The **declared** floors are checked against the
+**measured** ones from the break map, because a declaration nothing checks is a note.
+
+- **B5 PASS — all six deep-dive questions return answers**, each from one query, each checkable:
+  Saquon Barkley **439 carries / 59.1 %** of PHI's 2024 backfield; Ja'Marr Chase **114 targets in
+  11 personnel / 28 % share**; PHI 2024 defense **82.8 % nickel, 42.8 % Cover-1**; LV **49.4 %** of
+  accounted money on defense. *A source is not ingested until the question that motivated it
+  returns an answer.*
+- **B6 PASS** — per-column floors raise and name the column; declared == measured on all 9.
+- **B8 PASS** — every DATA-2 table declares a PIT class, and the guard is **written to fail and
+  verified failing**: an unlagged draft-feature use of `team_scheme_season` raises.
+- **B0 PASS** — 27 baseline tables unchanged (25 bit-identical, 2 carrying DATA-1's named DOUBLE→INT
+  allowances), **0 unclassified changes**, 33 new.
+
+**954 tests (was 843), ruff clean.** Backup run and checksum-verified.
+
+---
+
+## ★ The session in one line
+
+**DATA-1 banked the plays and left them unattributable; DATA-2 attributed them — and found that
+the three worst hazards were in the instruments, not the data.** The break map is blind to two of
+this session's three encoding seams (one over its cardinality ceiling, one under its conservation
+test); a drop-reason guard passed while a franchise silently vanished from a join; and four
+separate bars of my own were measuring something other than what they claimed — a rate whose
+numerator was not a subset of its denominator, an expected value taken from football's rules
+rather than the file's, a 53-man check against a season-cumulative roster, and a mean over two
+rows printed as a climate. **Every one was caught by making the bar able to fail.**
+
+---
+
+## SESSION MM-1a — the belief board becomes a seat (2026-08-05)
+
+**Goal:** 16.18e — turn the filled `reference/mm1_belief_board_2026_20260802.xlsx` into a loadable
+`ManagerProfile` and put a `fitted_manager` seat in the room. **Beliefs only**; the policy half
+(16.18a–c) waits on an elicitation session the user has asked for as a **Streamlit page**.
+
+**Shipped:** `src/fantasy_quant/draft/manager_profile.py` · `steps/mm1_profile.py` ·
+`reference/manager_profiles/mm1_2026.json` · `analysis/mm1_profile.json` ·
+`tests/test_manager_profile.py` (20). `draft/personalities.py` gains `Personality.manager_profile` /
+`requires_profile`, the `fitted_manager` seat, `assert_room_profiles`, and one `balanced` seat in
+`REALISTIC_ROOM` steps aside for it (user decision).
+
+### ★★ The finding that decides how much to trust the seat: his beliefs are orthogonal to ours
+
+`corr(his Value Score, our Model vs ADP) = 0.135`, **Spearman +0.008** over 149 rated players. The
+personal board is **genuinely new information**, not a restatement of the value board with a human
+voice on top. The corollary is the honest one and it is the spec's own: *this makes the seat a
+faithful replica, not a better drafter.* A channel uncorrelated with our model cannot be expected to
+improve our model's answers, and nothing here claims it does.
+
+### ★ He is RB-averse, and it is not a depth artifact
+
+Regressing his signed value score on position + `log(depth)` (n=150, base = RB):
+**QB +0.64** (t 2.80) · **TE +0.59** (t 2.24) · **WR +0.45** (t 2.76) · depth **+0.13/sd** (t 1.86).
+The naive read — "he just likes deep players, and RBs are shallow" — is **wrong**: the positional
+lean survives the control and depth alone does not clear its own noise.
+
+⚠ **It is deliberately NOT expressed structurally** (user decision). The lean was *estimated from*
+the per-player deltas, so putting it back as a positional dummy would price the same opinion twice.
+Cost, stated: the seat expresses opinions only about the ~150 players actually rated, so it reverts
+toward `balanced` as the live board drifts off the workbook. Regenerating the workbook is the fix.
+
+### ★★ The scale is unresolved and shipped conservative — three statistics, three winners
+
+The workbook records **direction and confidence** and no magnitude (`Personal ADP` is empty for all
+150 rows), so picks-per-unit had to be calibrated. Against his **45 real Sleeper mock picks**
+(2026-07-11, three weeks *before* the workbook — genuinely held out):
+
+| scale | mean rank | median | top-1 |
+|---|---|---|---|
+| 0 (consensus null, avoids still on) | 8.78 | 4.5 | 0.200 |
+| **3 (shipped)** | 8.18 | 3.5 | **0.275** |
+| 6 | 7.60 | **3.0** | 0.250 |
+| 10 (argmin) | **7.55** | 4.0 | 0.200 |
+| 12 | 7.98 | 4.0 | 0.200 |
+
+`mean_rank` falls to 10, `median_rank` peaks at 5–6, `top1` peaks at 3–4. **Three statistics, three
+winners, on n=40 scored picks** — so the sweep is reported `sweep_resolved: false` and the shipped
+scale is the *smallest* within one paired-bootstrap se of the argmin. VH.3's rule applied verbatim:
+*if it is unresolved at achievable n, say so and keep the conservative default rather than reading
+an argmax off noise.* The conservative pick happens to also be the best on top-1.
+
+**What IS resolved: the direction.** Paired bootstrap of the shipped scale against the consensus
+null over the same 40 choices — **−0.60 ranks, se 0.21, CI [−1.03, −0.20], clear of zero.** And the
+procedure evaluated leave-one-**draft**-out (choose the scale on two drafts, score the third) gives
+**OOF mean rank 7.79 vs 8.78 null, top-1 0.229 vs 0.200.** ⚠ The fold is a draft, not a pick — picks
+inside one draft share a board, a seat and a running roster, and splitting on picks would leave most
+of a draft's information in the training set (16.8's sibling-derived-feature failure, on a CV split).
+
+**The unprompted corroboration, computed before any fit:** his 38 board-matched real picks average
+Value Score **+0.92** against a board mean of **+0.25**. He drafts what he says is underpriced —
+Egbuka R5 twice, Kraft R7 twice, Jadarian Price in all three drafts, Corum R9, LA Rams DEF R14
+twice, QBs at R6/R6/R8. Every one of those is written in his notes.
+
+### ★ Three places the stated rules and the realized picks disagree — reported, not patched (B5)
+
+1. **"Blank note = I would not draft him"** collides with exactly one pick: **Jayden Reed R12**
+   (blank note, dropdown *Undervalued*, and a Packer — all three stated rules at once).
+2. **The Packers rule** ("I wouldn't draft any Packers") is contradicted by **Tucker Kraft R7 in two
+   of three drafts** and by Reed. Resolved by the user as *a hard rule with Kraft as the one named
+   exception*, which the profile now encodes and a test pins.
+3. **Two picks against a stated fade** — Ashton Jeanty R3 and Justin Herbert R8, both marked
+   *Overvalued*. A fade is a tilt, not an avoid, so the seat can still take them; it is faithful.
+
+### ★ "Blank = never draft" had to be scoped to the rows he SAW
+
+Applied to the whole draftable universe it forbids **Cameron Dicker, whom he took in all three
+mocks** — a kicker was never on the top-150 sheet, so he never declined one. `unrated: "neutral"` is
+the rule: *a player who was never listed was never declined.* 35 avoids (29 `no_interest`,
+6 `team_rule`) out of 150 rated rows; 78 non-zero beliefs; mean |delta| 3.96 picks, max 9.0.
+
+### ★ The seat is not inert — and that is asserted, not hoped
+
+This repo has shipped five mechanisms that ran, passed a green suite and did nothing. Against the
+live 2026 board with a `balanced` in the same chair on the same seed: **the roster differs from
+round 3 on** — R3 Chris Olave over Jeremiyah Love (his single biggest fade, "ridiculously
+overvalued"), R5 Egbuka, R6 David Montgomery, R10 Tucker Kraft. The control takes Dallas Goedert,
+Rachaad White and **Jordan Love**; the fitted seat declines all three, and the only Packer it drafts
+is Kraft. **60 of 150 picks change across the whole draft** — one changed seat cascades, T33's
+chaotic-amplification finding again, which is exactly why B7 is owed.
+
+### Method notes worth keeping
+
+- **A synthetic fixture caught a real defect the live board could not.** `name_key` stripped every
+  non-letter, so any two names differing only by a digit collided. No real board would have shown
+  it; a fixture of `Player 1 … Player 40` did, on its first run. Digits are kept now, and
+  `build_profile` raises on a collision rather than letting one belief overwrite another.
+- **An avoided player's belief is deleted, not merely unused.** A positive delta on a player the
+  seat will never consider reads, to anyone inspecting the file, as an opinion the model holds and
+  does not act on. 8 beliefs were dropped this way and the count is recorded.
+- **`policy_source` is validated.** A profile carrying policy coefficients while claiming
+  `policy_source='corpus'` raises — an unfitted seat must never be reportable as a fitted one.
+
+### ★★ The defect that mattered most was invisible to every bar written to catch it
+
+`REALISTIC_ROOM` moved, so the realism sheet had to be re-measured. Both arms ran. Then a question
+that no bar asks — *what season is this profile about?* — turned up a **point-in-time violation**:
+
+> The profile describes **2026**. Every measurement harness in this repo sweeps **2017–2024**. The
+> workbook was filled in **August 2026** by someone who watched those seasons happen.
+
+So the batch run was feeding the future into a historical measurement — `CLAUDE.md` §3.1's
+non-negotiable, and it arrived through *room composition*, a place nobody thinks of as a data path.
+
+**★ Why it hid: the leak is graded.** A profile keyed on player identity fires on whoever is still
+on the board, so the 2026 board rated **6** rows in 2017, 21 in 2020, **55 in 2024** and 78 in 2026.
+A seat that is nearly `balanced` in the early seasons and increasingly itself toward the present
+does not look broken in any single season's output — *it looks like a seat with a mild opinion.*
+
+**★★ And its measured effect is smaller than any bar in the harness can resolve.** The un-gated arm
+against the pre-16.18 room, 40 seeds × 8 seasons, `--shuffle-room`:
+
+| bar | pre-16.18 | un-gated 16.18 |
+|---|---|---|
+| 1 profile distance · round-1 | 0.0894 · 2.640 | 0.0887 · 2.657 |
+| 2 elite p95 · past-10 | 16.0 · 25.24 % | 16.0 · 25.16 % |
+| 5 dispersion level error | −11.39 % | −11.24 % |
+| landing, top band past pick 4 | 15.31 % | 15.16 % |
+
+**All five T15 gates PASS on both arms.** A session that had only read its own pre-registered bars
+would have shipped the violation and reported "no movement". *The size of a defect is not the
+argument for fixing it* — and a bar that cannot see a defect is not evidence the defect is absent.
+
+**The fix is structural, and it dissolves the ticket it was opened under.**
+`ManagerProfile.covers(season)` + `make_room(..., season=)` degrade a `requires_profile` seat to
+`balanced` on a season its profile does not describe. It **degrades rather than raises** on purpose:
+a historical measurement legitimately wants the room *minus* the seat, and `balanced` is precisely
+the chair 16.18 took — so an uncovered season reproduces the pre-16.18 room **bit-for-bit**. That
+makes bar **B7** hold by *construction* instead of by measurement, keeps every committed historical
+sheet a valid reference, and leaves the seat where it belongs: on the one board its subject rated.
+
+**Proven, not asserted** — `steps/mm1_b7_room_gate.py` → `analysis/mm1_b7_room_gate.json` runs the
+gated default room against an explicitly pre-16.18 room (2017+2018 × 6 seeds, `--shuffle-room`) and
+requires every result leaf to agree. ⚠ The control **can** fail, which is what makes a zero
+informative: if the gate ever stopped firing, the first arm would seat the manager on a historical
+board and the two arms would separate. → **T54 ☑.**

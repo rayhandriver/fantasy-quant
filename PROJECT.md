@@ -123,6 +123,42 @@ Sequencing notes at the end of §5. **Full per-step detail (Goal · Do · Out ·
     play per team-week — each return an answer from one query; the register lists every source with its
     seasons, fill rates, **upstream floor**, PIT class and consumers; and every pre-existing table is
     byte-identical. *A source is not ingested until the question that motivated it returns an answer.*
+
+- **0.13 THE DEFENSIVE & TEAM-CONSTRUCTION RECONCILIATION** ☑ **RUN 2026-08-03 — 0.13.0–0.13.9, all 10
+  bars PASS; T48/T49/T50 ☑, T52/T53 opened; 954 tests** *(Session DATA-2; full spec `docs/BUILD_PLAN.md` §"Session DATA-2"; register
+  **T48** · **T49** · **T50**)*. Fill **every** gap the 0.12 inventory surfaced — *"especially
+  defensively"* — so a team-by-team deep dive has a complete, attributable, provenance-flagged panel to
+  read. **★ DATA-1 banked the plays and left them unattributable; this is the attribution half.**
+  - **The binding constraint (T48):** there is **no defensive play-caller regime table**. `coaches.csv` is
+    offense-only (204 rows, 48 play-callers, zero defensive attribution), so `situation/fingerprint.py`'s
+    z-scoring / EB-shrinkage-by-regime-length / PARTIAL-pinning apparatus **has no defensive counterpart**
+    and every defensive scheme fact in the store is person-anonymous. ⚠ No free source — research + a user
+    sign-off gate, the same artefact class as `coaches.csv`.
+  - **The deliberate omission:** `build_participation_player_week` filters `side='offense'` and says why in
+    its own docstring. Right for DATA-1; exactly what blocks DST now.
+  - **The third T45:** team construction is four zero-reader tables — `contracts` (51,793) ·
+    `weekly_rosters` (533,275) · `depth_charts_all` (955,989) · `draft_picks` (3,077).
+  - **★★ The hazard (T50, 🔴):** from 2023 the participation vendor stopped emitting NULLs and started
+    emitting **sentinels** (`was_pressure` 2022 = 31,207 null vs 2024 = **14**; `number_of_pass_rushers`
+    72 zeros → **23,754**), so fill rates read **0.38 → 1.00** while meaning inverts — and `fill_rate_gate`
+    cannot see it: it counts *nonnull*, it fails only on **drops**, and it is **whole-table, not
+    per-season**. Plus **T49** — floors are registered per table and are a property of the **column**:
+    man/zone's true floor is **2018**, not participation's 2016 ⇒ **five** DEV seasons, not seven.
+  - 0.13.0 ☑ the break map `data/breaks.py` + a two-sided per-season fill gate *(FIRST — every rate downstream is wrong without it)*
+  - 0.13.1 ☑ `reference/defense_coaches.csv` + `defense_lineage.csv` *(hand-curated; **user sign-off gate**; the long pole)*
+  - 0.13.2 ☑ `defense_player_week` / `defense_team_week` *(fronts, blitz rate, man/zone, pressure)*
+  - 0.13.3 ☑ coverage shells + the secondary *(charted shell ~49 % 2018+ · derived safety-count **proxy** · alignment depth **does not exist free**)*
+  - 0.13.4 ☑ the offensive completion *(formation · personnel · tempo · FTN motion/PA/RPO/screen `backtestable:false` · the **19**-route tree; ⚠ **slot/wide/inline alignment does NOT exist free** — `offense_positions` is the listed roster position, not where a man lined up → registered as a floor)*
+  - 0.13.5 ☑ `team_construction_season` *(cap by position group, draft capital, age, **continuity**; the roster names the team and the contract names the money — `contracts.team` is an OTC nickname/career-path, never a team code. **Four** franchise vocabularies reconciled in `data/teams.py`)*
+  - 0.13.6 ☑ ST + the K environment *(aggression attributed to the **head coach**, conditioned on the opportunity — naive go-rate 0.170 vs conditioned 0.296; **0 attribution mismatches** vs `coaches.csv`; dome weather verified NULL, not zero-filled)*
+  - 0.13.7 ☑ the unified `team_scheme_season` / `team_scheme_week` panel *(**190 registered columns**, z-scored within season, ratios-of-sums never means-of-ratios; a NULL z is never filled with 0)*
+  - 0.13.8 ☑ extend `fingerprint.py` to defense *(**26 defensive play-callers / 116 regime-seasons** on the same EB machinery, plus a widened offensive vector; **descriptive only — asserted**, not merely stated)*
+  - 0.13.9 ☑ per-column floors (`registry.COLUMN_FLOORS`, declared **checked against measured**) · PIT classes · register refresh (45 → 63 tables) · backup
+  - **Done when** the deep-dive questions each return an answer from one query — most-played front and
+    coverage per team-season · blitz % per team-week · single-high vs two-high share · cap allocation by
+    position group · backfield carry split · target share **within** personnel grouping — the break map
+    finds the 2023 discontinuity **unprompted**, and the naive-vs-gated blitz rates are reported as a
+    **stated difference**. *Prove the trap is real first, then prove the gate closes it.*
   - ⚠ **Ingest all seasons, analyse DEV only** — loading 2023/24 does not spend the lockbox; building a
     feature on it does. The wall stays at the modelling step. **No feature is built in this phase.**
 

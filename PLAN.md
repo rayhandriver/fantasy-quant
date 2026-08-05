@@ -3226,3 +3226,245 @@ No feature built (M-1 owes NGS **and** now `pfr_*`). No consensus re-pull. `nflv
 **M-1 now owes two wirings** (T45 NGS + T47 `pfr_*`), same session and same bars. The mining
 program M-0…M-6 is unblocked but still unscoped. VH's two open decisions and MM-1/MM-2 remain
 independent. **User reviews + commits.**
+
+---
+
+## 2026-08-03 (session 2) — the scheme inventory → SESSION DATA-2 SCOPED (docs-only, no code, nothing ran)
+
+The user asked, before anything else, for **a list of every data point pertaining to scheme, per
+position** — then, on reading it, for a session that fills **all** the gaps it surfaced: *"especially
+defensively … as much data as possible about each and every defensive scheme, defensive playcaller, team
+construction, safety coverage … deep dive into every single team's entire data construction — what
+offensive/defensive schemes they play the most, which sets they use, target shares, backfield splits,
+blitz percentages, literally everything."* That session is **DATA-2 = Phase 0.13**. The team-by-team deep
+dives come after it.
+
+### The inventory, and what it found
+
+Eleven tables carry scheme signal and **nine of them have zero consumers** — DATA-1's own register says
+so. The per-position enumeration is in `docs/BUILD_PLAN.md` §"Session DATA-2"; what matters here is the
+three gaps it exposed and the one instrument defect.
+
+> **★★ DATA-1 banked the plays and left them UNATTRIBUTABLE.** Every question in the ask that starts with
+> the word *defensive* is currently team-anonymous and person-anonymous.
+
+1. **T48 — no defensive play-caller regime table.** `reference/coaches.csv` is offense-only by
+   construction: `season, team, head_coach, offensive_coordinator, play_caller, hc_calls_plays, in_house,
+   confidence, notes`. 204 rows, 32 teams, 2014–2026, **48 distinct play-callers, zero defensive
+   attribution.** So `situation/fingerprint.py` — within-season z-scoring, EB shrinkage by regime length,
+   PARTIAL-season week-pinning, all keyed to `coaches.fingerprint_source` — **has no defensive
+   counterpart to run on.** ⚠ No free source; `coaches.csv`'s own header says it of itself.
+2. **The defensive half of participation was deliberately never materialized.**
+   `build_participation_player_week` filters `where v.side = 'offense'`, and its docstring says why:
+   *"the defensive record is available through the view, but the fantasy questions are all offensive and
+   materializing both doubles the table for nothing."* Right for DATA-1; **exactly what blocks DST now.**
+3. **Team construction is four zero-reader tables** — `contracts` (51,793), `weekly_rosters` (533,275),
+   `depth_charts_all` (955,989), `draft_picks` (3,077). T45/T47's pattern for a third and fourth time.
+
+### ★★ The finding — the vendor stopped emitting nulls, and the gate only knows how to see nulls
+
+Verified by reading the parquets, not inferred:
+
+| season | `was_pressure` | `number_of_pass_rushers` |
+|---|---|---|
+| **2022** | 31,207 **null** · 13,425 False · 5,518 True | 72 zeros |
+| **2024** | **14 null** · 38,838 False · 7,067 True | **23,754 zeros** |
+
+Non-pass plays used to be `NULL`; from 2023 they are `False` and `0`. Unconditional fill climbs
+**0.38 → 1.00** while the column's meaning inverts. Three independent reasons `validate.fill_rate_gate`
+cannot see it, each sufficient alone: `store_fill_rates` measures the **nonnull** share, so a sentinel
+counts as filled; the gate fails only on **drops** (`was - rate > tol`) and this is a **rise**; and it is
+**whole-table, not per-season**, so a mid-history break averages away regardless.
+
+> **The gate written to catch `ngs_air_yards` silently going to zero is blind to the exact opposite
+> failure — and the opposite failure is the one actually present in the data the mining program exists to
+> mine.** A blitz rate computed naively across 2022→2023 reads as a league-wide scheme revolution that is
+> entirely an encoding change. → **T50 (🔴).**
+
+**This is T45 one level up, for the fourth time in this family.** T45: nothing recorded a table's
+consumers. T46: nothing recorded that the wrapper was not the data. T47: the same as T45, twice more.
+T50: nothing records a column's **encoding**, so a re-encoding and a real trend are indistinguishable
+from outside. The shape is constant — *an instrument that measures the thing it can see rather than the
+thing it is for.*
+
+⚠ **Not a defect in `participation.fill_rates()`**, which does state conditional rates against the right
+denominator; DATA-1's B5 was met. The defect is in the **standing gate**, which is what runs on every
+future ingest.
+
+### The second correction — floors are per COLUMN, not per table
+
+`reference/DATA-SOURCES.md` lists participation's floor as **2016**. Correct for personnel, box counts
+and formation; **wrong for coverage**: `defense_man_zone_type` and `defense_coverage_type` are **0.000 in
+2016 and 2017**, ~0.38 for 2018–2022, ~0.49 for 2023–2025. True floor **2018** ⇒ with `DEV_SEASONS` =
+2014–2022, **five** development seasons of man/zone, not seven. A floor recorded one level too coarse is
+worse than no floor: it is confidently wrong at the grain a query is actually written at. → **T49.**
+
+### A correction I made to my own reporting, mid-session
+
+My first fill-rate pass reported `route` and `defense_man_zone_type` at 1.00 for 2023+. Wrong — those
+columns are pyarrow-string typed, so `dtype == object` was False and empty strings were never counted as
+missing. Corrected: `route` is ~0.37–0.42 throughout, `defense_man_zone_type` ~0.49 in 2023+. *A
+missingness check that only knows about NULL is the same defect as T50, committed by the person opening
+T50, one hour earlier.*
+
+### The three tiers of "safety coverage", which the session must not blur
+
+The user asked for it by name and it does not resolve to one thing:
+1. **Charted shell** — `defense_coverage_type` (COVER_0/1/2/3/4/6/9, 2_MAN, COMBO): ~49 %, **2018+**.
+2. **Derived safety count** — FS/SS on the field from `defense_players` + `defense_positions` → a
+   single-high vs two-high **personnel proxy**. ~76 % pre-2023, ~100 % after. *Label it a proxy.*
+3. **Not obtainable free** — pre-snap alignment *depth* and post-snap rotation. PFF-paid. Goes in the
+   register as a floor, per DATA-1's do-not-chase rule.
+
+### Decisions taken while scoping (the three open ones are in BUILD_PLAN)
+
+- **`base_front`/`coverage_identity` stay OUT of the curated CSV.** Derivable from 0.13.2, and the 16.5
+  derived-vs-curated rule says a question a feed can answer gets no human maintainer. **The CSV carries
+  only what no feed knows: who called it.**
+- **No ST coordinator table.** 4th-down and 2-point aggression are head-coach decisions and `pbp` carries
+  the head coach exactly and PIT. Hand-curation buying an already-attributable variable is not worth it.
+- **0.13.0 goes first.** Every rate in the session routes its denominator through the break map, so
+  building it after anything else means rebuilding that thing.
+- **Classify the break; do not smooth it.** A normalization that makes the discontinuity disappear
+  without recording it is the same defect as the gate that cannot see it.
+- **DATA-2 builds no feature.** 0.13.8 extends a *descriptive* module nothing downstream reads. M-1 still
+  owes T45 + T47.
+- **Derive all seasons, analyse DEV only.** Same wall as DATA-1, same place.
+
+### The bar that matters most
+
+**B2 — the naive and gated blitz rates must differ by a stated amount.** Prove the trap is real *first*,
+then prove the gate closes it. *A fix whose effect is unmeasured is a claim, not a fix.* Paired with
+**B1**, which requires the break map to find the 2023 discontinuity **without being pointed at it** and
+to flag a planted synthetic sentinel — T31's rule, verbatim: assert the control can produce a known
+difference before trusting it to show none.
+
+### Next
+
+**User reviews + commits, then Session DATA-2.** The 0.13.1 research-and-review block is the real long
+pole and needs a sign-off gate exactly as `coaches.csv` did. M-1 (T45 + T47), VH's two open decisions and
+MM-1/MM-2 remain independent and unblocked; ordering is the user's call. After DATA-2, the team-by-team
+deep dives have a complete panel to read.
+
+---
+
+## 2026-08-03 (session 3) — SESSION DATA-2 RUN: Phase 0.13.0–0.13.9 complete, all 10 bars PASS
+
+Resumed mid-session: 0.13.0–0.13.3 were already built (break map, defensive regime table, defensive
+fact tables, coverage). This session ran **0.13.4 → 0.13.9** straight through on four decisions
+taken up front, and closed the docs the earlier half still owed.
+
+### Decisions taken before the run
+
+1. **Straight through 0.13.4 → 0.13.9**, one report, hard-stop only on a failed bar.
+2. **0.13.1's 121 historical rows accepted at recorded confidence** (78 high / 74 med / 1 low; the
+   32 2026 rows were already user-signed-off). 0.13.8 carries `confidence` through and reports
+   regime coverage rather than hiding it, instead of a `coaches.csv`-style correction loop.
+3. **0.13.4 built in full**, FTN columns shipping with a `backtestable: false` **assertion**.
+4. **B0 = table byte-identity per substep + the full suite once at the end**; **0.13.5 = all four
+   tables including cap $**; **0.13.7 = both grains materialized**; **0.13.8 = defense + a widened
+   offensive vector**; **leave uncommitted**.
+
+### What shipped
+
+`data/teams.py` · `situation/{offense_scheme,construction,special_teams,scheme_panel,
+defense_fingerprint}.py` · `steps/phase0_13_{4,5,6,7,8,9}_*.py` · `tests/test_data2b.py` (111
+tests) · 16 new tables + 2 views · registry **45 → 63**. **954 tests (was 843), ruff clean, B0 PASS,
+backup checksum-verified.**
+
+### ★★ The session's shape: the three worst hazards were in the instruments, not the data
+
+- **The break map is blind to two of the three encoding seams this session met** (→ **T52**). It
+  keys on conservation — mass leaving NULL for **one** value. `offense_personnel` is over the
+  cardinality ceiling *and* spreads its arriving mass over hundreds of new strings;
+  `weekly_rosters.position` is a **vocabulary swap** among observed values, with nothing to
+  conserve. Both are handled correctly now; the debt is that the standing gate would not have said
+  so. *"We have a break detector" is not "we would notice a break."*
+- **A drop-reason guard passed while a franchise vanished.** 0.13.8's first run lost six LAR
+  defensive regime-seasons (and nine offensive) to the LAR/LA canon seam, carrying the reason "no
+  panel row for this team-season" — **true of every possible drop**, and therefore not a reason.
+  The guard now checks the drop is below the panel's floor. Recovered: defense 24 → 26
+  play-callers, 110 → 116 regime-seasons.
+- **Four of my own bars measured something other than what they claimed**, each caught by making
+  the bar able to fail: a rate whose numerator was not a subset of its denominator (B4a read
+  1.016); an expected value taken from football's rules rather than the file's (B4b, `11 × plays`,
+  when the vendor lists 12 on 2,739 plays); a 53-man check against a season-cumulative roster
+  (B7a, twice); and a dome "climate" that was the mean of two rows.
+
+### Corrections to the spec, all in the direction of less
+
+- **Slot/wide/inline alignment does not exist free** and is not derived. `offense_positions` is the
+  **listed roster position** — it says a man is a WR, never that he lined up in the slot. Registered
+  as a floor beside PFF safety-alignment depth; the honest free substitutes are NGS
+  `avg_cushion`/`avg_separation` and personnel context.
+- **The route tree is 19 values, not 14**, enumerated so a 20th surfaces rather than joining an
+  "other" bucket, and attributed to the **targeted receiver only** (one route per play is charted).
+- **`contracts.team` is an OTC nickname / career-path string, never a team code** — 90 distinct
+  values in a 32-team league. Hence the roster-names-the-team architecture, and `data/teams.py`.
+
+### Numbers worth keeping
+
+B4a **1.000000** both sides · B7b draft-capital identity **1.0000 exactly** (0.8105 before the PFR
+codes were mapped) · cap accounted **1.2324** of cap → read `cap_share_*`, not `cap_pct_*`
+(**T53**) · 4th-down go-rate naive **0.170** vs conditioned **0.296** · coach attribution **0
+mismatches** against `coaches.csv` · panel **190 registered columns**, z mean 0.0000 sd 1.0000, **0**
+z-scores before a floor, side symmetry exact · defensive fingerprints face-valid (Bowles **+1.14**
+blitz, Spagnuolo **+0.59** man, Quinn **+0.77** man) · **B5: all six deep-dive questions answered
+from one query each** (Barkley 439 carries / 59.1 % of PHI's 2024 backfield; Chase 114 targets in 11
+personnel / 28 %).
+
+### Register
+
+**T48 ☑ T49 ☑ T50 ☑.** **T52 🟠** (the population-shaped re-encoding the detector cannot see) and
+**T53 🟡** (`cap_pct_*` is not cap spend — rename to `apy_accounted_*` before anything outside
+`situation/` reads it) opened. **T51 still open on the data question** (re-scrape PFR 2024–25 TDs or
+mark the column dead).
+
+### Next
+
+**User reviews + commits.** The team-by-team deep dives are unblocked and read
+`team_scheme_season`/`_week`. **M-1** still owes two wirings (T45 NGS + T47 `pfr_*`); **VH's two
+open decisions** and **MM-1 · MM-2** remain independent and unblocked; ordering is the user's call.
+Stage-0 FFC chore current (`ffc-20260801`), next due after **08-07**.
+
+---
+
+## 2026-08-05 — MM-1a: the belief board becomes a seat (16.18e built; policy deferred)
+
+The user reported `reference/mm1_belief_board_2026_20260802.xlsx` filled and asked for the
+personality to be created and added to the library. **Beliefs shipped; policy explicitly not.**
+
+### The eight decisions, all asked before anything was written
+
+| | question | answer | what it settled |
+|---|---|---|---|
+| 1 | what is the seat FOR? | **opponent AND my own autodraft** | widens 08-01's "realistic opponent" — the same profile, a different chair in the 16.17 `SeatMap` |
+| 2 | where does POLICY come from? | **an elicitation session**, as a Streamlit page | so MM-1a is beliefs-only and `policy_source='corpus'` is asserted, not assumed |
+| 3 | blank Notes vs the dropdown | **blank wins — never draft** | 35 avoids; ⚠ scoped to *rated rows*, or it forbids the kicker he drafted three times |
+| 4 | how big is a belief, in picks? | **calibrate against my 45 real mock picks** | `Personal ADP` was empty for all 150 rows, so there was no other anchor |
+| 5 | anti-Packers | **hard rule, Kraft the one exception** | encoded and pinned by a test; the two contradicting picks are reported under B5 |
+| 6 | room composition | **beside `value_hawk` — one `balanced` steps aside** | moves `REALISTIC_ROOM`, which is why B7 is owed |
+| 7 | elicitation format | **Streamlit page**, *and* a to-do for the same thing as a **product feature for every user** | → new `docs/BUILD_PLAN.md` §14.P |
+| 8 | generalize the positional lean? | **no — it is already inside the per-player deltas** | avoids double-counting; the stated cost is that the seat blands out as the board drifts off the workbook |
+
+### Method calls taken without asking (conventional defaults, stated for the record)
+
+- **Leave-one-draft-out calibration**, so the scale never sees the draft it is scored on. Choosing
+  on all three and scoring on all three is the grader-is-the-subject trap with an extra step.
+- **Conservative tie-break on an unresolved sweep** — smallest scale within 1 se of the argmin.
+- **An avoided player's belief is deleted**, not merely unused.
+
+### What was deliberately NOT done
+
+- **No policy was inferred from the prose**, though the notes are full of it (QB-late, TE barbell,
+  K/DST a round early, avoid committees, injury aversion). The 08-01 spec's *"do not collect the
+  policy by asking him to describe it"* is the reason, and it held.
+- **Nothing touches** the frozen value stack, `value_board`, the cost report or the spent lockbox.
+- **No structural positional lean**, per decision 8.
+
+### Open, and owed
+
+- **B7** — the realism bars before/after the room change. Running; a movement is stated, not absorbed.
+- **MM-1b** — the elicitation page, then the 16.18c fit. ⚠ The 45 mock picks are now *partly spent*
+  (one scalar, under LOO), so B4's primary arm should become the withheld comparisons.
+- **14.P** — the personality builder as a shipped product feature.

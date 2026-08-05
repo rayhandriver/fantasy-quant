@@ -1,0 +1,282 @@
+{
+  "step": "0.13.7 \u2014 the unified scheme panel",
+  "team_scheme_week": {
+    "table": "team_scheme_week",
+    "n_rows": 5522,
+    "n_teams": 32,
+    "n_seasons": 10,
+    "n_metric_columns": 84
+  },
+  "team_scheme_season": {
+    "table": "team_scheme_season",
+    "n_rows": 320,
+    "n_teams": 32,
+    "n_seasons": 10,
+    "n_metric_columns": 106
+  },
+  "team_scheme_week_z": {
+    "table": "team_scheme_week_z",
+    "n_rows": 5522,
+    "n_metrics_zscored": 71
+  },
+  "team_scheme_season_z": {
+    "table": "team_scheme_season_z",
+    "n_rows": 320,
+    "n_metrics_zscored": 92
+  },
+  "column_register": {
+    "table": "team_scheme_columns",
+    "n_rows": 190
+  },
+  "B9a_coverage": {
+    "seasons": 10,
+    "min_teams_in_a_season": 32,
+    "seasons_missing_teams": [],
+    "PASS": true
+  },
+  "B9b_no_dead_columns": {
+    "columns_registered": 190,
+    "dead_columns": [],
+    "columns_with_a_declared_floor": 39,
+    "floors_respected": 35,
+    "floor_violations": [],
+    "coverage_columns_zero_before_floor": [
+      "man_zone_denom",
+      "charted_share",
+      "man_zone_denom",
+      "charted_share"
+    ],
+    "PASS": true
+  },
+  "B9c_per_season_fill": [
+    {
+      "season": 2016,
+      "teams": 32,
+      "man_share": 0.0,
+      "charted_share": 1.0,
+      "share_cover_3": 0.0,
+      "motion_rate": 0.0,
+      "play_action_rate": 0.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2017,
+      "teams": 32,
+      "man_share": 0.0,
+      "charted_share": 1.0,
+      "share_cover_3": 0.0,
+      "motion_rate": 0.0,
+      "play_action_rate": 0.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2018,
+      "teams": 32,
+      "man_share": 1.0,
+      "charted_share": 1.0,
+      "share_cover_3": 1.0,
+      "motion_rate": 0.0,
+      "play_action_rate": 0.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2019,
+      "teams": 32,
+      "man_share": 1.0,
+      "charted_share": 1.0,
+      "share_cover_3": 1.0,
+      "motion_rate": 0.0,
+      "play_action_rate": 0.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2020,
+      "teams": 32,
+      "man_share": 1.0,
+      "charted_share": 1.0,
+      "share_cover_3": 1.0,
+      "motion_rate": 0.0,
+      "play_action_rate": 0.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2021,
+      "teams": 32,
+      "man_share": 1.0,
+      "charted_share": 1.0,
+      "share_cover_3": 1.0,
+      "motion_rate": 0.0,
+      "play_action_rate": 0.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2022,
+      "teams": 32,
+      "man_share": 1.0,
+      "charted_share": 1.0,
+      "share_cover_3": 1.0,
+      "motion_rate": 1.0,
+      "play_action_rate": 1.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2023,
+      "teams": 32,
+      "man_share": 1.0,
+      "charted_share": 1.0,
+      "share_cover_3": 1.0,
+      "motion_rate": 1.0,
+      "play_action_rate": 1.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2024,
+      "teams": 32,
+      "man_share": 1.0,
+      "charted_share": 1.0,
+      "share_cover_3": 1.0,
+      "motion_rate": 1.0,
+      "play_action_rate": 1.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    },
+    {
+      "season": 2025,
+      "teams": 32,
+      "man_share": 1.0,
+      "charted_share": 1.0,
+      "share_cover_3": 1.0,
+      "motion_rate": 1.0,
+      "play_action_rate": 1.0,
+      "blitz_rate": 1.0,
+      "share_p11": 1.0,
+      "pass_rate_neutral": 1.0,
+      "proxy_two_high_share": 1.0,
+      "fourth_go_rate": 1.0,
+      "cap_share_wr": 1.0,
+      "continuity_offense": 1.0
+    }
+  ],
+  "B6_per_column_floor_guard": {
+    "man_share_2016_raises": true,
+    "man_share_2018_allowed": true,
+    "motion_2019_raises": true,
+    "table_floor_column_allowed": true
+  },
+  "z_sanity": {
+    "mean_z": -0.0,
+    "sd_z": 1.0,
+    "n_z": 32.0,
+    "z_before_floor": 0.0
+  },
+  "side_symmetry": {
+    "defense_only": 0,
+    "offense_only": 0,
+    "team_weeks": 5522
+  },
+  "coverage_by_season": [
+    {
+      "season": 2016,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2017,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2018,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2019,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2020,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2021,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2022,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2023,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2024,
+      "teams": 32,
+      "rows_": 32
+    },
+    {
+      "season": 2025,
+      "teams": 32,
+      "rows_": 32
+    }
+  ]
+}

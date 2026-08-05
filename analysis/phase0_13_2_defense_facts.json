@@ -1,0 +1,131 @@
+{
+  "step": "0.13.2 \u2014 the defensive fact tables",
+  "team_week": {
+    "table": "defense_team_week",
+    "n_rows": 5522,
+    "n_teams": 32,
+    "n_seasons": 10
+  },
+  "player_week": {
+    "table": "defense_player_week",
+    "n_rows": 106760,
+    "n_players": 3169,
+    "n_seasons": 10
+  },
+  "personnel_strings": 7637,
+  "unparsed_personnel_strings": 1,
+  "B2_blitz_naive_vs_gated": {
+    "naive_rate_pre2023": 0.2803,
+    "naive_rate_post2023": 0.1311,
+    "gated_rate_pre2023": 0.2806,
+    "gated_rate_post2023": 0.2638,
+    "naive_rushers_pre2023": 4.223,
+    "naive_rushers_post2023": 2.124,
+    "gated_rushers_pre2023": 4.236,
+    "gated_rushers_post2023": 4.302,
+    "naive_break_size": -0.1492,
+    "gated_break_size": -0.0168,
+    "trap_closed": true
+  },
+  "B2_rate_is_plausible": true,
+  "per_season": [
+    {
+      "season": 2016,
+      "naive_denom": 20280,
+      "naive_rate": 0.2934,
+      "gated_denom": 20209,
+      "gated_rate": 0.2945,
+      "naive_rushers": 4.2291,
+      "gated_rushers": 4.2439
+    },
+    {
+      "season": 2017,
+      "naive_denom": 19575,
+      "naive_rate": 0.2855,
+      "gated_denom": 19517,
+      "gated_rate": 0.2864,
+      "naive_rushers": 4.2297,
+      "gated_rushers": 4.2421
+    },
+    {
+      "season": 2018,
+      "naive_denom": 20681,
+      "naive_rate": 0.2694,
+      "gated_denom": 20528,
+      "gated_rate": 0.2697,
+      "naive_rushers": 4.2147,
+      "gated_rushers": 4.2293
+    },
+    {
+      "season": 2019,
+      "naive_denom": 20800,
+      "naive_rate": 0.2896,
+      "gated_denom": 20629,
+      "gated_rate": 0.2895,
+      "naive_rushers": 4.235,
+      "gated_rushers": 4.2474
+    },
+    {
+      "season": 2020,
+      "naive_denom": 21127,
+      "naive_rate": 0.2924,
+      "gated_denom": 20959,
+      "gated_rate": 0.2928,
+      "naive_rushers": 4.2463,
+      "gated_rushers": 4.261
+    },
+    {
+      "season": 2021,
+      "naive_denom": 21976,
+      "naive_rate": 0.262,
+      "gated_denom": 21814,
+      "gated_rate": 0.2621,
+      "naive_rushers": 4.1883,
+      "gated_rushers": 4.2001
+    },
+    {
+      "season": 2022,
+      "naive_denom": 21408,
+      "naive_rate": 0.2699,
+      "gated_denom": 21232,
+      "gated_rate": 0.2695,
+      "naive_rushers": 4.2195,
+      "gated_rushers": 4.2293
+    },
+    {
+      "season": 2023,
+      "naive_denom": 44874,
+      "naive_rate": 0.13,
+      "gated_denom": 21721,
+      "gated_rate": 0.2538,
+      "naive_rushers": 2.1875,
+      "gated_rushers": 4.2864
+    },
+    {
+      "season": 2024,
+      "naive_denom": 45905,
+      "naive_rate": 0.1304,
+      "gated_denom": 20867,
+      "gated_rate": 0.2684,
+      "naive_rushers": 2.0798,
+      "gated_rushers": 4.3065
+    },
+    {
+      "season": 2025,
+      "naive_denom": 45175,
+      "naive_rate": 0.1329,
+      "gated_denom": 20825,
+      "gated_rate": 0.2693,
+      "naive_rushers": 2.1033,
+      "gated_rushers": 4.3138
+    }
+  ],
+  "man_zone_floor": 2018,
+  "checks": {
+    "null_team": 0.0,
+    "share_overflow": 0.0,
+    "manzone_before_floor": 0.0,
+    "max_snap_share": 1.0,
+    "teams_2024": 32.0
+  }
+}

@@ -1,0 +1,360 @@
+{
+  "step": "0.13.8 \u2014 the fingerprint, extended to defense",
+  "defense": {
+    "n_play_callers": 26,
+    "n_regime_seasons": 116,
+    "dropped": 5,
+    "drop_reasons": [
+      "season is below the panel floor"
+    ],
+    "panel_floor": 2016,
+    "n_metrics": 21
+  },
+  "offense_scheme": {
+    "n_play_callers": 42,
+    "n_regime_seasons": 162,
+    "dropped": 10,
+    "n_metrics": 18,
+    "note": "additive to fingerprint.METRICS' 14, which stay exactly as they were"
+  },
+  "shrinkage_k": {
+    "defense": {
+      "share_base": 1.112,
+      "share_nickel": 0.949,
+      "share_dime": 0.75,
+      "dl_mean": 0.506,
+      "lb_mean": 0.472,
+      "db_mean": 0.997,
+      "box_mean": 0.626,
+      "share_box_8plus": 0.629,
+      "blitz_rate": 0.734,
+      "big_blitz_rate": 0.493,
+      "rush3_rate": 0.782,
+      "rushers_mean": 0.94,
+      "pressure_rate": 6.772,
+      "man_share": 2.612,
+      "share_cover_1": 2.463,
+      "share_cover_2": 1.481,
+      "share_cover_3": 1.98,
+      "share_cover_4": 1.413,
+      "proxy_safeties_mean": 1.532,
+      "proxy_single_high_share": 3.494,
+      "proxy_two_high_share": 1.442
+    },
+    "offense_scheme": {
+      "share_p11": 0.754,
+      "share_p12": 2.824,
+      "share_p21": 0.336,
+      "share_p13": 1.09,
+      "share_shotgun": 0.628,
+      "share_empty": 1.616,
+      "share_under_center": 0.22,
+      "share_i_form": 0.281,
+      "rb_mean": 0.397,
+      "te_mean": 2.244,
+      "wr_mean": 1.014,
+      "no_huddle_rate": 0.414,
+      "pass_rate_neutral": 2.032,
+      "pass_oe_mean": 2.268,
+      "motion_rate": 0.317,
+      "play_action_rate": 1.163,
+      "rpo_rate": 0.659,
+      "screen_rate": 1.007
+    }
+  },
+  "weight_by_regime_length": {
+    "blitz_rate": {
+      "n=1": 0.577,
+      "n=3": 0.803,
+      "n=6": 0.891
+    },
+    "man_share": {
+      "n=1": 0.277,
+      "n=3": 0.535,
+      "n=6": 0.697
+    },
+    "share_nickel": {
+      "n=1": 0.513,
+      "n=3": 0.76,
+      "n=6": 0.863
+    },
+    "proxy_two_high_share": {
+      "n=1": 0.409,
+      "n=3": 0.675,
+      "n=6": 0.806
+    }
+  },
+  "coverage": [
+    {
+      "play_caller": "Dennis Allen",
+      "n_seasons": 10,
+      "teams": "CHI,NO",
+      "first_season": 2016,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Steve Spagnuolo",
+      "n_seasons": 9,
+      "teams": "KC,NYG",
+      "first_season": 2016,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Vic Fangio",
+      "n_seasons": 9,
+      "teams": "CHI,DEN,MIA,PHI",
+      "first_season": 2016,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Vance Joseph",
+      "n_seasons": 8,
+      "teams": "ARI,DEN,MIA",
+      "first_season": 2016,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Lou Anarumo",
+      "n_seasons": 7,
+      "teams": "CIN,IND",
+      "first_season": 2019,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Patrick Graham",
+      "n_seasons": 7,
+      "teams": "LV,MIA,NYG",
+      "first_season": 2019,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Todd Bowles",
+      "n_seasons": 7,
+      "teams": "TB",
+      "first_season": 2019,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Jeff Ulbrich",
+      "n_seasons": 6,
+      "teams": "ATL,NYJ",
+      "first_season": 2020,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Brandon Staley",
+      "n_seasons": 5,
+      "teams": "LA,LAC,NO",
+      "first_season": 2020,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Dan Quinn",
+      "n_seasons": 5,
+      "teams": "ATL,DAL",
+      "first_season": 2017,
+      "last_season": 2023
+    },
+    {
+      "play_caller": "Robert Saleh",
+      "n_seasons": 5,
+      "teams": "SF",
+      "first_season": 2017,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Aaron Glenn",
+      "n_seasons": 4,
+      "teams": "DET",
+      "first_season": 2021,
+      "last_season": 2024
+    },
+    {
+      "play_caller": "Brian Flores",
+      "n_seasons": 4,
+      "teams": "MIN,NE",
+      "first_season": 2018,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "DeMeco Ryans",
+      "n_seasons": 4,
+      "teams": "HOU,SF",
+      "first_season": 2021,
+      "last_season": 2024
+    },
+    {
+      "play_caller": "Ejiro Evero",
+      "n_seasons": 4,
+      "teams": "CAR,DEN",
+      "first_season": 2022,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Mike Macdonald",
+      "n_seasons": 4,
+      "teams": "BAL,SEA",
+      "first_season": 2022,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Nick Rallis",
+      "n_seasons": 3,
+      "teams": "ARI",
+      "first_season": 2023,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Raheem Morris",
+      "n_seasons": 3,
+      "teams": "LA",
+      "first_season": 2021,
+      "last_season": 2023
+    },
+    {
+      "play_caller": "Chris Shula",
+      "n_seasons": 2,
+      "teams": "LA",
+      "first_season": 2024,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Dennard Wilson",
+      "n_seasons": 2,
+      "teams": "TEN",
+      "first_season": 2024,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Jesse Minter",
+      "n_seasons": 2,
+      "teams": "LAC",
+      "first_season": 2024,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Jonathan Gannon",
+      "n_seasons": 2,
+      "teams": "PHI",
+      "first_season": 2021,
+      "last_season": 2022
+    },
+    {
+      "play_caller": "Al Golden",
+      "n_seasons": 1,
+      "teams": "CIN",
+      "first_season": 2025,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Anthony Campanile",
+      "n_seasons": 1,
+      "teams": "JAX",
+      "first_season": 2025,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Kelvin Sheppard",
+      "n_seasons": 1,
+      "teams": "DET",
+      "first_season": 2025,
+      "last_season": 2025
+    },
+    {
+      "play_caller": "Matt Burke",
+      "n_seasons": 1,
+      "teams": "HOU",
+      "first_season": 2025,
+      "last_season": 2025
+    }
+  ],
+  "coordinators_with_one_season": [
+    "Al Golden",
+    "Anthony Campanile",
+    "Kelvin Sheppard",
+    "Matt Burke"
+  ],
+  "most_distinctive": [
+    {
+      "play_caller": "Brian Flores",
+      "n_seasons": 4,
+      "teams": "MIN,NE",
+      "distinctiveness": 0.782,
+      "blitz_rate": 2.017,
+      "man_share": -0.452,
+      "share_nickel": -0.803,
+      "box_mean": 0.221
+    },
+    {
+      "play_caller": "Kelvin Sheppard",
+      "n_seasons": 1,
+      "teams": "DET",
+      "distinctiveness": 0.671,
+      "blitz_rate": 0.025,
+      "man_share": 0.368,
+      "share_nickel": -1.116,
+      "box_mean": 1.348
+    },
+    {
+      "play_caller": "Vic Fangio",
+      "n_seasons": 9,
+      "teams": "CHI,DEN,MIA,PHI",
+      "distinctiveness": 0.614,
+      "blitz_rate": -0.817,
+      "man_share": 0.556,
+      "share_nickel": 0.659,
+      "box_mean": -1.292
+    },
+    {
+      "play_caller": "Jesse Minter",
+      "n_seasons": 2,
+      "teams": "LAC",
+      "distinctiveness": 0.609,
+      "blitz_rate": -0.571,
+      "man_share": -0.502,
+      "share_nickel": -0.481,
+      "box_mean": -2.015
+    },
+    {
+      "play_caller": "Dan Quinn",
+      "n_seasons": 5,
+      "teams": "ATL,DAL",
+      "distinctiveness": 0.584,
+      "blitz_rate": 0.083,
+      "man_share": 0.724,
+      "share_nickel": 0.253,
+      "box_mean": 0.634
+    },
+    {
+      "play_caller": "Todd Bowles",
+      "n_seasons": 7,
+      "teams": "TB",
+      "distinctiveness": 0.566,
+      "blitz_rate": 1.141,
+      "man_share": -0.483,
+      "share_nickel": 0.198,
+      "box_mean": 0.886
+    },
+    {
+      "play_caller": "Chris Shula",
+      "n_seasons": 2,
+      "teams": "LA",
+      "distinctiveness": 0.565,
+      "blitz_rate": -0.582,
+      "man_share": -0.135,
+      "share_nickel": -1.463,
+      "box_mean": -0.221
+    },
+    {
+      "play_caller": "Vance Joseph",
+      "n_seasons": 8,
+      "teams": "ARI,DEN,MIA",
+      "distinctiveness": 0.564,
+      "blitz_rate": 1.048,
+      "man_share": 0.388,
+      "share_nickel": -0.449,
+      "box_mean": 0.529
+    }
+  ],
+  "descriptive_only": "no FDR gate, no backtested-edge claim, not imported by draft/optimizer.py, valuation/value_board.py or valuation/cost_report.py \u2014 asserted, not stated"
+}

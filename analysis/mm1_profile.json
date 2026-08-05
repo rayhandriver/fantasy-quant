@@ -1,0 +1,190 @@
+{
+  "profile": {
+    "profile_id": "mm1_2026",
+    "season": 2026,
+    "n_beliefs": 78,
+    "n_nonzero": 78,
+    "belief_scale": 3.0,
+    "mean_abs_delta": 3.9615384615384617,
+    "max_abs_delta": 9.0,
+    "n_avoid": 35,
+    "avoid_by_reason": {
+      "no_interest": 29,
+      "team_rule": 6
+    },
+    "policy_source": "corpus",
+    "n_policy": 0,
+    "beliefs_are_stated_not_backtested": true
+  },
+  "board": {
+    "source": "ffc",
+    "rows": 244,
+    "asof": "2026-08-01 00:00:00"
+  },
+  "workbook": {
+    "path": "reference/mm1_belief_board_2026_20260802.xlsx",
+    "rows": 150
+  },
+  "calibration": {
+    "grid": [
+      0.0,
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      8.0,
+      10.0,
+      12.0
+    ],
+    "in_sample": {
+      "0.0": {
+        "n_scored": 40,
+        "mean_rank": 8.775,
+        "median_rank": 4.5,
+        "top1": 0.2,
+        "top5": 0.55,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "1.0": {
+        "n_scored": 40,
+        "mean_rank": 8.575,
+        "median_rank": 4.5,
+        "top1": 0.25,
+        "top5": 0.575,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "2.0": {
+        "n_scored": 40,
+        "mean_rank": 8.25,
+        "median_rank": 3.5,
+        "top1": 0.225,
+        "top5": 0.55,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "3.0": {
+        "n_scored": 40,
+        "mean_rank": 8.175,
+        "median_rank": 3.5,
+        "top1": 0.275,
+        "top5": 0.575,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "4.0": {
+        "n_scored": 40,
+        "mean_rank": 7.95,
+        "median_rank": 3.5,
+        "top1": 0.275,
+        "top5": 0.6,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "5.0": {
+        "n_scored": 40,
+        "mean_rank": 7.775,
+        "median_rank": 3.0,
+        "top1": 0.25,
+        "top5": 0.6,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "6.0": {
+        "n_scored": 40,
+        "mean_rank": 7.6,
+        "median_rank": 3.0,
+        "top1": 0.25,
+        "top5": 0.625,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "8.0": {
+        "n_scored": 40,
+        "mean_rank": 7.575,
+        "median_rank": 3.5,
+        "top1": 0.2,
+        "top5": 0.6,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "10.0": {
+        "n_scored": 40,
+        "mean_rank": 7.55,
+        "median_rank": 4.0,
+        "top1": 0.2,
+        "top5": 0.575,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      },
+      "12.0": {
+        "n_scored": 40,
+        "mean_rank": 7.975,
+        "median_rank": 4.0,
+        "top1": 0.2,
+        "top5": 0.575,
+        "picks_off_board": 5,
+        "picks_against_own_avoid": 1
+      }
+    },
+    "folds": [
+      {
+        "held_out_draft": "1381667884610109440",
+        "chosen_scale": 10.0,
+        "n_scored": 14,
+        "mean_rank": 6.071428571428571,
+        "median_rank": 4.0,
+        "top1": 0.07142857142857142,
+        "top5": 0.5714285714285714,
+        "picks_off_board": 1,
+        "picks_against_own_avoid": 0
+      },
+      {
+        "held_out_draft": "1381687658979291136",
+        "chosen_scale": 10.0,
+        "n_scored": 13,
+        "mean_rank": 9.461538461538462,
+        "median_rank": 4.0,
+        "top1": 0.3076923076923077,
+        "top5": 0.5384615384615384,
+        "picks_off_board": 2,
+        "picks_against_own_avoid": 1
+      },
+      {
+        "held_out_draft": "1381689410868760576",
+        "chosen_scale": 6.0,
+        "n_scored": 13,
+        "mean_rank": 7.846153846153846,
+        "median_rank": 3.0,
+        "top1": 0.3076923076923077,
+        "top5": 0.6153846153846154,
+        "picks_off_board": 2,
+        "picks_against_own_avoid": 0
+      }
+    ],
+    "argmin_scale": 10.0,
+    "shipped_scale": 3.0,
+    "shipped_rule": "smallest scale within 1 paired-bootstrap se of the argmin",
+    "oof_mean_rank": 7.793040293040293,
+    "oof_top1": 0.22893772893772893,
+    "null_scale0_mean_rank": 8.775,
+    "null_scale0_top1": 0.2,
+    "delta_vs_null": {
+      "delta": -0.6,
+      "se": 0.21094105219231274,
+      "lo": -1.025,
+      "hi": -0.2
+    },
+    "sweep_resolved": false,
+    "beats_consensus_null": true,
+    "oof_note": "oof_* scores the PROCEDURE (choose a scale on two drafts, score the third), which is the falsifiable number. delta_vs_null scores the SHIPPED scale in-sample; the shipped scale is a conservative tie-break inside the procedure's own noise and has no clean out-of-fold of its own."
+  },
+  "held_out_picks": {
+    "n_drafts": 3,
+    "n_picks": 45
+  },
+  "policy": "NOT FITTED \u2014 waits on the 16.18a-c elicitation session; the seat runs the corpus-average manager's tradeoffs over this manager's own board"
+}

@@ -170,9 +170,143 @@ REGISTRY: tuple[TableSpec, ...] = (
                   "⚠ nfl_data_py warns this source 'is currently in flux and may be out of "
                   "date'. Landed for completeness; game_lines remains the market spine."
               )),
+
+    # ---- Session DATA-2 (Phase 0.13) — derived facts, all in_season_weekly ------------------
+    # ⚠ Every one of these is DERIVED from participation/pbp/rosters, so its PIT class is
+    # inherited from its sources, and its floor is the floor of the WEAKEST column it carries
+    # (T49). The per-column detail lives in `team_scheme_columns`, which 0.13.7 generates —
+    # a table-level floor here would repeat exactly the mistake T49 opened.
+    TableSpec("defense_team_week", "team-week", "in_season_weekly",
+              "DATA-2 0.13.2 over participation", floor=2016,
+              expected_seasons=_seasons(2016, 2025),
+              note=("Fronts, blitz, box, man/zone, pressure. Rates route their denominators "
+                    "through the 0.13.0 break map; man/zone columns are 2018+, NOT 2016+.")),
+    TableSpec("defense_player_week", "player-week", "in_season_weekly",
+              "DATA-2 0.13.2 over participation", floor=2016,
+              expected_seasons=_seasons(2016, 2025),
+              note="The defensive half participation deliberately never materialized (T48)."),
+    TableSpec("defense_personnel_map", "personnel-string", "preseason",
+              "DATA-2 0.13.2 lookup",
+              note="Distinct defense_personnel string -> unit counts. Both encodings."),
+    TableSpec("defense_coverage_week", "team-week", "in_season_weekly",
+              "DATA-2 0.13.3 over participation", floor=2016,
+              expected_seasons=_seasons(2016, 2025),
+              note=("THREE TIERS, never blended: charted shell (2018+, ~49%), derived safety "
+                    "count (a PERSONNEL proxy, never alignment), and not-obtainable-free "
+                    "alignment depth/rotation.")),
+    TableSpec("offense_team_week", "team-week", "in_season_weekly",
+              "DATA-2 0.13.4 over participation + ftn_charting", floor=2016,
+              expected_seasons=_seasons(2016, 2025),
+              note=("Formation/personnel/tempo 2016+; motion/PA/RPO/screen are FTN 2022+ and "
+                    "backtestable:false — see offense_scheme.assert_ftn_backtestable.")),
+    TableSpec("offense_player_week", "player-week", "in_season_weekly",
+              "DATA-2 0.13.4 over participation", floor=2016,
+              expected_seasons=_seasons(2016, 2025),
+              note=("Route tree (19 charted routes, targeted receiver only) + usage within "
+                    "personnel grouping.")),
+    TableSpec("offense_personnel_map", "personnel-string", "preseason",
+              "DATA-2 0.13.4 lookup",
+              note="Distinct offense_personnel string -> skill counts. Both encodings."),
+    TableSpec("contract_season", "player-season", "preseason",
+              "DATA-2 0.13.5 over contracts", floor=2014,
+              note=("The contract in force per player-season, deduplicated. ⚠ OTC nominal "
+                    "window [year_signed, +years) — NOT a cap sheet: no per-season cap hits, "
+                    "dead money or restructures.")),
+    TableSpec("team_construction_season", "team-season", "preseason",
+              "DATA-2 0.13.5 over contracts/draft_picks/weekly_rosters/snaps", floor=2014,
+              note=("Cap allocation, draft capital, age, continuity. Read cap_share_* (a "
+                    "distribution) not cap_pct_* (accounted APY, which sums past 1.0). "
+                    "preseason because roster/cap/draft state is known before week 1.")),
+    TableSpec("st_team_season", "team-season", "in_season_weekly",
+              "DATA-2 0.13.6 over pbp", floor=2014,
+              expected_seasons=_seasons(2014, 2025),
+              note=("4th-down and 2-point aggression attributed to the HEAD COACH, conditioned "
+                    "on the opportunity that offered the choice. No ST-coordinator table.")),
+    TableSpec("kicking_env_week", "team-week", "in_season_weekly",
+              "DATA-2 0.13.6 over pbp", floor=2014,
+              expected_seasons=_seasons(2014, 2025),
+              note=("temp/wind are NULL inside a dome and that null is information — verified "
+                    "NOT zero-filled, the opposite of the T50 failure.")),
+    TableSpec("team_scheme_week", "team-week", "in_season_weekly",
+              "DATA-2 0.13.7 panel", floor=2016,
+              expected_seasons=_seasons(2016, 2025),
+              note="The unified panel. Per-column floors in team_scheme_columns (T49)."),
+    TableSpec("team_scheme_season", "team-season", "in_season_weekly",
+              "DATA-2 0.13.7 panel", floor=2016,
+              expected_seasons=_seasons(2016, 2025),
+              note=("Rates are ratios of sums, never means of weekly ratios. Per-column floors "
+                    "in team_scheme_columns.")),
+    TableSpec("team_scheme_week_z", "team-week", "in_season_weekly",
+              "DATA-2 0.13.7 z-scored within season", floor=2016,
+              note="A NULL z means never measured; it is never filled with 0 (= league average)."),
+    TableSpec("team_scheme_season_z", "team-season", "in_season_weekly",
+              "DATA-2 0.13.7 z-scored within season", floor=2016,
+              note="A NULL z means never measured; it is never filled with 0 (= league average)."),
+    TableSpec("participation_defense_player_play", "play-defender", "in_season_weekly",
+              "DATA-2 0.13.2 view over participation", floor=2016,
+              note=("Zips defense_players with defense_positions by PARALLEL unnest. "
+                    "⚠ defense_positions is 2023+, so 2016-2022 rows carry a null position "
+                    "rather than vanishing — requiring it truncated the view to three seasons, "
+                    "all outside DEV.")),
+    TableSpec("participation_offense_player_play", "play-player", "in_season_weekly",
+              "DATA-2 0.13.4 view over participation", floor=2016,
+              note=("The offensive twin. `route` is ONE route per play, so it is play context "
+                    "and is attributed only to the targeted receiver.")),
+    TableSpec("team_scheme_columns", "table-column", "preseason",
+              "DATA-2 0.13.7 generated register",
+              note=("★ T49's answer: per-COLUMN floor, PIT class, break provenance and "
+                    "per-season fill for every panel column.")),
 )
 
 BY_TABLE: dict[str, TableSpec] = {s.table: s for s in REGISTRY}
+
+
+# ------------------------------------------------------------------------------------------------
+# T49 — floors are a property of the COLUMN, not of the table
+# ------------------------------------------------------------------------------------------------
+#: ★ Columns whose first usable season is **later than their table's**. The register listed
+#: participation at 2016, which is right for personnel, box counts and formation and **wrong for
+#: coverage**: ``defense_man_zone_type`` and ``defense_coverage_type`` are 0.000 in 2016 and 2017.
+#: With ``DEV_SEASONS`` = 2014-2022 that is **five** development seasons of man/zone, not seven.
+#:
+#: *A floor recorded one level too coarse is worse than no floor: it is confidently wrong at the
+#: grain a query is actually written at.* These are measured by ``breaks.BreakMap.floor``, not
+#: asserted by hand — this table is the declaration the gate checks the measurement against.
+COLUMN_FLOORS: dict[tuple[str, str], int] = {
+    ("participation", "defense_man_zone_type"): 2018,
+    ("participation", "defense_coverage_type"): 2018,
+    ("participation", "defense_positions"): 2016,
+    ("participation", "offense_positions"): 2016,
+    ("ftn_charting", "is_motion"): 2022,
+    ("ftn_charting", "is_play_action"): 2022,
+    ("ftn_charting", "is_rpo"): 2022,
+    ("ftn_charting", "is_screen_pass"): 2022,
+    ("ftn_charting", "n_blitzers"): 2022,
+}
+
+
+def column_floor(table: str, column: str) -> int | None:
+    """First usable season for ``table.column`` — the column's own floor, else its table's."""
+    if (table, column) in COLUMN_FLOORS:
+        return COLUMN_FLOORS[(table, column)]
+    return BY_TABLE[table].floor if table in BY_TABLE else None
+
+
+def assert_column_floor(table: str, column: str, season: int) -> None:
+    """Raise if ``season`` is below ``table.column``'s floor, **naming the column** (T49).
+
+    The error names the column and says how it differs from the table, because the whole failure
+    mode is a query written against the table's floor getting empty seasons that look like quiet
+    ones — a 2016 man/zone request returning zeros rather than raising.
+    """
+    floor = column_floor(table, column)
+    if floor is not None and season < floor:
+        table_floor = BY_TABLE[table].floor if table in BY_TABLE else None
+        extra = ("" if table_floor == floor else
+                 f" (the TABLE's floor is {table_floor} — this is a per-COLUMN floor, T49)")
+        raise ValueError(
+            f"{table}.{column} has no data before {floor}; requested {season}{extra}."
+        )
 
 
 def spec(table: str) -> TableSpec:

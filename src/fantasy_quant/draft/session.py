@@ -689,13 +689,21 @@ def realistic_mix(n_humans: int, n_teams: int = 10) -> tuple[str, ...]:
                          f"for a {n_teams}-team draft")
     if n_humans >= n_teams:                   # k = n: you drive the whole table, there is no room
         return ()
+    # ★ 16.18 — the give-up order. `balanced` first, as before and for the same reason (it is the
+    # modal fitted manager, so it costs the least composition). Then **`fitted_manager`**, which
+    # 16.18 added and which the room can most afford to lose *precisely when* k is large: a replica
+    # of you is worth having in the room when you drive one seat, and worth nothing when you are
+    # already driving four. Only after both does this refuse — giving up a *character* seat would
+    # quietly change the mix 16.14R step 7 validated, which is what the refusal protects.
+    give_up = ["balanced"] * REALISTIC_ROOM.count("balanced") + ["fitted_manager"]
     for _ in range(n_humans):
-        if "balanced" not in names:
+        nxt = next((n for n in give_up if n in names), None)
+        if nxt is None:
             raise ValueError(
-                f"the shipped room has only {REALISTIC_ROOM.count('balanced')} `balanced` seats to "
-                f"give up; for {n_humans} human seats pass an explicit room of "
-                f"{n_teams - n_humans} names")
-        names.remove("balanced")
+                f"the shipped room has only {len(give_up)} seats it can give up "
+                f"({REALISTIC_ROOM.count('balanced')} `balanced` + `fitted_manager`); for "
+                f"{n_humans} human seats pass an explicit room of {n_teams - n_humans} names")
+        names.remove(nxt)
     return tuple(names)
 
 

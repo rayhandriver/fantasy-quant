@@ -1,0 +1,340 @@
+{
+  "step": "0.13.5 \u2014 team construction",
+  "construction": {
+    "table": "team_construction_season",
+    "n_rows": 416,
+    "n_teams": 32,
+    "n_seasons": 13,
+    "pick_value_curve": "johnson"
+  },
+  "contract_season": {
+    "duplicate_groups": 4794,
+    "excess_rows": 6384,
+    "worst_group": 9
+  },
+  "B7a_roster_size": {
+    "mean_active_weekly": 49.3,
+    "min_season_mean": 47.0,
+    "max_season_mean": 55.1,
+    "worst_week_low": 36,
+    "worst_week_high": 94,
+    "convention_seam_seasons": [
+      2015,
+      2016
+    ],
+    "note": "ACT only, per week, 2014-2025; the 53-man limit with game-day inactives removed. 2016 is an upstream roster-convention transition (a team-week reaches 94) and 2015 dips to 36 \u2014 recorded as a floor, not smoothed.",
+    "per_season": [
+      {
+        "season": 2014,
+        "mean_active": 47.7,
+        "min_active": 40,
+        "max_active": 53
+      },
+      {
+        "season": 2015,
+        "mean_active": 47.0,
+        "min_active": 36,
+        "max_active": 53
+      },
+      {
+        "season": 2016,
+        "mean_active": 55.1,
+        "min_active": 46,
+        "max_active": 94
+      },
+      {
+        "season": 2017,
+        "mean_active": 53.2,
+        "min_active": 52,
+        "max_active": 56
+      },
+      {
+        "season": 2018,
+        "mean_active": 53.0,
+        "min_active": 52,
+        "max_active": 57
+      },
+      {
+        "season": 2019,
+        "mean_active": 47.5,
+        "min_active": 45,
+        "max_active": 55
+      },
+      {
+        "season": 2020,
+        "mean_active": 48.1,
+        "min_active": 45,
+        "max_active": 56
+      },
+      {
+        "season": 2021,
+        "mean_active": 48.0,
+        "min_active": 45,
+        "max_active": 49
+      },
+      {
+        "season": 2022,
+        "mean_active": 48.0,
+        "min_active": 46,
+        "max_active": 53
+      },
+      {
+        "season": 2023,
+        "mean_active": 48.0,
+        "min_active": 48,
+        "max_active": 48
+      },
+      {
+        "season": 2024,
+        "mean_active": 48.0,
+        "min_active": 44,
+        "max_active": 52
+      },
+      {
+        "season": 2025,
+        "mean_active": 48.0,
+        "min_active": 47,
+        "max_active": 55
+      }
+    ],
+    "PASS": true
+  },
+  "B7b_draft_capital": {
+    "seasons": 12,
+    "picks_without_curve": 0,
+    "max_pick": 262,
+    "mean_picks_per_year": 256.4,
+    "PASS": true
+  },
+  "B7b_capital_identity": {
+    "summed": 182064.0,
+    "total": 182064.0,
+    "ratio": 1.0
+  },
+  "B7c_cap_honesty": {
+    "mean_accounted_pct": 1.2324,
+    "mean_player_coverage": 0.8892,
+    "worst_season_accounted": 0.9214,
+    "best_season_accounted": 1.3838,
+    "shares_not_summing": 0,
+    "impossible_share": 0,
+    "PASS": true
+  },
+  "cap_by_season": [
+    {
+      "season": 2014,
+      "team_seasons": 32,
+      "mean_accounted": 0.9214,
+      "min_accounted": 0.676,
+      "max_accounted": 1.119,
+      "mean_player_coverage": 0.7007,
+      "mean_rostered": 67.0
+    },
+    {
+      "season": 2015,
+      "team_seasons": 32,
+      "mean_accounted": 0.985,
+      "min_accounted": 0.789,
+      "max_accounted": 1.184,
+      "mean_player_coverage": 0.7814,
+      "mean_rostered": 68.1
+    },
+    {
+      "season": 2016,
+      "team_seasons": 32,
+      "mean_accounted": 1.2061,
+      "min_accounted": 1.002,
+      "max_accounted": 1.425,
+      "mean_player_coverage": 0.8108,
+      "mean_rostered": 99.6
+    },
+    {
+      "season": 2017,
+      "team_seasons": 32,
+      "mean_accounted": 1.2266,
+      "min_accounted": 0.933,
+      "max_accounted": 1.448,
+      "mean_player_coverage": 0.9658,
+      "mean_rostered": 111.7
+    },
+    {
+      "season": 2018,
+      "team_seasons": 32,
+      "mean_accounted": 1.2498,
+      "min_accounted": 0.995,
+      "max_accounted": 1.588,
+      "mean_player_coverage": 0.9598,
+      "mean_rostered": 113.8
+    },
+    {
+      "season": 2019,
+      "team_seasons": 32,
+      "mean_accounted": 1.2485,
+      "min_accounted": 0.963,
+      "max_accounted": 1.515,
+      "mean_player_coverage": 0.9472,
+      "mean_rostered": 114.0
+    },
+    {
+      "season": 2020,
+      "team_seasons": 32,
+      "mean_accounted": 1.2858,
+      "min_accounted": 1.048,
+      "max_accounted": 1.515,
+      "mean_player_coverage": 0.9315,
+      "mean_rostered": 109.9
+    },
+    {
+      "season": 2021,
+      "team_seasons": 32,
+      "mean_accounted": 1.316,
+      "min_accounted": 1.066,
+      "max_accounted": 1.559,
+      "mean_player_coverage": 0.9103,
+      "mean_rostered": 107.8
+    },
+    {
+      "season": 2022,
+      "team_seasons": 32,
+      "mean_accounted": 1.3311,
+      "min_accounted": 0.87,
+      "max_accounted": 1.681,
+      "mean_player_coverage": 0.8853,
+      "mean_rostered": 111.9
+    },
+    {
+      "season": 2023,
+      "team_seasons": 32,
+      "mean_accounted": 1.3502,
+      "min_accounted": 1.015,
+      "max_accounted": 1.901,
+      "mean_player_coverage": 0.971,
+      "mean_rostered": 108.8
+    },
+    {
+      "season": 2024,
+      "team_seasons": 32,
+      "mean_accounted": 1.3737,
+      "min_accounted": 1.081,
+      "max_accounted": 1.7,
+      "mean_player_coverage": 0.9691,
+      "mean_rostered": 115.3
+    },
+    {
+      "season": 2025,
+      "team_seasons": 32,
+      "mean_accounted": 1.3838,
+      "min_accounted": 1.014,
+      "max_accounted": 1.709,
+      "mean_player_coverage": 0.9746,
+      "mean_rostered": 113.0
+    },
+    {
+      "season": 2026,
+      "team_seasons": 32,
+      "mean_accounted": 1.1428,
+      "min_accounted": 0.648,
+      "max_accounted": 1.546,
+      "mean_player_coverage": 0.7515,
+      "mean_rostered": 91.4
+    }
+  ],
+  "picks_by_season": [
+    {
+      "season": 2014,
+      "n_picks": 256,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 256
+    },
+    {
+      "season": 2015,
+      "n_picks": 256,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 256
+    },
+    {
+      "season": 2016,
+      "n_picks": 253,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 253
+    },
+    {
+      "season": 2017,
+      "n_picks": 253,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 253
+    },
+    {
+      "season": 2018,
+      "n_picks": 256,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 256
+    },
+    {
+      "season": 2019,
+      "n_picks": 254,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 254
+    },
+    {
+      "season": 2020,
+      "n_picks": 255,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 255
+    },
+    {
+      "season": 2021,
+      "n_picks": 259,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 259
+    },
+    {
+      "season": 2022,
+      "n_picks": 262,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 262
+    },
+    {
+      "season": 2023,
+      "n_picks": 259,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 259
+    },
+    {
+      "season": 2024,
+      "n_picks": 257,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 257
+    },
+    {
+      "season": 2025,
+      "n_picks": 257,
+      "total_value": 60688.0,
+      "picks_without_curve": 0,
+      "max_pick": 257
+    }
+  ],
+  "checks": {
+    "null_team": 0.0,
+    "teams_2024": 32.0,
+    "continuity_over_1": 0.0,
+    "no_continuity_2015": 0.0,
+    "mean_continuity_off": 0.6714,
+    "mean_qb_age_2024": 27.47
+  },
+  "provenance": {
+    "cap_source": "otc_nominal_window",
+    "note": "contracts.team is an OTC nickname / career-path string, never a team code; team membership comes from weekly_rosters and the contract joins to the PLAYER. cap_pct_* is accounted APY as a share of cap, not cap spend; read cap_share_* for allocation."
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "step": "0.13.1 \u2014 the defensive regime table",
+  "rows": {
+    "total": 153,
+    "historical": 121,
+    "signed_off_2026": 32
+  },
+  "play_callers": 33,
+  "regimes": 52,
+  "confidence": {
+    "high": 78,
+    "med": 74,
+    "low": 1
+  },
+  "audit_vs_pbp": {
+    "auditable_rows": 121,
+    "disagreements": {},
+    "vacuous_by_construction": true,
+    "note": "head_coach is auto-filled from this same scaffold, so this audit cannot fire; expectation_mismatches below is the check with teeth."
+  },
+  "expectation_audit": {
+    "rows_compared": 121,
+    "mismatches": []
+  },
+  "move_graph_findings": [
+    "note: 2020 ATL: internal promotion \u2014 Jeff Ulbrich was already on staff but Dan Quinn called plays in 2019",
+    "note: 2021 SF: internal promotion \u2014 DeMeco Ryans was already on staff but Robert Saleh called plays in 2020",
+    "note: 2024 LAR: internal promotion \u2014 Chris Shula was already on staff but Raheem Morris called plays in 2023",
+    "note: 2025 DET: internal promotion \u2014 Kelvin Sheppard was already on staff but Aaron Glenn called plays in 2024",
+    "note: 2025 HOU: internal promotion \u2014 Matt Burke was already on staff but DeMeco Ryans called plays in 2024",
+    "note: 2026 HOU: internal promotion \u2014 DeMeco Ryans was already on staff but Matt Burke called plays in 2025",
+    "note: 2026 LV: internal promotion \u2014 Rob Leonard was already on staff but Patrick Graham called plays in 2025",
+    "check: Dan Quinn @ ATL: one-season hole at 2018 inside the 2017-2019 spell \u2014 confirm it is a deliberate exclusion, not a missing row",
+    "check: DeMeco Ryans @ HOU: one-season hole at 2025 inside the 2023-2026 spell \u2014 confirm it is a deliberate exclusion, not a missing row"
+  ],
+  "coverage_2026": {
+    "with_prior_history": 25,
+    "first_time": 7,
+    "first_time_teams": [
+      "BUF",
+      "CLE",
+      "DAL",
+      "LAC",
+      "LV",
+      "MIA",
+      "NE"
+    ],
+    "median_prior_seasons": 4.0
+  },
+  "lineage": {
+    "rows": 4,
+    "unmentored_first_timers": [
+      "Chris O'Leary",
+      "Sean Duggan",
+      "Zak Kuhr"
+    ]
+  },
+  "hc_calls_defense_2026": 7
+}
