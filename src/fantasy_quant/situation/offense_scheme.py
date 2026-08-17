@@ -338,6 +338,12 @@ def build_offense_player_week(con, bm: BreakMap) -> dict:
     - **usage within a personnel grouping** — snaps and targets split by the offense's package,
       which is the "target share within personnel grouping" deep-dive question at its own grain
       rather than as a one-off query.
+
+    ⚠ **13 personnel carries a denominator column and the others do not.** ``snaps_p13`` shipped
+    from the start, but targets and carries in the package did not, so the productivity half of
+    the question had to drop to the play view. It is a column now — with ``team_targets_p13``
+    beside it, because a ~3-5% package throws one target in a team-week often enough that an
+    ungated ``target_share_p13`` reads 1.0000 off a denominator of 1.
     """
     offense_player_play_view(con)
     route_cols = ",\n            ".join(
@@ -381,10 +387,12 @@ def build_offense_player_week(con, bm: BreakMap) -> dict:
             count(*) filter (where targeted and package = '11')          as targets_p11,
             count(*) filter (where targeted and package = '12')          as targets_p12,
             count(*) filter (where targeted and package = '21')          as targets_p21,
+            count(*) filter (where targeted and package = '13')          as targets_p13,
             count(*) filter (where carried)                              as carries,
             count(*) filter (where carried and package = '11')           as carries_p11,
             count(*) filter (where carried and package = '12')           as carries_p12,
             count(*) filter (where carried and package = '21')           as carries_p21,
+            count(*) filter (where carried and package = '13')           as carries_p13,
             count(*) filter (where targeted and yardline_100 <= 20)      as targets_rz,
             count(*) filter (where carried and yardline_100 <= 20)       as carries_rz,
             avg(air_yards) filter (where targeted)                       as adot,
@@ -408,7 +416,16 @@ def build_offense_player_week(con, bm: BreakMap) -> dict:
                round(w.targets_p11 / nullif(sum(w.targets_p11) over (partition by w.season, w.week,
                      w.team), 0), 4)                          as target_share_p11,
                round(w.targets_p12 / nullif(sum(w.targets_p12) over (partition by w.season, w.week,
-                     w.team), 0), 4)                          as target_share_p12
+                     w.team), 0), 4)                          as target_share_p12,
+               round(w.targets_p13 / nullif(sum(w.targets_p13) over (partition by w.season, w.week,
+                     w.team), 0), 4)                          as target_share_p13,
+               -- ⚠ the p13 denominator is small enough to be dangerous, which is why it ships as
+               -- a column rather than staying implicit. 13 personnel is a ~3-5% package league-
+               -- wide, so a team-week often throws one target from it and the share reads 1.0000
+               -- off a denominator of 1. Gate on this before ranking anyone by target_share_p13;
+               -- p11/p12 need no such guard because their denominators are never that thin.
+               sum(w.targets_p13) over (partition by w.season, w.week, w.team)
+                                                              as team_targets_p13
         from {PLAYER_WEEK_TABLE} w
         left join {TEAM_WEEK_TABLE} t using (season, week, team)
     """)

@@ -78,7 +78,7 @@ the most useful thing in this file.*
 | `news_raw` | item | in_season_weekly | **NO** | 109 | 9 | — | — | 3 |
 | `ngs` | player-week | in_season_weekly | yes | 26,723 | 53 | 2016-2025 | 2016 | 1 |
 | `offense_personnel_map` | personnel-string | preseason | yes | 4,001 | 11 | — | — | 0 |
-| `offense_player_week` | player-week | in_season_weekly | yes | 102,368 | 52 | 2016-2025 | 2016 | 1 |
+| `offense_player_week` | player-week | in_season_weekly | yes | 102,368 | 56 | 2016-2025 | 2016 | 1 |
 | `offense_team_week` | team-week | in_season_weekly | yes | 5,522 | 42 | 2016-2025 | 2016 | 1 |
 | `officials` | game-official | retrospective | yes | 21,900 | 10 | 2015-2025 | 2015 | 0 |
 | `otc_player_ids` | player | preseason | yes | 13,782 | 7 | — | — | 0 |
@@ -102,7 +102,7 @@ the most useful thing in this file.*
 | `sleeper_crawl_leagues` | league | preseason | yes | 8,207 | 2 | — | — | 0 |
 | `sleeper_crawl_queue` | queue entry | preseason | yes | 11,149 | 3 | — | — | 0 |
 | `sleeper_crawl_users` | user | preseason | yes | 370 | 2 | — | — | 0 |
-| `sleeper_draft_picks` | pick | preseason | yes | 1,207,687 | 17 | 2017-2026 | — | 9 |
+| `sleeper_draft_picks` | pick | preseason | yes | 1,207,687 | 17 | 2017-2026 | — | 10 |
 | `sleeper_drafts` | draft | preseason | yes | 8,521 | 16 | 2017-2026 | — | 8 |
 | `sleeper_manager_profiles` | manager | preseason | yes | 24,696 | 11 | — | — | 3 |
 | `sleeper_tendencies` | manager-slot | preseason | yes | 122,162 | 7 | — | — | 0 |

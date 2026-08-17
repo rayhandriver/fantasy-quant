@@ -334,7 +334,9 @@
       ],
       "source": "DATA-2 0.13.5 over contracts",
       "table": "contract_season",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2014
     },
     {
@@ -507,7 +509,9 @@
       ],
       "source": "DATA-2 0.13.3 over participation",
       "table": "defense_coverage_week",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2016
     },
     {
@@ -623,7 +627,9 @@
       ],
       "source": "DATA-2 0.13.2 over participation",
       "table": "defense_player_week",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2016
     },
     {
@@ -721,7 +727,9 @@
       ],
       "source": "DATA-2 0.13.2 over participation",
       "table": "defense_team_week",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2016
     },
     {
@@ -1570,7 +1578,9 @@
       ],
       "source": "DATA-2 0.13.6 over pbp",
       "table": "kicking_env_week",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2014
     },
     {
@@ -1835,10 +1845,12 @@
         "targets_p11",
         "targets_p12",
         "targets_p21",
+        "targets_p13",
         "carries",
         "carries_p11",
         "carries_p12",
         "carries_p21",
+        "carries_p13",
         "targets_rz",
         "carries_rz",
         "adot",
@@ -1870,13 +1882,16 @@
         "snap_share",
         "target_rate",
         "target_share_p11",
-        "target_share_p12"
+        "target_share_p12",
+        "target_share_p13",
+        "team_targets_p13"
       ],
       "fill_rates": {
         "adot": 0.4328,
         "carries": 1.0,
         "carries_p11": 1.0,
         "carries_p12": 1.0,
+        "carries_p13": 1.0,
         "carries_p21": 1.0,
         "carries_rz": 1.0,
         "gsis_id": 1.0,
@@ -1918,17 +1933,20 @@
         "target_rate": 1.0,
         "target_share_p11": 0.9982,
         "target_share_p12": 0.9257,
+        "target_share_p13": 0.3765,
         "targets": 1.0,
         "targets_p11": 1.0,
         "targets_p12": 1.0,
+        "targets_p13": 1.0,
         "targets_p21": 1.0,
         "targets_rz": 1.0,
         "team": 1.0,
+        "team_targets_p13": 1.0,
         "week": 1.0
       },
       "grain": "player-week",
-      "n_cols": 52,
-      "n_columns_below_50pct_fill": 2,
+      "n_cols": 56,
+      "n_columns_below_50pct_fill": 3,
       "n_producers": 1,
       "n_readers": 1,
       "n_rows": 102368,
@@ -1958,7 +1976,9 @@
       ],
       "source": "DATA-2 0.13.4 over participation",
       "table": "offense_player_week",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2016
     },
     {
@@ -2083,7 +2103,9 @@
       ],
       "source": "DATA-2 0.13.4 over participation + ftn_charting",
       "table": "offense_team_week",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2016
     },
     {
@@ -2289,7 +2311,8 @@
       "table": "participation",
       "test_only": [
         "tests/test_data1.py",
-        "tests/test_data2.py"
+        "tests/test_data2.py",
+        "tests/test_data2b.py"
       ],
       "upstream_floor": 2016
     },
@@ -4665,7 +4688,7 @@
       "n_cols": 17,
       "n_columns_below_50pct_fill": 1,
       "n_producers": 0,
-      "n_readers": 9,
+      "n_readers": 10,
       "n_rows": 1207687,
       "note": "",
       "pit_class": "preseason",
@@ -4677,6 +4700,7 @@
         "src/fantasy_quant/draft/availability.py",
         "src/fantasy_quant/draft/enrichment.py",
         "src/fantasy_quant/draft/opponent_model.py",
+        "steps/mm1_profile.py",
         "steps/phase0_10b_crawl.py",
         "steps/phase16_15_mock_room.py",
         "steps/phase16_16_run_detection.py"
@@ -4963,6 +4987,7 @@
       "table": "snaps",
       "test_only": [
         "tests/test_data2.py",
+        "tests/test_data2b.py",
         "tests/test_nflverse_ingest.py"
       ],
       "upstream_floor": 2014
@@ -5069,7 +5094,9 @@
       ],
       "source": "DATA-2 0.13.6 over pbp",
       "table": "st_team_season",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2014
     },
     {
@@ -5232,7 +5259,9 @@
       ],
       "source": "DATA-2 0.13.5 over contracts/draft_picks/weekly_rosters/snaps",
       "table": "team_construction_season",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2014
     },
     {
@@ -5283,7 +5312,9 @@
       "seasons": [],
       "source": "DATA-2 0.13.7 generated register",
       "table": "team_scheme_columns",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": null
     },
     {
@@ -5543,7 +5574,9 @@
       ],
       "source": "DATA-2 0.13.7 panel",
       "table": "team_scheme_season",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2016
     },
     {
@@ -6171,7 +6204,9 @@
       ],
       "source": "DATA-2 0.13.7 panel",
       "table": "team_scheme_week",
-      "test_only": [],
+      "test_only": [
+        "tests/test_data2b.py"
+      ],
       "upstream_floor": 2016
     },
     {

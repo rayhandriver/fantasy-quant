@@ -2956,3 +2956,38 @@ to catch it** (profile distance moved 0.0007; all five T15 gates passed on both 
 cannot see a defect is not evidence the defect is absent, and the size of a defect is not the
 argument for fixing it.* The fix **degrades rather than raises** — an uncovered season reproduces
 the pre-change room bit-for-bit, which is what turns a re-measurement into a construction proof.
+
+## 13-personnel usage terms (2026-08-05) — the productivity half of a package question
+
+**usage within a personnel grouping, and the half that was missing.** `offense_player_week` shipped
+`snaps_p11/p12/p21/p13` but targets and carries only for **11/12/21** — so "who was on the field in
+13" was a column while "who ate in 13" required dropping to `participation_offense_player_play` ×
+`offense_personnel_map` × `pbp`. `targets_p13`, `carries_p13` and `target_share_p13` close it.
+*A snap count is presence; a target count is usage, and a package is only a fantasy fact once you
+have the second one.*
+
+**★ the thin denominator (`team_targets_p13`).** 13 personnel is a ~3–5% package league-wide, so a
+team-week routinely throws **exactly one** target from it — 106 of the 213 team-weeks with any 2025
+p13 target — and 106 of the 114 rows reading `target_share_p13 = 1.0000` are that case. The
+denominator therefore ships as its own column, in the house `*_denom` idiom, and must be gated on
+before anyone is ranked by the share. `p11`/`p12` need no such guard because their denominators are
+never that thin. *A share whose denominator can be 1 is not a rate; it is a coin flip wearing a
+percent sign.*
+
+**rank beats z on a package column.** CHI's 2025 `share_p13` of 9.64% is **4th of 32**, but
+`share_p13_z` reads only **0.78** — LA at 30.79% inflates the SD until a genuine outlier looks
+ordinary. On any column with one runaway team, the z-score is a worse instrument than the rank.
+
+**the midseason install.** A season-total package share blends two different offenses when the
+package was **added** in-year: CHI ran 13 personnel on 2.5% of wk1–10 snaps and **14.5%** of
+wk11–18, so the 9.64% season figure describes no team that ever took the field. Same shape as
+[[role-change detection]] on a player, applied to a scheme column — the split is the finding.
+
+**coach prior ≠ coach history.** Ben Johnson's Detroit ran 3.79 / 3.82 / 3.87% 13 personnel across
+2022–24 — flat, bottom half, every year — so CHI's 2025 jump is **not** a signature being imported.
+*A playcaller's prior is what he did with the personnel he had, not a constant he carries.*
+
+**the mean that is one team.** League-wide `share_p13` went 3.62% → 5.15% in 2025, but roughly 40%
+of that move is LA alone. The median (2.49% → 4.41%, highest in the ten stored seasons) and the
+count of teams ≥5% (6 → 13) are the honest instruments. *When a distribution has one runaway, report
+the median and say so.*
