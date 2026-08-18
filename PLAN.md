@@ -3468,3 +3468,48 @@ personality to be created and added to the library. **Beliefs shipped; policy ex
 - **MM-1b** — the elicitation page, then the 16.18c fit. ⚠ The 45 mock picks are now *partly spent*
   (one scalar, under LOO), so B4's primary arm should become the withheld comparisons.
 - **14.P** — the personality builder as a shipped product feature.
+
+## 2026-08-17 — Session UI-3: preferences are first-class (A1 · A2 · A3 · A7)
+
+Ran the session's remaining three steps straight through after step 0 and step 1 (already committed),
+plus the pre-registered runner. **All 7 bars PASS**, 996 tests, ruff clean, engine untouched.
+
+### The six decisions, all asked before anything was written
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | stop gates and commits | **straight through, commit each step** in the house style |
+| 2 | the strip's third field, given T39 killed `TIER` | **the tier cliff in points** (14.E's own number) |
+| 3 | which surfaces get §5 bars | **card's 8 + strip's 5 + the grade panel's four contributions** (the grade gets a 0–100 fill only — its baseline is min–max over the room, so a dual baseline would be a second claim) |
+| 4 | how much of the pick UI goes | **full spec** — selectbox replaces the text search, quick row deleted, `resolve_pick` kept for the CLI |
+| 5 | which five bars on the strip | **§2's #1–#5** (Impact · Upside · Downside · Injury · Bargain), *not* `card["bars"][:5]` — the two numberings differ and #1/#5 are card fields |
+| 6 | percentile pool for the dual baseline | **the whole board, static** — matching `_bargain`'s shipped precedent |
+
+### Judgment calls taken without asking (stated for the record)
+- **`BUST` is the only inverted bar.** The other seven read high-is-good, including `Q10`: §2 chose
+  the *floor in points* for bar #3 precisely so the downside bar would not need inverting.
+- **The strip hangs off `pending_pick`, not off the selection event** — which is what gives B2 a
+  drivable path under T36, and it is why A7 later strengthens A2's coverage rather than only its UX.
+- **The strip carries the tag controls** (§3's sketch does not list them).
+- **The Board page shares the room's `pending_pick`** — one concept, *the player I am looking at*.
+
+### Dead ends and things deliberately not done
+- **No drag-to-reorder rankings, no keyboard shortcuts, no faked hover** — the spec's three "do nots",
+  all still right, all still unbuilt.
+- **The deep page still drops a readout it cannot supply** rather than drawing an empty track: on the
+  card there is room to simply not make the claim. The *strip* keeps its five in place, because a
+  glance whose columns move between players is unreadable.
+- **T36 not closed.** The honest options remain a browser driver (a new dev dependency and a slow bar)
+  or a control that exists only to be testable, which is worse.
+
+### What this cost elsewhere, and how it was declared
+A7 deleted the control **four** committed sheets drove their FLOW bar through, and A3 deleted the
+table K2's `grade_rendered` looked for. Both were re-pointed rather than loosened: one shared
+`steps/_app_drive.pick_by_clicking`, and two narrow `ALLOWED_MOVES` entries (`a7_pick_path`,
+`prose_census`) on T40's precedent — *the renamed keys are the instrument; the numbers under them are
+still checked*. `clicked`, `picks_before` and `picks_after` were left unexcused and did not move.
+
+### Next
+**Session UI-4** (the polish tail: B2 presets · B3 room-grid polish · B4 density · B5 export · B6 the
+`why` search into the dialog · B7 first-run state · C2 mock history · C3 room scouting), whose only
+ordering constraint is that **B2 lands after K3** (league import). K3, VH's two open decisions and
+MM-1/MM-2 are all still independent and unblocked.

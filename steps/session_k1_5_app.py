@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine, probe  # noqa: E402
-from steps import _sheet_diff  # noqa: E402
+from steps import _app_drive, _sheet_diff  # noqa: E402
 
 from fantasy_quant.data import db  # noqa: E402
 from fantasy_quant.draft import session  # noqa: E402
@@ -253,7 +253,7 @@ def bar_flow(con, season: int) -> dict:
     started = "draft" in a.session_state
     meta = a.session_state["draft"]["meta"] if started else {}
 
-    # --- half 2: a quick-pick button really makes that pick ------------------------------------
+    # --- half 2: clicking really makes that pick (A7: select, then confirm) ----------------
     built = engine.build(con, season)
     state, meta2 = engine.start_draft(built, human_seats=[SEAT], settings=LeagueSettings(),
                                       season=season, seed=7, room_seed=1)
@@ -264,21 +264,22 @@ def bar_flow(con, season: int) -> dict:
     b.session_state["draft"] = {"state": state, "meta": meta2, "vi": built["value_index"],
                                 "risk": built["risk"]}
     b.run()
-    quick = [x for x in b.button if x.key and x.key.startswith("quick_")]
-    wanted = quick[0].label.split("\n")[0] if quick else None
-    if quick:
-        quick[0].click().run()
+    # UI-3 A7 — the six-button quick row this bar used to click is deleted; the claim ("a human can
+    # make a pick by clicking") is unchanged and now runs through the one pick path. The player is
+    # the same one: the selector's first real option is the best available legal player, which is
+    # who `quick[0]` was.
+    wanted, b = _app_drive.pick_by_clicking(b)
     after = b.session_state["draft"]["state"]
     mine = [p["player_name"] for p in after.log if p["team"] == SEAT]
     exceptions = ([str(e.value)[:300] for e in a.exception]
                   + [str(e.value)[:300] for e in b.exception])
 
     return {"bar": "FLOW — a human can start a draft and make a pick by clicking",
-            "pass": bool(started and quick and wanted in mine and len(after.log) > before
+            "pass": bool(started and wanted and wanted in mine and len(after.log) > before
                          and not exceptions),
             "start_button_started_a_draft": started,
             "randomized_seed": meta.get("seed"), "randomized_room_seed": meta.get("room_seed"),
-            "quick_pick_buttons": len(quick), "clicked": wanted, "your_picks": mine,
+            "pick_path": "selectbox -> strip confirm", "clicked": wanted, "your_picks": mine,
             "picks_before": before, "picks_after": len(after.log),
             "n_exceptions": len(exceptions), "exceptions": exceptions[:3]}
 

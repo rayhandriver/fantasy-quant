@@ -33,7 +33,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine, post_draft, probe  # noqa: E402
-from steps import _sheet_diff  # noqa: E402
+from steps import _app_drive, _sheet_diff  # noqa: E402
 
 from fantasy_quant.data import db  # noqa: E402
 from fantasy_quant.draft import drift, optimizer, session  # noqa: E402
@@ -364,9 +364,14 @@ def bar_b1(con, season: int) -> dict:
         # rendered with `st.warning`/`st.info`, and a check that only reads markdown would report
         # them missing from a page that shows them — a bar failing for the wrong reason is a bar
         # nobody trusts the next time it fails.
+        # ⚠ …and the `html` bodies, since UI-3 A3 (2026-08-17): the grade's four contributions are
+        # drawn bars now, so a scrape that stopped at the text primitives would report them missing
+        # from a page that draws them. **Same lesson as the alert elements above, one medium on** —
+        # and it can only *add* matches, so the two honesty-rule leaves beside it cannot flip.
         text = " ".join(str(e.value) for kind in ("markdown", "caption", "warning", "info",
                                                   "success")
                         for e in getattr(at, kind, []))
+        text += " " + " ".join(str(getattr(e.proto, "body", "")) for e in at.get("html"))
         runs.append({
             "k": k, "page_bodies": ran, "n_dataframes": len(frames),
             "standings_matches_session": startable_ok,
@@ -376,8 +381,12 @@ def bar_b1(con, season: int) -> dict:
                                            for v in f["TITLE"]),
             "one_observation_rule_rendered": (k <= 1) or ("ONE observation" in text),
             "fully_simulated_scope_rendered": "fully simulated" in text,
-            "grade_rendered": any("letter" in str(f.columns).lower() or "COMPONENT"
-                                  in getattr(f, "columns", []) for f in frames),
+            # UI-3 A3 — the four contributions were a `COMPONENT` dataframe and are now drawn
+            # bars, so this looks for the contributions themselves rather than for the table that
+            # used to hold them. **The claim is unchanged**: 14.I's grade is on the page with its
+            # arithmetic beside it, and it is still checked once per k.
+            "grade_rendered": (any("letter" in str(f.columns).lower() for f in frames)
+                               or all(c.upper() in text for c in session.GRADE_WEIGHTS)),
         })
     ok = (not exceptions
           and all(r["page_bodies"] == {"post": 1} for r in runs)
@@ -437,9 +446,8 @@ def bar_flow(con, season: int) -> dict:
     a.session_state["draft"] = {"state": state2, "meta": meta2, "vi": built["value_index"],
                                 "risk": built["risk"]}
     a.run()
-    quick = [x for x in a.button if x.key and x.key.startswith("quick_")]
-    if quick:
-        quick[0].click().run()
+    # UI-3 A7 — one pick path (see `steps/_app_drive.py`); this used to click the quick row.
+    clicked, a = _app_drive.pick_by_clicking(a)
     after = a.session_state["draft"]["state"]
     completed = after.is_done() or not after.available
     # ⚠ `AppTest.session_state` is a SafeSessionState, not a dict — it has no `.get`
@@ -485,11 +493,11 @@ def bar_flow(con, season: int) -> dict:
     exceptions = ([str(e.value)[:300] for e in a.exception]
                   + [str(e.value)[:300] for e in b.exception] + page_errors)
     return {"bar": "FLOW — the last pick lands on 14.N by clicking; every page renders",
-            "pass": bool(quick and completed and arrived and card_ok and not exceptions),
+            "pass": bool(clicked and completed and arrived and card_ok and not exceptions),
             "pages_rendered": pages, "page_errors": page_errors[:4],
             "picks_before": picks_before, "picks_after": len(after.log),
             "draft_completed_by_click": completed, "navigated_to_post_draft": arrived,
-            "clicked": quick[0].label.split("\n")[0] if quick else None,
+            "clicked": clicked, "pick_path": "selectbox -> strip confirm",
             "post_page_dataframes": len(b.dataframe), "letters_seen": sorted(letters),
             "card_player": card["name"], "card_bars": len(card["bars"]),
             "card_chain_rows": len(card["chain"][0]["rows"]) if card["chain"] else 0,

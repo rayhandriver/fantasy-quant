@@ -11,7 +11,8 @@ section, not just appended.
 > polarity resolved before the renderer · the dual baseline · no reading, no bar ·
 > **drawing a number asks what its maximum is** · the third tier, measured · **step 4/A7:**
 > one way in · an illegal pick is not offered · the rule outlived the function ·
-> `resolve_pick` kept-not-default) and **bar-sheet comparator terms** (T41/T40/T55:
+> `resolve_pick` kept-not-default · **the bars:** an instrument cannot outlive what it
+> measures · the unexcused clause · a scrape that cannot see the surface) and **bar-sheet comparator terms** (T41/T40/T55:
 > board vintage stamp · gate leaf vs readout leaf · the pinned control · the room is an input ·
 > constructed vs sampled control · an inert guard). _Previously:_ 2026-07-30 — **seat-map terms**
 > (16.17 **BUILT**, 14.J still
@@ -3186,3 +3187,26 @@ nothing here can be armed by a stray Enter.
 **`resolve_pick` is kept, not default** (the Phase-7 / props pattern, third instance). The CLI still
 types a free-text name at it and its two-step disambiguation is still the right answer *there*; the
 app no longer needs to parse a name because a selectbox never hands it one.
+
+### The bars, and what UI-3 cost them
+
+**an instrument that lives in the thing it measures cannot outlive it.** A7 deleted the six-button
+quick row, and **four** committed bar sheets (K1.5, K2, UI-1, UI-2) drove their FLOW bar through it;
+A3 replaced the grade's `COMPONENT` table, which is what K2's `grade_rendered` looked for. In every
+case **the claim was unchanged and only the control had moved**, so the drive went into one shared
+`steps/_app_drive.pick_by_clicking` and the renamed leaves were declared in `ALLOWED_MOVES` under
+`a7_pick_path` — T40's precedent, *the renamed keys are the instrument, the numbers under them are
+still checked.*
+
+**the unexcused clause.** The half of that fix which carries the proof: `clicked`, `picks_before`
+and `picks_after` were **deliberately left out** of the allowance, because the selector's first real
+option is the same best-available player the quick row's first button was. If the re-pointing had
+quietly changed *which* pick a sheet made, those three leaves would have moved and B0 would have
+failed. A declared allowance is a hypothesis; the leaf you refuse to declare is the test of it.
+Sibling of [[the pinned control]].
+
+**a scrape that cannot see the surface reports the surface as missing** (third instance, twice in
+this session). B1 first read `0/4` tagged players on the Cost page while the `TAG` column was on
+screen inside an Arrow payload; K2's `text` had the same blind spot for `st.html` once the grade's
+contributions became bars. Both instruments were widened and **neither claim moved** — which is how
+you tell an instrument bug from a regression.

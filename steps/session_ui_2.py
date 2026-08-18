@@ -37,7 +37,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine, palette, post_draft, probe  # noqa: E402
-from steps import _sheet_diff  # noqa: E402
+from steps import _app_drive, _sheet_diff  # noqa: E402
 
 from fantasy_quant.data import db  # noqa: E402
 from fantasy_quant.draft import optimizer, session  # noqa: E402
@@ -638,10 +638,12 @@ def bar_flow(con, season: int) -> dict:
             clicked_in.append(mode)
     at = _apptest("draft", state, meta, built)
     at.run()
-    quick = [b for b in at.button if "\n" in (b.label or "")]
+    # UI-3 A7 — this used to click the six-button quick row (found by its multiline label), which
+    # is deleted. One pick path now: `steps/_app_drive.pick_by_clicking`. Same player, because the
+    # selector's first real option is the best available legal player the quick row led with.
+    clicked, at = _app_drive.pick_by_clicking(at)
     picked = None
-    if quick:
-        quick[0].click().run()
+    if clicked:
         after = at.session_state["draft"]["state"]
         picked = len(after.log) > before
 
@@ -651,7 +653,7 @@ def bar_flow(con, season: int) -> dict:
             "pages_rendered": {p: sorted(set(v)) for p, v in pages.items()}, "runs": runs,
             "modes_rendered_without_exception": clicked_in,
             "pick_made_by_clicking": picked,
-            "clicked": quick[0].label.split("\n")[0] if quick else None,
+            "clicked": clicked, "pick_path": "selectbox -> strip confirm",
             "n_exceptions": len(exceptions), "exceptions": exceptions[:4]}
 
 

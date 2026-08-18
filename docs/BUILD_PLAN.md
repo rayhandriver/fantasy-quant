@@ -2735,6 +2735,33 @@ one cached home for the two season facts the board now needs.
 
 ---
 
+> ## ✅ UI-3 RUN 2026-08-17 — all four steps shipped, all 7 bars PASS
+>
+> `steps/session_ui_3.py` → `analysis/session_ui_3.json` (board vintage `ffc-20260817`).
+> **996 tests** (was 985), ruff clean, engine untouched — the card's eight bar values were
+> re-checked against a literal control list held in the measurement (480 values, zero differing).
+>
+> | the spec said | what happened |
+> |---|---|
+> | A2's strip carries `name · pos · **tier** · ADP · …` | **T39 killed `TIER`** before this session and shipped nothing, so the slot carries **14.E's cliff** — the number that answers what a tier was there to answer. No label over a null |
+> | "the strip's five bars" = §3's five | §3 numbers them off **§2**, which is *not* the order of `card["bars"]` — and #1 and #5 are card *fields*. The mapping is now written down once (`session.STRIP_BARS`) instead of being re-derived per renderer |
+> | B5 asks ≤ 2 queued / ≤ 3 search *(currently 3 and 3)* | **2 and 2.** The selectbox collapses "type" and "click a match" into one interaction |
+> | ⚠ "T36 … A2's strip is reachable in the bars only through the pieces around it" | **the spec's own warning, designed around**: A2 hangs off `pending_pick` rather than the selection event, so B2 and B3 drive the *real* strip through every non-click route. The uncovered surface is one event, and the sheet carries `t36_row_select_click_uncovered: true` |
+> | A3 = "~20 lines of inline SVG/CSS per bar" | about that, and written as a **string function** (`views.bar_html`) so B3 asserts §5 on the markup rather than on the spec |
+>
+> **★ Two findings the spec could not have contained.**
+> (1) The board carries **two** positional ranks — `pos_rank` is the **ADP** one — so bar #1 needed
+> its own derivation or the availability signal would have shipped inside the value bar.
+> (2) **Drawing a number is the first thing that asks what its maximum is:** the grade panel's
+> `score_*` is 0–1, the first bar divided it by 100, and the number had been correct on screen as a
+> `%.2f` table column for two sessions.
+>
+> **★ The bill this session paid elsewhere, declared rather than absorbed.** A7 deleted the control
+> **four** committed sheets drove their FLOW bar through and A3 deleted the table K2's
+> `grade_rendered` looked for. Both were re-pointed (one shared `steps/_app_drive.pick_by_clicking`)
+> with two narrow `ALLOWED_MOVES` entries on T40's precedent — and `clicked` / `picks_before` /
+> `picks_after` were left **unexcused**, and did not move.
+
 ## ★★ Session UI-3 — "PREFERENCES ARE FIRST-CLASS" *(A1 · A2 · A3 · A7)*
 
 **Character: the session that changes the *workflow*.** It is the one that makes the direct-indexing

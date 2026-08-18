@@ -74,8 +74,12 @@ ALLOWED_MOVES: tuple[tuple[str, str], ...] = (
     # of each other, so *the argmax of a noisy vector is noisier than the vector*, and a run where
     # `reacher` beats `upside_chaser` by 0.4 ms is not a finding about either.
     ("timing", "worst_ms"), ("timing", "worst_pick_ms_by_seat"), ("timing", "worst_seat"),
-    # the stat dictionary gains entries as columns are documented
-    ("stat_dict", "n_entries"), ("stat_dict", "documented"),
+    # …and UI-2's own wall-clock leaf, which is the same kind of number under a different name
+    # (2026-08-17): `cost_ms_for_40_rows` moved 406 → 455 ms between two runs of identical code.
+    ("timing", "cost_ms"),
+    # the stat dictionary gains entries as columns are documented. ⚠ The *count* is what is allowed;
+    # `assert_stat_dict_covers_board`'s verdict is a gate (`covers`) and is not excused by this.
+    ("stat_dict", "n_entries"), ("stat_dict", "documented"), ("stat_dict", "stat_dict_entries"),
     # UI-1: `Δ` joins the slim view, lengthening the column list K1.5's bar B2 records
     ("column_lists", "slim_columns"),
     # UI-2: three columns join the frame's union and the mode list grows by two
@@ -90,6 +94,23 @@ ALLOWED_MOVES: tuple[tuple[str, str], ...] = (
     # keys are the instrument; the numbers under them are still checked.
     ("t40_control", "glyphs_that_fired"), ("t40_control", "every_glyph_fired"),
     ("t40_control", "constructed_control"),
+    # UI-3 step 4 / A7 (2026-08-17): three sheets drove their FLOW bar through the six-button
+    # quick-pick row, and A7 deleted it. They now drive `steps/_app_drive.pick_by_clicking`.
+    # **Scoped to the instrument's own two keys, on T40's precedent.** `clicked`, `picks_before`
+    # and `picks_after` are deliberately *not* here: the selector's first real option is the same
+    # best-available player the quick row's first button was, so the pick that lands must
+    # reproduce on its own — which is the only thing that makes the re-pointing checkable rather
+    # than merely plausible.
+    ("a7_pick_path", "quick_pick_buttons"), ("a7_pick_path", "pick_path"),
+    # UI-1's prose census, which every later UI session moves **by construction** — A7 deleted the
+    # search box's help text and the quick row, so `draft_room.py` went 6 → 5 blocks. The bar's own
+    # verdict is `n_after <= PROSE_TARGET`, and `pass` is a gate this cannot excuse; what is allowed
+    # here is the *count*, which is a readout of a deletion the session declared. ⚠ Note the
+    # direction is not asserted: a count that went **up** would also land here, and it is B3 — the
+    # honesty-surface bar UI-1 deliberately paired with B2 — that stops prose being traded for a
+    # deleted warning. One bar's readout, another bar's gate.
+    ("prose_census", "after_total"), ("prose_census", "after_by_file"),
+    ("prose_census", "removed"),
 )
 
 #: Path segments that mark a leaf as a **gate** — something a bar's verdict rests on. A gate

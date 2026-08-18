@@ -141,7 +141,7 @@
           "page_bodies": {
             "post": 1
           },
-          "n_dataframes": 12,
+          "n_dataframes": 11,
           "standings_matches_session": true,
           "capital_labelled": true,
           "odds_lead_with_multiple": true,
@@ -154,7 +154,7 @@
           "page_bodies": {
             "post": 1
           },
-          "n_dataframes": 30,
+          "n_dataframes": 26,
           "standings_matches_session": true,
           "capital_labelled": true,
           "odds_lead_with_multiple": true,
@@ -184,7 +184,8 @@
       "draft_completed_by_click": true,
       "navigated_to_post_draft": true,
       "clicked": "Dalton Kincaid",
-      "post_page_dataframes": 12,
+      "pick_path": "selectbox -> strip confirm",
+      "post_page_dataframes": 11,
       "letters_seen": [
         "A",
         "A\u2212",

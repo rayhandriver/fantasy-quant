@@ -69,6 +69,63 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
+> **★★★ Next-session pointer (2026-08-17 — ✅ SESSION UI-3 COMPLETE: preferences are first-class.
+> All 7 bars PASS. READ THIS FIRST.)**
+>
+> **State: 996 tests (was 985), ruff clean, all four steps COMMITTED** (`03d0ed8` step 1 · `e25a991`
+> step 2 · `ba19d27` step 3 · `a41aff4` step 4, on step 0's `6fa2ddc`). **No refit, no lockbox read,
+> no frozen contract moved** — B0 re-checked `player_card`'s eight bar values against a literal
+> control list held in the measurement: **480 values, zero differing**.
+>
+> **Run it:** `uv run python steps/session_ui_3.py` → `analysis/session_ui_3.json` (~15 min; B0
+> nests UI-2 → UI-1 → K2 → K1.5 → K1). ⚠ **Back up `analysis/session_ui_*.json` first** — they are
+> tracked now, but a re-run overwrites them and only `git` remembers the last good one.
+>
+> **★★ THE SESSION IN ONE LINE: the app can now hold an opinion, and every number on it is drawn.**
+> Tag from the board (🎯 must · 🚫 never · ↑ reach · ↓ wait), price it on the Cost page — one object,
+> two pages, which is the direct-indexing thesis reaching the surface. Write-up: `findings.md`
+> §"SESSION UI-3"; decisions in `PLAN.md` §2026-08-17; the spec's own scorecard in
+> `docs/BUILD_PLAN.md` §"✅ UI-3 RUN 2026-08-17".
+>
+> **★ Six decisions the user took up front — do not re-litigate:** straight through with a commit per
+> step · the strip's dead `TIER` slot carries **14.E's cliff** · §5 bars on the **card's 8 + strip's
+> 5 + the grade panel's four** · A7 ships the **full** spec (selectbox replaces the search, quick row
+> deleted, `resolve_pick` kept for the CLI) · the strip's five are **§2's #1–#5**, not
+> `card["bars"][:5]` · both percentile baselines over the **whole board**, static.
+>
+> **★ Do not re-derive these — they are measured:**
+> - **The board carries TWO positional ranks.** `board["pos_rank"]` is filled from `adp_pos_rank` —
+>   the **market's** order, i.e. the availability signal — and PLAYER-VIEW bar #1 is *Impact /
+>   **value***. They disagree at the very top of the live 2026 board (ADP's RB1 Bijan is our RB2).
+>   `session.value_pos_rank` exists to be the one that means value, and its test **scrambles
+>   `pos_rank` and requires nothing to move.** Never wire a value readout to that column.
+> - **`score_*` in `draft_grade` is 0–1, not 0–100.** A3's first draft divided it by 100 and drew
+>   every grade contribution near-empty and red. **Drawing a number is the first thing that asks what
+>   its maximum is** — it had been correct on screen as a `%.2f` table column for two sessions.
+> - **Time to pick is 2 interactions** (was 3), for a queued player *and* an arbitrary search.
+>
+> **⚠ Do not "fix":**
+> - **The strip hangs off `pending_pick`, not off the row-select event.** That is deliberate: T36
+>   says `AppTest` cannot fire `st.dataframe(on_select=…)`, so hanging it off state is what gives
+>   B2/B3/B5 a real drivable path. **T36 is narrowed, not closed** — the uncovered surface is one
+>   event, and `analysis/session_ui_3.json` carries `t36_row_select_click_uncovered: true`.
+> - **`ALLOWED_MOVES` gained three narrow entries** (`a7_pick_path`, `prose_census`, plus `cost_ms` /
+>   `stat_dict_entries` fragments) because A7 deleted the control **four** committed sheets drove
+>   their FLOW bar through and A3 deleted the table K2's `grade_rendered` looked for. The drives moved
+>   into one shared `steps/_app_drive.pick_by_clicking`. **`clicked`, `picks_before` and
+>   `picks_after` were deliberately left unexcused and did not move** — that is what makes the
+>   re-pointing checkable. Do not widen these further to make a sheet go green.
+> - **`views.bar_html` is a string function on purpose** (B3 asserts §5 on the markup) and
+>   `views.grade_bars` returns a list on purpose (so the 0–1 defect has a unit test). Neither should
+>   be inlined back into a render call.
+> - **A missing readout draws a dashed empty track, never a zero-width fill.** T22 in a new medium.
+>
+> **★ NEXT: Session K3 (league import — 17.5 Sleeper for the contract → 17.6 ESPN, the one he needs;
+> 17.7 Yahoo deferred to 14.4), then Session UI-4** (the polish tail; **B2's presets must land after
+> K3** — same 17.3 form). VH's two open decisions and MM-1/MM-2 remain independent and unblocked.
+> Still ☐ in Phase 14/16: **16.6** Beta Lab, **14.H** playoff-SOS, **14.P** the elicitation page.
+> Stage-0 FFC chore current (`ffc-20260817`), next due after **08-23**.
+
 > **★★★ Next-session pointer (2026-08-05 — ✅ MM-1a: THE BELIEF BOARD IS A SEAT. 16.18e built,
 > policy deliberately NOT fitted. READ THIS FIRST.)**
 >

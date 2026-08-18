@@ -44,7 +44,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine, palette, post_draft, probe, views  # noqa: E402
-from steps import _sheet_diff  # noqa: E402
+from steps import _app_drive, _sheet_diff  # noqa: E402
 
 from fantasy_quant.data import db  # noqa: E402
 from fantasy_quant.draft import optimizer, session  # noqa: E402
@@ -627,9 +627,8 @@ def bar_flow(con, season: int) -> dict:
     before = len(state2.log)
     a = _apptest("draft", state2, meta2, built)
     a.run()
-    quick = [x for x in a.button if x.key and x.key.startswith("quick_")]
-    if quick:
-        quick[0].click().run()
+    # UI-3 A7 — one pick path (see `steps/_app_drive.py`); this used to click the quick row.
+    clicked, a = _app_drive.pick_by_clicking(a)
     after = a.session_state["draft"]["state"]
     completed = after.is_done() or not after.available
     arrived = ("_arrived_post_draft" in a.session_state
@@ -637,11 +636,11 @@ def bar_flow(con, season: int) -> dict:
     exceptions = page_errors + [str(e.value)[:200] for e in a.exception]
 
     return {"bar": "FLOW — all six pages render at k ∈ {0,1,4}; a pick made by clicking completes",
-            "pass": bool(not exceptions and quick and completed and arrived),
+            "pass": bool(not exceptions and clicked and completed and arrived),
             "pages_rendered": pages, "runs": runs,
             "picks_before": before, "picks_after": len(after.log),
             "completed_by_click": completed, "navigated_to_post_draft": arrived,
-            "clicked": quick[0].label.split("\n")[0] if quick else None,
+            "clicked": clicked, "pick_path": "selectbox -> strip confirm",
             "n_exceptions": len(exceptions), "exceptions": exceptions[:4],
             "modal_click_not_drivable": True}
 

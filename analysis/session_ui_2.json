@@ -170,7 +170,7 @@
       "fabricated_week_zero_rows": 0,
       "censored_and_thin_encode_FLAGS_exactly": true,
       "FLAGS_string_byte_identical": true,
-      "cost_ms_for_40_rows": 405.8,
+      "cost_ms_for_40_rows": 453.5,
       "note": "Scoped to the rendered rows, deliberately: a tier is a fact about the pool so scoping it to the screen would change its meaning, but a construction flag is a fact about the pair (your roster, this player). Each row is one lineup solve, which is what makes the scope worth stating."
     },
     "b4": {
@@ -261,7 +261,7 @@
         "board --view slim": 0,
         "stats": 0
       },
-      "stat_dict_entries": 24,
+      "stat_dict_entries": 26,
       "cli_value_header": "  #    PLAYER                POS    ADP  PROJ  MEAN AVAIL     BV   VBD   RK      \u0394 BARGAIN CLIFF",
       "cli_risk_header": "  #    PLAYER                POS  UPSIDE  FLOOR   TAIL  BOOM  BUST  RISKS / FLAGS"
     },
@@ -349,6 +349,7 @@
       ],
       "pick_made_by_clicking": true,
       "clicked": "Bijan Robinson",
+      "pick_path": "selectbox -> strip confirm",
       "n_exceptions": 0,
       "exceptions": []
     },
@@ -433,7 +434,7 @@
         },
         "analysis/session_k1_5_app.json": {
           "comparable": true,
-          "leaves": 135,
+          "leaves": 136,
           "vintage": {
             "committed": "ffc-20260817",
             "current": "ffc-20260817",
@@ -467,7 +468,9 @@
           "input_bucket": null,
           "moved": {
             "entropy": 7,
-            "timing": 9
+            "timing": 8,
+            "stat_dict": 1,
+            "a7_pick_path": 2
           },
           "moved_paths": {
             "entropy": [
@@ -483,11 +486,18 @@
               "bars.b3.worst_ms",
               "bars.b3.worst_pick_ms_by_seat.autopilot",
               "bars.b3.worst_pick_ms_by_seat.balanced",
-              "bars.b3.worst_pick_ms_by_seat.fitted_manager",
+              "bars.b3.worst_pick_ms_by_seat.chalk",
               "bars.b3.worst_pick_ms_by_seat.reacher",
               "bars.b3.worst_pick_ms_by_seat.safe_floor",
               "bars.b3.worst_pick_ms_by_seat.upside_chaser",
               "bars.b3.worst_pick_ms_by_seat.value_hawk"
+            ],
+            "stat_dict": [
+              "bars.b5.n_entries"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path",
+              "bars.flow.quick_pick_buttons"
             ]
           },
           "unclassified": [],
@@ -495,46 +505,7 @@
         },
         "analysis/session_k2_app.json": {
           "comparable": true,
-          "leaves": 173,
-          "vintage": {
-            "committed": "ffc-20260817",
-            "current": "ffc-20260817",
-            "moved": false
-          },
-          "room": {
-            "committed": [
-              "autopilot",
-              "balanced",
-              "balanced",
-              "fitted_manager",
-              "value_hawk",
-              "safe_floor",
-              "reacher",
-              "upside_chaser",
-              "chalk"
-            ],
-            "current": [
-              "autopilot",
-              "balanced",
-              "balanced",
-              "fitted_manager",
-              "value_hawk",
-              "safe_floor",
-              "reacher",
-              "upside_chaser",
-              "chalk"
-            ],
-            "moved": false
-          },
-          "input_bucket": null,
-          "moved": {},
-          "moved_paths": {},
-          "unclassified": [],
-          "n_unclassified": 0
-        },
-        "analysis/session_ui_1.json": {
-          "comparable": true,
-          "leaves": 346,
+          "leaves": 174,
           "vintage": {
             "committed": "ffc-20260817",
             "current": "ffc-20260817",
@@ -567,16 +538,79 @@
           },
           "input_bucket": null,
           "moved": {
-            "comparator_self": 6
+            "display_count": 3,
+            "a7_pick_path": 1
+          },
+          "moved_paths": {
+            "display_count": [
+              "bars.b1.runs[1].n_dataframes",
+              "bars.b1.runs[2].n_dataframes",
+              "bars.flow.post_page_dataframes"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path"
+            ]
+          },
+          "unclassified": [],
+          "n_unclassified": 0
+        },
+        "analysis/session_ui_1.json": {
+          "comparable": true,
+          "leaves": 358,
+          "vintage": {
+            "committed": "ffc-20260817",
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": null,
+          "moved": {
+            "comparator_self": 15,
+            "prose_census": 3,
+            "a7_pick_path": 1
           },
           "moved_paths": {
             "comparator_self": [
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.leaves",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.a7_pick_path",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.stat_dict",
               "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.timing",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[3]",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[4]",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[5]",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[6]",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[7]"
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.a7_pick_path[0]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.a7_pick_path[1]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.stat_dict[0]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[3]"
+            ],
+            "prose_census": [
+              "bars.b2.after_by_file.draft_room.py",
+              "bars.b2.after_total",
+              "bars.b2.removed"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path"
             ]
           },
           "unclassified": [],

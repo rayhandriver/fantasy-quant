@@ -1,0 +1,551 @@
+{
+  "season": 2026,
+  "seat": 6,
+  "board_vintage": "ffc-20260817",
+  "room_mix": [
+    "autopilot",
+    "balanced",
+    "balanced",
+    "fitted_manager",
+    "value_hawk",
+    "safe_floor",
+    "reacher",
+    "upside_chaser",
+    "chalk"
+  ],
+  "tags": {
+    "must": "\ud83c\udfaf",
+    "never": "\ud83d\udeab",
+    "reach": "\u2191",
+    "wait": "\u2193"
+  },
+  "queue_glyph": "\u2b50",
+  "strip_bars": [
+    "IMPACT",
+    "BOOM",
+    "Q10",
+    "AVAIL",
+    "BARGAIN"
+  ],
+  "inverted_bars": [
+    "BUST"
+  ],
+  "tier_mid": "#A87900",
+  "t36_row_select_click_uncovered": true,
+  "all_pass": true,
+  "bars": {
+    "b1": {
+      "bar": "B1 \u2014 a Board tag is the Cost page's DraftConfig, differenced against the recorded run",
+      "pass": true,
+      "baseline_vintage": "ffc-20260817",
+      "fields_matching_the_recorded_run": {
+        "must_draft": true,
+        "never_draft": true,
+        "tilts": true,
+        "archetype": true,
+        "risk_lambda": true
+      },
+      "tagged_glyphs_on_the_board_page": 2,
+      "tagged_players_named_on_the_cost_page": "4/4",
+      "re_entry_required": false,
+      "n_exceptions": 0,
+      "exceptions": []
+    },
+    "b2": {
+      "bar": "B2 \u2014 the strip's five bars are `player_card`'s numbers, drawn",
+      "pass": true,
+      "player": "Joe Burrow",
+      "board_index": 55,
+      "strip_labels": [
+        "IMPACT",
+        "BOOM",
+        "Q10",
+        "AVAIL",
+        "BARGAIN"
+      ],
+      "matched_on_screen": {
+        "IMPACT": true,
+        "BOOM": true,
+        "Q10": true,
+        "AVAIL": true,
+        "BARGAIN": true
+      },
+      "five_bars": true,
+      "labels_are_a_projection_of_the_card": true,
+      "one_call": "session.card_strip(session.player_card(...))",
+      "n_exceptions": 0,
+      "exceptions": []
+    },
+    "b3": {
+      "bar": "B3 \u2014 \u00a75 on the rendered HTML: green=good with the risk trait inverted, both baselines, no bar without a reading",
+      "pass": true,
+      "riskiest_player": "Brian Robinson",
+      "riskiest_bust": 0.8823529411764706,
+      "riskiest_bust_percentile": 0.0053475935828877,
+      "riskiest_hue": "#D9564A",
+      "safest_player": "Christian McCaffrey",
+      "safest_bust": 0.0,
+      "safest_bust_percentile": 0.9598930481283422,
+      "safest_hue": "#2E9E63",
+      "inversion_holds": true,
+      "length_and_colour_agree": true,
+      "both_baselines_per_bar": {
+        "IMPACT": true,
+        "BOOM": true,
+        "Q10": true,
+        "AVAIL": true,
+        "BARGAIN": true
+      },
+      "unmeasured_readout": {
+        "dashed": true,
+        "fill": null,
+        "hue": null,
+        "text": "\u2014"
+      },
+      "tier_mid": "#A87900",
+      "tier_cuts": [
+        0.3333333333333333,
+        0.6666666666666666
+      ],
+      "n_exceptions": 0,
+      "exceptions": []
+    },
+    "b4": {
+      "bar": "B4 \u2014 tags survive navigation and a rerun; `never` is inviolable",
+      "pass": true,
+      "forbidden_player": "Bijan Robinson",
+      "forbidden_was_available_and_legal": true,
+      "queue_skipped_him": true,
+      "skip_reason": "tagged \ud83d\udeab never \u2014 a hard refusal",
+      "queue_offered_instead": "Jahmyr Gibbs",
+      "never_button_absent_from_the_room": true,
+      "persisted_across": {
+        "board": true,
+        "draft": true,
+        "cost": true
+      },
+      "n_exceptions": 0,
+      "exceptions": []
+    },
+    "b5": {
+      "bar": "B5 \u2014 \u22642 interactions for a queued player, \u22643 for an arbitrary search",
+      "pass": true,
+      "search_interactions": 2,
+      "search_target": 3,
+      "queued_interactions": 2,
+      "queued_target": 2,
+      "before_this_session": {
+        "search": 3,
+        "queued": 3
+      },
+      "selector_options": 257,
+      "search_pick_landed": true,
+      "queued_player": "Jaxon Smith-Njigba",
+      "queued_pick_landed": true,
+      "picks_before": 0,
+      "n_exceptions": 0,
+      "exceptions": []
+    },
+    "flow": {
+      "bar": "FLOW \u2014 all six pages render at k \u2208 {0,1,4}; a pick made by clicking completes",
+      "pass": true,
+      "pages_rendered": {
+        "k0:settings": true,
+        "k0:board": true,
+        "k0:draft": true,
+        "k0:grid": true,
+        "k0:post": true,
+        "k0:cost": true,
+        "k1:settings": true,
+        "k1:board": true,
+        "k1:draft": true,
+        "k1:grid": true,
+        "k1:post": true,
+        "k1:cost": true,
+        "k4:settings": true,
+        "k4:board": true,
+        "k4:draft": true,
+        "k4:grid": true,
+        "k4:post": true,
+        "k4:cost": true
+      },
+      "runs": [
+        {
+          "k": 0,
+          "pages": 6,
+          "page_bodies": {
+            "settings": 1,
+            "board": 1,
+            "draft": 1,
+            "post": 2,
+            "grid": 1,
+            "cost": 1
+          }
+        },
+        {
+          "k": 1,
+          "pages": 6,
+          "page_bodies": {
+            "settings": 1,
+            "board": 1,
+            "draft": 1,
+            "grid": 1,
+            "post": 1,
+            "cost": 1
+          }
+        },
+        {
+          "k": 4,
+          "pages": 6,
+          "page_bodies": {
+            "settings": 1,
+            "board": 1,
+            "draft": 1,
+            "grid": 1,
+            "post": 1,
+            "cost": 1
+          }
+        }
+      ],
+      "picks_before": 140,
+      "picks_after": 150,
+      "completed_by_click": true,
+      "navigated_to_post_draft": true,
+      "clicked": "Jason Myers",
+      "pick_path": "selectbox -> strip confirm",
+      "row_select_click_not_drivable": true,
+      "n_exceptions": 0,
+      "exceptions": []
+    },
+    "b0": {
+      "bar": "B0 \u2014 UI-2's sheet re-runs (UI-1, K2, K1.5, K1 nested); the card's eight did not move",
+      "pass": true,
+      "board_vintage": "ffc-20260817",
+      "room_mix": [
+        "autopilot",
+        "balanced",
+        "balanced",
+        "fitted_manager",
+        "value_hawk",
+        "safe_floor",
+        "reacher",
+        "upside_chaser",
+        "chalk"
+      ],
+      "returncode": 0,
+      "ui2_all_pass": true,
+      "ui2_per_bar": {
+        "b1": true,
+        "b2": true,
+        "b3": true,
+        "b4": true,
+        "b5": true,
+        "b6": true,
+        "flow": true,
+        "b0": true
+      },
+      "ui1_all_pass": true,
+      "k2_all_pass": true,
+      "k1_5_all_pass": true,
+      "k1_all_pass": true,
+      "pinned_control_from_ui1": {
+        "ran": true,
+        "reproduced_bit_for_bit": true,
+        "pinned_vintage": "ffc-20260817"
+      },
+      "card_bar_values_checked": 480,
+      "card_bar_values_differing": [],
+      "every_moved_leaf_classified": true,
+      "moves_vs_committed": {
+        "analysis/session_k1_app.json": {
+          "comparable": true,
+          "leaves": 272,
+          "vintage": {
+            "committed": "ffc-20260817",
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": null,
+          "moved": {},
+          "moved_paths": {},
+          "unclassified": [],
+          "n_unclassified": 0
+        },
+        "analysis/session_k1_5_app.json": {
+          "comparable": true,
+          "leaves": 136,
+          "vintage": {
+            "committed": "ffc-20260817",
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": null,
+          "moved": {
+            "entropy": 7,
+            "timing": 8,
+            "stat_dict": 1,
+            "a7_pick_path": 2
+          },
+          "moved_paths": {
+            "entropy": [
+              "bars.b0.example_openings[0]",
+              "bars.b0.example_openings[1]",
+              "bars.b0.example_openings[2]",
+              "bars.b0.replayed_room_seed",
+              "bars.b0.replayed_seed",
+              "bars.flow.randomized_room_seed",
+              "bars.flow.randomized_seed"
+            ],
+            "timing": [
+              "bars.b3.worst_ms",
+              "bars.b3.worst_pick_ms_by_seat.autopilot",
+              "bars.b3.worst_pick_ms_by_seat.balanced",
+              "bars.b3.worst_pick_ms_by_seat.chalk",
+              "bars.b3.worst_pick_ms_by_seat.reacher",
+              "bars.b3.worst_pick_ms_by_seat.safe_floor",
+              "bars.b3.worst_pick_ms_by_seat.upside_chaser",
+              "bars.b3.worst_pick_ms_by_seat.value_hawk"
+            ],
+            "stat_dict": [
+              "bars.b5.n_entries"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path",
+              "bars.flow.quick_pick_buttons"
+            ]
+          },
+          "unclassified": [],
+          "n_unclassified": 0
+        },
+        "analysis/session_k2_app.json": {
+          "comparable": true,
+          "leaves": 174,
+          "vintage": {
+            "committed": "ffc-20260817",
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": null,
+          "moved": {
+            "display_count": 3,
+            "a7_pick_path": 1
+          },
+          "moved_paths": {
+            "display_count": [
+              "bars.b1.runs[1].n_dataframes",
+              "bars.b1.runs[2].n_dataframes",
+              "bars.flow.post_page_dataframes"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path"
+            ]
+          },
+          "unclassified": [],
+          "n_unclassified": 0
+        },
+        "analysis/session_ui_1.json": {
+          "comparable": true,
+          "leaves": 358,
+          "vintage": {
+            "committed": "ffc-20260817",
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": null,
+          "moved": {
+            "comparator_self": 15,
+            "prose_census": 3,
+            "a7_pick_path": 1
+          },
+          "moved_paths": {
+            "comparator_self": [
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.leaves",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.a7_pick_path",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.stat_dict",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.timing",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.a7_pick_path[0]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.a7_pick_path[1]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.stat_dict[0]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[3]"
+            ],
+            "prose_census": [
+              "bars.b2.after_by_file.draft_room.py",
+              "bars.b2.after_total",
+              "bars.b2.removed"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path"
+            ]
+          },
+          "unclassified": [],
+          "n_unclassified": 0
+        },
+        "analysis/session_ui_2.json": {
+          "comparable": true,
+          "leaves": 423,
+          "vintage": {
+            "committed": "ffc-20260817",
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": null,
+          "moved": {
+            "comparator_self": 31,
+            "timing": 1,
+            "stat_dict": 1,
+            "a7_pick_path": 1
+          },
+          "moved_paths": {
+            "comparator_self": [
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.leaves",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.a7_pick_path",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.stat_dict",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.timing",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.a7_pick_path[0]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.a7_pick_path[1]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.stat_dict[0]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[3]"
+            ],
+            "timing": [
+              "bars.b3.cost_ms_for_40_rows"
+            ],
+            "stat_dict": [
+              "bars.b5.stat_dict_entries"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path"
+            ]
+          },
+          "unclassified": [],
+          "n_unclassified": 0
+        }
+      },
+      "tail": ""
+    }
+  }
+}

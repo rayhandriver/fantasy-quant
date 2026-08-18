@@ -7108,3 +7108,71 @@ gated default room against an explicitly pre-16.18 room (2017+2018 × 6 seeds, `
 requires every result leaf to agree. ⚠ The control **can** fail, which is what makes a zero
 informative: if the gate ever stopped firing, the first arm would seat the manager on a historical
 board and the two arms would separate. → **T54 ☑.**
+
+## SESSION UI-3 — preferences are first-class (2026-08-17)
+
+**Four steps, seven pre-registered bars, all PASS** (`steps/session_ui_3.py` →
+`analysis/session_ui_3.json`, board vintage `ffc-20260817`). 996 tests (was 985), ruff clean. The
+engine was not touched: no refit, no lockbox read, no frozen contract moved — `session.player_card`'s
+eight bars were re-checked value-by-value against a literal control list held in the *measurement*
+(`PRE_A3_BARS`), 480 values, zero differing.
+
+### What each step produced
+
+- **Step 0 (committed earlier)** — T41 board-vintage stamps + the gate/readout partition + the pinned
+  control; T40's constructed glyph fixture; **T55** (`start_draft` never handed `season` to
+  `SeatMap.of`, so a 2026 belief board could seat itself as an opponent in a lockbox season).
+- **Step 1 · A1 — the tag/queue system.** Four tags (🎯 must · 🚫 never · ↑ reach · ↓ wait) plus an
+  untagged ⭐ queue, keyed by `player_key`, rendered on every board view, and read by the Cost page
+  **instead of** its four `st.multiselect`s. `session.tag_config` is the one translation.
+- **Step 2 · A2 — the glance strip.** PLAYER-VIEW §3's card, inline under the board instead of a
+  modal over it. `session.card_strip` is a *projection of the card* (`project_view` : `board_view`
+  :: `card_strip` : `player_card`), so the strip cannot hold a number the dialog does not.
+- **Step 3 · A3 — the bars, drawn.** §5's quasi-bar with green = good always, a three-tier band and
+  the dual baseline, as `st.html` — replacing `st.metric` on the card, the strip and the grade panel.
+- **Step 4 · A7 — one way in.** A type-to-filter selectbox over `draftable_pool` loading the strip:
+  **2 interactions** to any pick, against a pre-registered ≤2 queued / ≤3 search and a measured 3/3
+  before. The six-button quick row and `_confirm_bar` are deleted; the *rule* they carried is not.
+
+### The four findings
+
+1. **★ The board carries two positional ranks and they disagree.** `board["pos_rank"]` is filled
+   from `adp_pos_rank` — the **market's** order, i.e. the availability signal — while PLAYER-VIEW
+   bar #1 is *Impact / **value***. Rendering the column that was sitting right there would have put
+   the availability signal into the value channel under a label saying otherwise, which the
+   2026-07-04 three-layer contract forbids by name. On the live 2026 board they disagree at the very
+   top (ADP's RB1 Bijan Robinson is our RB2). `session.value_pos_rank` is its own function and its
+   test **scrambles `pos_rank` and requires nothing to move**. *A name collision between two real
+   quantities is the kind that survives review, because neither side looks wrong on its own.*
+2. **★★ Drawing a number is the first thing that asks what its maximum is.** The grade panel's four
+   contributions had been on screen and correct for two sessions as a `%.2f` table column. Drawing
+   them needed a denominator, the first draft assumed 0–100, and `score_*` is **0–1** — so every
+   contribution rendered near-empty and red. Nothing about the number changed; the question did.
+   `views.grade_bars` is split out so the regression is a unit test.
+3. **An instrument that lives in the thing it measures cannot outlive it.** A7 deleted the control
+   that **four** committed sheets drove their FLOW bar through (K1.5, K2, UI-1, UI-2). The claim —
+   *a human can make a pick by clicking* — never changed, so the drive moved into one shared
+   `steps/_app_drive.pick_by_clicking` and the renamed leaves are declared in `ALLOWED_MOVES` under
+   `a7_pick_path`. **`clicked`, `picks_before` and `picks_after` were deliberately left unexcused,
+   and they did not move**: the selector's first real option is the same best-available player the
+   quick row's first button was, which is what makes the re-pointing checkable rather than plausible.
+   K2's `grade_rendered` needed the same treatment for the same reason (it looked for the `COMPONENT`
+   dataframe A3 replaced with bars).
+4. **A scrape that cannot see the surface reports the surface as missing** — for the third time in
+   this repo, and twice in this session. B1 first reported `0/4` tagged players on the Cost page while
+   the `TAG` column was on screen, inside an Arrow payload the text-primitive scrape never read; K2's
+   `text` had the same blind spot for `st.html`. Both instruments were widened, and neither claim moved.
+
+### Honest scope
+
+- **T36 is still open and the sheet says so.** `st.dataframe(on_select=…)` is a client event `AppTest`
+  cannot fire, so the row-select **click** remains uncovered. A2 was deliberately built to hang off
+  `pending_pick` rather than off the selection event, so everything downstream of that click — the
+  strip, its five bars, its confirm — is exercised through the routes that *are* drivable. The gap is
+  one event and it is named in `analysis/session_ui_3.json`, not implied away by FLOW.
+- **T39's slot.** The strip was specced to carry a `TIER`; the tier feature measured out as a null and
+  shipped nothing, so the slot carries 14.E's **cliff** — the number that answers what a tier was
+  there to answer. No `TIER` label over a null.
+- **The strip carries tag controls**, which §3's sketch did not ask for. A1's premise is that a
+  preference forms while you are looking at a player and the strip is now that surface; recorded as a
+  deliberate addition rather than left to be discovered.

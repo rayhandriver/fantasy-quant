@@ -78,7 +78,7 @@
       "bar": "B2 \u2014 prose blocks 68 \u2192 \u2264 25, one census both ways",
       "pass": true,
       "before_total": 68,
-      "after_total": 24,
+      "after_total": 23,
       "target": 25,
       "before_reproduces_ui_plan_68": true,
       "before_by_file": {
@@ -91,7 +91,7 @@
         "views.py": 24
       },
       "after_by_file": {
-        "draft_room.py": 6,
+        "draft_room.py": 5,
         "main.py": 1,
         "post_draft.py": 5,
         "room_grid.py": 1,
@@ -100,7 +100,7 @@
         "views.py": 6
       },
       "before_ref": "5eff21d",
-      "removed": 44,
+      "removed": 45,
       "note": "The census is `st.caption` + the four alert primitives \u2014 37 + 31 = the 68 in UI-PLAN \u00a73.1. `st.markdown` is excluded because those 28 blocks are mostly headers and labels. The 'before' is read from `git show HEAD:` rather than hard-coded, so the two numbers come off one ruler."
     },
     "b3": {
@@ -260,6 +260,7 @@
       "completed_by_click": true,
       "navigated_to_post_draft": true,
       "clicked": "Dalton Kincaid",
+      "pick_path": "selectbox -> strip confirm",
       "n_exceptions": 0,
       "exceptions": [],
       "modal_click_not_drivable": true
@@ -368,7 +369,7 @@
         },
         "analysis/session_k1_5_app.json": {
           "comparable": true,
-          "leaves": 135,
+          "leaves": 136,
           "vintage": {
             "committed": "ffc-20260817",
             "current": "ffc-20260817",
@@ -402,7 +403,9 @@
           "input_bucket": null,
           "moved": {
             "entropy": 7,
-            "timing": 9
+            "timing": 8,
+            "stat_dict": 1,
+            "a7_pick_path": 2
           },
           "moved_paths": {
             "entropy": [
@@ -418,11 +421,18 @@
               "bars.b3.worst_ms",
               "bars.b3.worst_pick_ms_by_seat.autopilot",
               "bars.b3.worst_pick_ms_by_seat.balanced",
-              "bars.b3.worst_pick_ms_by_seat.fitted_manager",
+              "bars.b3.worst_pick_ms_by_seat.chalk",
               "bars.b3.worst_pick_ms_by_seat.reacher",
               "bars.b3.worst_pick_ms_by_seat.safe_floor",
               "bars.b3.worst_pick_ms_by_seat.upside_chaser",
               "bars.b3.worst_pick_ms_by_seat.value_hawk"
+            ],
+            "stat_dict": [
+              "bars.b5.n_entries"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path",
+              "bars.flow.quick_pick_buttons"
             ]
           },
           "unclassified": [],
@@ -430,7 +440,7 @@
         },
         "analysis/session_k2_app.json": {
           "comparable": true,
-          "leaves": 173,
+          "leaves": 174,
           "vintage": {
             "committed": "ffc-20260817",
             "current": "ffc-20260817",
@@ -462,8 +472,20 @@
             "moved": false
           },
           "input_bucket": null,
-          "moved": {},
-          "moved_paths": {},
+          "moved": {
+            "display_count": 3,
+            "a7_pick_path": 1
+          },
+          "moved_paths": {
+            "display_count": [
+              "bars.b1.runs[1].n_dataframes",
+              "bars.b1.runs[2].n_dataframes",
+              "bars.flow.post_page_dataframes"
+            ],
+            "a7_pick_path": [
+              "bars.flow.pick_path"
+            ]
+          },
           "unclassified": [],
           "n_unclassified": 0
         }

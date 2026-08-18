@@ -606,18 +606,26 @@ substeps, Stage-0 FFC snapshot chore first if stale, then a hard stop + report +
       number quoted throughout these docs: `COIN`'s **146 of 199** conflates *distinguishable* with
       *unknown* — **147** pairs have both bands, **146** overlap, **1** is a genuine break and **52** are
       missing bands, so the honest figure is **99.3 % of evaluable pairs overlap**.
-    - **☐ UI-3 "preferences are first-class"** — A1 the queue/tag system (🎯 must · 🚫 never · ↑ reach ·
+    - **☑ UI-3 "preferences are first-class"** *(done 2026-08-17; all 7 bars PASS,
+      `analysis/session_ui_3.json`, 996 tests)* — A1 the queue/tag system (🎯 must · 🚫 never · ↑ reach ·
       ↓ wait) **unified with the Cost page, replacing its four multiselects**, so a preference formed
-      while drafting can be priced — the direct-indexing workflow the current UI makes impossible · A2 the
-      selected-player strip (PLAYER-VIEW §3's hover card, inline, board stays visible) · A3 **actually
-      draw the §5 bars** (today's `st.metric` has no bar and no baseline — the largest spec-vs-shipped gap
-      in the repo) · A7 two taps to a pick, not three.
+      while drafting can be priced · A2 the selected-player strip (PLAYER-VIEW §3's card, inline, board
+      stays visible; `card_strip` is a *projection of the card*) · A3 the §5 bars **drawn** — green =
+      good always with `BUST` inverted, three-tier band, dual baseline, on the card, the strip and the
+      grade panel · A7 **two** taps to any pick (was 3; pre-registered ≤2/≤3).
+      **Two findings:** the board carries **two** positional ranks and `pos_rank` is the **ADP** one, so
+      bar #1 needed its own derivation or the availability signal would have shipped inside the value
+      bar; and *drawing a number is the first thing that asks what its maximum is* — the grade panel's
+      `score_*` is 0–1 and the first bar divided it by 100. **T39's slot** carries the cliff, not a
+      `TIER` label over a null; **T36 stays open**, now narrowed to the row-select *click* alone and
+      stamped in the sheet.
     - **☐ UI-4 polish tail** — league presets *(after K3 — same 17.3 form)* · room-grid colour · density ·
       CSV export · merge the `why` box into the dialog · land on Board · C2 a mock history that **replays
       exactly** (T34's stamped seeds make it near-free; PFF's hub cannot) · C3 a room scouting report from
       `drift_frames["seats"]` — **realism, never prediction** (PLAYER-VIEW §9.3) · C4 light/dark.
-    - **Recommended order: UI-1 → K3 → UI-2 → UI-3 → UI-4.** *(UI-1 ☑ and UI-2 ☑ are both done as of
-      2026-08-01; K3 is next.)* UI-1 is pure formatting with zero engine
+    - **Recommended order: UI-1 → K3 → UI-2 → UI-3 → UI-4.** *(UI-1 ☑, UI-2 ☑ 2026-08-01 and UI-3 ☑
+      2026-08-17 are done; **K3 and UI-4 remain**, and UI-4's presets are the one item that must wait
+      for K3.)* UI-1 is pure formatting with zero engine
       risk; the only real coupling is that UI-4's presets sit above the form K3's importer fills.
     - **Deferred out of all four, deliberately:** **C1 undo** (`DraftState` is append-only and consumes an
       RNG, so honest undo is a seeded replay and must preserve K1.5's clocked-≡-stepped identity — engine
