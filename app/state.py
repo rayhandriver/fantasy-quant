@@ -93,6 +93,52 @@ def put_draft(state, meta, vi=None, risk=None) -> None:
     st.session_state["draft"] = {"state": state, "meta": meta, "vi": vi, "risk": risk}
 
 
+# ------------------------------------------------------------------------------------------------
+# UI-3 step 1 (A1) — the tags and the queue, which are preferences and therefore NOT draft state
+# ------------------------------------------------------------------------------------------------
+#: ★ **Deliberately absent from :func:`clear_draft`.** A tag is a statement about a player — *I want
+#: him, I refuse him, I would reach* — and starting a new mock does not change your mind. Wiping
+#: them with the draft would also break the workflow the feature exists for: tag while drafting,
+#: then price it on the Cost page, which is a page you reach *after* the draft you tagged during.
+_TAGS_KEY, _QUEUE_KEY = "tags", "queue"
+
+
+def tags() -> dict[str, str]:
+    """``{player_key: tag}`` — survives page navigation and reruns, because session state does."""
+    return st.session_state.setdefault(_TAGS_KEY, {})
+
+
+def queue() -> list[str]:
+    """``[player_key]`` in the order you want them, which is **ordering, not preference**."""
+    return st.session_state.setdefault(_QUEUE_KEY, [])
+
+
+def set_tag(player_key: str, tag: str | None) -> None:
+    """Set (or clear, with ``None``) one player's tag. Clearing is a first-class action: a
+    preference you can express and cannot retract is a trap, not a feature."""
+    cur = tags()
+    if tag is None:
+        cur.pop(str(player_key), None)
+    else:
+        cur[str(player_key)] = str(tag)
+
+
+def toggle_queue(player_key: str) -> None:
+    """Add to the end of the queue, or drop out of it. Append rather than insert: the queue is a
+    plan you build in the order you thought of it."""
+    q, key = queue(), str(player_key)
+    if key in q:
+        q.remove(key)
+    else:
+        q.append(key)
+
+
+def drop_from_queue(player_key: str) -> None:
+    q = queue()
+    if str(player_key) in q:
+        q.remove(str(player_key))
+
+
 def clear_draft() -> None:
     """Drop the draft **and everything derived from it**.
 

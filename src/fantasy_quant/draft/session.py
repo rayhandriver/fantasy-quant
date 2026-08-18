@@ -31,7 +31,7 @@ quantity rather than reading one is a bug — see :func:`explain_chain`, whose e
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 
 import numpy as np
@@ -481,6 +481,27 @@ STAT_DICT: dict[str, dict[str, str]] = {
         "provenance": "session.construction_flags → session.roster_construction_risk on "
                       "(roster + this player)",
     },
+    # UI-3 step 1 — the only column whose content is the *user's*, and therefore the only one whose
+    # tooltip has to say what it costs as well as what it means.
+    "TAG": {
+        "label": "Your tag",
+        "one_line": "What you have said about this player — and the thing the Cost page prices.",
+        "what_it_means": "`⭐` queued (ordering only — it says *next*, not *how much*) · `🎯` must "
+                         "draft, secured within a ~2-round reach · `🚫` never draft, a hard "
+                         "refusal · `↑` reach ~1 round early · `↓` willing to wait. The four tags "
+                         "are exactly the four preference kinds `DraftConfig` accepts, so every "
+                         "mark here becomes a constraint the cost report can put a number on.",
+        "worked_example": "Tag a WR `🎯` on the board during round 3, open the Cost page, and the "
+                          "leave-one-out line for him is what insisting on him cost against the "
+                          "same seat drafting pure value.",
+        "how_to_read_it": "⚠ A tag is a **preference, not a prediction** — it does not improve the "
+                          "player, it changes what you are willing to pay, and the cost report is "
+                          "where you find out how much. `🚫` is the one that is absolute: the "
+                          "queue will not draft a `🚫` player, because `never_draft` is a hard "
+                          "constraint in the engine and the UI is not allowed to soften it.",
+        "provenance": "st.session_state → session.attach_tags (display) / session.tag_config "
+                      "(pricing)",
+    },
     # UI-1 step 5 — the attached column. It is documented here rather than in `app/` for the same
     # reason every other column is: one dictionary, every surface, and a column the CLI cannot
     # explain is a column with no behaviour behind it.
@@ -586,6 +607,146 @@ def attach_reach(view: pd.DataFrame, reach: pd.DataFrame | None) -> pd.DataFrame
                   index=pd.Index(reach["board_index"].astype(int)))
     out[REACH_COL] = p.reindex(out.index).to_numpy(float)
     return out
+
+
+# ------------------------------------------------------------------------------------------------
+# UI-3 step 1 (A1) — preferences as first-class objects: four tags, one queue, one translation
+# ------------------------------------------------------------------------------------------------
+#: **The four tags, which are the Cost page's four preference kinds and nothing new.**
+#:
+#: ★ That identity is the point of the feature. The Cost page has always offered exactly these four
+#: — must / never / reach / wait — behind four ``st.multiselect``s over the whole board, which means
+#: a preference could only be expressed *away from the draft*, by scrolling a ~200-entry list for a
+#: player you were looking at thirty seconds ago. **Tagging from the board and pricing on the Cost
+#: page are now the same object**, which is the direct-indexing workflow the 2026-07-04 reframe
+#: describes and the one thing the old UI made impossible.
+#:
+#: ⚠ **Inventing a fifth kind here would be inventing a preference the cost report cannot price.**
+#: Every tag must map onto :class:`~fantasy_quant.draft.config.DraftConfig`, or it is a sticker.
+TAGS: dict[str, dict[str, str]] = {
+    "must":  {"glyph": "🎯", "label": "Must draft",
+              "help": "Secure him within a ~2-round reach. Priced as a `must_draft` constraint."},
+    "never": {"glyph": "🚫", "label": "Never draft",
+              "help": "A hard refusal — `never_draft`. The queue will not take him, ever."},
+    "reach": {"glyph": "↑", "label": "Reach ~1 round early",
+              "help": "A positive tilt in the seat's utility, priced leave-one-out."},
+    "wait":  {"glyph": "↓", "label": "Willing to wait",
+              "help": "A negative tilt: you would rather take him a round later than the board."},
+}
+
+#: The star is **ordering, not preference** — a queue entry says *next*, a tag says *how much*. Kept
+#: separate because they answer different questions and because a queue is not priceable: it has no
+#: ``DraftConfig`` counterpart, and pretending otherwise would put an unpriced object on a page
+#: whose entire subject is the price.
+QUEUE_GLYPH: str = "⭐"
+
+#: The column the tags render as, on **every** board view.
+TAG_COL: str = "TAG"
+
+#: The two magnitudes the Cost page's four multiselects hard-coded inline. They are constants here
+#: so the tag path and the multiselect path are provably the same numbers — bar B1 differences the
+#: two ``DraftConfig``s, and a bar that compares two copies of a literal is comparing the literal.
+MUST_ROUNDS: float = 2.0
+TILT_MAGNITUDE: float = 1.5
+
+
+def tag_config(tags: Mapping[str, str], *, league=None, archetype: str | None = None,
+               risk_lambda: float | None = None) -> DraftConfig:
+    """``{player_key: tag}`` → the :class:`DraftConfig` the four multiselects used to build.
+
+    ★ **One translation, in the one derivation site.** The Cost page built this dict inline from
+    four widget values; doing it here means the board, the Cost page and any future surface all
+    produce the *same* config from the same preferences, and bar B1 can difference the two paths
+    rather than eyeball them.
+
+    Unknown tag names raise rather than being dropped. A preference the engine silently ignores is
+    the worst outcome available: the user sees their tag on the board, the cost report prices a
+    league without it, and nothing anywhere says so.
+    """
+    # ⚠ every optional argument stays *unset* rather than being defaulted here: `DraftConfig` owns
+    # its own defaults, and a second set of them in a helper is how two callers end up building
+    # two different leagues from the same preferences.
+    cfg: dict = {}
+    if archetype is not None:
+        cfg["archetype"] = str(archetype)
+    if league is not None:
+        cfg["league"] = league
+    if risk_lambda is not None:
+        cfg["risk_lambda"] = float(risk_lambda)
+    unknown = sorted({t for t in tags.values() if t not in TAGS})
+    if unknown:
+        raise ValueError(f"unknown tag(s) {unknown}; the four are {sorted(TAGS)}")
+    cfg["must_draft"] = [(str(k), MUST_ROUNDS) for k, t in tags.items() if t == "must"]
+    cfg["never_draft"] = {str(k) for k, t in tags.items() if t == "never"}
+    cfg["tilts"] = {str(k): (TILT_MAGNITUDE if t == "reach" else -TILT_MAGNITUDE)
+                    for k, t in tags.items() if t in ("reach", "wait")}
+    return DraftConfig(**cfg)
+
+
+def attach_tags(view: pd.DataFrame, board: pd.DataFrame, tags: Mapping[str, str] | None = None,
+                queue: Sequence[str] = ()) -> pd.DataFrame:
+    """Place the user's tags onto a rendered board as :data:`TAG_COL` — ``⭐🎯`` style glyphs.
+
+    ★ **A placement, exactly like** :func:`attach_reach`, and here for the same reason: the app is
+    not allowed to decide what a preference looks like on a board, because then the CLI shows a
+    different board from the app for the same draft. The queue star sorts first so a scan down the
+    column reads *what is next* before *what I think of him*.
+
+    ``board`` is the frame carrying ``player_key`` (the rendered ``view`` is projected columns and
+    may not); untagged rows come back as an empty string, never a placeholder.
+    """
+    out = view.copy()
+    tags = dict(tags or {})
+    q = {str(k) for k in queue}
+    if not tags and not q:
+        out[TAG_COL] = ""
+        return out
+    keys = board["player_key"].astype(str).reindex(out.index)
+    out[TAG_COL] = [
+        ("" if pd.isna(k) else
+         (QUEUE_GLYPH if str(k) in q else "") + TAGS.get(tags.get(str(k), ""), {}).get("glyph", ""))
+        for k in keys]
+    return out
+
+
+def queue_next(st: DraftState, team: int, queue: Sequence[str],
+               tags: Mapping[str, str] | None = None) -> dict:
+    """The first queued player this seat may legally draft, and **what was skipped to reach him**.
+
+    ``{board_index, player_name, skipped: [{player_key, why}], remaining}``; ``board_index`` is
+    ``None`` when the queue holds nobody draftable.
+
+    ★ **The skip rule is the user's decision (2026-08-17): walk down to the first available player,
+    naming who was passed and why** — the alternative (stop and say so) costs a tap at exactly the
+    moment A7 is trying to buy one back, and the confirm bar still stands between this and a pick,
+    so nothing is taken without the name on screen first.
+
+    ⚠ **``never`` is inviolable here, not merely discouraged.** A ``never``-tagged player is skipped
+    with a reason even though he is available and legal, because the S1 preference contract makes
+    ``never_draft`` a *hard* constraint and **the UI must not be the place a hard constraint becomes
+    soft**. Same standing as roster legality, which arrives for free: the candidate set is
+    :meth:`DraftState.draftable_pool`, so a player who cannot legally be rostered is never offered.
+    """
+    tags = dict(tags or {})
+    pool = st.draftable_pool(int(team))
+    legal = {str(k): i for i, k in zip(pool.index, pool["player_key"].astype(str), strict=False)}
+    skipped: list[dict] = []
+    for pos, key in enumerate(str(k) for k in queue):
+        if tags.get(key) == "never":
+            skipped.append({"player_key": key, "why": "tagged 🚫 never — a hard refusal"})
+            continue
+        idx = legal.get(key)
+        if idx is None:
+            gone = key not in set(st.board["player_key"].astype(str))
+            skipped.append({"player_key": key,
+                            "why": "not on this board" if gone else
+                                   "already drafted, or no legal roster slot left for him"})
+            continue
+        return {"board_index": int(idx), "player_key": key,
+                "player_name": str(st.board.loc[idx, "player_name"]),
+                "skipped": skipped, "remaining": len(queue) - pos - 1}
+    return {"board_index": None, "player_key": None, "player_name": None,
+            "skipped": skipped, "remaining": 0}
 
 
 def team_for_pick(st: DraftState, overall_pick: int) -> int | None:
@@ -1976,6 +2137,10 @@ def player_card(st: DraftState, board_index: int, *, vi: pd.DataFrame | None = N
     row = st.board.loc[int(board_index)]
     key = str(row["player_key"])
     card: dict = {
+        # UI-3 — the key the tags are stored under. A lookup, not a derivation: the card is the
+        # surface where a preference actually forms, and a card that cannot name its own player in
+        # the vocabulary `DraftConfig` uses would need the app to re-derive it from the board.
+        "player_key": key,
         "board_index": int(board_index), "name": str(row["player_name"]),
         "pos": str(row["pos"]), "team": (str(row["team"]) if pd.notna(row.get("team")) else "—"),
         "adp": float(row["adp"]), "available": int(board_index) in st.available,

@@ -165,6 +165,8 @@ def _room(d: dict) -> None:
         # single most differentiated readout (a validated `P(available)` with an un-drifted
         # baseline — FantasyPros' Pick Predictor has neither) and it shipped collapsed.
         st.divider()
+        _queue_rail(d, seat)
+        st.divider()
         st.markdown("**Still there at your next pick?**")
         views.next_pick_badge(st_obj, seat)
         _reach_risk(d, seat, n=12)
@@ -184,6 +186,26 @@ def _rail_seat(st_obj, sm) -> int:
     idx = yours.index(on_clock) if on_clock in yours else 0
     choice = st.selectbox("Seat", labels, index=idx, key="rail_seat")
     return yours[labels.index(choice)]
+
+
+def _queue_rail(d: dict, seat: int) -> None:
+    """UI-3 step 1 — the queue, in the rail, with one button into the **existing** pick path.
+
+    ★ **It sets ``pending_pick`` and reruns; it does not draft.** `_confirm_bar` is the only thing
+    that turns an intention into a pick, and a rail that could bypass it would be a second pick
+    path — the shape of defect this repo has paid for three times in the *value* layer (T18 / F.5 /
+    T27) and has no appetite for in the pick layer, where the cost of a mis-click is a round.
+
+    The button only appears on your own clock. A "Draft him" button that silently means *later*
+    is worse than no button.
+    """
+    st_obj, meta = d["state"], d["meta"]
+    on_clock = (st_obj.team_on_clock() == seat and seat in st_obj.human_teams
+                and seat not in session.auto_teams(meta))
+    res, action = views.queue_panel(st_obj, seat, allow_draft=on_clock)
+    if action == "draft" and res and res["board_index"] is not None:
+        st.session_state["pending_pick"] = int(res["board_index"])
+        st.rerun()
 
 
 def _clock_and_board(d: dict, sm) -> None:

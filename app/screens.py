@@ -7,7 +7,6 @@ at this altitude. What each page *does* is Session K1's and is not re-litigated 
 
 from __future__ import annotations
 
-import pandas as pd
 import streamlit as st
 
 from app import palette, probe, state, views
@@ -158,26 +157,33 @@ def page_cost() -> None:
     # Both instances of this were found by booting the app, not by the test suite (bar B5 and the
     # AppTest run) — *a column set is part of a function's contract even when nothing declares it.*
     board = _prepare_board(built["board"])
-    labels = (board.assign(_a=pd.to_numeric(board["adp"], errors="coerce"))
-              .dropna(subset=["_a"]).sort_values("_a"))
-    opts = {f"{r['player_name']} — {r['pos']} (ADP {r['_a']:.0f})": str(r["player_key"])
-            for _, r in labels.iterrows()}
-    names = list(opts)
-    must = st.multiselect("Must draft (secure within a ~2-round reach)", names)
-    never = st.multiselect("Never draft (hard refusal)", names)
-    reach = st.multiselect("Reach ~1 round early on", names)
-    wait = st.multiselect("Willing to wait ~1 round on", names)
+
+    # ★★ **UI-3 step 1 — this page reads your TAGS. The four `st.multiselect`s are gone.**
+    # They were the only way to state a preference, they lived on a page you reach *after* the
+    # draft, and each one rebuilt a ~200-entry ADP-sorted option list on every rerun of every tab
+    # (the T35-adjacent cost). The deeper problem was not the cost: **a preference formed while
+    # drafting could not be priced**, which is the direct-indexing workflow this whole project is
+    # about. Tag from the board or the player card; the price is here.
+    #
+    # ⚠ One object, one translation: `session.tag_config` builds the `DraftConfig`, so the board
+    # and this page cannot disagree about what a tag means. Bar B1 differences it against the
+    # multiselect path recorded at `analysis/ui3_cost_multiselect_baseline.json`.
+    tags = dict(state.tags())
+    views.tag_summary(board, tags)
+    if not tags:
+        st.badge("nothing tagged yet", color="gray",
+                 help="Tag players 🎯 / 🚫 / ↑ / ↓ on the **Board** or in a player's card, then "
+                      "come back and price them. An untagged run prices the archetype alone, "
+                      "which is a valid thing to ask for.")
 
     if not st.button("Price it", type="primary"):
         st.info("Pick an archetype and any preferences, then **Price it**. The report runs paired "
                 "drafts and a leave-one-out redraft per preference, so it is not instant.")
         return
 
-    tilts = {opts[x]: 1.5 for x in reach} | {opts[x]: -1.5 for x in wait}
     try:
-        cfg = DraftConfig(league=settings.league_setup(), archetype=archetype, risk_lambda=lam,
-                          must_draft=[(opts[x], 2.0) for x in must],
-                          never_draft={opts[x] for x in never}, tilts=tilts)
+        cfg = session.tag_config(tags, league=settings.league_setup(), archetype=archetype,
+                                 risk_lambda=lam)
     except ValueError as exc:
         st.error(f"That combination doesn't work: {exc}")
         return

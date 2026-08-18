@@ -1443,3 +1443,113 @@ def test_ui2_the_signed_ink_is_a_tint_that_survives_both_themes():
     for surface in ("#0F1115", "#181B21", "#FFFFFF"):
         for hue in (pal.VALUE_GOOD, pal.VALUE_BAD):
             assert pal.contrast_ratio(hue, surface) >= 3.0, (hue, surface)
+
+
+# ------------------------------------------------------------------------------------------------
+# UI-3 step 1 (A1) — the tags and the queue: a preference is an object, and it gets priced
+# ------------------------------------------------------------------------------------------------
+def test_ui3_a_tag_produces_the_config_the_multiselects_produced():
+    """★ **B1's core, as a unit test: the tag path and the deleted multiselect path are the same
+    object.** The four ``st.multiselect``s cannot be re-run — they are gone — so the config they
+    built was recorded before the deletion (``analysis/ui3_cost_multiselect_baseline.json``) and
+    this differences against the record. *A replacement for a deleted path is only checkable if the
+    deleted path was written down first.*
+    """
+    import json
+
+    rec = json.loads(Path("analysis/ui3_cost_multiselect_baseline.json").read_text())
+    keys, want = rec["keys"], rec["config"]
+    cfg = session.tag_config(
+        {keys["must"]: "must", keys["never"]: "never",
+         keys["reach"]: "reach", keys["wait"]: "wait"},
+        archetype=want["archetype"], risk_lambda=want["risk_lambda"])
+    assert [[m.player_key, m.reach_budget] for m in cfg.must_draft] == want["must_draft"]
+    assert sorted(cfg.never_draft) == want["never_draft"]
+    assert dict(cfg.tilts) == want["tilts"]
+    assert cfg.archetype == want["archetype"] and cfg.risk_lambda == want["risk_lambda"]
+
+
+def test_ui3_an_unknown_tag_raises_rather_than_being_dropped():
+    """A preference the engine silently ignores is worse than one it refuses: the user sees the
+    tag, the report prices a league without it, and nothing says so."""
+    with pytest.raises(ValueError, match="unknown tag"):
+        session.tag_config({"00-0000001": "sleeper"})
+
+
+def test_ui3_tags_render_on_the_board_and_untagged_rows_stay_blank(k2_built):
+    state, _ = _k2_draft(k2_built, finish=False)
+    view = session.board_view(state, 0, n=10)
+    keys = state.board["player_key"].astype(str)
+    first, second = str(keys.loc[view.index[0]]), str(keys.loc[view.index[1]])
+    out = session.attach_tags(view, state.board, {first: "must"}, queue=[second])
+    assert out.loc[view.index[0], session.TAG_COL] == session.TAGS["must"]["glyph"]
+    assert out.loc[view.index[1], session.TAG_COL] == session.QUEUE_GLYPH
+    assert out.loc[view.index[2], session.TAG_COL] == ""
+    # and the frame it was placed on is otherwise untouched — a placement, not a projection
+    assert list(out.columns)[:-1] == list(view.columns)
+    assert out.drop(columns=[session.TAG_COL]).equals(view)
+
+
+def test_ui3_the_queue_skips_the_gone_and_never_takes_a_never(k2_built):
+    """★ **B4's hard half.** ``never_draft`` is a hard constraint in the S1 preference contract, so
+    the queue button must not be the place it becomes soft — asserted against a queue whose *first*
+    entry is the tagged player, i.e. the case where skipping him actually costs something."""
+    from fantasy_quant.draft.simulator import _apply_pick
+
+    state, _ = _k2_draft(k2_built, finish=False)
+    pool = state.draftable_pool(0)
+    refused, taken, wanted = (str(pool["player_key"].iloc[i]) for i in (0, 1, 2))
+    taken_idx = int(pool.index[1])
+    _apply_pick(state, 1, taken_idx)                       # somebody else drafts the second man
+
+    res = session.queue_next(state, 0, [refused, taken, wanted], {refused: "never"})
+    assert res["player_key"] == wanted
+    assert [s["player_key"] for s in res["skipped"]] == [refused, taken]
+    assert "never" in res["skipped"][0]["why"] and "drafted" in res["skipped"][1]["why"]
+    # the refusal is absolute: alone in the queue, he is still not offered
+    assert session.queue_next(state, 0, [refused], {refused: "never"})["board_index"] is None
+
+
+def test_ui3_the_queue_only_offers_a_legal_pick(k2_built):
+    """Roster legality is the engine's, not the UI's: the candidate set IS ``draftable_pool``."""
+    state, _ = _k2_draft(k2_built, finish=False)
+    legal = set(state.draftable_pool(0).index)
+    every_key = list(state.board["player_key"].astype(str))
+    res = session.queue_next(state, 0, every_key, {})
+    assert res["board_index"] in legal
+
+
+def test_ui3_the_tag_column_is_documented_and_the_dictionary_still_covers_the_board():
+    session.assert_stat_dict_covers_board()
+    assert session.stat_entry(session.TAG_COL)["worked_example"]
+    # every tag the vocabulary offers is explained in the one place a column is explained
+    entry = session.stat_entry(session.TAG_COL)["what_it_means"]
+    for spec in session.TAGS.values():
+        assert spec["glyph"] in entry, spec
+    assert session.QUEUE_GLYPH in entry
+
+
+def test_ui3_tags_are_preferences_and_survive_a_new_draft():
+    """``clear_draft`` drops everything derived from a draft. A tag is not derived from a draft —
+    it is a statement about a player, and starting a new mock does not change your mind."""
+    import app.state as app_state
+
+    class _FakeState(dict):
+        pass
+
+    fake = _FakeState()
+    real = app_state.st.session_state
+    app_state.st.session_state = fake                       # no Streamlit runtime in a unit test
+    try:
+        app_state.set_tag("00-0000001", "must")
+        app_state.toggle_queue("00-0000002")
+        fake["draft"] = {"state": None}
+        app_state.clear_draft()
+        assert fake.get("draft") is None
+        assert app_state.tags() == {"00-0000001": "must"}
+        assert app_state.queue() == ["00-0000002"]
+        app_state.set_tag("00-0000001", None)
+        app_state.toggle_queue("00-0000002")
+        assert app_state.tags() == {} and app_state.queue() == []
+    finally:
+        app_state.st.session_state = real

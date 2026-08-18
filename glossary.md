@@ -4,7 +4,9 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-08-17 — **bar-sheet comparator terms** (bottom section, T41/T40/T55:
+> **Last updated:** 2026-08-17 — **Session UI-3 terms** (bottom section: tag · queue · the
+> workflow the old UI made impossible · the skip is rendered · `never` is inviolable · a
+> recorded baseline for a deleted path) and **bar-sheet comparator terms** (T41/T40/T55:
 > board vintage stamp · gate leaf vs readout leaf · the pinned control · the room is an input ·
 > constructed vs sampled control · an inert guard). _Previously:_ 2026-07-30 — **seat-map terms**
 > (16.17 **BUILT**, 14.J still
@@ -3042,3 +3044,38 @@ the constructor is *told* the season, and `app/engine.start_draft` never told it
 this repo after T22 and T35: *a guard that does not run on the path a human uses is not a guard.* Its
 test's first assertion is that a profile is loaded at all, because an unloaded profile degrades to the
 same `balanced` the gate produces — **an inert thing still passes**, for the sixth time.
+
+
+## Session UI-3 terms (2026-08-17) — preferences as objects
+
+**tag** (🎯 must · 🚫 never · ↑ reach · ↓ wait). A statement about a player, set from the board or
+his card, stored by `player_key` and **priced**. The four are not new vocabulary: they are exactly
+the four preference kinds `DraftConfig` already accepted, which is the point — *a fifth tag would be
+a preference the cost report cannot price*, i.e. a sticker. `session.tag_config` is the one
+translation, so the board and the Cost page cannot disagree about what a tag means.
+
+**queue** (⭐). **Ordering, not preference** — a queue entry says *next*, a tag says *how much*. Kept
+a separate object because it has no `DraftConfig` counterpart: putting an unpriceable mark on the
+page whose whole subject is the price would be the first honesty leak in the feature.
+
+**the workflow the old UI made impossible.** Before UI-3 the only way to state a preference was four
+`st.multiselect`s on the **Cost page** — a ~200-entry ADP-sorted list, reached *after* the draft. So
+a preference formed while drafting could not be priced, which is the direct-indexing thesis
+([[REFRAME-2026-07-04]]) failing at the surface rather than in the model. Tag while drafting, price
+afterwards: same object, two pages.
+
+**the skip is rendered.** The queue button walks past a drafted or `🚫`-tagged player to the first
+one you may legally take, and **names who it passed and why**. The user chose skip-to-next over
+stop-and-say-so (2026-08-17); the naming is what keeps that choice honest, because *a silent skip is
+how a queue drafts somebody you did not mean to take.*
+
+**`never` is inviolable, and the UI is where that gets tested.** `never_draft` is a hard constraint
+in the S1 preference contract, so the queue refuses a `🚫` player even when he is available, legal
+and first in line — the case where refusing him actually costs something, which is the case the test
+asserts. Roster legality comes for free by construction: the candidate set *is*
+`DraftState.draftable_pool`. *A hard constraint that a button can soften is not a hard constraint.*
+
+**a recorded baseline for a deleted path.** The four multiselects cannot be re-run once removed, so
+the `DraftConfig` they produced was written to `analysis/ui3_cost_multiselect_baseline.json`
+**before** the deletion, and bar B1 differences the tag-derived config against that record. *A
+replacement is only checkable if the thing it replaced was written down first.*

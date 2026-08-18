@@ -15,7 +15,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from app import palette
+from app import palette, state
 from fantasy_quant.draft import session
 
 #: Column formats for the board. ``None`` = leave as text.
@@ -46,6 +46,9 @@ def _column_config() -> dict:
     # UI-2 step 3 — the scan channel. Narrow on purpose: it is meant to be swept down, not read.
     cfg["RISKS"] = st.column_config.TextColumn("RISKS", width="small",
                                                help=session.stat_help("RISKS"))
+    # UI-3 step 1 — your own marks, on every view. Narrow for the same reason as RISKS.
+    cfg[session.TAG_COL] = st.column_config.TextColumn(
+        session.TAG_COL, width="small", help=session.stat_help(session.TAG_COL))
     # UI-1 step 5 — attached, not projected. A progress column rather than a number because the one
     # thing a drafter does with it under a clock is compare it to the row above.
     cfg[session.REACH_COL] = st.column_config.ProgressColumn(
@@ -127,6 +130,9 @@ def board_table(st_obj, team: int | None = None, *, pos: str | None = None, n: i
     shown = session.project_view(view, advanced=advanced, mode=mode)
     if reach is not None:
         shown = session.attach_reach(shown, reach)
+    # UI-3 step 1 — your marks, on every view, placed by `session` for the same reason `P(THERE)`
+    # is: a board the app draws differently from the one the CLI prints is two boards.
+    shown = session.attach_tags(shown, st_obj.board, state.tags(), state.queue())
     extra = {"on_select": "rerun", "selection_mode": "single-row"} if selectable else {}
     # ⚠ the Styler wraps `shown`, it does not replace it — row selection still indexes the same
     # frame, so `view.index[rows[0]]` below is untouched. Streamlit honours `background-color` and
@@ -755,6 +761,11 @@ def player_card_body(card: dict) -> None:
     if line:
         st.markdown(" · ".join(line))
 
+    # UI-3 step 1 — the card is where a preference is most likely to form, so it is where the tag
+    # controls go. Above the chain, below the numbers: you decide after reading, not while.
+    if card.get("player_key"):
+        tag_controls(str(card["player_key"]), where="card")
+
     if card["chain"]:
         e = card["chain"][0]
         st.markdown("**How his value is built** (T27 — every line is an identity, not a "
@@ -766,6 +777,125 @@ def player_card_body(card: dict) -> None:
                                         " ": "" if r["value"] is None else f"{r['value']:,.1f}",
                                         "  ": r["note"]} for r in e["rows"]]),
                          width="stretch", hide_index=True)
+
+
+def tag_controls(player_key: str, *, where: str) -> None:
+    """UI-3 step 1 — set this player's tag, and queue him, from wherever he is on screen.
+
+    ★ **Five buttons: the queue star, and the Cost page's four preference kinds**
+    (:data:`~fantasy_quant.draft.session.TAGS`). Clicking the active tag **clears** it: a
+    preference you can express and cannot retract is a trap, and the retraction has to be as cheap
+    as the assertion or nobody edits a stale board.
+
+    ⚠ **Buttons, not a ``segmented_control``.** The control would need a widget key per player and
+    UI-1 has already paid for what happens when widget state and app state both claim to own a
+    value (`mode_control`'s docstring). A button is an *event*; the tag lives in one place.
+    """
+    key = str(player_key)
+    cur = state.tags().get(key)
+    queued = key in state.queue()
+    cols = st.columns(len(session.TAGS) + 1)
+    if cols[0].button(f"{session.QUEUE_GLYPH} {'Queued' if queued else 'Queue'}",
+                      key=f"q_{where}_{key}", width="stretch",
+                      type="primary" if queued else "secondary",
+                      help="Ordering, not preference — the queue says *next*, a tag says *how "
+                           "much*. Only tags are priced."):
+        state.toggle_queue(key)
+        st.rerun()
+    for col, (name, spec) in zip(cols[1:], session.TAGS.items(), strict=False):
+        on = cur == name
+        if col.button(f"{spec['glyph']}", key=f"tag_{where}_{name}_{key}", width="stretch",
+                      type="primary" if on else "secondary",
+                      help=f"**{spec['label']}** — {spec['help']}"
+                           + ("\n\nClick again to clear." if on else "")):
+            state.set_tag(key, None if on else name)
+            st.rerun()
+
+
+def tag_summary(board: pd.DataFrame, tags: dict[str, str]) -> pd.DataFrame:
+    """The tagged players, named — what the Cost page prices, shown before it prices it.
+
+    ⚠ A tag whose player is not on **this** board (a different season, a board that has moved) is
+    listed with its key rather than dropped: a preference silently missing from the run it was
+    supposed to constrain is the failure mode the whole feature exists to prevent.
+    """
+    if not tags:
+        return pd.DataFrame(columns=["", "PLAYER", "POS", "ADP"])
+    keys = board["player_key"].astype(str)
+    rows = []
+    for k, t in tags.items():
+        hit = board[keys == str(k)]
+        r = hit.iloc[0] if len(hit) else None
+        rows.append({"": session.TAGS[t]["glyph"],
+                     "PLAYER": str(r["player_name"]) if r is not None else f"({k} — not on board)",
+                     "POS": str(r["pos"]) if r is not None else "—",
+                     "ADP": float(r["adp"]) if r is not None else float("nan")})
+    frame = pd.DataFrame(rows)
+    st.markdown("**What you have tagged**")
+    st.dataframe(palette.style_pos_columns(frame, surface="cost"), hide_index=True,
+                 width="stretch",
+                 column_config={"ADP": st.column_config.NumberColumn("ADP", format="%.1f")})
+    return frame
+
+
+def queue_panel(st_obj, team: int, *, allow_draft: bool) -> tuple[dict | None, str | None]:
+    """The draft-room rail's queue, and the button that drafts the top of it.
+
+    Returns ``(resolution, action)`` where ``resolution`` is
+    :func:`~fantasy_quant.draft.session.queue_next`'s dict and ``action`` is ``"draft"`` when the
+    button was pressed — the *caller* makes the pick, because the confirm bar and the pick path
+    belong to the draft room and a rail that could draft on its own would be a second pick path.
+
+    ⚠ **The skipped list renders.** Walking down the queue past a drafted or `🚫`-tagged player is
+    the user's chosen behaviour, and a silent skip is how a queue quietly drafts somebody you did
+    not mean to take.
+    """
+    q = state.queue()
+    st.markdown(f"**{session.QUEUE_GLYPH} Your queue**")
+    if not q:
+        # UI-1's rule holds through UI-3: instruction becomes a chip with the sentence in its
+        # tooltip, never a paragraph on a rail that is 25% of the screen.
+        st.badge("empty", color="gray",
+                 help="Queue a player from the board or from his card. The top of the queue is "
+                      "one click from a pick — and the confirm bar still stands in front of it.")
+        return None, None
+    res = session.queue_next(st_obj, int(team), q, state.tags())
+    rows = []
+    board = st_obj.board
+    keys = board["player_key"].astype(str)
+    for k in q:
+        hit = board[keys == str(k)]
+        if hit.empty:
+            continue
+        r = hit.iloc[0]
+        rows.append({"": session.TAGS.get(state.tags().get(str(k), ""), {}).get("glyph", ""),
+                     "PLAYER": str(r["player_name"]), "POS": str(r["pos"]),
+                     "ADP": float(r["adp"]),
+                     "GONE": int(hit.index[0]) not in st_obj.available})
+    if rows:
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch",
+                     column_config={"ADP": st.column_config.NumberColumn("ADP", format="%.1f"),
+                                    "GONE": st.column_config.CheckboxColumn("GONE")})
+    for s in res["skipped"]:
+        hit = board[keys == str(s["player_key"])]
+        who = str(hit.iloc[0]["player_name"]) if len(hit) else s["player_key"]
+        # ⚠ Rendered, always. Walking down the queue past somebody is the user's chosen behaviour
+        # (2026-08-17) and a silent skip is how a queue drafts a player you did not mean to take.
+        st.badge(f"⏭ {who}", color="orange", help=s["why"])
+    if res["board_index"] is None:
+        st.badge("Nobody in the queue is draftable", color="orange")
+        return res, None
+    if not allow_draft:
+        # ⚠ No button off your own clock. One that silently meant *later* would be a button that
+        # lies about when it acts, which is worse than making you wait for your turn.
+        st.badge(f"next: {res['player_name']}", color="blue",
+                 help="Draftable on your own clock. No button off it — one that silently meant "
+                      "*later* would be a button that lies about when it acts.")
+        return res, None
+    pressed = st.button(f"Draft {res['player_name']}", width="stretch",
+                        key=f"queue_draft_{st_obj.overall_pick}",
+                        help="Loads the confirm bar — the pick is still yours to confirm.")
+    return res, ("draft" if pressed else None)
 
 
 @st.dialog("Player", width="large")

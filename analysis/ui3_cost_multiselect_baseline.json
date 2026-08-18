@@ -1,0 +1,33 @@
+{
+  "board_vintage": "ffc-20260817",
+  "selected_labels": {
+    "must": "Bijan Robinson \u2014 RB (ADP 2)",
+    "never": "Ja'Marr Chase \u2014 WR (ADP 4)",
+    "reach": "Jonathan Taylor \u2014 RB (ADP 8)",
+    "wait": "James Cook III \u2014 RB (ADP 13)"
+  },
+  "keys": {
+    "must": "00-0038542",
+    "never": "00-0036900",
+    "reach": "00-0036223",
+    "wait": "00-0037248"
+  },
+  "config": {
+    "archetype": "bpa",
+    "risk_lambda": 0.01,
+    "must_draft": [
+      [
+        "00-0038542",
+        2.0
+      ]
+    ],
+    "never_draft": [
+      "00-0036900"
+    ],
+    "tilts": {
+      "00-0036223": 1.5,
+      "00-0037248": -1.5
+    }
+  },
+  "note": "The four `st.multiselect`s of `app/screens.page_cost` as they stood at commit 6fa2ddc, one selection per kind taken by ADP rank so the record is reproducible. UI-3 bar B1 differences the tag-derived DraftConfig against this recorded object \u2014 the deleted path cannot be re-run, so it is written down before it is deleted."
+}
