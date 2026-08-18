@@ -1553,3 +1553,81 @@ def test_ui3_tags_are_preferences_and_survive_a_new_draft():
         assert app_state.tags() == {} and app_state.queue() == []
     finally:
         app_state.st.session_state = real
+
+
+# ------------------------------------------------------------------------------------------------
+# UI-3 step 2 (A2) — the selected-player strip
+# ------------------------------------------------------------------------------------------------
+def test_ui3_the_impact_bar_is_the_value_rank_and_never_the_market_one(k2_built):
+    """★ The trap A2 walked into: the board carries **two** positional ranks and they disagree.
+
+    ``board["pos_rank"]`` is filled from ``adp_pos_rank`` — the market's order, i.e. the
+    *availability* signal — while PLAYER-VIEW bar #1 is *Impact / value*. On the live 2026 board
+    the ADP RB1 is our RB2, so a renderer that reached for the column sitting right there would
+    have put the availability signal into the value channel under a label saying otherwise, which
+    the 2026-07-04 reframe forbids by name.
+
+    The assertion is structural, not incidental: scribble on ``pos_rank`` and **nothing moves.**
+    """
+    state, _ = _k2_draft(k2_built, finish=False)
+    vpr = session.value_pos_rank(state)
+    board = state.board
+    for pos, grp in board.groupby("pos"):
+        ranks = vpr.loc[grp.index].dropna()
+        assert ranks.min() == 1.0, pos
+        assert vpr.loc[grp["overall_rank"].astype(float).idxmin()] == 1.0, pos
+
+    scrambled = board.copy()
+    scrambled["pos_rank"] = scrambled["pos_rank"].to_numpy()[::-1]
+    state.board = scrambled
+    pd.testing.assert_series_equal(session.value_pos_rank(state), vpr)
+    state.board = board
+
+    idx = int(board.index[3])
+    card = session.player_card(state, idx, vi=k2_built["value_index"], lam=0.01)
+    assert card["impact"]["value"] == pytest.approx(float(vpr.loc[idx]))
+    assert card["impact"]["text"] == f"{board.loc[idx, 'pos']}{int(vpr.loc[idx])}"
+
+
+def test_ui3_the_strip_is_five_numbers_lifted_out_of_the_card(k2_built):
+    """B2, structurally — the strip is a *projection of the card*, so it cannot hold a number the
+    dialog does not. Comparing two renderings proves they agree today; taking one from the other
+    proves they cannot disagree, which is the same argument K1's B1 makes one layer up."""
+    state, _ = _k2_draft(k2_built, finish=False)
+    idx = int(state.board.index[3])
+    card = session.player_card(state, idx, vi=k2_built["value_index"], lam=0.01)
+    strip = session.card_strip(card)
+
+    assert [e["label"] for e in strip] == [lbl for lbl, _ in session.STRIP_BARS]
+    assert len(strip) == 5, "PLAYER-VIEW §3 is five, and the deep-page-only three stay off it"
+    assert len(card["bars"]) == 8, "the card's bar shape is asserted by two committed sheets"
+
+    bars = {b["label"]: b for b in card["bars"]}
+    for e in strip:
+        if e["label"] in bars:
+            assert e["value"] == bars[e["label"]]["value"], e["label"]
+    assert strip[0]["value"] == card["impact"]["value"]
+    # #5 is carried in **rounds**, which is §2's own worked example ("+1.5 rounds of value")
+    assert strip[-1]["value"] == card["bargain"]["rounds"]
+    assert strip[-1]["text"].endswith("rounds")
+    assert all(e["help"] for e in strip), "every number on the glance carries its 14.O tooltip"
+
+
+def test_ui3_a_strip_number_that_does_not_exist_is_blank_and_not_zero(k2_built):
+    """T22's rule, on the newest surface. A player nobody simulated has no boom rate; rendering
+    him at ``0.00`` reads as *never booms*, which is a claim the board never made."""
+    state, _ = _k2_draft(k2_built, finish=False)
+    missing = state.board.index[state.board["boom_prob_live"].isna()]
+    assert len(missing), "the fixture is meant to contain unseen players"
+    card = session.player_card(state, int(missing[0]), vi=k2_built["value_index"], lam=0.01)
+    boom = {e["label"]: e for e in session.card_strip(card)}["BOOM"]
+    assert boom["value"] is None and boom["text"] is None
+
+
+def test_ui3_every_strip_label_is_documented():
+    """14.O's rule reaches the strip: a number on screen with no dictionary entry is a number a
+    reader has to guess at, and ``IMPACT`` is a new one this session invented."""
+    for label, _ in session.STRIP_BARS:
+        assert session.stat_entry(label)["one_line"]
+    assert "ADP" in session.stat_entry("IMPACT")["how_to_read_it"], \
+        "the entry must carry the pos_rank collision, because that is the trap"

@@ -90,10 +90,23 @@ def page_board() -> None:
                                        elevation=state.elevation())
     if mode == "ranges":
         views.range_note(view)
+    # UI-3 step 2 (A2) — select a row and the glance strip renders **under the board**, not over it.
+    # The deep page is still one click away, from the strip's own footer.
+    #
+    # ⚠ **The same `pending_pick` key the draft room uses**, deliberately: it is one concept — *the
+    # player I am looking at* — and a second key would mean selecting a player here and finding the
+    # room had forgotten him. Nothing is drafted from this page (`allow_draft=False`); the room
+    # still guards on `pending in st_obj.available`, so a selection made against the preview board
+    # cannot survive into a draft as a pick.
     if selected is not None:
-        views.player_dialog(session.player_card(st_obj, int(selected),
-                                                vi=built["value_index"], lam=built["lam"],
-                                                risk=built["risk"]))
+        st.session_state["pending_pick"] = int(selected)
+    pending = st.session_state.get("pending_pick")
+    if pending is not None and pending in st_obj.board.index:
+        card = session.player_card(st_obj, int(pending), vi=built["value_index"],
+                                   lam=built["lam"], risk=built["risk"])
+        if views.selected_strip(card, session.card_strip(card), allow_draft=False,
+                                where="board") == "card":
+            views.player_dialog(card)
 
     st.divider()
     st.markdown("#### Why is this player worth that?")

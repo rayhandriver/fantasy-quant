@@ -459,6 +459,26 @@ STAT_DICT: dict[str, dict[str, str]] = {
         "provenance": "session.board_view — adp rank − value_board.overall_rank, both over the "
                       "full board",
     },
+    # UI-3 step 2 (A2) — PLAYER-VIEW bar #1, which had never been rendered anywhere. It is not a
+    # board column: it belongs to the strip and the card, where a *single* player is the subject.
+    "IMPACT": {
+        "label": "Impact (value positional rank)",
+        "one_line": "Where our value board ranks him among his own position — the WR7 read.",
+        "what_it_means": "His `overall_rank` ranked within position over the whole board. "
+                         "PLAYER-VIEW's bar #1, and the one number on the strip that answers "
+                         "*how good is he*, as opposed to *what does he cost* (BARGAIN) or *what "
+                         "shape is he* (the three that follow it).",
+        "worked_example": "`RB4` means three running backs on this board carry a higher "
+                          "`overall_rank` than he does — **not** that three go before him.",
+        "how_to_read_it": "Lower is better, and it is a **value** rank. ⚠ The board also carries "
+                          "a `pos_rank` column and that one is the **ADP** positional rank — the "
+                          "market's order, i.e. the availability signal. The two disagree "
+                          "routinely (on the 2026 board the ADP RB1 is our RB2), and reading one "
+                          "for the other would put the availability signal into the value "
+                          "channel, which the 2026-07-04 reframe forbids by name.",
+        "provenance": "session.value_pos_rank — value_board.overall_rank, ranked within pos over "
+                      "the full board",
+    },
     "RISKS": {
         "label": "Construction risks",
         "one_line": "What this player would do to the shape of YOUR roster, at pick time.",
@@ -1425,6 +1445,29 @@ def _bargain(st: DraftState) -> pd.Series:
     return (adp_rank - val_rank).astype(float)
 
 
+def value_pos_rank(st: DraftState) -> pd.Series:
+    """Positional rank by **our value board**, over the whole board — PLAYER-VIEW bar #1.
+
+    ``overall_rank`` ranked within position, on every boarded player rather than the shrinking
+    available pool — the same static construction as :func:`_bargain`, and for the same reason:
+    a player does not become the RB2 because the RB1 was drafted, he becomes *available*.
+
+    ⚠ **The board already has a ``pos_rank`` column and it is a different quantity.**
+    :func:`~fantasy_quant.draft.simulator._prepare_board` fills it from ``adp_pos_rank`` — it is
+    the **market's** positional order, i.e. the availability signal. On the live 2026 board the
+    ADP RB1 (Bijan Robinson) is our RB2, so the two disagree at the very top. Rendering the board's
+    column under a bar labelled *Impact / value* would put the availability signal into the value
+    channel, and the 2026-07-04 reframe's three-layer contract forbids exactly that ("never one
+    ADP input"). It is a name collision, which is the kind that survives review — so this function
+    exists to be the one that means *value*, and it never reads ``pos_rank``.
+    """
+    board = st.board
+    if "overall_rank" not in board.columns:
+        return pd.Series(np.nan, index=board.index, dtype=float)
+    r = pd.to_numeric(board["overall_rank"], errors="coerce")
+    return r.groupby(board["pos"].astype(str)).rank(method="min").astype(float)
+
+
 def roster_view(st: DraftState, team: int) -> pd.DataFrame:
     """One seat's roster in lineup order, with ``proj_points`` — the frame both surfaces total."""
     r = st.roster(int(team))
@@ -2182,6 +2225,15 @@ def player_card(st: DraftState, board_index: int, *, vi: pd.DataFrame | None = N
                        "rounds": (None if pd.isna(v) else v / float(st.n_teams)),
                        "help": stat_help("BARGAIN")}
 
+    # ★ UI-3 step 2 — PLAYER-VIEW bar #1, a **field** for exactly bargain's reason: ``bars`` is a
+    # length two committed sheets and a unit test assert, and the strip needs #1 and #5 in the same
+    # five. See :func:`value_pos_rank` for why this is not the board's own ``pos_rank``.
+    vpr = value_pos_rank(st)
+    iv = float(vpr.loc[int(board_index)]) if int(board_index) in vpr.index else np.nan
+    card["impact"] = {"value": (None if pd.isna(iv) else iv),
+                      "text": (None if pd.isna(iv) else f"{card['pos']}{int(iv)}"),
+                      "help": stat_help("IMPACT")}
+
     if vi is not None and not vi.empty:
         hit = [e for e in explain_chain(st.board.loc[[int(board_index)]], vi,
                                         str(row["player_name"]), lam)]
@@ -2191,6 +2243,66 @@ def player_card(st: DraftState, board_index: int, *, vi: pd.DataFrame | None = N
         if len(m):
             card["reach"] = m.iloc[0].to_dict()
     return card
+
+
+#: **UI-3 step 2 (A2) — the five the strip carries, and where each one comes from.**
+#:
+#: ``docs/PLAYER-VIEW.md`` §3 says the glance shows "bars #1–#5" and §2 numbers them
+#: *Impact · Upside · Downside · Injury · Bargain*. That numbering is **not** the order of
+#: :func:`player_card`'s ``bars`` list (``PROJ, MEAN, AVAIL, Q10, MED, Q90, BOOM, BUST``), and two
+#: of the five — #1 and #5 — are card *fields* rather than entries in it. So the mapping is written
+#: down here once, as ``(label, source)``, instead of being re-derived by each renderer.
+#:
+#: ★ **The three deep-page-only bars (#6–#8) are withheld on purpose** (§3): the glance is a
+#: *draft-now* decision, not a scouting report. Adding one here would not be a richer strip, it
+#: would be the deep page rendered twice.
+STRIP_BARS: tuple[tuple[str, str], ...] = (
+    ("IMPACT", "impact"),    # #1 value  — how good is he
+    ("BOOM", "bar"),         # #2 upside — §2's "34% boom weeks"
+    ("Q10", "bar"),          # #3 floor  — §2's "floor 118 pts"; high is good, so nothing inverts
+    ("AVAIL", "bar"),        # #4 injury — §2's "15.2 of 17"
+    ("BARGAIN", "bargain"),  # #5 cost   — §2's "+1.5 rounds of value"
+)
+
+
+def card_strip(card: Mapping[str, object]) -> list[dict]:
+    """PLAYER-VIEW §3's five, as a **projection of an already-built card**.
+
+    Takes the card, not the state — the same relationship :func:`project_view` has to
+    :func:`board_view`, and for the same reason. Bar **B2** asks that the strip and the dialog show
+    one set of numbers; if this function took a :class:`DraftState` it could answer a question the
+    dialog never asked, and the two surfaces would be free to disagree about a player who is on
+    both of them at once. **Nothing here is computed**: every value is lifted out of
+    :func:`player_card`'s own output, and the only additions are the §2 display phrasing and the
+    ordering.
+
+    Returns ``[{label, value, fmt, text, help}]``, always five long, with ``value=None`` (and
+    ``text=None``) for anything the board could not supply — never a zero, which is T22's rule.
+    """
+    bars = {str(b["label"]): b for b in (card.get("bars") or [])}  # type: ignore[union-attr]
+    bargain = card.get("bargain") or {}
+    impact = card.get("impact") or {}
+    out: list[dict] = []
+    for label, src in STRIP_BARS:
+        if src == "bar":
+            b = bars.get(label, {})
+            value, fmt = b.get("value"), str(b.get("fmt", "%.2f"))
+            text = None if value is None else f"{value:{fmt[1:]}}"
+            help_ = b.get("help") or stat_help(label)
+        elif src == "impact":
+            value, fmt = impact.get("value"), "%.0f"
+            text = impact.get("text")
+            help_ = impact.get("help") or stat_help(label)
+        else:
+            # ⚠ **rounds, not ranks.** §2's worked example for bar #5 is "+1.5 rounds of value" and
+            # the round is the unit a drafter actually trades in. The rank stays on the card's chip;
+            # the strip is the glance, and one unit per number is the whole point of a glance.
+            rounds = bargain.get("rounds")
+            value, fmt = rounds, "%+.1f"
+            text = None if rounds is None else f"{rounds:+.1f} rounds"
+            help_ = bargain.get("help") or stat_help(label)
+        out.append({"label": label, "value": value, "fmt": fmt, "text": text, "help": help_})
+    return out
 
 
 def parse_seats(raw: str | Sequence[int]) -> list[int]:

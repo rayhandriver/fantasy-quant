@@ -6,7 +6,8 @@ section, not just appended.
 
 > **Last updated:** 2026-08-17 — **Session UI-3 terms** (bottom section: tag · queue · the
 > workflow the old UI made impossible · the skip is rendered · `never` is inviolable · a
-> recorded baseline for a deleted path) and **bar-sheet comparator terms** (T41/T40/T55:
+> recorded baseline for a deleted path · **step 2/A2:** the strip · one selection, one
+> `pending_pick` · **the two positional ranks** · T39's slot) and **bar-sheet comparator terms** (T41/T40/T55:
 > board vintage stamp · gate leaf vs readout leaf · the pinned control · the room is an input ·
 > constructed vs sampled control · an inert guard). _Previously:_ 2026-07-30 — **seat-map terms**
 > (16.17 **BUILT**, 14.J still
@@ -3079,3 +3080,36 @@ asserts. Roster legality comes for free by construction: the candidate set *is*
 the `DraftConfig` they produced was written to `analysis/ui3_cost_multiselect_baseline.json`
 **before** the deletion, and bar B1 differences the tag-derived config against that record. *A
 replacement is only checkable if the thing it replaced was written down first.*
+
+### Step 2 (A2) — the selected-player strip
+
+**the strip.** PLAYER-VIEW §3's glance card, rendered **inline under the board** instead of as a
+modal over it. §11 records the compromise it replaces: Streamlit has no hover event, so K2 made one
+`st.dialog` serve both §3's glance and §4's deep page — and the cost of that lands at the worst
+possible moment, because *the modal covers the board you are picking from*. The strip is the glance
+where the glance was specced to be; the dialog stays as the deep page, reached from the strip's own
+footer. `views._card_button` ("What do we know about him?") is **deleted** rather than kept beside
+it: two controls opening one surface is how the two drift.
+
+**one selection, one `pending_pick`.** Row-select, the queue button, the search and (step 4) the
+selectbox all now write the same piece of session state, and the strip renders off *that* rather
+than off the selection event. It reads as tidiness and is actually the **testability** fix:
+`st.dataframe(on_select=…)` is a client event `AppTest` cannot fire ([[T36]]), so a strip hung off
+the selection would have been untestable by construction, while a strip hung off `pending_pick` is
+exercised by every other route in. *Where a surface hangs decides whether it can be measured.*
+
+**the two positional ranks** (the trap A2 walked into). The prepared board carries **`pos_rank`,
+which is the ADP positional rank** (`_prepare_board` fills it from `adp_pos_rank`) — the market's
+order, i.e. the **availability** signal. PLAYER-VIEW bar #1 is *Impact / **value***, so rendering
+the column that was sitting right there would have put the availability signal into the value
+channel under a label saying otherwise — precisely what the [[REFRAME-2026-07-04]] three-layer
+contract forbids ("never one ADP input"). `session.value_pos_rank` is therefore its own function,
+ranking `overall_rank` within position over the whole board, and its test **scrambles `pos_rank` and
+requires that nothing moves**. On the live 2026 board the two disagree at the very top (ADP's RB1
+Bijan Robinson is our RB2). *A name collision between two real quantities is the kind that survives
+review, because neither side looks wrong on its own.*
+
+**T39's slot.** The strip was specced as `name · pos · TIER · ADP · …`, but the tier feature
+measured out as a null ([[T39]]) and shipped nothing, so the slot carries the **cliff** — 14.E's own
+number, which answers what a tier was there to answer: *what does waiting at this position cost.* A
+blank slot was the honest alternative; a `TIER` label over a null was not.

@@ -779,6 +779,90 @@ def player_card_body(card: dict) -> None:
                          width="stretch", hide_index=True)
 
 
+def bar_block(col, entry: dict) -> None:
+    """One readout — label, number, tooltip. **The single place a bar is drawn** (A3 rewrites it).
+
+    ⚠ A missing value renders ``—``, never ``0``. Every consumer of this function is showing a
+    frozen-stack number for one player, and the two ways that number goes missing (nobody
+    simulated him; the quantity is censored) are both *unknown*, which T22 and T19 have each cost
+    this repo a session to learn.
+    """
+    value, fmt = entry.get("value"), str(entry.get("fmt") or "%.2f")
+    text = entry.get("text") or ("—" if value is None else f"{value:{fmt[1:]}}")
+    col.metric(str(entry["label"]), text, help=entry.get("help"))
+
+
+def strip_numbers(st_obj, strip: list[dict]) -> None:
+    """The five, side by side. **Step 2 renders label + number; step 3 (A3) draws the bar.**
+
+    Split out from :func:`selected_strip` so the strip's *content* is testable without a Streamlit
+    runtime and so A3 has exactly one place to change — the alternative was five call sites and a
+    sixth that got missed, which is the shape of every UI defect this session has already found.
+    """
+    cols = st_obj.columns(len(strip))
+    for col, entry in zip(cols, strip, strict=False):
+        bar_block(col, entry)
+
+
+def selected_strip(card: dict, strip: list[dict], *, allow_draft: bool, where: str = "board",
+                   why: str | None = None) -> str | None:
+    """A2 — PLAYER-VIEW §3's glance card, rendered **inline** rather than as a modal.
+
+    Returns ``"draft"`` when the confirm button was pressed, ``"card"`` for the deep page, else
+    ``None``. The caller makes the pick, for :func:`queue_panel`'s reason: one pick path.
+
+    ★ **Why this exists at all.** `docs/PLAYER-VIEW.md` §11 records that Streamlit has no hover
+    event, so K2 made one ``st.dialog`` serve both §3's glance and §4's deep page. That cost is
+    concrete and it is paid at the worst moment: **the modal covers the board you are picking
+    from.** The strip is §3's five bars where §3 wanted them — beside the board, on the row you
+    selected — and the dialog stays as §4.
+
+    ⚠ **The explicit confirm survives.** ``_confirm_bar``'s comment is right: a mis-click costs a
+    round, and a round is the most expensive unit in this app. A2 removes a *modal*, not the
+    confirmation — the button here is the same one, with the player's five numbers around it
+    instead of behind a second click.
+    """
+    action: str | None = None
+    with st.container(border=True):
+        head = st.columns([3, 1, 1, 1])
+        head[0].markdown(f"**{card['name']}** · {card['pos']} · {card['team']}")
+        head[1].badge(f"ADP {card['adp']:.1f}", color="gray")
+        # T39's slot. The strip was specced to carry a TIER here; the tier feature measured out as a
+        # null (one tier per position on the live board) and shipped nothing, so the slot carries
+        # the **cliff** — 14.E's own number, which answers what a tier was there to answer: what
+        # does waiting at this position cost. A blank slot would have been the honest alternative;
+        # a `TIER` label over a null would not.
+        if card.get("cliff") is not None:
+            head[2].badge(f"cliff {card['cliff']:.0f}", color="gray",
+                          help=session.stat_help("CLIFF"))
+        rr = card.get("reach") or {}
+        if rr.get("p_available") is not None:
+            head[3].badge(f"{session.REACH_COL} {float(rr['p_available']):.0%}",
+                          color="blue" if float(rr["p_available"]) >= 0.5 else "orange",
+                          help=session.stat_help(session.REACH_COL))
+        if card["flags"]:
+            st.badge(f"⌀ {card['flags']}", color="orange", icon=":material/priority_high:",
+                     help=session.stat_entry("FLAGS")["how_to_read_it"])
+
+        strip_numbers(st, strip)
+
+        foot = st.columns([1, 1, 2])
+        if allow_draft and foot[0].button("Draft him", type="primary",
+                                          key=f"strip_draft_{where}_{card['board_index']}"):
+            action = "draft"
+        if foot[1].button("Open full profile →", key=f"strip_card_{where}_{card['board_index']}"):
+            action = "card"
+        if why:
+            foot[2].badge(why, color="gray")
+        # ★ The tags ride along, which the §3 sketch did not ask for. A1's premise is that a
+        # preference forms *while you are looking at a player*, and this strip is now the surface
+        # you are looking at — putting the controls one modal away would rebuild the exact
+        # friction A1 deleted from the Cost page.
+        if card.get("player_key"):
+            tag_controls(str(card["player_key"]), where=f"strip_{where}")
+    return action
+
+
 def tag_controls(player_key: str, *, where: str) -> None:
     """UI-3 step 1 — set this player's tag, and queue him, from wherever he is on screen.
 

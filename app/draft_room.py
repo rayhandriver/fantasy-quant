@@ -348,10 +348,6 @@ def _pick_controls(d: dict, team: int) -> None:
                     st.session_state["pending_pick"] = int(m["index"])
                     st.rerun()
 
-    pending = st.session_state.get("pending_pick")
-    if pending is not None and pending in st_obj.available:
-        _confirm_bar(d, team, int(pending), why="selected")
-
     st.markdown("**Best available**")
     c1, c2, c3 = st.columns([2, 1, 2])
     pos = c1.multiselect("Position", ["QB", "RB", "WR", "TE", "K", "DST"],
@@ -376,10 +372,20 @@ def _pick_controls(d: dict, team: int) -> None:
         vi=d.get("vi"), byes=state.byes(season), elevation=state.elevation())
     if mode == "ranges":
         views.range_note(view)
+    # ★ UI-3 step 2 (A2) — **one selection, one strip.** Row-select and the queue button and the
+    # search all do the same thing now: they set `pending_pick`. The strip renders off that one
+    # piece of state, directly under the board it was selected from, so §3's glance card exists
+    # without the modal that used to cover the board (`views.selected_strip`).
+    #
+    # ⚠ It is also what gives bar **B2** a drivable path. `st.dataframe(on_select=…)` is a client
+    # event `AppTest` cannot fire (T36), so a strip that hung off `selected` would be untestable by
+    # construction; hanging it off `pending_pick` means every *other* route in — and after step 4
+    # that includes the selectbox — exercises the same render.
     if selected is not None:
         st.session_state["pending_pick"] = int(selected)
-        _confirm_bar(d, team, int(selected), why="selected on the board")
-        _card_button(d, int(selected))
+    pending = st.session_state.get("pending_pick")
+    if pending is not None and pending in st_obj.available:
+        _selected_strip(d, team, int(pending), reach=reach)
 
     # a literal button per row is fine for the top handful and gets slow past that (14.K spec), so
     # the quick row covers the picks a drafter actually makes at a glance and the table covers all.
@@ -443,12 +449,27 @@ def _reach_risk(d: dict, team: int, *, n: int = 20) -> None:
     views.reach_panel(frame, frame.attrs.get("window_picks"))
 
 
-def _card_button(d: dict, board_index: int) -> None:
-    """Open the PLAYER-VIEW deep page for the selected row (14.N's sibling on the board)."""
-    if st.button("What do we know about him?", key=f"card_{d['state'].overall_pick}_{board_index}"):
-        views.player_dialog(session.player_card(
-            d["state"], int(board_index), vi=d.get("vi"),
-            lam=float(getattr(d.get("risk"), "lam", 0.0) or 0.0), risk=d.get("risk")))
+def _selected_strip(d: dict, team: int, board_index: int, *, reach=None,
+                    why: str | None = None) -> None:
+    """A2 — the selected player's glance strip, and the two things it can do.
+
+    ⚠ **The deep page is reached from here, not from a button of its own.** ``_card_button`` ("What
+    do we know about him?") is deleted: it opened the same modal on the same player, so keeping it
+    would leave two controls for one surface — and the strip is the one that answers the question
+    without covering the board first.
+
+    The card is built **with** the reach frame, so ``P(THERE)`` on the strip is the board column's
+    own number rather than a second survival call (UI-1 bar B5's rule, one surface further down).
+    """
+    card = session.player_card(
+        d["state"], int(board_index), vi=d.get("vi"),
+        lam=float(getattr(d.get("risk"), "lam", 0.0) or 0.0), risk=d.get("risk"), reach=reach)
+    action = views.selected_strip(card, session.card_strip(card), allow_draft=True,
+                                  where="room", why=why)
+    if action == "draft":
+        _apply(d, team, int(board_index))
+    elif action == "card":
+        views.player_dialog(card)
 
 
 def _confirm_bar(d: dict, team: int, board_index: int, *, why: str) -> None:
