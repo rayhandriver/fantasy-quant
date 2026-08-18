@@ -191,10 +191,10 @@ def _rail_seat(st_obj, sm) -> int:
 def _queue_rail(d: dict, seat: int) -> None:
     """UI-3 step 1 — the queue, in the rail, with one button into the **existing** pick path.
 
-    ★ **It sets ``pending_pick`` and reruns; it does not draft.** `_confirm_bar` is the only thing
-    that turns an intention into a pick, and a rail that could bypass it would be a second pick
-    path — the shape of defect this repo has paid for three times in the *value* layer (T18 / F.5 /
-    T27) and has no appetite for in the pick layer, where the cost of a mis-click is a round.
+    ★ **It sets ``pending_pick`` and reruns; it does not draft.** `views.selected_strip` is the
+    only thing that turns an intention into a pick, and a rail that could bypass it would be a
+    second pick path — the shape of defect this repo has paid for three times in the *value* layer
+    (T18 / F.5 / T27) and has no appetite for in the pick layer, where a mis-click costs a round.
 
     The button only appears on your own clock. A "Draft him" button that silently means *later*
     is worse than no button.
@@ -322,32 +322,12 @@ def _overrun_notice(interval: int) -> None:
 
 
 # ------------------------------------------------------------------------------------------------
-# making a pick — three ways in, one board
+# making a pick — one way in, one board
 # ------------------------------------------------------------------------------------------------
 def _pick_controls(d: dict, team: int) -> None:
     st_obj = d["state"]
     st.markdown("#### Your pick")
-
-    # --- search that behaves like search: matches render UNDER the box, clickable, ADP-ranked ---
-    q = st.text_input("Search the board", key=f"pick_q_{st_obj.overall_pick}",
-                      placeholder="name or board #",
-                      help="Type a name. Matches appear below — Enter never drafts anyone.")
-    if q.strip():
-        found = session.resolve_pick(st_obj, team, q)
-        if isinstance(found, int):
-            _confirm_bar(d, team, found, why="matched your search")
-        elif not found:
-            st.error(f"No available player matching “{q}”.")
-        else:
-            # ⚠ deliberately two-step. `st.text_input` fires on Enter and Streamlit has no keypress
-            # hook, so "Enter drafts the top hit" would let a stray Enter cost a round.
-            st.badge(f"{len(found)} matches — click one", color="gray")
-            for m in found[:10]:
-                if st.button(f"{m['player_name']} · {m['pos']} · ADP {m['adp']:.1f}",
-                             key=f"hit_{st_obj.overall_pick}_{m['index']}", width="stretch"):
-                    st.session_state["pending_pick"] = int(m["index"])
-                    st.rerun()
-
+    _pick_selector(d, team)
     st.markdown("**Best available**")
     c1, c2, c3 = st.columns([2, 1, 2])
     pos = c1.multiselect("Position", ["QB", "RB", "WR", "TE", "K", "DST"],
@@ -387,15 +367,10 @@ def _pick_controls(d: dict, team: int) -> None:
     if pending is not None and pending in st_obj.available:
         _selected_strip(d, team, int(pending), reach=reach)
 
-    # a literal button per row is fine for the top handful and gets slow past that (14.K spec), so
-    # the quick row covers the picks a drafter actually makes at a glance and the table covers all.
-    quick = view.head(6)
-    if len(quick):
-        cols = st.columns(len(quick))
-        for col, (idx, row) in zip(cols, quick.iterrows(), strict=False):
-            if col.button(f"{row['PLAYER']}\n\n{row['POS']} · ADP {row['ADP']:.0f}",
-                          key=f"quick_{st_obj.overall_pick}_{idx}", width="stretch"):
-                _apply(d, team, int(idx))
+    # ⚠ **The six-button quick-pick row is deleted** (UI-3 step 4 / A7). It duplicated the top six
+    # rows of the table it sat under, and it was the app's one **one-click irreversible pick** —
+    # every other route puts the player's name and his five numbers in front of you first. A2's
+    # strip is its replacement and it is strictly more informative for the same tap.
 
     if st.button("Autopick this seat", key=f"auto_{st_obj.overall_pick}"):
         engine.autopick(st_obj, d["meta"], team, d.get("risk"))
@@ -449,6 +424,39 @@ def _reach_risk(d: dict, team: int, *, n: int = 20) -> None:
     views.reach_panel(frame, frame.attrs.get("window_picks"))
 
 
+def _pick_selector(d: dict, team: int) -> None:
+    """A7 — **one searchable box, and it loads the strip.** Type → select → confirm.
+
+    Before this the room had three ways in and the shortest was three interactions: type into a
+    text box, click a match, click *Draft him*. ``st.selectbox`` is type-to-filter natively, so the
+    search and the match list are one control, and the strip (A2) is the confirm — **two**.
+
+    ⚠ **The confirm stays.** ``_confirm_bar``'s deleted docstring was right: a mis-click costs a
+    round, and a round is the most expensive unit in this app. A7 removes a *step*, not the
+    confirmation. And there is still no keypress hook in Streamlit, so nothing here can be armed by
+    a stray Enter — selecting an option renders the strip, it does not draft.
+
+    ★ **The options are ``draftable_pool``**, so an illegal pick is not offered rather than being
+    offered and refused — the same construction that makes the queue button's roster legality free
+    (A1). ``session.resolve_pick`` is untouched and still the CLI's path; the app simply no longer
+    needs to parse a name, because it never receives one.
+    """
+    st_obj = d["state"]
+    pool = st_obj.draftable_pool(team)
+    if pool.empty:
+        st.badge("No legal pick left for this seat", color="orange")
+        return
+    labels = {f"{r['player_name']} · {r['pos']} · ADP {float(r['adp']):.1f}": int(idx)
+              for idx, r in pool.iterrows()}
+    choice = st.selectbox(
+        "Search the board", [""] + list(labels), index=0,
+        key=f"pick_sel_{st_obj.overall_pick}",
+        help="Type any part of a name. Only players you may legally draft are listed — choosing "
+             "one loads him below with his five numbers; the pick is still yours to confirm.")
+    if choice:
+        st.session_state["pending_pick"] = labels[str(choice)]
+
+
 def _selected_strip(d: dict, team: int, board_index: int, *, reach=None,
                     why: str | None = None) -> None:
     """A2 — the selected player's glance strip, and the two things it can do.
@@ -472,17 +480,10 @@ def _selected_strip(d: dict, team: int, board_index: int, *, reach=None,
         views.player_dialog(card)
 
 
-def _confirm_bar(d: dict, team: int, board_index: int, *, why: str) -> None:
-    """Never a one-click irreversible pick without the name in front of the user — a mis-click
-    costs a round, and a round is the most expensive unit in this app."""
-    row = d["state"].board.loc[board_index]
-    with st.container(border=True):
-        c1, c2 = st.columns([3, 1])
-        c1.markdown(f"**{row['player_name']}** · {row['pos']} · "
-                    f"ADP {float(row['adp']):.1f} (#{board_index})")
-        c1.badge(why, color="gray")
-        if c2.button("Draft him", type="primary", key=f"confirm_{d['state'].overall_pick}"):
-            _apply(d, team, board_index)
+# ⚠ ``_confirm_bar`` is **deleted** (UI-3 step 4). Its rule is not: *never a one-click irreversible
+# pick without the name in front of the user.* `views.selected_strip` is the confirm bar with the
+# player's five §5 bars around it, and it is the only surface that turns an intention into a pick.
+# The rule outlived the function, which is the right way round.
 
 
 def _apply(d: dict, team: int, board_index: int) -> None:

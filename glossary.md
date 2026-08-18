@@ -9,7 +9,9 @@ section, not just appended.
 > recorded baseline for a deleted path · **step 2/A2:** the strip · one selection, one
 > `pending_pick` · **the two positional ranks** · T39's slot · **step 3/A3:** quasi-bar ·
 > polarity resolved before the renderer · the dual baseline · no reading, no bar ·
-> **drawing a number asks what its maximum is** · the third tier, measured) and **bar-sheet comparator terms** (T41/T40/T55:
+> **drawing a number asks what its maximum is** · the third tier, measured · **step 4/A7:**
+> one way in · an illegal pick is not offered · the rule outlived the function ·
+> `resolve_pick` kept-not-default) and **bar-sheet comparator terms** (T41/T40/T55:
 > board vintage stamp · gate leaf vs readout leaf · the pinned control · the room is an input ·
 > constructed vs sampled control · an inert guard). _Previously:_ 2026-07-30 — **seat-map terms**
 > (16.17 **BUILT**, 14.J still
@@ -3161,3 +3163,26 @@ white** — a highlighter, legible on the dark theme and gone the moment a reade
 both poles' own minimums. The band is **redundant with the bar's length**, so a reader who cannot
 separate the hues loses a convenience and not the encoding — the same test `VALUE_GOOD` passed and
 `POSITION_COLORS` deliberately failed.
+
+### Step 4 (A7) — fewer taps to a pick
+
+**one way in.** The room had three (type→click a match→confirm · row-select→confirm · a six-button
+quick row) and the shortest was **three** interactions; two of them duplicated the table they sat
+under, and the quick row was the app's only **one-click irreversible pick**. A7 leaves one: a
+type-to-filter `st.selectbox` whose options are `DraftState.draftable_pool`, loading A2's strip.
+Measured on the live board: **two** interactions for a queued player *and* for an arbitrary search,
+against B5's asked-for ≤2 / ≤3.
+
+**an illegal pick is not offered, rather than offered and refused.** The selector's options *are*
+the draftable pool, so roster legality comes for free — the same construction A1 used for the queue
+button. A control that lists a choice it will reject is a control that has to explain itself.
+
+**the rule outlived the function.** `_confirm_bar` is deleted and its docstring's rule — *never a
+one-click irreversible pick without the name in front of the user; a mis-click costs a round* — is
+now `views.selected_strip`, which shows the name **and** the five §5 bars before the same button.
+A7 removed a *step*, never the confirmation, and there is still no keypress hook in Streamlit, so
+nothing here can be armed by a stray Enter.
+
+**`resolve_pick` is kept, not default** (the Phase-7 / props pattern, third instance). The CLI still
+types a free-text name at it and its two-step disambiguation is still the right answer *there*; the
+app no longer needs to parse a name because a selectbox never hands it one.

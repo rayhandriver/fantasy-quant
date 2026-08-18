@@ -1774,3 +1774,43 @@ def test_ui3_the_grade_bars_read_the_score_on_its_own_scale():
     w_odds = session.GRADE_WEIGHTS["odds"]
     assert best["pct_overall"] == pytest.approx(1.0)
     assert best["text"] == f"{w_odds:.1f} / {w_odds:.0f}"
+
+
+# ------------------------------------------------------------------------------------------------
+# UI-3 step 4 (A7) — fewer taps to a pick
+# ------------------------------------------------------------------------------------------------
+def test_ui3_there_is_one_way_into_a_pick_and_the_confirm_survived(k2_built):
+    """A7 — three routes collapse to one, and the thing that got deleted is a *step*, not the
+    confirmation.
+
+    ⚠ Asserted on the **AST**, not on the text. UI-1's lesson: a grep cannot tell doing from
+    describing, and this module's comments name ``_confirm_bar`` and the quick row precisely to
+    record why they are gone — a text search would find both and report the deletion as undone.
+    """
+    import ast
+
+    import app.draft_room as room
+
+    tree = ast.parse(Path(room.__file__).read_text())
+    fns = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+    assert "_pick_selector" in fns, "A7's one control"
+    assert "_confirm_bar" not in fns, "deleted — `views.selected_strip` is the confirm bar now"
+    assert "_card_button" not in fns, "deleted — the strip's footer opens the deep page"
+    assert not hasattr(room, "_confirm_bar") and not hasattr(room, "_card_button")
+
+    # the pick still goes through exactly one function, and it is the one that reruns
+    calls = [n for n in ast.walk(tree)
+             if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "_apply"]
+    assert len(calls) == 1, "one call site: the strip's action. Autopick has its own engine path."
+
+    # ★ `resolve_pick` is **kept, not default** — the CLI still types a name at it, and the app
+    # simply no longer needs to parse one because a selectbox never hands it a free-text query.
+    state, _ = _k2_draft(k2_built, finish=False)
+    idx = int(state.board.index[7])
+    found = session.resolve_pick(state, 0, str(state.board.loc[idx, "player_name"]))
+    # the fixture's names are substrings of each other ("Player 7" is in "Player 70"), which is
+    # exactly the ambiguity the CLI's two-step exists for — so the claim is that he is *in* the
+    # match set, not that a prefix resolves to one man.
+    assert idx in ([found] if isinstance(found, int) else [m["index"] for m in found])
+    import steps.mock_draft as cli
+    assert cli.session.resolve_pick is session.resolve_pick
