@@ -7,7 +7,9 @@ section, not just appended.
 > **Last updated:** 2026-08-17 — **Session UI-3 terms** (bottom section: tag · queue · the
 > workflow the old UI made impossible · the skip is rendered · `never` is inviolable · a
 > recorded baseline for a deleted path · **step 2/A2:** the strip · one selection, one
-> `pending_pick` · **the two positional ranks** · T39's slot) and **bar-sheet comparator terms** (T41/T40/T55:
+> `pending_pick` · **the two positional ranks** · T39's slot · **step 3/A3:** quasi-bar ·
+> polarity resolved before the renderer · the dual baseline · no reading, no bar ·
+> **drawing a number asks what its maximum is** · the third tier, measured) and **bar-sheet comparator terms** (T41/T40/T55:
 > board vintage stamp · gate leaf vs readout leaf · the pinned control · the room is an input ·
 > constructed vs sampled control · an inert guard). _Previously:_ 2026-07-30 — **seat-map terms**
 > (16.17 **BUILT**, 14.J still
@@ -3113,3 +3115,49 @@ review, because neither side looks wrong on its own.*
 measured out as a null ([[T39]]) and shipped nothing, so the slot carries the **cliff** — 14.E's own
 number, which answers what a tier was there to answer: *what does waiting at this position cost.* A
 blank slot was the honest alternative; a `TIER` label over a null was not.
+
+### Step 3 (A3) — the bars, drawn
+
+**quasi-bar** (PLAYER-VIEW §5, finally rendered). A label, a number, a filled track and a tick,
+built as a **string** (`views.bar_html`) rather than as a render call — which is what lets bar B3
+assert §5 *on the markup* instead of on the document. The previous version of this rule lived only
+in a document, and what shipped was `st.metric`: a number with no bar, no baseline and no tier. *A
+spec is not a surface.*
+
+**polarity, resolved before the renderer sees it.** §5's governing rule is *green = good for the
+drafter, always*, so `session.bar_percentiles` returns percentiles that are **already inverted**
+where the underlying number is a rate of failure. `CARD_BARS` carries `good = -1` on **`BUST`
+alone** — the other seven read high-is-good, including `Q10`, because §2 deliberately chose the
+*floor in points* for the downside bar so it would not need inverting. The renderer therefore never
+knows which readouts are risk traits, which is the only version of this rule that cannot rot: a
+tenth bar added later is inverted in the table or not at all.
+
+**the dual baseline** (§5's Q2 decision, both halves static). The **fill** is the player's
+percentile against the whole board; the **tick** beneath it is his percentile among his own
+position, spelled out as *"top 15% at his position (n=…)"* so it is legible without measuring a
+two-pixel marker. Both are taken over **every boarded player, never the available pool** (user
+decision, 2026-08-17): a pool-relative fill would rise every time somebody else was drafted, so the
+bar would be measuring *the draft* while claiming to measure the player — and the same player would
+read differently on the Board page and in the room. Same static construction as [[the two
+positional ranks]] and `_bargain`.
+
+**no reading, no bar.** `pct_overall = None` renders a **dashed empty track** and a `—`, never a
+zero-width fill. A zero-length bar is not "unknown", it draws as *worst on the board* — [[T22]]'s
+defect in a new medium, arriving for the third time (blank ≠ zero on the board, `0` ≠ *no floor* on
+`q10`, and now empty ≠ unmeasured on a bar).
+
+**★ drawing a number is the first thing that asks what its maximum is.** The grade panel's four
+contributions had been on screen and correct for two sessions as a table column formatted `%.2f`.
+Drawing them required a denominator, the first draft assumed 0–100, and `score_*` is **0–1** — so
+every contribution rendered as a near-empty red bar. Nothing about the number had changed; the
+*question* had. Sibling of K2's "a scale and its labels have to be anchored to the same thing",
+and the reason `views.grade_bars` returns a list a test can read rather than painting to the screen.
+
+**the third tier, measured.** §5's band is green/amber/red and the two poles already existed
+(`VALUE_GOOD`/`VALUE_BAD`), so A3 needed exactly one new colour. Okabe-Ito's own yellow `#F0E442`
+is the obvious pick from the palette the app already committed to and it scores contrast **1.32 on
+white** — a highlighter, legible on the dark theme and gone the moment a reader flips the toggle.
+`TIER_MID = #A87900` clears the 3.0 mark floor on all three surfaces (4.86 · 4.43 · 3.89), above
+both poles' own minimums. The band is **redundant with the bar's length**, so a reader who cannot
+separate the hues loses a convenience and not the encoding — the same test `VALUE_GOOD` passed and
+`POSITION_COLORS` deliberately failed.

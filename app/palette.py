@@ -109,6 +109,42 @@ TINT_ALPHA = 0.22
 VALUE_GOOD = "#2E9E63"
 VALUE_BAD = "#D9564A"
 
+#: **UI-3 step 3 — the middle of PLAYER-VIEW §5's three-tier band.** The band is green / yellow /
+#: red and the two poles already exist above, so the only new colour this session needs is the
+#: middle one.
+#:
+#: ★ **Okabe-Ito's own yellow is the obvious pick and it fails.** ``#F0E442`` is in the palette this
+#: app already committed to, and as a *mark* it scores contrast **1.32 on white** — a highlighter
+#: pen, legible on the dark theme and invisible the moment a reader flips the toggle. The shipped
+#: amber clears the mark floor of 3.0 on all three surfaces the UI-2 pair was measured against
+#: (``#0F1115`` 4.86 · ``#181B21`` 4.43 · white 3.89), which puts it *above* both poles' own
+#: minimums (3.39 and 3.90). *The palette lesson, third session running: a colour chosen by eye is
+#: a colour nobody re-derives when the surface changes.*
+#:
+#: ⚠ The band is **redundant with the bar's length** — a longer bar is always a better bar, so a
+#: reader who cannot separate the three hues has lost a convenience and not the encoding. That is
+#: the same test :data:`VALUE_GOOD` passed and :data:`POSITION_COLORS` deliberately failed, where
+#: six categories were carried by hue alone.
+TIER_MID = "#A87900"
+
+#: Where §5's three tiers cut, on the **overall** percentile. Thirds: the document says "green
+#: (top) / yellow (middle) / red (bottom)" and names no boundary, so the boundary is the one that
+#: makes the three words true of equal shares of the board rather than one tuned to flatter it.
+TIER_CUTS: tuple[float, float] = (1 / 3, 2 / 3)
+
+
+def tier_color(pct: float | None) -> str | None:
+    """§5's three-tier band for a **polarity-corrected** percentile: high is always good.
+
+    ``None`` in, ``None`` out — an unmeasured player has no tier, and the renderer must draw that
+    as *no bar* rather than as a short red one (T22 at the display layer: a zero-length bar reads
+    as "worst on the board", which is a claim nobody made).
+    """
+    if pct is None:
+        return None
+    lo, hi = TIER_CUTS
+    return VALUE_BAD if pct < lo else (TIER_MID if pct < hi else VALUE_GOOD)
+
 #: A cell like ``"Bijan Robinson (RB)"`` or ``"1.01  Bijan Robinson (RB)"`` — the shape
 #: :func:`~fantasy_quant.draft.session.room_grid` writes for both its layouts. Parsing the rendered
 #: string is formatting, not derivation: the position is already *in* the cell, and the alternative

@@ -569,6 +569,36 @@ def construction_panel(risk: dict) -> None:
                               "absence risk, at the pooled Phase-8.5 elevation ratio.")})
 
 
+def grade_bars(row) -> list[dict]:
+    """14.I's four contributions as bar entries — **the content, split out so it can be asserted.**
+
+    ⚠ **``score_*`` is 0–1, not 0–100.**
+    :func:`~fantasy_quant.draft.session.draft_grade` min–maxes each component across the room and
+    multiplies by the weight, so ``points = score × weight`` and the weights sum to 100. The first
+    version of this divided the score by 100 and drew every contribution as a near-empty red bar —
+    a wrong reading of a number that had been on screen, correct, for two sessions.
+    **As a table column formatted ``%.2f`` its scale never had to be known; drawing it is the first
+    thing that asks what its maximum is.** That is the argument for A3 in one defect, and it is why
+    this returns a list a test can read rather than painting straight to the screen (K2's
+    ``seat_strip_rows`` split, same reason).
+    """
+    out = []
+    for name, w in session.GRADE_WEIGHTS.items():
+        score = float(row[f"score_{name}"])
+        out.append({
+            "label": name.upper(),
+            # the contribution, against the most it could have been — so the weights stay visible
+            # in the numbers rather than only in the popover
+            "text": f"{row[f'points_{name}']:.1f} / {w:.0f}",
+            "pct_overall": score,
+            "value": score,
+            "help": f"raw {row[name]:.2f} → score {score:.2f} × weight {w:.0f} = "
+                    f"{row[f'points_{name}']:.1f} points. The score is min–max across the ten "
+                    f"teams in this room, so 0.5 is the middle of *this* room.",
+        })
+    return out
+
+
 def grade_panel(grade: pd.DataFrame, team: int) -> None:
     """14.I — one seat's grade, with the arithmetic that produced it and the weights named.
 
@@ -585,17 +615,18 @@ def grade_panel(grade: pd.DataFrame, team: int) -> None:
     left, right = st.columns([1, 3])
     left.metric(f"{r['who']} (T{int(r['team'])})", str(r["letter"]), f"{r['total']:.0f} / 100",
                 delta_color="off")
-    parts = pd.DataFrame([{
-        "COMPONENT": name,
-        "WEIGHT": f"{w:.0f}",
-        "RAW": r[name],
-        "SCORE": r[f"score_{name}"],
-        "POINTS": r[f"points_{name}"],
-    } for name, w in session.GRADE_WEIGHTS.items()])
-    right.dataframe(parts, width="stretch", hide_index=True, column_config={
-        "RAW": st.column_config.NumberColumn("RAW", format="%.2f"),
-        "SCORE": st.column_config.NumberColumn("SCORE", format="%.2f"),
-        "POINTS": st.column_config.NumberColumn("POINTS", format="%.1f")})
+    # ★ UI-3 step 3 (A3) — the four contributions as **bars**, which is what they always were: a
+    # score out of 100 in a table column is a bar somebody declined to draw. Each fill is the
+    # component's own min–max score and the number beside it is what it actually contributed,
+    # ``points / weight`` — so the reader can still see that odds is worth 50 and construction 15.
+    #
+    # ⚠ **No tick.** §5's secondary baseline is a *within-position* percentile and a grade
+    # component has no position; drawing a second marker here would be a baseline invented to
+    # match a layout. The weights stay visible in the numbers, which is the honesty surface this
+    # panel exists for — see the badge and the popover below, which are not compressible further.
+    with right:
+        for entry in grade_bars(r):
+            bar_block(st, entry)
     # ★ The printed weights stay printed. Being the only tool in the category that shows its own
     # blend is a feature, not a liability — so the disclaimer is compressed to a badge and a
     # popover, never deleted (UI-1 constraint 4, and bar B3 checks it renders).
@@ -743,13 +774,17 @@ def player_card_body(card: dict) -> None:
                  help=session.stat_entry("FLAGS")["how_to_read_it"] + " "
                       + session.stat_entry("FLAGS")["what_it_means"])
 
+    # UI-3 step 3 (A3) — §5's bars, drawn. ⚠ The filter on ``value is not None`` **stays**: a
+    # readout the board could not supply is dropped from the deep page entirely rather than drawn
+    # as an empty track, because here there is room to simply not make the claim. (The strip keeps
+    # its five in place — a glance whose columns move around between players is unreadable.)
     bars = [b for b in card["bars"] if b["value"] is not None]
     for chunk in (bars[:4], bars[4:]):
         if not chunk:
             continue
         cols = st.columns(len(chunk))
         for c, b in zip(cols, chunk, strict=False):
-            c.metric(b["label"], f"{b['value']:{b['fmt'][1:]}}", help=b["help"])
+            bar_block(c, b)
 
     line = []
     if card.get("cliff") is not None:
@@ -779,8 +814,72 @@ def player_card_body(card: dict) -> None:
                          width="stretch", hide_index=True)
 
 
+#: The bar's own chrome. rgba greys for :data:`_STRIP_EDGE`'s reason — they composite over whichever
+#: theme is active, so one string serves both and none of them is a palette colour.
+_BAR_TRACK = "rgba(128,128,128,0.20)"
+_BAR_EMPTY = "rgba(128,128,128,0.45)"
+
+
+def bar_html(label: str, text: str, pct_overall: float | None, pct_pos: float | None, *,
+             help: str | None = None, n_pos: int | None = None) -> str:
+    """One PLAYER-VIEW §5 quasi-bar, as a string. **The whole of A3's visual grammar lives here.**
+
+    §5 in four clauses, and each is a line of this function: *green = good always* (the percentiles
+    arrive polarity-corrected from :func:`~fantasy_quant.draft.session.bar_percentiles`, so ``BUST``
+    is already flipped before it gets here) · *three tiers* (:func:`~app.palette.tier_color`) ·
+    *length tracks the same scale as colour* (both read ``pct_overall``, so a bar cannot be long and
+    red) · *dual baseline* (the **fill** is the overall percentile, the **tick** beneath it is the
+    within-position one).
+
+    ★ **A string, not a render call** — bar B3 asks that §5 is satisfied *on the rendered HTML*
+    rather than on the spec, and a function that returns markup can be asserted against without a
+    browser or an ``AppTest``. It is also the only way the claim survives: the previous version of
+    this rule lived in a document, and what shipped was ``st.metric``.
+
+    ⚠ **No reading, no bar.** With ``pct_overall=None`` the track renders dashed and empty and the
+    number reads ``—``. A zero-width fill would have been the easy build and it is the T22 defect in
+    a new medium: it draws an unmeasured player as the worst player on the board.
+    """
+    hue = palette.tier_color(pct_overall)
+    title = f"{label} — {help}" if help else label
+    if hue is None:
+        track = (f"<div style='height:10px;border-radius:5px;"
+                 f"border:1px dashed {_BAR_EMPTY};box-sizing:border-box'></div>")
+    else:
+        fill = f"<div style='width:{max(0.0, min(1.0, pct_overall)) * 100:.1f}%;height:100%;" \
+               f"border-radius:5px;background:{hue}'></div>"
+        tick = ""
+        if pct_pos is not None:
+            # white lined in near-black, so the marker is visible **on the fill and off it** — the
+            # two backgrounds it has to sit on are the tier hue and the track, and no single flat
+            # colour clears both. Reuses `palette.INK`; no new hex enters the app (bar B1).
+            tick = (f"<div style='position:absolute;left:{min(100.0, pct_pos * 100):.1f}%;"
+                    f"top:-3px;width:2px;height:16px;background:{palette.INK[1]};"
+                    f"box-shadow:0 0 0 1px {palette.INK[0]}'></div>")
+        track = (f"<div style='position:relative;height:10px;border-radius:5px;"
+                 f"background:{_BAR_TRACK}'>{fill}{tick}</div>")
+    sub = ""
+    if pct_pos is not None:
+        # §5's worked phrasing — "top-15% at WR" — spelled from the *secondary* baseline, which is
+        # the one a reader would otherwise have to infer from a two-pixel tick.
+        top = max(1, round((1 - pct_pos) * 100))
+        sub = (f"<div style='font-size:.68rem;opacity:.6;margin-top:.15rem'>"
+               f"top {top}% at his position{f' (n={n_pos})' if n_pos else ''}</div>")
+    return (f"<div title=\"{_attr(title)}\" style='margin:0 0 .6rem 0'>"
+            f"<div style='display:flex;justify-content:space-between;font-size:.75rem;"
+            f"opacity:.8'><span>{label}</span><span><b>{text}</b></span></div>"
+            f"{track}{sub}</div>")
+
+
+def _attr(value: str) -> str:
+    """Quote-safe text for an HTML attribute. The tooltips are 14.O's sentences and they contain
+    both kinds of quote and the odd ``<``."""
+    return (str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            .replace('"', "&quot;"))
+
+
 def bar_block(col, entry: dict) -> None:
-    """One readout — label, number, tooltip. **The single place a bar is drawn** (A3 rewrites it).
+    """One readout, drawn. **The single place a bar reaches the screen.**
 
     ⚠ A missing value renders ``—``, never ``0``. Every consumer of this function is showing a
     frozen-stack number for one player, and the two ways that number goes missing (nobody
@@ -789,7 +888,8 @@ def bar_block(col, entry: dict) -> None:
     """
     value, fmt = entry.get("value"), str(entry.get("fmt") or "%.2f")
     text = entry.get("text") or ("—" if value is None else f"{value:{fmt[1:]}}")
-    col.metric(str(entry["label"]), text, help=entry.get("help"))
+    col.html(bar_html(str(entry["label"]), text, entry.get("pct_overall"), entry.get("pct_pos"),
+                      help=entry.get("help"), n_pos=entry.get("n_pos")))
 
 
 def strip_numbers(st_obj, strip: list[dict]) -> None:

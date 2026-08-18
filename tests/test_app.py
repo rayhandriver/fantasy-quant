@@ -1631,3 +1631,146 @@ def test_ui3_every_strip_label_is_documented():
         assert session.stat_entry(label)["one_line"]
     assert "ADP" in session.stat_entry("IMPACT")["how_to_read_it"], \
         "the entry must carry the pos_rank collision, because that is the trap"
+
+
+# ------------------------------------------------------------------------------------------------
+# UI-3 step 3 (A3) — the bars are drawn, and §5 is asserted on the HTML
+# ------------------------------------------------------------------------------------------------
+def test_ui3_green_is_good_always_and_the_risk_trait_is_inverted(k2_built):
+    """★ B3's core, on the **rendered HTML** rather than on the spec.
+
+    ``BUST`` is the one readout of the ten whose number is a rate of *failure*, so it is the one
+    §5's "green = good for the drafter, always" has to invert. Un-inverted, the player most likely
+    to bust draws the longest greenest bar on the page — praise, for the warning.
+    """
+    from app import palette as pal
+    from app import views as app_views
+
+    state, _ = _k2_draft(k2_built, finish=False)
+    bust = pd.to_numeric(state.board["bust_prob_live"], errors="coerce")
+    worst, best = int(bust.idxmax()), int(bust.idxmin())
+
+    seen = {}
+    for idx in (worst, best):
+        card = session.player_card(state, idx, vi=k2_built["value_index"], lam=0.01)
+        b = {x["label"]: x for x in card["bars"]}["BUST"]
+        seen[idx] = b
+        html = app_views.bar_html("BUST", f"{b['value']:.2f}", b["pct_overall"], b["pct_pos"],
+                                  help=b["help"], n_pos=b["n_pos"])
+        assert pal.tier_color(b["pct_overall"]) in html
+
+    assert seen[worst]["pct_overall"] < seen[best]["pct_overall"], "the inversion is the claim"
+    assert pal.tier_color(seen[worst]["pct_overall"]) == pal.VALUE_BAD
+    assert pal.tier_color(seen[best]["pct_overall"]) == pal.VALUE_GOOD
+    # and the length agrees with the colour, which is §5's "same scale" clause
+    assert seen[worst]["pct_overall"] < pal.TIER_CUTS[0] < pal.TIER_CUTS[1] \
+        < seen[best]["pct_overall"]
+
+
+def test_ui3_both_baselines_are_on_the_bar_and_neither_moves_as_the_draft_empties(k2_built):
+    """§5's dual baseline — fill = overall, tick = within-position — and the user's 2026-08-17
+    decision that both are taken over the **whole board**. A pool-relative fill would rise every
+    time somebody else was drafted: the bar would be measuring the draft, not the player."""
+    from app import views as app_views
+
+    from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp
+
+    state, _ = _k2_draft(k2_built, finish=False)
+    idx = int(state.board.index[5])
+    before = session.bar_percentiles(state, idx)
+    for _ in range(20):
+        t = state.team_on_clock()
+        _apply_pick(state, t, int(pick_by_adp(state, t, noise=0.0)))
+    assert session.bar_percentiles(state, idx) == before, "static, by construction"
+
+    b = {x["label"]: x for x in
+         session.player_card(state, idx, vi=k2_built["value_index"], lam=0.01)["bars"]}["PROJ"]
+    html = app_views.bar_html("PROJ", "300", b["pct_overall"], b["pct_pos"], n_pos=b["n_pos"])
+    assert f"width:{b['pct_overall'] * 100:.1f}%" in html, "the fill is the overall percentile"
+    assert f"left:{b['pct_pos'] * 100:.1f}%" in html, "the tick is the within-position percentile"
+    assert "at his position" in html, "§5's secondary baseline is spelled, not only ticked"
+
+
+def test_ui3_a_bar_with_no_reading_is_not_a_bar_of_zero(k2_built):
+    """T22 in a new medium. A zero-width fill is not *unknown*, it renders as **worst on the
+    board** — a claim about a player nobody measured."""
+    from app import palette as pal
+    from app import views as app_views
+
+    state, _ = _k2_draft(k2_built, finish=False)
+    missing = state.board.index[state.board["boom_prob_live"].isna()]
+    assert len(missing)
+    card = session.player_card(state, int(missing[0]), vi=k2_built["value_index"], lam=0.01)
+    b = {x["label"]: x for x in card["bars"]}["BOOM"]
+    assert b["pct_overall"] is None and b["pct_pos"] is None
+    html = app_views.bar_html("BOOM", "—", b["pct_overall"], b["pct_pos"])
+    assert "dashed" in html and "width:" not in html
+    assert not any(h in html for h in (pal.VALUE_GOOD, pal.VALUE_BAD, pal.TIER_MID))
+    assert pal.tier_color(None) is None
+
+
+def test_ui3_the_eight_bars_are_spelled_in_exactly_one_place(k2_built):
+    """``CARD_BARS`` replaced a literal list inside ``player_card`` so the percentiles could not
+    hold a second opinion about which column ``BUST`` reads. The values must be unchanged."""
+    state, _ = _k2_draft(k2_built, finish=False)
+    idx = int(state.board.index[4])
+    card = session.player_card(state, idx, vi=k2_built["value_index"], lam=0.01)
+    assert [b["label"] for b in card["bars"]] == [lbl for lbl, *_ in session.CARD_BARS]
+    for label, col, fmt, _good in session.CARD_BARS:
+        b = {x["label"]: x for x in card["bars"]}[label]
+        raw = pd.to_numeric(pd.Series([state.board.loc[idx, col]]), errors="coerce").iloc[0]
+        assert (b["value"] is None) if pd.isna(raw) else b["value"] == pytest.approx(float(raw))
+        assert b["fmt"] == fmt
+    inverted = [lbl for lbl, _c, _f, good in session.CARD_BARS if good < 0]
+    assert inverted == ["BUST"], "the risk-trait list is a decision, not an accident"
+
+
+def test_ui3_the_third_tier_colour_survives_both_themes():
+    """The same measured floor UI-2 held its value pair to. Okabe-Ito's own yellow — the obvious
+    pick — scores **1.32 against white**, i.e. invisible the moment a reader flips the theme."""
+    from app import palette as pal
+
+    for surface in ("#0F1115", "#181B21", "#FFFFFF"):
+        assert pal.contrast_ratio(pal.TIER_MID, surface) >= 3.0, surface
+    assert pal.contrast_ratio("#F0E442", "#FFFFFF") < 2.0, "the rejected candidate, on the record"
+    assert pal.TIER_MID not in pal.POSITION_COLORS.values()
+    assert pal.tier_color(0.9) == pal.VALUE_GOOD
+    assert pal.tier_color(0.5) == pal.TIER_MID
+    assert pal.tier_color(0.1) == pal.VALUE_BAD
+
+
+def test_ui3_the_grade_bars_read_the_score_on_its_own_scale():
+    """★ The regression for the defect A3 found in its own first draft.
+
+    ``score_*`` is **0–1** and the bar divided it by 100, drawing every contribution as a
+    near-empty red bar. The number itself had been correct on screen for two sessions — as a table
+    column formatted ``%.2f`` its scale never had to be known. *Drawing a number is the first thing
+    that asks what its maximum is.*
+
+    Built on ``apply_grade`` directly rather than on a finished draft: the scale is a property of
+    the scoring, and a test that needed a season simulation to reach it would not be run.
+    """
+    from app import views as app_views
+
+    rng = np.random.default_rng(1)
+    comps = pd.DataFrame({"team": np.arange(1, 11), "who": [f"T{i}" for i in range(1, 11)],
+                          **{c: rng.uniform(0, 50, 10) for c in session.GRADE_WEIGHTS}})
+    grade = session.apply_grade(comps)
+    r = grade.iloc[0]
+
+    entries = app_views.grade_bars(r)
+    assert [e["label"] for e in entries] == [c.upper() for c in session.GRADE_WEIGHTS]
+    for (name, w), e in zip(session.GRADE_WEIGHTS.items(), entries, strict=True):
+        assert 0.0 <= e["pct_overall"] <= 1.0, (name, e["pct_overall"])
+        assert e["pct_overall"] == pytest.approx(float(r[f"score_{name}"]))
+        # points = score × weight is B5's identity; the bar must not invent a third scale
+        assert float(r[f"points_{name}"]) == pytest.approx(e["pct_overall"] * w)
+        assert e["text"] == f"{r[f'points_{name}']:.1f} / {w:.0f}"
+
+    # the property the /100 broke: the room's best on a component fills its bar and banks its
+    # whole weight, and the room's worst empties it
+    top = session.apply_grade(comps).sort_values("odds", ascending=False).iloc[0]
+    best = {e["label"]: e for e in app_views.grade_bars(top)}["ODDS"]
+    w_odds = session.GRADE_WEIGHTS["odds"]
+    assert best["pct_overall"] == pytest.approx(1.0)
+    assert best["text"] == f"{w_odds:.1f} / {w_odds:.0f}"

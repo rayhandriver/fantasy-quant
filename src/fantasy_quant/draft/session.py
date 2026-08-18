@@ -1445,6 +1445,30 @@ def _bargain(st: DraftState) -> pd.Series:
     return (adp_rank - val_rank).astype(float)
 
 
+#: **The eight card bars — label, board column, format, and which direction is good.**
+#:
+#: One tuple rather than a literal list inside :func:`player_card`, because UI-3 step 3 needs the
+#: *same* eight to compute §5's percentiles and a second list would be a second opinion about which
+#: column ``BUST`` reads. The values it produces are byte-identical to the list it replaced.
+#:
+#: ★ ``good = -1`` on **BUST alone.** PLAYER-VIEW §5's governing rule is *green = good for the
+#: drafter, always*, so a risk trait has to be inverted before it is drawn or a high bust rate
+#: renders as a long green bar — praise, for the thing you were being warned about. The other seven
+#: already read high-is-good, including ``Q10``: §2 chose the **floor in points** for bar #3
+#: precisely so the downside bar needs no inversion, and the one that does need it is the one whose
+#: number is a *rate of failure*.
+CARD_BARS: tuple[tuple[str, str, str, int], ...] = (
+    ("PROJ", "proj_points", "%.0f", +1),
+    ("MEAN", "mean", "%.0f", +1),
+    ("AVAIL", "games_played_mean", "%.1f", +1),
+    ("Q10", "q10", "%.0f", +1),
+    ("MED", "q50", "%.0f", +1),
+    ("Q90", "q90", "%.0f", +1),
+    ("BOOM", "boom_prob_live", "%.2f", +1),
+    ("BUST", "bust_prob_live", "%.2f", -1),
+)
+
+
 def value_pos_rank(st: DraftState) -> pd.Series:
     """Positional rank by **our value board**, over the whole board — PLAYER-VIEW bar #1.
 
@@ -1466,6 +1490,68 @@ def value_pos_rank(st: DraftState) -> pd.Series:
         return pd.Series(np.nan, index=board.index, dtype=float)
     r = pd.to_numeric(board["overall_rank"], errors="coerce")
     return r.groupby(board["pos"].astype(str)).rank(method="min").astype(float)
+
+
+def _bar_source(st: DraftState, label: str) -> tuple[pd.Series, int] | None:
+    """The board-wide series a bar is a reading of, and which direction is good."""
+    for lbl, col, _fmt, good in CARD_BARS:
+        if lbl == label:
+            if col not in st.board.columns:
+                return None
+            return pd.to_numeric(st.board[col], errors="coerce"), good
+    if label == "IMPACT":
+        # ⚠ the **rank**, not the positional rank it displays: a percentile of a within-position
+        # rank would be the same number for the RB1 and the QB1 by construction, which is exactly
+        # the cross-position comparison §5's primary baseline exists to keep honest.
+        if "overall_rank" not in st.board.columns:
+            return None
+        return pd.to_numeric(st.board["overall_rank"], errors="coerce"), -1
+    if label == "BARGAIN":
+        return _bargain(st), +1
+    return None
+
+
+def bar_percentiles(st: DraftState, board_index: int) -> dict[str, dict[str, float | int | None]]:
+    """PLAYER-VIEW §5's **dual baseline** for one player — the fill and the tick.
+
+    ``{label: {pct_overall, pct_pos, n_overall, n_pos}}``. ``pct_overall`` is his percentile against
+    every boarded player (§5's primary, the bar's length); ``pct_pos`` is his percentile among his
+    own position (§5's secondary, the tick beneath). Both are already **polarity-corrected**, so a
+    high percentile means *more of what you want* on all ten readouts and the renderer never has to
+    know which ones are risk traits.
+
+    ★ **Both are taken over the whole board, never the available pool** (user decision,
+    2026-08-17) — the same static construction as :func:`_bargain` and :func:`value_pos_rank`. A
+    pool-relative fill would rise every time somebody else was drafted, so the bar would be
+    measuring *the draft* while claiming to measure the player, and the same player would read
+    differently on the Board page and in the room.
+
+    ⚠ **A player with no value gets ``None``, not ``0.0``.** T22's rule reaches the bar layer with
+    teeth here: a zero-length bar is not "unknown", it renders as *worst on the board*, which is a
+    claim about a player nobody measured.
+    """
+    idx = int(board_index)
+    pos = st.board["pos"].astype(str)
+    out: dict[str, dict[str, float | int | None]] = {}
+    for label in [lbl for lbl, *_ in CARD_BARS] + ["IMPACT", "BARGAIN"]:
+        src = _bar_source(st, label)
+        if src is None:
+            out[label] = {"pct_overall": None, "pct_pos": None, "n_overall": 0, "n_pos": 0}
+            continue
+        s, good = src
+        signed = s * float(good)
+        overall = signed.rank(pct=True)
+        within = signed.groupby(pos).rank(pct=True)
+        same = pos == str(st.board.loc[idx, "pos"])
+        po = overall.get(idx, np.nan)
+        pp = within.get(idx, np.nan)
+        out[label] = {
+            "pct_overall": (None if pd.isna(po) else float(po)),
+            "pct_pos": (None if pd.isna(pp) else float(pp)),
+            "n_overall": int(s.notna().sum()),
+            "n_pos": int((s.notna() & same).sum()),
+        }
+    return out
 
 
 def roster_view(st: DraftState, team: int) -> pd.DataFrame:
@@ -2195,16 +2281,8 @@ def player_card(st: DraftState, board_index: int, *, vi: pd.DataFrame | None = N
         v = pd.to_numeric(pd.Series([v]), errors="coerce").iloc[0]
         return float(v) if pd.notna(v) else None
 
-    card["bars"] = [
-        {"label": "PROJ", "value": _num("proj_points"), "fmt": "%.0f"},
-        {"label": "MEAN", "value": _num("mean"), "fmt": "%.0f"},
-        {"label": "AVAIL", "value": _num("games_played_mean"), "fmt": "%.1f"},
-        {"label": "Q10", "value": _num("q10"), "fmt": "%.0f"},
-        {"label": "MED", "value": _num("q50"), "fmt": "%.0f"},
-        {"label": "Q90", "value": _num("q90"), "fmt": "%.0f"},
-        {"label": "BOOM", "value": _num("boom_prob_live"), "fmt": "%.2f"},
-        {"label": "BUST", "value": _num("bust_prob_live"), "fmt": "%.2f"},
-    ]
+    card["bars"] = [{"label": lbl, "value": _num(col), "fmt": fmt}
+                    for lbl, col, fmt, _ in CARD_BARS]
     for b in card["bars"]:
         b["help"] = stat_help(b["label"])
 
@@ -2233,6 +2311,15 @@ def player_card(st: DraftState, board_index: int, *, vi: pd.DataFrame | None = N
     card["impact"] = {"value": (None if pd.isna(iv) else iv),
                       "text": (None if pd.isna(iv) else f"{card['pos']}{int(iv)}"),
                       "help": stat_help("IMPACT")}
+
+    # ★ UI-3 step 3 (A3) — §5's dual baseline, attached to the readouts it describes rather than
+    # handed to the renderer as a second dict to keep aligned. Additive keys only: ``bars`` keeps
+    # its asserted length of eight and every existing value.
+    pcts = bar_percentiles(st, int(board_index))
+    for b in card["bars"]:
+        b.update(pcts.get(b["label"], {}))
+    card["impact"].update(pcts.get("IMPACT", {}))
+    card["bargain"].update(pcts.get("BARGAIN", {}))
 
     if vi is not None and not vi.empty:
         hit = [e for e in explain_chain(st.board.loc[[int(board_index)]], vi,
@@ -2301,7 +2388,15 @@ def card_strip(card: Mapping[str, object]) -> list[dict]:
             value, fmt = rounds, "%+.1f"
             text = None if rounds is None else f"{rounds:+.1f} rounds"
             help_ = bargain.get("help") or stat_help(label)
-        out.append({"label": label, "value": value, "fmt": fmt, "text": text, "help": help_})
+        # A3 — §5's two baselines ride with the number they belong to. Read off the card's own
+        # entry, never recomputed: a strip that ranked the board again would be free to draw a
+        # different bar from the dialog for the player they are both showing.
+        src_entry = (bars.get(label) if src == "bar"
+                     else impact if src == "impact" else bargain)
+        out.append({"label": label, "value": value, "fmt": fmt, "text": text, "help": help_,
+                    "pct_overall": (src_entry or {}).get("pct_overall"),
+                    "pct_pos": (src_entry or {}).get("pct_pos"),
+                    "n_pos": (src_entry or {}).get("n_pos")})
     return out
 
 
