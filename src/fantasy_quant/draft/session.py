@@ -639,7 +639,7 @@ def next_pick_info(st: DraftState, team: int | None = None) -> dict:
 # the board a human reads and the value every seat optimizes — built together, once
 # ------------------------------------------------------------------------------------------------
 def build_board(con, season: int = 2026, teams: int = 10, config: DraftConfig | None = None,
-                *, cache_dir=None) -> dict:
+                *, cache_dir=None, asof: str | None = None) -> dict:
     """``{board, value_index, risk, source, n_base_value, lam}`` from **one** pass over the store.
 
     ★ **T27 — the board and the value index must be built together or not at all.** This used to
@@ -652,9 +652,16 @@ def build_board(con, season: int = 2026, teams: int = 10, config: DraftConfig | 
     Takes an open ``con`` rather than opening one, so a UI can hold the connection in a resource
     cache and a step can pass its read-only handle. Raises :class:`LookupError` for an empty board —
     a caller decides whether that is a crash or a message.
+
+    ★ **T41 — ``asof`` is a pass-through to** :func:`~fantasy_quant.draft.mock.room_board`, and it
+    is here so a *control* can pin the board rather than only report it. VH.0 added the parameter to
+    ``resolve_board`` and it stopped one call short of every app-side measurement, which is why a
+    bar sheet could say "the board moved" but never "and here is the same code on the old board".
+    ``asof=None`` is the live path and is byte-identical to what this function did before.
     """
     config = config or DraftConfig()
-    board, src = mock.room_board(con, int(season), teams=int(teams), cache_dir=cache_dir)
+    board, src = mock.room_board(con, int(season), teams=int(teams), cache_dir=cache_dir,
+                                 asof=asof)
     if board.empty:
         raise LookupError(f"no {season} board at teams={teams}")
     vi = optimizer.assemble_value(con, int(season), config)

@@ -66,6 +66,7 @@ At a glance:
 | **T52** | 🟠 | **the break detector is blind to two of the three encoding seams DATA-2 actually met, and 'we have a break detector' is not 'we would notice a break'.** 0.13.0 keys on **conservation** — a re-encoding moves mass out of NULL onto ONE in-domain value, so `Δnull ≈ −Δvalue`. Two real seams in this session have a different shape and pass silently: **(1) over the cardinality ceiling** — `participation.offense_personnel` fill climbs **0.7586 → 1.0000** at the same 2023 seam as T50, but `probeable_columns` skips anything above `MAX_CARDINALITY` (64) and this column has **1,468** distinct strings from 2023 (106 before); even probed, the arriving mass spreads across hundreds of new special-teams strings rather than landing on one sentinel, so the conservation test could not fire either. **(2) under the conservation test** — `weekly_rosters.position` swaps vocabulary at 2016 (fine-grained CB/FS/DE/ILB/C/G/T through 2015, grouped DB/DL/LB/OL after); at 27 distinct values it is *under* the ceiling, but a **vocabulary swap among observed values** has nothing to conserve. Unmapped, it silently dropped the pre-2016 positions and left **64 team-seasons** whose position shares did not sum to 1. *A detector that keys on a single value is blind to a re-encoding that arrives as a population.* | **Add a population-level check to `data/validate.py`**: for high-cardinality and categorical columns, compare the **value-set** and the fill rate **conditioned on a stable population** season over season (0.13.4's `scrimmage_fill_by_season` is the worked example — naive break 0.2414, conditioned break 0.0001). A value set whose Jaccard overlap collapses between adjacent seasons is a vocabulary swap, and it must fail the same way a sentinel does. NB neither seam is a *defect in the data* — both are handled correctly now; the debt is that the standing gate would not have told us | ☐ 2026-08-03 |
 | **T53** | 🟡 | **`team_construction_season`'s cap columns are not a cap sheet, and the gap is 23 %.** Accounted APY sums to **1.2324** of the cap on average (min 0.92, max 1.38), because OTC gives a contract's signing year / length / average-per-year and *not* per-season cap hits, dead money, restructures or June-1 mechanics — and because a player traded mid-season is counted on both rosters. The **normalized `cap_share_*`** columns are correct and are what the deep dives read (allocation within accounted money, a valid distribution on all 416 rows); **`cap_pct_*` must never be read as 'percent of cap spent'**, which is exactly the misreading its name invites. Player-level coverage is 88–97 % per season | Either (a) source a real per-season cap-hit feed (none free is known — this may be a permanent register floor like PFF alignment), or (b) **rename `cap_pct_*` to `apy_accounted_*`** so the column cannot be misread, and keep `cap_share_*` as the headline. (b) is cheap and should probably just happen; do it when something outside `situation/` first reads these columns | ☐ 2026-08-03 |
 | **T54** | ☑ | **a manager profile is season-scoped, and applying one across seasons is LOOK-AHEAD — not a mismatch.** 16.18 seated `fitted_manager` in `REALISTIC_ROOM`, and every measurement harness in the repo sweeps **2017–2024**. The profile describes **2026** and was written in August 2026 by someone who watched those seasons happen, so a batch run fed the future into a historical measurement — `CLAUDE.md` §3.1's non-negotiable. **★ The leak is GRADED, which is what hid it:** the 2026 profile fires on **6** board rows in 2017, 21 in 2020, **55 in 2024** (a lockbox season) and 78 in 2026, so the seat is *almost* `balanced` early and *increasingly itself* toward the present — which reads as a seat with a mild opinion, not as a defect. **★★ And it was invisible to every bar written to catch it:** measured un-gated against the pre-16.18 room, profile distance moved **0.0894 → 0.0887**, elite past-10 **25.24 % → 25.16 %**, dispersion **−11.39 % → −11.24 %**, landing **15.31 % → 15.16 %** — *all five T15 gates PASS on both arms.* A session that had only read the bars would have shipped it | **Gate at room composition** — `ManagerProfile.covers(season)` + `make_room(..., season=)` degrading a `requires_profile` seat to `PROFILE_FALLBACK` (`balanced`). ⚠ Degrade, **do not raise**: a historical measurement legitimately wants the room *minus* the seat, and since `balanced` is exactly the chair 16.18 took, an uncovered season reproduces the pre-16.18 room **bit-for-bit** — which is what keeps every committed historical sheet a valid reference and makes spec bar **B7** hold by construction rather than by measurement | **☑ 2026-08-05** — `covers()` + the `make_room` gate + `full_room(season=)`; `steps/mock_room_bars.py` builds its room **per season**. Verified paired by the done-bar `steps/mm1_b7_room_gate.py` -> `analysis/mm1_b7_room_gate.json` (2017+2018 × 6 seeds, `--shuffle-room`): the gated default room and an explicitly pre-16.18 room agree on every result leaf. 2 tests pin it, including a control that the gate can fire. **The size of the leak was never the argument** |
+| **T55** | 🟠 | **16.18's point-in-time gate was inert on the one path a human uses: `app/engine.start_draft` never passed `season=` to `SeatMap.of`.** T54 closed the leak in the batch harnesses by having `make_room` degrade a `requires_profile` seat to `balanced` on a season the profile does not describe — and the degradation can only fire if the constructor is *told* the season. The app's did not tell it, so a mock started on any of the **fifteen** seasons the selector offers (2011–2024, 2026) seated the **2026** belief board as an opponent, including in **2023 and 2024, which are lockbox seasons**. The leak is graded — the seat fires on whoever is still on that year's board, ~6 rows in 2017 against 78 in 2026 — so it presents as *a seat with a mild opinion*, never as a defect. Third instance of the same shape after T22 and T35: **a guard that does not run on the path a human uses is not a guard** | fixed on sight (2026-08-17, Session UI-3 step 0): one argument, plus `test_t55_the_app_hands_the_season_to_the_seat_map`, whose *first* assertion is that a profile is loaded at all — without it the test passes when nothing loads, since an unloaded profile degrades to the same `balanced` the gate produces | ☑ 2026-08-17 |
 
 ---
 
@@ -2506,6 +2507,33 @@ regression. Re-run, read the nested `*_all_pass` flags, and commit the sheets so
 vintage. Pre-pull evidence for this instance is preserved at
 `analysis/session_ui_{1,2}.pre_ffc20260801.json` (the `phase11_opponent_model.pre_t15.json` convention).
 
+> **☑ FIXED 2026-08-17 (Session UI-3, step 0) — and building it found a third cause the ticket had
+> not counted.** `steps/_sheet_diff.py` is now the one comparator (the two copies in
+> `session_ui_{1,2}.py` had **already diverged** — one carried `ui2_column_lists`, the other
+> `ui2_columns`/`ui2_modes` and had dropped the first). Both halves the 08-01 update prescribed are
+> in it:
+>
+> - **Partition.** Every sheet stamps `board_vintage` + `room_mix` (`_sheet_diff.input_stamp`), and
+>   a moved leaf is attributed to `vintage_changed` / `room_changed` **only when that stamp actually
+>   moved** and **only when the leaf is not a gate** — `pass`, an identity, a difference count, an
+>   `n_missing`. A gate holds on any board, so a board move can never excuse one. `ALLOWED_MOVES` was
+>   *not* widened, per the ⚠ above.
+> - **Pin.** `session.build_board(..., asof=)` now reaches the app-side builder (VH.0's parameter
+>   stopped one call short), so `session_ui_1.bar_b0._pinned_control` replays the committed sheet's
+>   **board and room** through today's code and demands K1's `app_summary` back bit-for-bit. The
+>   classification is only believed when that replay passes: *a named bucket is not evidence, the
+>   replay is.*
+>
+> **★★ The third cause, which is why the pinned control was worth building rather than reasoning
+> about.** Its first run reproduced **nothing** — 7 of 10 summary rows differed on the pinned
+> 08-01 board — because two more things had changed under these sheets since they were written, and
+> only one of them was the world: **MM-1a seated `fitted_manager` in `REALISTIC_ROOM` on 08-05**
+> (the room is an input, and T41 did not know it had one), and **VH.1's T33 divisor fix moved 20.7 %
+> of picks at k=1**. So the 122 unclassified leaves had *three* causes, the entry named one, and the
+> interim rule ("all unclassified leaves are draft-outcome fields → re-baseline") would have waved
+> all three through together. **The instrument that can only say "the world moved" is the instrument
+> that says it when the code moved too.**
+
 ## 🟡 T40 — the control fired once, so it was one board refresh from firing never
 
 Opened 2026-08-01, alongside T41 and from the same run. UI-2's B3 asserts that each construction glyph
@@ -2538,6 +2566,19 @@ decide whether the interesting case is present.
 from the depth chart, so the control can seat that pair on the hypothetical roster and *require* the
 glyph, rather than drafting 40 rows and hoping. Keep the control — do not loosen it into a pass, which
 would be tuning a bar to a board.
+
+> **☑ FIXED 2026-08-17 (Session UI-3, step 0), exactly as prescribed.**
+> `steps/session_ui_2._constructed_glyph_fixture` builds three pairs on the live board and requires
+> the glyph from each: **🛡** the lead back of the first backfield holding two RBs, with
+> `mates.iloc[1]` as the candidate — board order inside a backfield *is* the consensus's depth read,
+> which is what makes the pair deterministic rather than sampled; **⚑** two startable players sharing
+> a bye week; **⛓** two players on one NFL team. First run on `ffc-20260817`: all three fire
+> (owned *Bijan Robinson*; candidates *Brian Robinson* 🛡, *Puka Nacua* ⚑, *Drake London* ⛓).
+>
+> **The fixture is the gate; the live-board tally stays as a readout** under
+> `glyphs_that_fired_on_the_live_board`, because how often a glyph fires in practice is worth knowing
+> and worth not gating on. A fixture that cannot be built is a **failure, not a skip** — a control
+> that quietly disappears when the board is awkward is the defect this entry is about.
 
 ---
 

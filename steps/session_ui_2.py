@@ -37,6 +37,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine, palette, post_draft, probe  # noqa: E402
+from steps import _sheet_diff  # noqa: E402
 
 from fantasy_quant.data import db  # noqa: E402
 from fantasy_quant.draft import optimizer, session  # noqa: E402
@@ -279,6 +280,72 @@ def bar_b2(con, season: int) -> dict:
 # ------------------------------------------------------------------------------------------------
 # B3 — the live glyph IS the post-draft function
 # ------------------------------------------------------------------------------------------------
+def _constructed_glyph_fixture(built, season: int, byes, elev) -> dict:
+    """★ **T40 — a roster each glyph *must* fire against, built rather than hoped for.**
+
+    Three pairs, each chosen so the glyph's documented meaning is true by construction:
+
+    ==========  ===========================================================================
+    ``🛡``       the **lead back** of some backfield is owned and his ``mates.iloc[1]`` is the
+                candidate — ``_handcuff_gaps`` prices insurance on the lead only, and board
+                order inside a backfield *is* the consensus's depth read, so this pair is
+                deterministic rather than sampled
+    ``⚑``       two startable players sharing a bye week: one owned, one the candidate
+    ``⛓``       two players on one NFL team: one owned, one the candidate
+    ==========  ===========================================================================
+
+    Returns the fixture's own report. A fixture that cannot be built is a **failure**, not a skip —
+    a control that quietly disappears when the board is awkward is the defect T40 is about.
+    """
+    state, meta = _draft(built, season, k=1, finish=False, picks=0)
+    board = state.board
+    startable = board[board["pos"].isin(["RB", "WR", "TE", "QB"])]
+
+    # 🛡 — the first backfield with two RBs on the board; iloc[0] is its lead by construction
+    pair_hc = None
+    for nfl, mates in board[board["pos"] == "RB"].groupby("team", sort=False):
+        if isinstance(nfl, str) and nfl and len(mates) >= 2:
+            pair_hc = (int(mates.index[0]), int(mates.index[1]))
+            break
+    # ⚑ — two startable players on one bye week
+    wk = startable["player_key"].astype(str).map(lambda k: byes.get(k))
+    pair_bye = None
+    for _, grp in startable[wk.notna()].head(120).groupby(wk.dropna(), sort=False):
+        if len(grp) >= 2:
+            pair_bye = (int(grp.index[0]), int(grp.index[1]))
+            break
+    # ⛓ — two players on one NFL team, the owned one startable
+    pair_tm = None
+    for nfl, grp in startable.head(160).groupby("team", sort=False):
+        if isinstance(nfl, str) and nfl and len(grp) >= 2:
+            pair_tm = (int(grp.index[0]), int(grp.index[1]))
+            break
+
+    pairs = {"handcuff": pair_hc, "bye": pair_bye, "stack": pair_tm}
+    missing = [k for k, v in pairs.items() if v is None]
+    if missing:
+        return {"built": False, "pairs": {k: v for k, v in pairs.items()}, "missing": missing,
+                "all_fired": False,
+                "reason": f"the live board offers no deterministic pair for {missing}"}
+
+    owned = {k: v[0] for k, v in pairs.items()}
+    cands = {k: v[1] for k, v in pairs.items()}
+    for i in dict.fromkeys(owned.values()):          # de-duplicated, order preserved
+        if i in state.available:
+            _apply_pick(state, SEAT, int(i))
+    got = session.construction_flags(state, SEAT, list(dict.fromkeys(cands.values())),
+                                     vi=built["value_index"], byes=byes, elevation=elev)
+    g = session.CONSTRUCTION_GLYPHS
+    fired = {k: bool(g[k] in str(got.get(cands[k], ""))) for k in pairs}
+    return {"built": True, "all_fired": all(fired.values()), "fired": fired,
+            "owned": {k: str(board.loc[i, "player_name"]) for k, i in owned.items()},
+            "candidates": {k: str(board.loc[i, "player_name"]) for k, i in cands.items()},
+            "glyph_strings": {k: str(got.get(i, "")) for k, i in cands.items()},
+            "roster_size": int(len(state.roster(SEAT))),
+            "note": ("Constructed, not sampled: each pair makes the glyph's documented meaning "
+                     "true by construction, so the control cannot be emptied by a refresh (T40).")}
+
+
 def bar_b3(con, season: int) -> dict:
     """Each construction glyph is a delta of ``roster_construction_risk``'s own scalars, checked
     against an independent evaluation of that function on (roster + candidate), row by row.
@@ -291,8 +358,19 @@ def bar_b3(con, season: int) -> dict:
     decision-relevant one, so both moved to it.
 
     ⚠ **With a control.** A glyph column that never fires would pass a pure equality check
-    trivially, so the bar also requires each of the three to fire at least once somewhere on the
-    live board — *a bar that cannot fire is the same defect as a bar that cannot fail*.
+    trivially, so the bar also requires each of the three to fire — *a bar that cannot fire is the
+    same defect as a bar that cannot fail*.
+
+    ★★ **T40 (fixed 2026-08-17): the control is now CONSTRUCTED, not sampled.** It used to require
+    each glyph to fire somewhere in 40 rows of the live board, and on the 07-30 board ``handcuff``
+    fired **exactly once** — ``{'bye': 6, 'stack': 8, 'handcuff': 1}``. The 08-01 chore took it to
+    **zero** and B3 flipped to FAIL with ``mismatched: []``: every correctness claim intact, the
+    control's own sample gone. *A control whose n is 1 is one board refresh from reporting a defect
+    that does not exist* — the same alarm-fatigue failure as T41, arriving from the opposite
+    direction. So :func:`_constructed_glyph_fixture` now **builds** a roster each glyph must fire
+    against (the lead-back/backup pair is deterministic from board order, which is the consensus's
+    own depth read) and that is the gate; the live-board tally stays in the sheet as a *readout*,
+    because how often a glyph fires in practice is worth knowing and worth not gating on.
     """
     built = engine.build(con, season)
     # ⚠ **The depth is part of the bar.** At picks=60 the seat's roster is already full and every
@@ -360,12 +438,15 @@ def bar_b3(con, season: int) -> dict:
     flags_untouched = list(view["FLAGS"]) == list(session.range_flags(
         state.draftable_pool(SEAT).head(40)))
 
+    constructed = _constructed_glyph_fixture(built, season, byes, elev)
     return {"bar": "B3 — the live construction glyph == roster_construction_risk on (roster + him)",
             "pass": bool(not bad and unknown_stays_unknown and week0 == 0 and encode_ok
-                         and flags_untouched and all(v > 0 for v in fired.values())),
+                         and flags_untouched and constructed["all_fired"]),
             "rows_checked": int(len(pool)), "mismatched": bad[:4],
-            "glyphs_that_fired": fired,
-            "every_glyph_fired_at_least_once": all(v > 0 for v in fired.values()),
+            # ★ T40 — the gate is the constructed fixture; the live tally is a readout beside it.
+            "constructed_control": constructed,
+            "glyphs_that_fired_on_the_live_board": fired,
+            "every_glyph_fired_on_the_live_board": all(v > 0 for v in fired.values()),
             "unknown_byes_stay_unknown": unknown_stays_unknown,
             "fabricated_week_zero_rows": week0,
             "censored_and_thin_encode_FLAGS_exactly": encode_ok,
@@ -580,51 +661,6 @@ def bar_flow(con, season: int) -> dict:
 #: What a session that adds three board columns is allowed to move in a committed sheet.
 #: **An unmatched change fails the bar.** Inherited from UI-1's list, because UI-1's own allowances
 #: (entropy draws, wall-clock timings) are properties of the harness, not of that session.
-_ALLOWED_MOVES: tuple[tuple[str, str], ...] = (
-    ("display_count", "n_elements_rendered"),
-    ("display_count", "n_dataframes"),
-    ("display_count", "post_page_dataframes"),
-    ("entropy", "randomized_seed"), ("entropy", "randomized_room_seed"),
-    ("entropy", "replayed_seed"), ("entropy", "replayed_room_seed"),
-    ("entropy", "distinct_openings"), ("entropy", "example_openings"),
-    ("timing", "worst_ms"), ("timing", "worst_pick_ms_by_seat"), ("timing", "worst_seat"),
-    ("stat_dict", "n_entries"), ("stat_dict", "documented"),
-    # UI-2's own: three columns join the frame's union, and the mode list grows by two. Neither
-    # touches a value in the fifteen — that is asserted separately, column by column, below.
-    ("ui2_columns", "n_columns"), ("ui2_columns", "columns"), ("ui2_columns", "board_columns"),
-    ("ui2_modes", "modes"), ("ui2_modes", "n_modes"), ("ui2_modes", "view_modes"),
-)
-
-
-def _flatten(obj, prefix: str = ""):
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            yield from _flatten(v, f"{prefix}.{k}" if prefix else str(k))
-    elif isinstance(obj, list):
-        for i, v in enumerate(obj):
-            yield from _flatten(v, f"{prefix}[{i}]")
-    else:
-        yield prefix, obj
-
-
-def _classify_moves(rel: str) -> dict:
-    head = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=ROOT, capture_output=True, text=True)
-    if head.returncode != 0:
-        return {"comparable": False, "reason": "not in HEAD (uncommitted since UI-1)"}
-    before = dict(_flatten(json.loads(head.stdout)))
-    after = dict(_flatten(json.loads((ROOT / rel).read_text())))
-    moved, unclassified = {}, []
-    for key in sorted(set(before) | set(after)):
-        if before.get(key) == after.get(key):
-            continue
-        cat = next((c for c, frag in _ALLOWED_MOVES if frag in key), None)
-        if cat is None:
-            unclassified.append(f"{key}: {before.get(key)!r} -> {after.get(key)!r}")
-        moved.setdefault(cat or "UNCLASSIFIED", []).append(key)
-    return {"comparable": True, "leaves": len(set(before) | set(after)),
-            "moved": {k: len(v) for k, v in moved.items()},
-            "moved_paths": {k: v[:8] for k, v in moved.items()},
-            "unclassified": unclassified[:8]}
 
 
 def bar_b0(con, season: int) -> dict:
@@ -658,13 +694,31 @@ def bar_b0(con, season: int) -> dict:
     quantile_block = [c for c in ("Q10", "MED", "Q90", "COIN", "FLAGS")
                       if not plain[c].equals(rich[c])]
 
-    moves = {p: _classify_moves(p) for p in ("analysis/session_k1_app.json",
-                                             "analysis/session_k1_5_app.json",
-                                             "analysis/session_k2_app.json",
-                                             "analysis/session_ui_1.json")}
+    # ★ T41 — the same two stamps UI-1's B0 carries, so a moved leaf is attributable rather than
+    # merely alarming. The pinned control lives in UI-1's sheet (nested above) and is not repeated
+    # here: one replay of the old inputs per run is the claim, and two would be two chances to
+    # disagree about the same thing.
+    now_v, now_r = _sheet_diff.board_stamp(con, season), _sheet_diff.room_stamp()
+    moves = {}
+    for p in ("analysis/session_k1_app.json", "analysis/session_k1_5_app.json",
+              "analysis/session_k2_app.json", "analysis/session_ui_1.json"):
+        head = subprocess.run(["git", "show", f"HEAD:{p}"], cwd=ROOT, capture_output=True,
+                              text=True)
+        doc = json.loads(head.stdout) if head.returncode == 0 else {}
+        moves[p] = _sheet_diff.classify_moves(
+            p, vintage=(_sheet_diff.sheet_vintage(doc), now_v),
+            room=(_sheet_diff.sheet_room(doc), now_r))
     clean = all(not m.get("unclassified") for m in moves.values())
+    pinned = ((data.get("bars") or {}).get("b0") or {}).get("pinned_control") or {}
+    attributed = bool(pinned.get("reproduced_bit_for_bit"))
+    inputs_moved = any((m.get("input_bucket") or "") != "" for m in moves.values())
     return {"bar": "B0 — UI-1's sheet re-runs (K2, K1.5, K1 nested); the fifteen are bit-identical",
-            "pass": bool(data.get("all_pass") and clean and not differing and not quantile_block),
+            "pass": bool(data.get("all_pass") and clean and not differing and not quantile_block
+                         and (attributed or not inputs_moved)),
+            "board_vintage": now_v, "room_mix": now_r,
+            "pinned_control_from_ui1": {"ran": bool(pinned.get("ran")),
+                                        "reproduced_bit_for_bit": attributed,
+                                        "pinned_vintage": pinned.get("pinned_vintage")},
             "returncode": r.returncode, "ui1_all_pass": data.get("all_pass"),
             "ui1_per_bar": per_bar,
             "k2_all_pass": nested.get("k2_all_pass"),
@@ -712,6 +766,8 @@ def main() -> None:
         print()
 
     report = {"season": season, "seat": SEAT + 1,
+              # ★ T41 — see `steps/_sheet_diff.py`; every sheet names its own inputs from here on.
+              **_sheet_diff.input_stamp(con, season),
               "new_columns": list(session.UI2_COLS),
               "view_modes": list(session.VIEW_MODES),
               "app_view_modes": list(session.APP_VIEW_MODES),

@@ -202,6 +202,38 @@ def test_the_room_shrinks_by_one_seat_per_human(built):
         assert len(session.seat_map_from(meta).human_teams) == k
 
 
+def test_t55_the_app_hands_the_season_to_the_seat_map(built):
+    """★ **T55 — 16.18's PIT gate was inert on the one path a human uses.**
+
+    ``make_room`` degrades a ``requires_profile`` seat to ``balanced`` on a season the profile does
+    not describe (T54), and it can only do that if it is *told* the season. ``start_draft`` did not
+    tell it, so the 2026 belief board sat in every historical mock the app can start — and the
+    season selector offers fifteen, two of them lockbox seasons. The leak was graded, so it read as
+    a seat with a mild opinion rather than as a defect: exactly the reason it needs a test and not
+    a comment.
+
+    ⚠ The first assertion is the one that keeps this honest. Without it the test passes when the
+    profile fails to load at all — *an inert thing still passes*, and the fallback for an unloaded
+    profile is the very ``balanced`` the second assertion looks for.
+    """
+    from fantasy_quant.draft.personalities import personalities
+
+    assert personalities()["fitted_manager"].manager_profile is not None, (
+        "no profile loaded, so this test cannot tell the gate from an empty seat")
+
+    _, covered = app_engine.start_draft(built, human_seats=[5], settings=LeagueSettings(),
+                                        season=2026, seed=7, room_seed=1)
+    _, uncovered = app_engine.start_draft(built, human_seats=[5], settings=LeagueSettings(),
+                                          season=2020, seed=7, room_seed=1)
+    assert "fitted_manager" in covered["room"]
+    assert "fitted_manager" not in uncovered["room"]
+    # and it degrades in place: an uncovered season is the pre-16.18 room, seat for seat
+    assert [("balanced" if n == "fitted_manager" else n) for n in covered["room"]] \
+        == uncovered["room"]
+    # the gate must survive the meta round-trip, since that is what a resumed draft rebuilds from
+    assert "fitted_manager" not in [p.name for p in session.seat_map_from(uncovered).room()]
+
+
 def test_autopicked_seats_must_be_your_own(built):
     with pytest.raises(ValueError, match="seats you drive"):
         app_engine.start_draft(built, human_seats=[2], auto=[5], settings=LeagueSettings(),

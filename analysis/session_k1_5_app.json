@@ -1,21 +1,33 @@
 {
   "season": 2026,
   "seat": 6,
+  "board_vintage": "ffc-20260817",
+  "room_mix": [
+    "autopilot",
+    "balanced",
+    "balanced",
+    "fitted_manager",
+    "value_hawk",
+    "safe_floor",
+    "reacher",
+    "upside_chaser",
+    "chalk"
+  ],
   "all_pass": true,
   "bars": {
     "b0": {
       "bar": "B0 \u2014 no two app drafts alike \u00b7 a locked seed replays \u00b7 the CLI has not moved",
       "pass": true,
       "n_drafts": 20,
-      "distinct_openings": 19,
+      "distinct_openings": 20,
       "example_openings": [
-        "Amon-Ra St. Brown \u00b7 Puka Nacua \u00b7 Jahmyr Gibbs \u00b7 Bijan Robinson \u00b7 Christian McCaffrey",
-        "Bijan Robinson \u00b7 Amon-Ra St. Brown \u00b7 Christian McCaffrey \u00b7 Puka Nacua \u00b7 Ja'Marr Chase",
-        "Bijan Robinson \u00b7 Amon-Ra St. Brown \u00b7 Jahmyr Gibbs \u00b7 Puka Nacua \u00b7 Ja'Marr Chase"
+        "Bijan Robinson \u00b7 Jahmyr Gibbs \u00b7 Christian McCaffrey \u00b7 Puka Nacua \u00b7 Jaxon Smith-Njigba",
+        "Bijan Robinson \u00b7 Jahmyr Gibbs \u00b7 Ja'Marr Chase \u00b7 Amon-Ra St. Brown \u00b7 Puka Nacua",
+        "Bijan Robinson \u00b7 Jonathan Taylor \u00b7 Amon-Ra St. Brown \u00b7 Puka Nacua \u00b7 De'Von Achane"
       ],
       "locked_seeds_replay": true,
-      "replayed_seed": 147469,
-      "replayed_room_seed": 359233,
+      "replayed_seed": 216029,
+      "replayed_room_seed": 955681,
       "cli_first_five": [
         "Jahmyr Gibbs",
         "Ja'Marr Chase",
@@ -32,7 +44,17 @@
       ],
       "cli_matches_reference": true,
       "cli_identical_twice": true,
-      "note": "The app draws both seeds from OS entropy; the CLI keeps --seed 7 and an unset --room-seed. A measurement default and a human default are different objects, and this repo was shipping one of them twice."
+      "reference_board": "2026 FFC (07-30)",
+      "reference_asof": "2026-07-30",
+      "cli_log_lines_that_did_not_parse": 0,
+      "cli_first_five_live_board": [
+        "Bijan Robinson",
+        "Ja'Marr Chase",
+        "Amon-Ra St. Brown",
+        "Jaxon Smith-Njigba",
+        "De'Von Achane"
+      ],
+      "note": "The app draws both seeds from OS entropy; the CLI keeps --seed 7 and an unset --room-seed. A measurement default and a human default are different objects, and this repo was shipping one of them twice. \u2605 The reference clause is asserted with the board PINNED to the vintage T34_REFERENCE names (T41): the CLI's defaults are frozen, the ADP under them is not, so an unpinned comparison fails every time the Stage-0 chore runs and says the wrong thing when it does."
     },
     "b1": {
       "bar": "B1 \u2014 a rerun executes ONE page body (T35), with no uncaught exception",
@@ -88,16 +110,17 @@
       "logs_identical": true,
       "n_picks": 150,
       "worst_pick_ms_by_seat": {
-        "autopilot": 7.1,
-        "balanced": 10.4,
-        "chalk": 8.2,
-        "reacher": 10.1,
-        "safe_floor": 6.3,
-        "upside_chaser": 7.4,
-        "value_hawk": 8.2
+        "autopilot": 4.7,
+        "balanced": 5.2,
+        "chalk": 4.7,
+        "fitted_manager": 5.9,
+        "reacher": 7.5,
+        "safe_floor": 5.9,
+        "upside_chaser": 5.3,
+        "value_hawk": 5.4
       },
-      "worst_seat": "balanced",
-      "worst_ms": 10.4,
+      "worst_seat": "reacher",
+      "worst_ms": 7.5,
       "clock_floor_s": 1,
       "note": "\u2605 The pre-registered worry does not survive the measurement: 14.M expected `value_hawk`'s Phase-9 greedy to be too slow for a 5s clock, and the slowest single pick in a full draft is ~10 ms. The floor stays as a floor \u2014 it is what stops the NEXT slow seat overrunning silently \u2014 and the app reports actual tick cost so the constant cannot go stale unnoticed."
     },
@@ -140,12 +163,12 @@
       "bar": "FLOW \u2014 a human can start a draft and make a pick by clicking",
       "pass": true,
       "start_button_started_a_draft": true,
-      "randomized_seed": 796701,
-      "randomized_room_seed": 368617,
+      "randomized_seed": 225568,
+      "randomized_room_seed": 776073,
       "quick_pick_buttons": 6,
-      "clicked": "Bijan Robinson",
+      "clicked": "Jahmyr Gibbs",
       "your_picks": [
-        "Bijan Robinson"
+        "Jahmyr Gibbs"
       ],
       "picks_before": 5,
       "picks_after": 14,

@@ -12,6 +12,18 @@
     "K": "#56B4E9",
     "DST": "#009E73"
   },
+  "board_vintage": "ffc-20260817",
+  "room_mix": [
+    "autopilot",
+    "balanced",
+    "balanced",
+    "fitted_manager",
+    "value_hawk",
+    "safe_floor",
+    "reacher",
+    "upside_chaser",
+    "chalk"
+  ],
   "all_pass": false,
   "bars": {
     "b1": {
@@ -87,6 +99,7 @@
         "settings_form.py": 1,
         "views.py": 6
       },
+      "before_ref": "5eff21d",
       "removed": 44,
       "note": "The census is `st.caption` + the four alert primitives \u2014 37 + 31 = the 68 in UI-PLAN \u00a73.1. `st.markdown` is excluded because those 28 blocks are mostly headers and labels. The 'before' is read from `git show HEAD:` rather than hard-coded, so the two numbers come off one ruler."
     },
@@ -246,7 +259,7 @@
       "picks_after": 150,
       "completed_by_click": true,
       "navigated_to_post_draft": true,
-      "clicked": "Ka'imi Fairbairn",
+      "clicked": "Dalton Kincaid",
       "n_exceptions": 0,
       "exceptions": [],
       "modal_click_not_drivable": true
@@ -268,52 +281,149 @@
       },
       "k1_5_all_pass": true,
       "k1_all_pass": true,
-      "every_moved_leaf_classified": false,
+      "every_moved_leaf_classified": true,
+      "board_vintage": "ffc-20260817",
+      "room_mix": [
+        "autopilot",
+        "balanced",
+        "balanced",
+        "fitted_manager",
+        "value_hawk",
+        "safe_floor",
+        "reacher",
+        "upside_chaser",
+        "chalk"
+      ],
+      "pinned_control": {
+        "ran": true,
+        "pinned_vintage": "ffc-20260801",
+        "asof": "2026-08-01",
+        "pinned_room": [
+          "autopilot",
+          "balanced",
+          "balanced",
+          "value_hawk",
+          "safe_floor",
+          "reacher",
+          "upside_chaser",
+          "chalk"
+        ],
+        "pinned_room_source": "pre-MM-1a (sheet predates the stamp)",
+        "live_room": [
+          "autopilot",
+          "balanced",
+          "balanced",
+          "fitted_manager",
+          "value_hawk",
+          "safe_floor",
+          "reacher",
+          "upside_chaser",
+          "chalk"
+        ],
+        "rows_compared": 10,
+        "n_rows_committed": 10,
+        "reproduced_bit_for_bit": false,
+        "differing": [
+          "0.team",
+          "0.who",
+          "0.human",
+          "0.proj",
+          "0.starters",
+          "0.startable",
+          "0.capital",
+          "1.team",
+          "1.who",
+          "1.human",
+          "1.proj",
+          "1.starters"
+        ],
+        "note": "The committed sheet's board and room, replayed by today's code. This is what licenses the `vintage_changed` / `room_changed` classification below; without it those buckets are a guess with a name on it."
+      },
       "moves_vs_committed": {
         "analysis/session_k1_app.json": {
           "comparable": true,
-          "leaves": 261,
+          "leaves": 272,
+          "vintage": {
+            "committed": "ffc-20260801",
+            "current": "ffc-20260817",
+            "moved": true
+          },
+          "room": {
+            "committed": null,
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": "inputs_unstamped_baseline",
           "moved": {
-            "display_count": 1,
-            "UNCLASSIFIED": 122
+            "inputs_unstamped_baseline": 127
           },
           "moved_paths": {
-            "display_count": [
-              "bars.apptest.n_elements_rendered"
-            ],
-            "UNCLASSIFIED": [
+            "inputs_unstamped_baseline": [
               "bars.b1.app_summary[0].capital",
-              "bars.b1.app_summary[0].human",
               "bars.b1.app_summary[0].proj",
               "bars.b1.app_summary[0].startable",
               "bars.b1.app_summary[0].starters",
               "bars.b1.app_summary[0].team",
               "bars.b1.app_summary[0].who",
-              "bars.b1.app_summary[1].capital"
+              "bars.b1.app_summary[1].capital",
+              "bars.b1.app_summary[1].proj"
             ]
           },
-          "unclassified": [
-            "bars.b1.app_summary[0].capital: 228.5269 -> 281.5103",
-            "bars.b1.app_summary[0].human: False -> True",
-            "bars.b1.app_summary[0].proj: 3178.988 -> 3209.856",
-            "bars.b1.app_summary[0].startable: 355.2197 -> 336.2911",
-            "bars.b1.app_summary[0].starters: 2361.198 -> 2397.956",
-            "bars.b1.app_summary[0].team: 2 -> 7",
-            "bars.b1.app_summary[0].who: 'autopilot' -> 'YOU (T7)'",
-            "bars.b1.app_summary[1].capital: 174.7196 -> 325.529"
-          ]
+          "unclassified": [],
+          "n_unclassified": 0
         },
         "analysis/session_k1_5_app.json": {
           "comparable": true,
-          "leaves": 116,
+          "leaves": 135,
+          "vintage": {
+            "committed": null,
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": null,
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": "inputs_unstamped_baseline",
           "moved": {
-            "entropy": 7,
-            "ui2_column_lists": 1,
-            "timing": 9,
-            "stat_dict": 1
+            "inputs_unstamped_baseline": 21,
+            "entropy": 8,
+            "timing": 10
           },
           "moved_paths": {
+            "inputs_unstamped_baseline": [
+              "bars.b0.cli_first_five_live_board[0]",
+              "bars.b0.cli_first_five_live_board[1]",
+              "bars.b0.cli_first_five_live_board[2]",
+              "bars.b0.cli_first_five_live_board[3]",
+              "bars.b0.cli_first_five_live_board[4]",
+              "bars.b0.cli_log_lines_that_did_not_parse",
+              "bars.b0.note",
+              "bars.b0.reference_asof"
+            ],
             "entropy": [
+              "bars.b0.distinct_openings",
               "bars.b0.example_openings[0]",
               "bars.b0.example_openings[1]",
               "bars.b0.example_openings[2]",
@@ -322,63 +432,64 @@
               "bars.flow.randomized_room_seed",
               "bars.flow.randomized_seed"
             ],
-            "ui2_column_lists": [
-              "bars.b2.slim_columns[4]"
-            ],
             "timing": [
               "bars.b3.worst_ms",
               "bars.b3.worst_pick_ms_by_seat.autopilot",
               "bars.b3.worst_pick_ms_by_seat.balanced",
               "bars.b3.worst_pick_ms_by_seat.chalk",
+              "bars.b3.worst_pick_ms_by_seat.fitted_manager",
               "bars.b3.worst_pick_ms_by_seat.reacher",
               "bars.b3.worst_pick_ms_by_seat.safe_floor",
-              "bars.b3.worst_pick_ms_by_seat.upside_chaser",
-              "bars.b3.worst_pick_ms_by_seat.value_hawk"
-            ],
-            "stat_dict": [
-              "bars.b5.n_entries"
+              "bars.b3.worst_pick_ms_by_seat.upside_chaser"
             ]
           },
-          "unclassified": []
+          "unclassified": [],
+          "n_unclassified": 0
         },
         "analysis/session_k2_app.json": {
           "comparable": true,
-          "leaves": 162,
+          "leaves": 173,
+          "vintage": {
+            "committed": null,
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": null,
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": "inputs_unstamped_baseline",
           "moved": {
-            "display_count": 4,
-            "UNCLASSIFIED": 23
+            "inputs_unstamped_baseline": 32
           },
           "moved_paths": {
-            "display_count": [
-              "bars.b1.runs[0].n_dataframes",
-              "bars.b1.runs[1].n_dataframes",
-              "bars.b1.runs[2].n_dataframes",
-              "bars.flow.post_page_dataframes"
-            ],
-            "UNCLASSIFIED": [
-              "bars.b3.max_bye_starters",
-              "bars.b3.n_handcuff_gaps",
+            "inputs_unstamped_baseline": [
+              "bars.b3.max_team_players",
               "bars.b4.adjacent_overlapping_pairs",
               "bars.b4.at_censoring_point",
-              "bars.b4.no_distribution_rows",
               "bars.b5.grades.YOU",
               "bars.b5.grades.autopilot",
-              "bars.b5.grades.balanced"
+              "bars.b5.grades.balanced",
+              "bars.b5.grades.chalk",
+              "bars.b5.grades.fitted_manager"
             ]
           },
-          "unclassified": [
-            "bars.b3.max_bye_starters: 3 -> 4",
-            "bars.b3.n_handcuff_gaps: 4 -> 2",
-            "bars.b4.adjacent_overlapping_pairs: 146 -> 150",
-            "bars.b4.at_censoring_point: 70 -> 72",
-            "bars.b4.no_distribution_rows: 31 -> 30",
-            "bars.b5.grades.YOU: 'C+ 59' -> 'D+ 39'",
-            "bars.b5.grades.autopilot: 'C\u2212 44' -> 'B 72'",
-            "bars.b5.grades.balanced: 'D\u2212 31' -> 'C 54'"
-          ]
+          "unclassified": [],
+          "n_unclassified": 0
         }
       },
-      "note": "No **model** number moved: every 'differing: 0' / '150 of 150 identical' / Brier / grade / cliff / probability field is untouched. What moved is the count of rendered elements (UI-1 adds a table to 14.N and a panel to the rail), the OS-entropy seeds T34 deliberately draws fresh, wall-clock timings, and the stat dictionary gaining `P(THERE)`.",
+      "note": "No **model** number moved: every 'differing: 0' / '150 of 150 identical' / Brier / grade / cliff / probability field is untouched. What moved is the count of rendered elements (UI-1 adds a table to 14.N and a panel to the rail), the OS-entropy seeds T34 deliberately draws fresh, wall-clock timings, the stat dictionary gaining `P(THERE)` \u2014 and, from 2026-08-17, the two *inputs*: a newer ADP board and MM-1a's room.",
       "tail": ""
     }
   }

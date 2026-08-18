@@ -33,6 +33,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine, post_draft, probe  # noqa: E402
+from steps import _sheet_diff  # noqa: E402
 
 from fantasy_quant.data import db  # noqa: E402
 from fantasy_quant.draft import drift, optimizer, session  # noqa: E402
@@ -560,6 +561,9 @@ def main() -> None:
         print()
 
     report = {"season": season, "seat": SEAT + 1, "bar_sims": BAR_SIMS,
+              # ★ T41 — every sheet names the two inputs it was measured under, so a
+              # comparator can tell "the world moved" from "the code broke".
+              **_sheet_diff.input_stamp(con, season),
               "app_arrival_sims": post_draft.ARRIVAL_SIMS,
               "all_pass": all(r["pass"] for r in results.values()), "bars": results}
     OUT.parent.mkdir(parents=True, exist_ok=True)

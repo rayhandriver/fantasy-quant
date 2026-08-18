@@ -69,18 +69,22 @@ def boarded_seasons(con, *, scoring: str = "ppr", teams: int = 10) -> list[int]:
 
 
 def build(con, season: int, settings: LeagueSettings | None = None,
-          config: DraftConfig | None = None) -> dict:
+          config: DraftConfig | None = None, *, asof: str | None = None) -> dict:
     """The ``(board, value_index, risk)`` build — :func:`session.build_board`, with the 17.3
     settings threaded in so the board a user reads is the board *their* league produces.
 
     ``settings`` is what un-orphans Phase 17: ``teams`` sizes the board and the replacement levels
     the value index is computed against, so a superflex league's QBs lift here rather than in a
     caption. When it is ``None`` the engine defaults apply, which is the lockbox case.
+
+    ``asof`` (T41) pins the ADP vintage. **No app screen passes it** — it exists so a bar sheet can
+    re-run itself on the board a committed sheet was measured on, which is the difference between
+    reporting that the world moved and proving the code did not.
     """
     settings = settings or LeagueSettings()
     config = config or config_from(settings)
     return session.build_board(con, season=int(season), teams=int(settings.n_teams),
-                               config=config, cache_dir=CACHE_DIR)
+                               config=config, cache_dir=CACHE_DIR, asof=asof)
 
 
 def config_from(settings: LeagueSettings) -> DraftConfig:
@@ -146,7 +150,16 @@ def start_draft(built: dict, *, human_seats: list[int], room_arg: str | None = "
     if set(auto) - set(human_seats):
         raise ValueError("autopicked seats must be seats you drive")
     mix = session.room_mix(room_arg, n_humans=len(human_seats), n_teams=n_teams)
-    sm = SeatMap.of(n_teams, human_teams=human_seats, mix=mix, seed=room_seed, fav_teams=fav)
+    # ★★ T55 — **the season goes to the seat map, or 16.18's PIT gate is inert on the one path a
+    # human uses.** `make_room` degrades a `requires_profile` seat to `balanced` on a season the
+    # profile does not describe (T54), and it can only do that if it is told the season. This call
+    # omitted it, so the 2026 belief board was seated in every historical mock the app can start —
+    # and the season selector offers **fifteen** of them, two of which (2023, 2024) are lockbox
+    # seasons. The leak is graded and therefore quiet: the seat fires on whoever is still on that
+    # year's board, so it reads as a mild opinion rather than as a defect. Same shape as T22 and
+    # T35 before it — *a guard that does not run on the path a human uses is not a guard.*
+    sm = SeatMap.of(n_teams, human_teams=human_seats, mix=mix, seed=room_seed, fav_teams=fav,
+                    season=int(season))
     primary = human_seats[0] if human_seats else 0
     meta = {"your_team": primary, "human_teams": list(human_seats), "auto": auto,
             "room": [p.name for p in sm.room()], "teams": n_teams, "rounds": rounds,

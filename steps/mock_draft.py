@@ -64,7 +64,7 @@ import pandas as pd
 
 from fantasy_quant.draft import mock, session
 from fantasy_quant.draft.config import DraftConfig
-from fantasy_quant.draft.personalities import SeatMap
+from fantasy_quant.draft.personalities import SeatMap, personalities
 from fantasy_quant.draft.session import (
     REALISTIC_NINE,
     advance,
@@ -96,7 +96,8 @@ def _con():
     return duckdb.connect(str(DB), read_only=True)
 
 
-def build_board(season: int = 2026, teams: int = 10) -> tuple[pd.DataFrame, pd.DataFrame, object]:
+def build_board(season: int = 2026, teams: int = 10,
+                asof: str | None = None) -> tuple[pd.DataFrame, pd.DataFrame, object]:
     """``(board, value_index, risk)`` — :func:`session.build_board`, opened and announced.
 
     The build itself moved to ``session.py`` (Session K1) so the app gets the *same* board, value
@@ -105,7 +106,8 @@ def build_board(season: int = 2026, teams: int = 10) -> tuple[pd.DataFrame, pd.D
     """
     con = _con()
     try:
-        built = session.build_board(season=season, teams=teams, con=con, cache_dir=CACHE)
+        built = session.build_board(season=season, teams=teams, con=con, cache_dir=CACHE,
+                                    asof=asof)
     except LookupError as exc:
         raise SystemExit(str(exc)) from None
     finally:
@@ -139,9 +141,22 @@ def load() -> tuple[DraftState, dict, pd.DataFrame | None, object]:
 # rule is precisely how the shipped mix and the interactive mix would come apart (T27, one level
 # up).
 # The only adaptation is at the boundary — `session` raises `ValueError`, this CLI exits.
+#: Width of the ``who`` column in :func:`fmt_pick`, **computed from the personality library** so the
+#: longest seat name is always followed by at least two spaces.
+#:
+#: ★★ **It was a hard-coded 15, and MM-1a's `fitted_manager` is 14 characters.** The name filled the
+#: field, left a single space, and every reader of this log — K1's B1 and K1.5's B0 — parses the
+#: who/player boundary on a **two-space** gap. So one seat's 15 picks silently vanished from the
+#: parsed log, `n_picks_cli` read 135 against the app's 150, and B1 reported *"app and CLI produce
+#: different picks"* — a true failure with a false cause, which is the most expensive kind. The
+#: drafts were identical the whole time. *A fixed-width column is a contract with whoever reads it,
+#: and a hard-coded width is that contract stated where the data cannot reach it.*
+WHO_W = max([len("YOU (T10)")] + [len(n) for n in personalities()]) + 2
+
+
 def fmt_pick(r: dict, sm: SeatMap) -> str:
     return (f"  {r['round']:>2}.{r['pick_in_round']:02d}  {'T' + str(r['team'] + 1):<4}"
-            f"{seat_label(r['team'], sm):<15}{r['player_name'][:23]:<24}{r['pos']:<4}"
+            f"{seat_label(r['team'], sm):<{WHO_W}}{r['player_name'][:23]:<24}{r['pos']:<4}"
             f"(ADP {r['adp']:.1f})")
 
 
@@ -385,7 +400,7 @@ def human_seats(a) -> list[int]:
 
 
 def cmd_start(a) -> None:
-    board, vi, risk = build_board(season=a.season, teams=a.teams)
+    board, vi, risk = build_board(season=a.season, teams=a.teams, asof=getattr(a, "asof", None))
     # T27 1a: `proj_points` and `base_value` are `simulator.PASSTHROUGH_COLS` now, so they ride
     # through `_prepare_board` with everything else. The hand-rolled re-attach that used to sit
     # here is deleted rather than duplicated — it was the visible half of the two-scales defect.
@@ -394,7 +409,11 @@ def cmd_start(a) -> None:
     fav = tuple(x.strip().upper() for x in (a.fav or "").split(",") if x.strip())
     mix = room_mix(a.room, n_humans=len(seats), n_teams=a.teams)
     # 16.17: `SeatMap.of` is the only length check — `n_teams - k`, not `n_teams - 1`.
-    sm = SeatMap.of(a.teams, human_teams=seats, mix=mix, seed=a.room_seed, fav_teams=fav)
+    # ★ T55 — the season reaches the seat map here too, for the reason it does in `app/engine`:
+    # 16.18's PIT gate degrades a `requires_profile` seat to `balanced` on a season the profile
+    # does not describe, and a constructor that is not told the season cannot do it.
+    sm = SeatMap.of(a.teams, human_teams=seats, mix=mix, seed=a.room_seed, fav_teams=fav,
+                    season=a.season)
     auto = sorted({int(x.strip()) - 1 for x in (a.auto or "").split(",") if x.strip()})
     if set(auto) - set(seats):
         raise SystemExit(f"--auto {sorted(t + 1 for t in set(auto) - set(seats))} are not your "
@@ -596,6 +615,11 @@ def main() -> None:
     s.add_argument("--season", type=int, default=2026)
     s.add_argument("--seed", type=int, default=7)
     s.add_argument("--room-seed", type=int, default=None)
+    # ★ T41 — pin the ADP vintage. A control that has to reproduce a measurement taken on an older
+    # board needs to be able to *ask for* that board; without it "the CLI has not moved" is a claim
+    # no one can check the week after the Stage-0 chore runs.
+    s.add_argument("--asof", default=None,
+                   help="pin the ADP board to this date (YYYY-MM-DD); default is the newest")
     s.add_argument("--room", default="realistic",
                    help="'realistic' (the shipped room minus one `balanced` per human seat, "
                         "default) | 'default' (pre-16.14R) | a comma-separated list of exactly "

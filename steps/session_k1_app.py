@@ -38,6 +38,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine  # noqa: E402
+from steps import _sheet_diff  # noqa: E402
 
 from fantasy_quant.adp import boards  # noqa: E402
 from fantasy_quant.backtest.scoring import (  # noqa: E402,E501
@@ -116,15 +117,29 @@ def _cli_summary(text: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+#: A line that *is* a pick line, judged on its pick number and team alone — deliberately looser than
+#: :data:`_PICK_NAME`, so the two can be compared and a silent parse failure becomes a loud one.
+_PICK_ROW = re.compile(r"^\s+\d+\.\d+\s+T\d+\s")
+_PICK_NAME = re.compile(r"^\s+\d+\.\d+\s+T\d+\s+\S[\S ]*?\s{2,}(\S[\S ]*?)\s{2,}\S+\s+\(ADP")
+
+
 def _cli_picks(text: str) -> list[str]:
-    """Every player name in the CLI's own pick log, in order."""
-    out = []
-    for line in text.splitlines():
-        m = re.match(r"^\s+\d+\.\d+\s+T\d+\s+\S[\S ]*?\s{2,}(\S[\S ]*?)\s{2,}\S+\s+\(ADP",
-                     line)
-        if m:
-            out.append(m.group(1).strip())
-    return out
+    """Every player name in the CLI's own pick log, in order.
+
+    ⚠ **Pairs with** :func:`_cli_parse_gap`. This reads a fixed-width column layout, and when
+    `fitted_manager` (14 chars) met a 15-wide field the two-space gap this pattern needs disappeared
+    for one seat: 15 picks dropped out of the parse, `n_picks_cli` read 135 against 150, and B1
+    called it a pick mismatch. *A parser that can drop rows must be asked how many it dropped* —
+    otherwise the bar reports a real failure with the wrong cause, and the wrong cause is what gets
+    investigated.
+    """
+    return [m.group(1).strip() for m in map(_PICK_NAME.match, text.splitlines()) if m]
+
+
+def _cli_parse_gap(text: str) -> int:
+    """How many lines look like picks but did not parse. Anything but 0 is a format drift."""
+    lines = text.splitlines()
+    return sum(1 for ln in lines if _PICK_ROW.match(ln)) - len(_cli_picks(text))
 
 
 def bar_b1(con, season: int) -> dict:
@@ -171,7 +186,10 @@ def bar_b1(con, season: int) -> dict:
     # the CLI rounds to whole points on screen, so agreement is asserted at display precision
     numbers_ok = all(v <= 0.5 for v in diffs.values() if v >= 0) and len(merged) == state.n_teams
     # the CLI's `log` truncates each name to 23 chars for its column, so compare on that prefix
-    picks_ok = bool(cli_log) and [n[:23] for n in app_log] == [n[:23] for n in cli_log]
+    # ⚠ the parse must be complete before the comparison means anything (see `_cli_picks`)
+    parse_gap = _cli_parse_gap(log.stdout if not log.returncode else start.stdout)
+    picks_ok = (bool(cli_log) and parse_gap == 0
+                and [n[:23] for n in app_log] == [n[:23] for n in cli_log])
     first_diff = next((i for i, (x, y) in enumerate(zip(app_log, cli_log, strict=False))
                        if x[:23] != y[:23]), None)
 
@@ -180,6 +198,7 @@ def bar_b1(con, season: int) -> dict:
             "n_teams_matched": int(len(merged)), "who_matches": who_ok,
             "picks_match": picks_ok, "n_picks_app": len(app_log), "n_picks_cli": len(cli_log),
             "first_differing_pick": first_diff, "max_abs_diff": diffs,
+            "cli_log_lines_that_did_not_parse": parse_gap,
             "note": ("The CLI ran as a subprocess and was parsed off stdout; the app ran "
                      "in-process through app/engine.py. Different entry points, one engine."),
             "cli_summary": cli_tab.to_dict("records"),
@@ -485,6 +504,9 @@ def main() -> None:
         print()
 
     report = {"season": season, "seed": SEED, "room_seed": ROOM_SEED, "seats": SEATS,
+              # ★ T41 — every sheet names the two inputs it was measured under, so a
+              # comparator can tell "the world moved" from "the code broke".
+              **_sheet_diff.input_stamp(con, season),
               "all_pass": all(r["pass"] for r in results.values()), "bars": results}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2, default=str))

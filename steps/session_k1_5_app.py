@@ -29,6 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine, probe  # noqa: E402
+from steps import _sheet_diff  # noqa: E402
 
 from fantasy_quant.data import db  # noqa: E402
 from fantasy_quant.draft import session  # noqa: E402
@@ -39,6 +40,9 @@ from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp  # noqa: E402
 OUT = Path("analysis/session_k1_5_app.json")
 APP = Path("app/main.py")
 ROOT = Path(__file__).resolve().parents[1]
+#: The board :data:`app.engine.T34_REFERENCE` was measured on, as `resolve_board(asof=)` wants it.
+#: It is stated once, here, because two places would be two answers the first time one is edited.
+T34_REFERENCE_ASOF = "2026-07-30"
 SEAT = 5                       # 0-indexed; the seat the T34 report was made from (seat 6)
 
 
@@ -79,41 +83,74 @@ def bar_b0(con, season: int, n_drafts: int = 20) -> dict:
     replays = ([p["player_name"] for p in a.log] == [p["player_name"] for p in b.log]
                and meta_a["room"] == meta_b["room"])
 
-    # ⚠ the other half: `steps/` must still mean what every committed bar sheet assumes
-    cli = _cli_first_five(season)
+    # ⚠ the other half: `steps/` must still mean what every committed bar sheet assumes — asserted
+    # **on the board the reference names**, and reported on today's.
     ref = engine.T34_REFERENCE
+    cli = _cli_first_five(season, asof=T34_REFERENCE_ASOF)
+    live = _cli_first_five(season)
     cli_unchanged = cli["first_five"] == ref["first_five"]
-    twice_identical = cli["identical_twice"]
+    twice_identical = cli["identical_twice"] and live["identical_twice"]
+    parsed_clean = (cli["lines_that_did_not_parse"] == 0
+                    and live["lines_that_did_not_parse"] == 0)
 
     return {"bar": "B0 — no two app drafts alike · a locked seed replays · the CLI has not moved",
-            "pass": bool(distinct > 1 and replays and cli_unchanged and twice_identical),
+            "pass": bool(distinct > 1 and replays and cli_unchanged and twice_identical
+                         and parsed_clean),
             "n_drafts": n_drafts, "distinct_openings": distinct,
             "example_openings": [" · ".join(o) for o in sorted(set(opens))[:3]],
             "locked_seeds_replay": replays,
             "replayed_seed": meta_a["seed"], "replayed_room_seed": meta_a["room_seed"],
             "cli_first_five": cli["first_five"], "cli_reference": ref["first_five"],
             "cli_matches_reference": cli_unchanged, "cli_identical_twice": twice_identical,
+            "reference_board": ref["board"], "reference_asof": T34_REFERENCE_ASOF,
+            "cli_log_lines_that_did_not_parse": cli["lines_that_did_not_parse"]
+            + live["lines_that_did_not_parse"],
+            # a readout, never a gate: which players the frozen defaults produce on *today's* board
+            "cli_first_five_live_board": live["first_five"],
             "note": ("The app draws both seeds from OS entropy; the CLI keeps --seed 7 and an "
                      "unset --room-seed. A measurement default and a human default are different "
-                     "objects, and this repo was shipping one of them twice.")}
+                     "objects, and this repo was shipping one of them twice. ★ The reference "
+                     "clause is asserted with the board PINNED to the vintage T34_REFERENCE names "
+                     "(T41): the CLI's defaults are frozen, the ADP under them is not, so an "
+                     "unpinned comparison fails every time the Stage-0 chore runs and says the "
+                     "wrong thing when it does.")}
 
 
 _PICK_LINE = re.compile(r"^\s+\d+\.\d+\s+T\d+\s+\S[\S ]*?\s{2,}(\S[\S ]*?)\s{2,}\S+\s+\(ADP")
+#: Looser sibling — a line that *is* a pick, on its number and team alone. The two counts must agree
+#: or the fixed-width parse has drifted; see `session_k1_app._cli_picks` for the instance that cost
+#: a session an hour (a 14-character personality in a 15-wide column).
+_PICK_ROW = re.compile(r"^\s+\d+\.\d+\s+T\d+\s")
 
 
-def _cli_first_five(season: int) -> dict:
-    """Run ``mock_draft.py start`` twice at the frozen defaults; parse the first five picks."""
+def _cli_first_five(season: int, asof: str | None = None) -> dict:
+    """Run ``mock_draft.py start`` twice at the frozen defaults; parse the first five picks.
+
+    ★ **T41 (2026-08-17) — ``asof`` pins the board this reference was measured on.**
+    :data:`~app.engine.T34_REFERENCE` names its own vintage (*"2026 FFC (07-30)"*) and the sequence
+    it records is a property of **that** board: the CLI's defaults are frozen, the ADP under them is
+    not. Left unpinned, this clause turned the mandated weekly Stage-0 chore into a bar failure
+    reading *"the CLI has moved"* — the same defect as T41 one layer in, a **stale reference used as
+    a control**. Pinned, the claim is the one the constant actually supports.
+    """
+    gaps: list[int] = []
+
     def run() -> list[str]:
-        r = subprocess.run(
-            [sys.executable, "steps/mock_draft.py", "start", "--seat", str(SEAT + 1),
-             "--season", str(season)],
-            cwd=ROOT, capture_output=True, text=True, timeout=1800)
+        cmd = [sys.executable, "steps/mock_draft.py", "start", "--seat", str(SEAT + 1),
+               "--season", str(season)] + (["--asof", asof] if asof else [])
+        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=1800)
         if r.returncode:
             return []
-        return [m.group(1).strip() for m in map(_PICK_LINE.match, r.stdout.splitlines()) if m][:5]
+        names = [m.group(1).strip() for m in map(_PICK_LINE.match, r.stdout.splitlines()) if m]
+        # ⚠ a dropped row does not shorten this list, it *shifts* it — the first five would then be
+        # five real picks in the wrong order, which is why the completeness check is not optional.
+        rows = sum(1 for ln in r.stdout.splitlines() if _PICK_ROW.match(ln))
+        gaps.append(rows - len(names))
+        return names[:5]
 
     first, second = run(), run()
-    return {"first_five": first, "identical_twice": bool(first) and first == second}
+    return {"first_five": first, "identical_twice": bool(first) and first == second,
+            "lines_that_did_not_parse": sum(gaps)}
 
 
 # ------------------------------------------------------------------------------------------------
@@ -468,6 +505,9 @@ def main() -> None:
         print()
 
     report = {"season": season, "seat": SEAT + 1,
+              # ★ T41 — every sheet names the two inputs it was measured under, so a
+              # comparator can tell "the world moved" from "the code broke".
+              **_sheet_diff.input_stamp(con, season),
               "all_pass": all(r["pass"] for r in results.values()), "bars": results}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2, default=str))

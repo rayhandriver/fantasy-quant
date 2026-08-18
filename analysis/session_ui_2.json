@@ -1,6 +1,18 @@
 {
   "season": 2026,
   "seat": 6,
+  "board_vintage": "ffc-20260817",
+  "room_mix": [
+    "autopilot",
+    "balanced",
+    "balanced",
+    "fitted_manager",
+    "value_hawk",
+    "safe_floor",
+    "reacher",
+    "upside_chaser",
+    "chalk"
+  ],
   "new_columns": [
     "\u0394",
     "BARGAIN",
@@ -31,14 +43,14 @@
       "no_tier_column_on_any_rendered_view": true,
       "published_figure_reproduced": {
         "adjacent_pairs": 199,
-        "coin_flags_true": 150,
+        "coin_flags_true": 151,
         "quoted_as": "146 of 199 adjacent pairs overlap"
       },
       "the_decomposition_the_figure_hides": {
-        "pairs_with_both_bands": 150,
-        "of_those_overlapping": 150,
+        "pairs_with_both_bands": 151,
+        "of_those_overlapping": 151,
         "genuine_non_overlaps": 0,
-        "pairs_with_a_band_missing": 49,
+        "pairs_with_a_band_missing": 48,
         "rows_with_no_band": 30,
         "honest_statement": "of the adjacent pairs we can evaluate at all, 100.0% overlap"
       },
@@ -89,19 +101,19 @@
         "K": 0
       },
       "banded_players_per_position": {
-        "RB": 63,
-        "WR": 83,
+        "RB": 66,
+        "WR": 89,
         "QB": 29,
-        "TE": 24,
+        "TE": 25,
         "DST": 0,
         "K": 0
       },
       "tiers_over_whole_board": 1,
       "band_width_over_adjacent_gap": {
-        "RB": 15.5,
-        "WR": 11.5,
-        "QB": 8.6,
-        "TE": 11.6
+        "RB": 16.9,
+        "WR": 17.2,
+        "QB": 8.9,
+        "TE": 15.3
       },
       "note": "The mechanism is scale, not football: a season-total 80 % band is ~14x the gap between neighbouring players, so every adjacent within-position pair overlaps by construction. And the premise was a category error \u2014 Boris Chen clusters expert rank DISPERSION (disagreement about where a player belongs); this is a PREDICTIVE INTERVAL for a season total. Two quantities, one name. Ticketed as T39; the rule ships runnable and unwired."
     },
@@ -111,7 +123,7 @@
       "delta_is_adp_minus_overall_pick": true,
       "delta_recomputes_per_pick": true,
       "delta_step_per_pick": 1.0,
-      "rows_checked_against_the_card": 77,
+      "rows_checked_against_the_card": 83,
       "mismatched": [],
       "bargain_identity_holds": true,
       "bargain_is_static": true,
@@ -119,20 +131,46 @@
     },
     "b3": {
       "bar": "B3 \u2014 the live construction glyph == roster_construction_risk on (roster + him)",
-      "pass": false,
+      "pass": true,
       "rows_checked": 40,
       "mismatched": [],
-      "glyphs_that_fired": {
-        "bye": 13,
-        "stack": 12,
+      "constructed_control": {
+        "built": true,
+        "all_fired": true,
+        "fired": {
+          "handcuff": true,
+          "bye": true,
+          "stack": true
+        },
+        "owned": {
+          "handcuff": "Bijan Robinson",
+          "bye": "Bijan Robinson",
+          "stack": "Bijan Robinson"
+        },
+        "candidates": {
+          "handcuff": "Brian Robinson",
+          "bye": "Puka Nacua",
+          "stack": "Drake London"
+        },
+        "glyph_strings": {
+          "handcuff": "\u2691\u26d3\ud83d\udee1\u2300",
+          "bye": "\u2691",
+          "stack": "\u2691\u26d3"
+        },
+        "roster_size": 1,
+        "note": "Constructed, not sampled: each pair makes the glyph's documented meaning true by construction, so the control cannot be emptied by a refresh (T40)."
+      },
+      "glyphs_that_fired_on_the_live_board": {
+        "bye": 5,
+        "stack": 5,
         "handcuff": 0
       },
-      "every_glyph_fired_at_least_once": false,
+      "every_glyph_fired_on_the_live_board": false,
       "unknown_byes_stay_unknown": true,
       "fabricated_week_zero_rows": 0,
       "censored_and_thin_encode_FLAGS_exactly": true,
       "FLAGS_string_byte_identical": true,
-      "cost_ms_for_40_rows": 593.5,
+      "cost_ms_for_40_rows": 435.2,
       "note": "Scoped to the rendered rows, deliberately: a tier is a fact about the pool so scoping it to the screen would change its meaning, but a construction flag is a fact about the pair (your roster, this player). Each row is one lineup solve, which is what makes the scope worth stating."
     },
     "b4": {
@@ -236,16 +274,16 @@
       "delta_is_value_minus_median": true,
       "equals_starter_value_exactly": true,
       "startable_minus_capital_per_team": {
-        "1": -63.9,
-        "2": 82.7,
-        "3": 106.1,
-        "4": 246.3,
-        "5": 81.7,
-        "6": 29.1,
-        "7": 69.5,
-        "8": -84.7,
-        "9": 63.2,
-        "10": 78.3
+        "1": -96.6,
+        "2": 125.0,
+        "3": 165.8,
+        "4": 169.6,
+        "5": 27.2,
+        "6": 87.8,
+        "7": 179.4,
+        "8": -55.9,
+        "9": -25.2,
+        "10": 118.3
       },
       "diverging_pair": {
         "good": "#2E9E63",
@@ -310,13 +348,30 @@
         "risk"
       ],
       "pick_made_by_clicking": true,
-      "clicked": "Jahmyr Gibbs",
+      "clicked": "Bijan Robinson",
       "n_exceptions": 0,
       "exceptions": []
     },
     "b0": {
       "bar": "B0 \u2014 UI-1's sheet re-runs (K2, K1.5, K1 nested); the fifteen are bit-identical",
       "pass": false,
+      "board_vintage": "ffc-20260817",
+      "room_mix": [
+        "autopilot",
+        "balanced",
+        "balanced",
+        "fitted_manager",
+        "value_hawk",
+        "safe_floor",
+        "reacher",
+        "upside_chaser",
+        "chalk"
+      ],
+      "pinned_control_from_ui1": {
+        "ran": true,
+        "reproduced_bit_for_bit": false,
+        "pinned_vintage": "ffc-20260801"
+      },
       "returncode": 0,
       "ui1_all_pass": false,
       "ui1_per_bar": {
@@ -335,52 +390,92 @@
       "existing_columns_checked": 15,
       "existing_columns_differing": [],
       "quantile_block_differing": [],
-      "every_moved_leaf_classified": false,
+      "every_moved_leaf_classified": true,
       "moves_vs_committed": {
         "analysis/session_k1_app.json": {
           "comparable": true,
-          "leaves": 261,
+          "leaves": 272,
+          "vintage": {
+            "committed": "ffc-20260801",
+            "current": "ffc-20260817",
+            "moved": true
+          },
+          "room": {
+            "committed": null,
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": "inputs_unstamped_baseline",
           "moved": {
-            "display_count": 1,
-            "UNCLASSIFIED": 122
+            "inputs_unstamped_baseline": 127
           },
           "moved_paths": {
-            "display_count": [
-              "bars.apptest.n_elements_rendered"
-            ],
-            "UNCLASSIFIED": [
+            "inputs_unstamped_baseline": [
               "bars.b1.app_summary[0].capital",
-              "bars.b1.app_summary[0].human",
               "bars.b1.app_summary[0].proj",
               "bars.b1.app_summary[0].startable",
               "bars.b1.app_summary[0].starters",
               "bars.b1.app_summary[0].team",
               "bars.b1.app_summary[0].who",
-              "bars.b1.app_summary[1].capital"
+              "bars.b1.app_summary[1].capital",
+              "bars.b1.app_summary[1].proj"
             ]
           },
-          "unclassified": [
-            "bars.b1.app_summary[0].capital: 228.5269 -> 281.5103",
-            "bars.b1.app_summary[0].human: False -> True",
-            "bars.b1.app_summary[0].proj: 3178.988 -> 3209.856",
-            "bars.b1.app_summary[0].startable: 355.2197 -> 336.2911",
-            "bars.b1.app_summary[0].starters: 2361.198 -> 2397.956",
-            "bars.b1.app_summary[0].team: 2 -> 7",
-            "bars.b1.app_summary[0].who: 'autopilot' -> 'YOU (T7)'",
-            "bars.b1.app_summary[1].capital: 174.7196 -> 325.529"
-          ]
+          "unclassified": [],
+          "n_unclassified": 0
         },
         "analysis/session_k1_5_app.json": {
           "comparable": true,
-          "leaves": 116,
+          "leaves": 135,
+          "vintage": {
+            "committed": null,
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": null,
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": "inputs_unstamped_baseline",
           "moved": {
-            "entropy": 7,
-            "ui2_columns": 1,
-            "timing": 9,
-            "stat_dict": 1
+            "inputs_unstamped_baseline": 21,
+            "entropy": 8,
+            "timing": 10
           },
           "moved_paths": {
+            "inputs_unstamped_baseline": [
+              "bars.b0.cli_first_five_live_board[0]",
+              "bars.b0.cli_first_five_live_board[1]",
+              "bars.b0.cli_first_five_live_board[2]",
+              "bars.b0.cli_first_five_live_board[3]",
+              "bars.b0.cli_first_five_live_board[4]",
+              "bars.b0.cli_log_lines_that_did_not_parse",
+              "bars.b0.note",
+              "bars.b0.reference_asof"
+            ],
             "entropy": [
+              "bars.b0.distinct_openings",
               "bars.b0.example_openings[0]",
               "bars.b0.example_openings[1]",
               "bars.b0.example_openings[2]",
@@ -389,67 +484,117 @@
               "bars.flow.randomized_room_seed",
               "bars.flow.randomized_seed"
             ],
-            "ui2_columns": [
-              "bars.b2.slim_columns[4]"
-            ],
             "timing": [
               "bars.b3.worst_ms",
               "bars.b3.worst_pick_ms_by_seat.autopilot",
               "bars.b3.worst_pick_ms_by_seat.balanced",
               "bars.b3.worst_pick_ms_by_seat.chalk",
+              "bars.b3.worst_pick_ms_by_seat.fitted_manager",
               "bars.b3.worst_pick_ms_by_seat.reacher",
               "bars.b3.worst_pick_ms_by_seat.safe_floor",
-              "bars.b3.worst_pick_ms_by_seat.upside_chaser",
-              "bars.b3.worst_pick_ms_by_seat.value_hawk"
-            ],
-            "stat_dict": [
-              "bars.b5.n_entries"
+              "bars.b3.worst_pick_ms_by_seat.upside_chaser"
             ]
           },
-          "unclassified": []
+          "unclassified": [],
+          "n_unclassified": 0
         },
         "analysis/session_k2_app.json": {
           "comparable": true,
-          "leaves": 162,
+          "leaves": 173,
+          "vintage": {
+            "committed": null,
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": null,
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": "inputs_unstamped_baseline",
           "moved": {
-            "display_count": 4,
-            "UNCLASSIFIED": 23
+            "inputs_unstamped_baseline": 32
           },
           "moved_paths": {
-            "display_count": [
-              "bars.b1.runs[0].n_dataframes",
-              "bars.b1.runs[1].n_dataframes",
-              "bars.b1.runs[2].n_dataframes",
-              "bars.flow.post_page_dataframes"
-            ],
-            "UNCLASSIFIED": [
-              "bars.b3.max_bye_starters",
-              "bars.b3.n_handcuff_gaps",
+            "inputs_unstamped_baseline": [
+              "bars.b3.max_team_players",
               "bars.b4.adjacent_overlapping_pairs",
               "bars.b4.at_censoring_point",
-              "bars.b4.no_distribution_rows",
               "bars.b5.grades.YOU",
               "bars.b5.grades.autopilot",
-              "bars.b5.grades.balanced"
+              "bars.b5.grades.balanced",
+              "bars.b5.grades.chalk",
+              "bars.b5.grades.fitted_manager"
             ]
           },
-          "unclassified": [
-            "bars.b3.max_bye_starters: 3 -> 4",
-            "bars.b3.n_handcuff_gaps: 4 -> 2",
-            "bars.b4.adjacent_overlapping_pairs: 146 -> 150",
-            "bars.b4.at_censoring_point: 70 -> 72",
-            "bars.b4.no_distribution_rows: 31 -> 30",
-            "bars.b5.grades.YOU: 'C+ 59' -> 'D+ 39'",
-            "bars.b5.grades.autopilot: 'C\u2212 44' -> 'B 72'",
-            "bars.b5.grades.balanced: 'D\u2212 31' -> 'C 54'"
-          ]
+          "unclassified": [],
+          "n_unclassified": 0
         },
         "analysis/session_ui_1.json": {
-          "comparable": false,
-          "reason": "not in HEAD (uncommitted since UI-1)"
+          "comparable": true,
+          "leaves": 407,
+          "vintage": {
+            "committed": null,
+            "current": "ffc-20260817",
+            "moved": false
+          },
+          "room": {
+            "committed": null,
+            "current": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
+            "moved": false
+          },
+          "input_bucket": "inputs_unstamped_baseline",
+          "moved": {
+            "inputs_unstamped_baseline": 24,
+            "comparator_self": 169
+          },
+          "moved_paths": {
+            "inputs_unstamped_baseline": [
+              "bars.b0.board_vintage",
+              "bars.b0.every_moved_leaf_classified",
+              "bars.b0.note",
+              "bars.b0.room_mix[0]",
+              "bars.b0.room_mix[1]",
+              "bars.b0.room_mix[2]",
+              "bars.b0.room_mix[3]",
+              "bars.b0.room_mix[4]"
+            ],
+            "comparator_self": [
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.input_bucket",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.leaves",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.entropy",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.inputs_unstamped_baseline",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.stat_dict",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.timing",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.ui2_column_lists",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[0]"
+            ]
+          },
+          "unclassified": [],
+          "n_unclassified": 0
         }
       },
-      "tail": " is what this runs.\n\n--- b5 ---\n  B5 \u2014 P(THERE) on the slim board IS reach_risk_view, and no expander hides it\n  PASS\n    rows_compared: 25\n    values_identical: True\n    uncovered_rows_stay_nan: True\n    uncovered_rows: 15\n    slim_board_carries_column: True\n    rail_panel_renders: True\n    expanders_on_the_draft_page: 0\n    documented_in_stat_dict: True\n    in_cli_slim_board: True\n    window_picks: 5\n    note: T37 closed: the draft room now renders zero expanders. The readout is our single most differentiated number \u2014 a validated P(available) with an un-drifted baseline, which FantasyPros' Pick Predictor has neither of \u2014 and it shipped collapsed for a session.\n\n--- b6 ---\n  B6 \u2014 zero st.json in app/; the elite-fall dump is a titled table\n  PASS\n    st_json_total: 0\n    json_elements_rendered: 0\n    elite_table_rendered: True\n    note: The dump was not wrong, it was unreadable \u2014 and it survived into 14.N because K2 *moved* the readouts from the room page rather than rewriting them. A defect that changes address without being looked at is the cheapest kind to keep.\n\n--- flow ---\n  FLOW \u2014 all six pages render at k \u2208 {0,1,4}; a pick made by clicking completes\n  PASS\n    picks_before: 145\n    picks_after: 150\n    completed_by_click: True\n    navigated_to_post_draft: True\n    clicked: Ka'imi Fairbairn\n    n_exceptions: 0\n    modal_click_not_drivable: True\n\n--- b0 ---\n  B0 \u2014 the K2 sheet re-runs (K1.5 and K1 nested), and every moved leaf is named\n  FAIL\n    returncode: 0\n    k2_all_pass: True\n    k1_5_all_pass: True\n    k1_all_pass: True\n    every_moved_leaf_classified: False\n    note: No **model** number moved: every 'differing: 0' / '150 of 150 identical' / Brier / grade / cliff / probability field is untouched. What moved is the count of rendered elements (UI-1 adds a table to 14.N and a panel to the rail), the OS-entropy seeds T34 deliberately draws fresh, wall-clock timings, and the stat dictionary gaining `P(THERE)`.\n\nSOME BARS FAILED -> analysis/session_ui_1.json\n"
+      "tail": "hides it\n  PASS\n    rows_compared: 25\n    values_identical: True\n    uncovered_rows_stay_nan: True\n    uncovered_rows: 15\n    slim_board_carries_column: True\n    rail_panel_renders: True\n    expanders_on_the_draft_page: 0\n    documented_in_stat_dict: True\n    in_cli_slim_board: True\n    window_picks: 5\n    note: T37 closed: the draft room now renders zero expanders. The readout is our single most differentiated number \u2014 a validated P(available) with an un-drifted baseline, which FantasyPros' Pick Predictor has neither of \u2014 and it shipped collapsed for a session.\n\n--- b6 ---\n  B6 \u2014 zero st.json in app/; the elite-fall dump is a titled table\n  PASS\n    st_json_total: 0\n    json_elements_rendered: 0\n    elite_table_rendered: True\n    note: The dump was not wrong, it was unreadable \u2014 and it survived into 14.N because K2 *moved* the readouts from the room page rather than rewriting them. A defect that changes address without being looked at is the cheapest kind to keep.\n\n--- flow ---\n  FLOW \u2014 all six pages render at k \u2208 {0,1,4}; a pick made by clicking completes\n  PASS\n    picks_before: 145\n    picks_after: 150\n    completed_by_click: True\n    navigated_to_post_draft: True\n    clicked: Dalton Kincaid\n    n_exceptions: 0\n    modal_click_not_drivable: True\n\n--- b0 ---\n  B0 \u2014 the K2 sheet re-runs (K1.5 and K1 nested), and every moved leaf is named\n  FAIL\n    returncode: 0\n    k2_all_pass: True\n    k1_5_all_pass: True\n    k1_all_pass: True\n    every_moved_leaf_classified: True\n    board_vintage: ffc-20260817\n    note: No **model** number moved: every 'differing: 0' / '150 of 150 identical' / Brier / grade / cliff / probability field is untouched. What moved is the count of rendered elements (UI-1 adds a table to 14.N and a panel to the rail), the OS-entropy seeds T34 deliberately draws fresh, wall-clock timings, the stat dictionary gaining `P(THERE)` \u2014 and, from 2026-08-17, the two *inputs*: a newer ADP board and MM-1a's room.\n\nSOME BARS FAILED -> analysis/session_ui_1.json\n"
     }
   }
 }

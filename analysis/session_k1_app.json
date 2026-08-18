@@ -3,6 +3,18 @@
   "seed": 7,
   "room_seed": 1,
   "seats": "3,7",
+  "board_vintage": "ffc-20260817",
+  "room_mix": [
+    "autopilot",
+    "balanced",
+    "balanced",
+    "fitted_manager",
+    "value_hawk",
+    "safe_floor",
+    "reacher",
+    "upside_chaser",
+    "chalk"
+  ],
   "all_pass": true,
   "bars": {
     "b2": {
@@ -10,16 +22,16 @@
       "pass": true,
       "season": 2026,
       "source": "ffc",
-      "vintage": "ffc-20260801",
-      "n_resolved": 244,
-      "n_served": 244,
+      "vintage": "ffc-20260817",
+      "n_resolved": 256,
+      "n_served": 256,
       "n_missing": 0,
       "missing_examples": [],
       "gate": {
         "gate": "board_vintage_2026",
         "passed": true,
-        "n_served": 244,
-        "n_resolved": 244,
+        "n_served": 256,
+        "n_resolved": 256,
         "n_missing": 0,
         "missing_examples": []
       }
@@ -60,12 +72,12 @@
       "bar": "B4 \u2014 a k-of-n draft completes and fields a legal lineup, k in {0,1,4,9,10}",
       "pass": true,
       "board_supply": {
-        "WR": 84,
-        "RB": 63,
+        "WR": 91,
+        "RB": 66,
         "QB": 29,
         "DST": 26,
-        "TE": 24,
-        "K": 18
+        "TE": 25,
+        "K": 19
       },
       "runs": [
         {
@@ -116,204 +128,205 @@
       "first_differing_pick": null,
       "max_abs_diff": {
         "rank": 0.0,
-        "starters": 0.4960000000000946,
-        "proj": 0.46199999999953434,
-        "startable": 0.2911115132386044,
-        "capital": 0.4897057969636762
+        "starters": 0.34400000000005093,
+        "proj": 0.4579999999996289,
+        "startable": 0.3757886124053016,
+        "capital": 0.4721866139969677
       },
+      "cli_log_lines_that_did_not_parse": 0,
       "note": "The CLI ran as a subprocess and was parsed off stdout; the app ran in-process through app/engine.py. Different entry points, one engine.",
       "cli_summary": [
         {
           "rank": 1,
-          "team": 7,
-          "who": "YOU (T7)",
+          "team": 3,
+          "who": "YOU (T3)",
           "starters": 2398.0,
-          "proj": 3210.0,
-          "startable": 336.0,
-          "capital": 282.0
+          "proj": 3236.0,
+          "startable": 196.0,
+          "capital": 139.0
         },
         {
           "rank": 2,
           "team": 2,
           "who": "autopilot",
-          "starters": 2374.0,
-          "proj": 3229.0,
-          "startable": 366.0,
-          "capital": 326.0
+          "starters": 2373.0,
+          "proj": 3262.0,
+          "startable": 354.0,
+          "capital": 393.0
         },
         {
           "rank": 3,
           "team": 10,
           "who": "chalk",
-          "starters": 2329.0,
-          "proj": 3039.0,
-          "startable": 219.0,
-          "capital": 107.0
+          "starters": 2319.0,
+          "proj": 3127.0,
+          "startable": 282.0,
+          "capital": 161.0
         },
         {
           "rank": 4,
-          "team": 5,
-          "who": "safe_floor",
-          "starters": 2302.0,
-          "proj": 3112.0,
-          "startable": 391.0,
-          "capital": 360.0
+          "team": 1,
+          "who": "reacher",
+          "starters": 2287.0,
+          "proj": 2903.0,
+          "startable": 230.0,
+          "capital": 83.0
         },
         {
           "rank": 5,
-          "team": 3,
-          "who": "YOU (T3)",
-          "starters": 2240.0,
-          "proj": 3094.0,
-          "startable": 409.0,
-          "capital": 373.0
+          "team": 5,
+          "who": "safe_floor",
+          "starters": 2252.0,
+          "proj": 2766.0,
+          "startable": 413.0,
+          "capital": 487.0
         },
         {
           "rank": 6,
-          "team": 4,
-          "who": "balanced",
-          "starters": 2226.0,
-          "proj": 2735.0,
-          "startable": 252.0,
-          "capital": 34.0
+          "team": 7,
+          "who": "YOU (T7)",
+          "starters": 2248.0,
+          "proj": 3110.0,
+          "startable": 322.0,
+          "capital": 254.0
         },
         {
           "rank": 7,
-          "team": 1,
-          "who": "reacher",
-          "starters": 2189.0,
-          "proj": 2863.0,
-          "startable": 45.0,
-          "capital": -68.0
+          "team": 6,
+          "who": "fitted_manager",
+          "starters": 2245.0,
+          "proj": 2785.0,
+          "startable": 292.0,
+          "capital": 213.0
         },
         {
           "rank": 8,
           "team": 9,
           "who": "value_hawk",
-          "starters": 2189.0,
-          "proj": 2959.0,
-          "startable": 454.0,
-          "capital": 468.0
+          "starters": 2229.0,
+          "proj": 3026.0,
+          "startable": 433.0,
+          "capital": 444.0
         },
         {
           "rank": 9,
-          "team": 6,
+          "team": 4,
           "who": "balanced",
-          "starters": 2156.0,
-          "proj": 2924.0,
-          "startable": 314.0,
-          "capital": 246.0
+          "starters": 2213.0,
+          "proj": 2794.0,
+          "startable": 324.0,
+          "capital": 124.0
         },
         {
           "rank": 10,
           "team": 8,
           "who": "upside_chaser",
-          "starters": 2088.0,
-          "proj": 2721.0,
-          "startable": 30.0,
-          "capital": -184.0
+          "starters": 1972.0,
+          "proj": 2702.0,
+          "startable": 29.0,
+          "capital": -151.0
         }
       ],
       "app_summary": [
         {
           "rank": 1,
-          "team": 7,
-          "who": "YOU (T7)",
+          "team": 3,
+          "who": "YOU (T3)",
           "human": true,
-          "proj": 3209.856,
-          "starters": 2397.956,
-          "startable": 336.2911,
-          "capital": 281.5103
+          "proj": 3235.542,
+          "starters": 2397.942,
+          "startable": 195.719,
+          "capital": 138.6073
         },
         {
           "rank": 2,
           "team": 2,
           "who": "autopilot",
           "human": false,
-          "proj": 3228.71,
-          "starters": 2373.78,
-          "startable": 366.1091,
-          "capital": 325.529
+          "proj": 3262.456,
+          "starters": 2372.926,
+          "startable": 353.6825,
+          "capital": 393.3152
         },
         {
           "rank": 3,
           "team": 10,
           "who": "chalk",
           "human": false,
-          "proj": 3039.292,
-          "starters": 2329.232,
-          "startable": 219.1513,
-          "capital": 107.1234
+          "proj": 3126.828,
+          "starters": 2318.868,
+          "startable": 282.0087,
+          "capital": 161.3878
         },
         {
           "rank": 4,
-          "team": 5,
-          "who": "safe_floor",
-          "human": false,
-          "proj": 3112.206,
-          "starters": 2301.956,
-          "startable": 390.9765,
-          "capital": 359.7669
-        },
-        {
-          "rank": 5,
-          "team": 3,
-          "who": "YOU (T3)",
-          "human": true,
-          "proj": 3094.394,
-          "starters": 2239.654,
-          "startable": 408.9342,
-          "capital": 373.2887
-        },
-        {
-          "rank": 6,
-          "team": 4,
-          "who": "balanced",
-          "human": false,
-          "proj": 2735.346,
-          "starters": 2226.296,
-          "startable": 251.9101,
-          "capital": 34.3338
-        },
-        {
-          "rank": 7,
           "team": 1,
           "who": "reacher",
           "human": false,
-          "proj": 2862.946,
-          "starters": 2189.496,
-          "startable": 45.0348,
-          "capital": -68.3391
+          "proj": 2903.194,
+          "starters": 2286.854,
+          "startable": 229.916,
+          "capital": 82.7206
+        },
+        {
+          "rank": 5,
+          "team": 5,
+          "who": "safe_floor",
+          "human": false,
+          "proj": 2766.184,
+          "starters": 2252.074,
+          "startable": 413.1052,
+          "capital": 486.568
+        },
+        {
+          "rank": 6,
+          "team": 7,
+          "who": "YOU (T7)",
+          "human": true,
+          "proj": 3109.566,
+          "starters": 2247.656,
+          "startable": 322.2422,
+          "capital": 254.2405
+        },
+        {
+          "rank": 7,
+          "team": 6,
+          "who": "fitted_manager",
+          "human": false,
+          "proj": 2784.806,
+          "starters": 2244.756,
+          "startable": 292.3632,
+          "capital": 213.4722
         },
         {
           "rank": 8,
           "team": 9,
           "who": "value_hawk",
           "human": false,
-          "proj": 2959.204,
-          "starters": 2188.934,
-          "startable": 454.2668,
-          "capital": 467.8714
+          "proj": 3026.21,
+          "starters": 2229.06,
+          "startable": 432.6242,
+          "capital": 444.0558
         },
         {
           "rank": 9,
-          "team": 6,
+          "team": 4,
           "who": "balanced",
           "human": false,
-          "proj": 2924.092,
-          "starters": 2156.452,
-          "startable": 314.1207,
-          "capital": 245.8311
+          "proj": 2794.306,
+          "starters": 2213.126,
+          "startable": 324.2268,
+          "capital": 124.1976
         },
         {
           "rank": 10,
           "team": 8,
           "who": "upside_chaser",
           "human": false,
-          "proj": 2720.538,
-          "starters": 2088.028,
-          "startable": 30.0648,
-          "capital": -184.474
+          "proj": 2702.202,
+          "starters": 1972.132,
+          "startable": 29.1695,
+          "capital": -151.145
         }
       ]
     },

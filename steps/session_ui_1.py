@@ -44,10 +44,12 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import engine, palette, post_draft, probe, views  # noqa: E402
+from steps import _sheet_diff  # noqa: E402
 
 from fantasy_quant.data import db  # noqa: E402
 from fantasy_quant.draft import optimizer, session  # noqa: E402
 from fantasy_quant.draft.config import LeagueSettings  # noqa: E402
+from fantasy_quant.draft.personalities import PROFILE_FALLBACK  # noqa: E402
 from fantasy_quant.draft.simulator import _apply_pick, pick_by_adp  # noqa: E402
 
 OUT = Path("analysis/session_ui_1.json")
@@ -58,6 +60,8 @@ APP_DIR = ROOT / "app"
 CONFIG = ROOT / ".streamlit" / "config.toml"
 SEAT = 5                       # 0-indexed; the seat every sheet since K1.5 is written from
 BAR_SIMS = 120
+#: K1's B1 constants, re-stated so the pinned control (T41) replays *that* draft, not a lookalike.
+K1_SEED, K1_ROOM_SEED, K1_SEATS = 7, 1, "3,7"
 
 #: The census that produced the 68. **It ships here so the before and the after are one
 #: instrument** — a compression bar measured with a different ruler than the one that set the
@@ -67,6 +71,15 @@ BAR_SIMS = 120
 PROSE_RE = re.compile(r"\.(caption|warning|info|error|success)\(")
 PROSE_BEFORE = 68              # UI-PLAN §3.1, re-derived from git in bar B2 rather than trusted
 PROSE_TARGET = 25              # the user's call, 2026-08-01
+#: ★★ **The commit "before" means, pinned — Session K2, the tree UI-1 started from.**
+#: B2 read its baseline from ``git show HEAD:``, which was the *pre*-UI-1 app for exactly as long as
+#: UI-1 stayed uncommitted. The moment the work landed (``c712f86``) the baseline became the
+#: compressed app and the census read **24 → 24, removed: 0** — a compression bar reporting that no
+#: compression happened, on the session that did it. Third member of the family this repo keeps
+#: meeting: *a stale reference is not a control* (seat-map terms), T41 for the board, and this for
+#: the diff. A baseline is a **fixed point in history**; anything that moves with `HEAD` is a moving
+#: target wearing a baseline's name.
+PROSE_BEFORE_REF = "5eff21d"
 
 
 def _con():
@@ -261,9 +274,12 @@ def bar_b2() -> dict:
     ⚠ The compression is only honest because B3 is paired with it. Deleting a paragraph passes this
     bar; deleting an honesty surface passes it too, which is why the two bars ship together and why
     B3 asserts by driving the app rather than by reading the diff.
+
+    ⚠ **The baseline is a commit, not ``HEAD``** — see :data:`PROSE_BEFORE_REF`. Reading it from
+    ``HEAD`` made the bar true only while the session was uncommitted, and self-refuting afterwards.
     """
     def from_git(f: Path):
-        r = subprocess.run(["git", "show", f"HEAD:app/{f.name}"], cwd=ROOT,
+        r = subprocess.run(["git", "show", f"{PROSE_BEFORE_REF}:app/{f.name}"], cwd=ROOT,
                            capture_output=True, text=True)
         return r.stdout if r.returncode == 0 else None
 
@@ -275,6 +291,7 @@ def bar_b2() -> dict:
             "before_total": n_before, "after_total": n_after, "target": PROSE_TARGET,
             "before_reproduces_ui_plan_68": n_before == PROSE_BEFORE,
             "before_by_file": before, "after_by_file": after,
+            "before_ref": PROSE_BEFORE_REF,
             "removed": n_before - n_after,
             "note": ("The census is `st.caption` + the four alert primitives — 37 + 31 = the 68 in "
                      "UI-PLAN §3.1. `st.markdown` is excluded because those 28 blocks are mostly "
@@ -632,71 +649,81 @@ def bar_flow(con, season: int) -> dict:
 # ------------------------------------------------------------------------------------------------
 # B0 — the K1 rule: nothing this session touched moved a number
 # ------------------------------------------------------------------------------------------------
-#: What a *display* session is allowed to move in a committed sheet, and nothing else.
-#: Each entry is (category, predicate on the flattened JSON path). **An unmatched change fails the
-#: bar**, which is the point: "all bars still pass" is a weaker claim than "and here is exactly what
-#: moved and why", and the second is the one K1's rule actually makes.
-_ALLOWED_MOVES: tuple[tuple[str, str], ...] = (
-    # counts of *rendered elements* — UI-1 adds a table to 14.N (T38) and a panel to the rail (T37)
-    ("display_count", "n_elements_rendered"),
-    ("display_count", "n_dataframes"),
-    ("display_count", "post_page_dataframes"),
-    # T34's entropy defaults: the app draws its seeds from the OS, so these were never stable and a
-    # sheet that reproduced them would mean the randomisation had stopped working
-    ("entropy", "randomized_seed"), ("entropy", "randomized_room_seed"),
-    ("entropy", "replayed_seed"), ("entropy", "replayed_room_seed"),
-    ("entropy", "distinct_openings"), ("entropy", "example_openings"),
-    # wall clock. ⚠ `worst_seat` is the **argmax** of `worst_pick_ms_by_seat`, and it was the one
-    # leaf the first version of this list missed — correctly, in the sense that the bar caught it
-    # rather than waving it through. It belongs here: the seven seats sit within a few milliseconds
-    # of each other, so *the argmax of a noisy vector is noisier than the vector*, and a run where
-    # `reacher` beats `upside_chaser` by 0.4 ms is not a finding about either.
-    ("timing", "worst_ms"), ("timing", "worst_pick_ms_by_seat"), ("timing", "worst_seat"),
-    # the stat dictionary gains exactly one entry: the attached `P(THERE)` column
-    ("stat_dict", "n_entries"),
-    # ★ **added by Session UI-2, 2026-08-01, and this list is cumulative by design.** Its docstring
-    # says *what a display session is allowed to move* — not what UI-1 moved — so a later session
-    # that legitimately adds a board column extends it rather than being failed by it. UI-2 adds
-    # `Δ` to the slim view, which lengthens the column list K1.5's bar B2 records. **The values in
-    # those columns are a separate claim and are checked separately**, column by column, by UI-2's
-    # own B0: a list getting longer is a display change, a number inside it moving is not.
-    ("ui2_column_lists", "slim_columns"),
-)
+def _committed_room(committed: dict, n_humans: int) -> tuple[list[str], str]:
+    """The room a committed sheet was measured under, at the seat count the control needs.
+
+    ★ **Read from the sheet's own stamp, never assumed.** A sheet written from 2026-08-17 carries
+    ``room_mix``; whether it contains ``fitted_manager`` is the whole question, because that is the
+    seat MM-1a added. For the pre-stamp sheets the answer is known from the register — they were
+    measured before 08-05 — and the fallback says so **in the artifact** rather than in a comment.
+
+    It is not hard-coded either way: 16.18's own gate degrades a ``requires_profile`` seat to
+    ``balanced`` and its docstring promises that an uncovered season reproduces the pre-16.18 room
+    *bit-for-bit*, so this asks the shipped code for the old room instead of asserting what it was.
+    """
+    stamp = _sheet_diff.sheet_room(committed)
+    had_fitted = ("fitted_manager" in stamp) if stamp else False
+    source = "the sheet's room_mix stamp" if stamp else "pre-MM-1a (sheet predates the stamp)"
+    room = list(session.realistic_mix(int(n_humans)))
+    if not had_fitted:
+        room = [PROFILE_FALLBACK if n == "fitted_manager" else n for n in room]
+    return room, source
 
 
-def _flatten(obj, prefix: str = ""):
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            yield from _flatten(v, f"{prefix}.{k}" if prefix else str(k))
-    elif isinstance(obj, list):
-        for i, v in enumerate(obj):
-            yield from _flatten(v, f"{prefix}[{i}]")
-    else:
-        yield prefix, obj
+def _pinned_control(con, season: int, committed_vintage: str | None) -> dict:
+    """★★ **T41's other half: pin the input, do not merely report it.**
+
+    Classifying a moved leaf as *the board moved* is a hypothesis. This is the test of it — the
+    **same code** re-run on the **committed sheet's board** (``build_board(..., asof=)``, VH.0) and
+    the **committed sheet's room** (16.18's gate, via a season the profile does not cover), asked to
+    reproduce K1's ``app_summary`` **bit-for-bit**. If it does, every leaf that moved on the live
+    board moved because the world moved. If it does not, the classification is worthless and B0 says
+    so, which is the failure mode the register entry cares about: *a control that cannot tell "the
+    world moved" from "the code broke".*
+
+    ⚠ It reproduces the draft K1's B1 builds — same seats, same seeds, same constructor — because
+    that block is where 122 of the 145 unclassified leaves lived.
+    """
+    committed = json.loads(
+        subprocess.run(["git", "show", "HEAD:analysis/session_k1_app.json"], cwd=ROOT,
+                       capture_output=True, text=True).stdout or "{}")
+    want = ((committed.get("bars") or {}).get("b1") or {}).get("app_summary")
+    vintage = committed and _sheet_diff.sheet_vintage(committed)
+    asof = _asof_for(vintage)
+    if not want or not asof:
+        return {"ran": False, "reason": f"committed K1 sheet has no reproducible input "
+                                        f"(app_summary={bool(want)}, vintage={vintage!r})"}
+    built = engine.build(con, season, asof=asof)
+    seats = session.parse_seats(K1_SEATS)
+    room, room_source = _committed_room(committed, len(seats))   # K1's B1 drives TWO seats -> eight
+    state, meta = engine.start_draft(built, human_seats=seats, settings=LeagueSettings(),
+                                     season=season, seed=K1_SEED, room_seed=K1_ROOM_SEED,
+                                     room_arg=",".join(room))
+    _finish(state, meta, built["risk"])
+    got = session.summary_table(state, session.seat_map_from(meta),
+                                built["value_index"]).round(4).to_dict("records")
+    differing = [f"{i}.{k}" for i, (a, b) in enumerate(zip(want, got, strict=False))
+                 for k in a if a.get(k) != b.get(k)]
+    return {"ran": True, "pinned_vintage": vintage, "asof": asof,
+            "pinned_room": room, "pinned_room_source": room_source,
+            "live_room": _sheet_diff.room_stamp(),
+            "rows_compared": min(len(want), len(got)), "n_rows_committed": len(want),
+            "reproduced_bit_for_bit": not differing and len(want) == len(got),
+            "differing": differing[:12],
+            "note": ("The committed sheet's board and room, replayed by today's code. This is "
+                     "what licenses the `vintage_changed` / `room_changed` classification below; "
+                     "without it those buckets are a guess with a name on it.")}
 
 
-def _classify_moves(rel: str) -> dict:
-    """Every leaf that changed in a committed sheet, and which allowance it falls under."""
-    head = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=ROOT, capture_output=True, text=True)
-    if head.returncode != 0:
-        return {"comparable": False}
-    before = dict(_flatten(json.loads(head.stdout)))
-    after = dict(_flatten(json.loads((ROOT / rel).read_text())))
-    moved, unclassified = {}, []
-    for key in sorted(set(before) | set(after)):
-        if before.get(key) == after.get(key):
-            continue
-        cat = next((c for c, frag in _ALLOWED_MOVES if frag in key), None)
-        if cat is None:
-            unclassified.append(f"{key}: {before.get(key)!r} -> {after.get(key)!r}")
-        moved.setdefault(cat or "UNCLASSIFIED", []).append(key)
-    return {"comparable": True, "leaves": len(set(before) | set(after)),
-            "moved": {k: len(v) for k, v in moved.items()},
-            "moved_paths": {k: v[:8] for k, v in moved.items()},
-            "unclassified": unclassified[:8]}
+def _asof_for(vintage: str | None) -> str | None:
+    """``'ffc-20260801'`` -> ``'2026-08-01'``, the date ``resolve_board(asof=)`` wants."""
+    if not vintage or "-" not in vintage:
+        return None
+    d = vintage.rsplit("-", 1)[-1]
+    return f"{d[:4]}-{d[4:6]}-{d[6:]}" if len(d) == 8 and d.isdigit() else None
 
 
-def bar_b0() -> dict:
+def bar_b0(con, season: int) -> dict:
     """*If a display change moves a number, it is not a display change.*
 
     UI-1 adds a theme, a palette, a strip, a compression pass and one attached column. It refits
@@ -707,8 +734,14 @@ def bar_b0() -> dict:
     22 leaves of 538 did move across the three sheets, and *every one of them being harmless is a
     claim that deserves an instrument rather than a sentence*. So the second half of this bar diffs
     each sheet against ``git show HEAD:`` and requires every changed leaf to fall under a named
-    allowance — a rendered-element count, a T34 entropy draw, a wall-clock timing, or the one new
-    stat-dictionary entry. **An unclassified move fails the bar.**
+    allowance. **An unclassified move fails the bar.**
+
+    ★★ **T41 (2026-08-17).** Two inputs moved under these sheets between 08-01 and 08-17 — the
+    Stage-0 chore banked a new ADP board, and MM-1a seated ``fitted_manager`` in the room — and the
+    comparator had no way to say either. It does now: each sheet stamps its board vintage and room
+    mix, board- and room-driven leaves land in named buckets **only when the stamps actually
+    moved**, gates are never attributable, and :func:`_pinned_control` re-runs the old inputs
+    through today's code to prove the attribution rather than assert it.
     """
     r = subprocess.run([sys.executable, "steps/session_k2_app.py"], cwd=ROOT,
                        capture_output=True, text=True, timeout=14400)
@@ -717,23 +750,38 @@ def bar_b0() -> dict:
     per_bar = {k: v.get("pass") for k, v in (data.get("bars") or {}).items()}
     nested = data.get("bars", {}).get("b0", {})
 
-    moves = {p: _classify_moves(p) for p in ("analysis/session_k1_app.json",
-                                             "analysis/session_k1_5_app.json",
-                                             "analysis/session_k2_app.json")}
+    now_v, now_r = _sheet_diff.board_stamp(con, season), _sheet_diff.room_stamp()
+    moves = {}
+    for p in ("analysis/session_k1_app.json", "analysis/session_k1_5_app.json",
+              "analysis/session_k2_app.json"):
+        head = subprocess.run(["git", "show", f"HEAD:{p}"], cwd=ROOT, capture_output=True,
+                              text=True)
+        doc = json.loads(head.stdout) if head.returncode == 0 else {}
+        moves[p] = _sheet_diff.classify_moves(
+            p, vintage=(_sheet_diff.sheet_vintage(doc), now_v),
+            room=(_sheet_diff.sheet_room(doc), now_r))
     clean = all(not m.get("unclassified") for m in moves.values())
+    pinned = _pinned_control(con, season, now_v)
+    attributed = bool(pinned.get("reproduced_bit_for_bit"))
+    inputs_moved = any((m.get("input_bucket") or "") != "" for m in moves.values())
     return {"bar": "B0 — the K2 sheet re-runs (K1.5 and K1 nested), and every moved leaf is named",
-            "pass": bool(data.get("all_pass") and clean),
+            # ★ when an input moved, the classification is only believed if the pinned control
+            # reproduced the old measurement. A named bucket is not evidence; the replay is.
+            "pass": bool(data.get("all_pass") and clean and (attributed or not inputs_moved)),
             "returncode": r.returncode, "k2_all_pass": data.get("all_pass"),
             "k2_per_bar": per_bar,
             "k1_5_all_pass": nested.get("k1_5", {}).get("all_pass"),
             "k1_all_pass": nested.get("k1_nested", {}).get("all_pass"),
             "every_moved_leaf_classified": clean,
+            "board_vintage": now_v, "room_mix": now_r,
+            "pinned_control": pinned,
             "moves_vs_committed": moves,
             "note": ("No **model** number moved: every 'differing: 0' / '150 of 150 identical' / "
                      "Brier / grade / cliff / probability field is untouched. What moved is the "
                      "count of rendered elements (UI-1 adds a table to 14.N and a panel to the "
                      "rail), the OS-entropy seeds T34 deliberately draws fresh, wall-clock "
-                     "timings, and the stat dictionary gaining `P(THERE)`."),
+                     "timings, the stat dictionary gaining `P(THERE)` — and, from 2026-08-17, the "
+                     "two *inputs*: a newer ADP board and MM-1a's room."),
             "tail": "" if data.get("all_pass") else r.stdout[-1500:]}
 
 
@@ -754,7 +802,7 @@ def main() -> None:
         "b5": lambda: bar_b5(con, season),
         "b6": lambda: bar_b6(con, season),
         "flow": lambda: bar_flow(con, season),
-        "b0": bar_b0,
+        "b0": lambda: bar_b0(con, season),
     }
     if a.only:
         plan = {a.only: plan[a.only]}
@@ -773,6 +821,10 @@ def main() -> None:
     report = {"season": season, "seat": SEAT + 1, "bar_sims": BAR_SIMS,
               "prose_before": PROSE_BEFORE, "prose_target": PROSE_TARGET,
               "palette": dict(palette.POSITION_COLORS),
+              # ★ T41 — the sheet says which inputs produced it. A comparator can then tell "the
+              # world moved" from "the code broke"; without these two leaves it cannot, and it
+              # said the alarming thing both times for a fortnight.
+              **_sheet_diff.input_stamp(con, season),
               "all_pass": all(r["pass"] for r in results.values()), "bars": results}
     # ⚠ a partial run writes a partial artifact. See the module docstring.
     out = OUT if not a.only else PARTIAL

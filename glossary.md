@@ -4,7 +4,10 @@ Living reference for the fantasy + quant terms in this project. Updated as we co
 current — there is a standing memory note about glossary maintenance). New terms fold into the right
 section, not just appended.
 
-> **Last updated:** 2026-07-30 — **seat-map terms** (bottom section, 16.17 **BUILT**, 14.J still
+> **Last updated:** 2026-08-17 — **bar-sheet comparator terms** (bottom section, T41/T40/T55:
+> board vintage stamp · gate leaf vs readout leaf · the pinned control · the room is an input ·
+> constructed vs sampled control · an inert guard). _Previously:_ 2026-07-30 — **seat-map terms**
+> (16.17 **BUILT**, 14.J still
 > planned: seat map · k-of-n control · the positional-mapping smell · one draft is one observation ·
 > bars have a scope, not just a value · **the poisoned control** · **a stale reference is not a
 > control**). _Previously:_ 2026-07-27 — **the 2×5 mock-room terms** (bottom section: the 2×5 room · censored
@@ -2991,3 +2994,51 @@ wk11–18, so the 9.64% season figure describes no team that ever took the field
 of that move is LA alone. The median (2.49% → 4.41%, highest in the ten stored seasons) and the
 count of teams ≥5% (6 → 13) are the honest instruments. *When a distribution has one runaway, report
 the median and say so.*
+
+
+## Bar-sheet comparator terms (2026-08-17, Session UI-3 step 0 — T41 · T40 · T55)
+
+**board vintage stamp.** The ADP snapshot a measurement was taken on, written *into the artifact* as
+`board_vintage` (`mock.board_vintage(raw, src)` → `ffc-20260817`). Until this session the bar sheets
+recorded their result and not their **input**, so after the mandated weekly Stage-0 pull a comparator
+could see 122 leaves move and could not say whether the cause was the world or the code. *A sheet that
+does not name its inputs cannot be re-read next week.* Sibling of [[T32]], where the same omission sat
+in a cache key instead of a control.
+
+**gate leaf vs readout leaf.** The partition that makes attribution honest. A **gate** is a leaf a
+bar's verdict rests on — a `pass` flag, an identity (`differing: 0`), a difference count, an
+`n_missing` — and it must hold on *any* board in *any* room, so a moved input can never excuse one. A
+**readout** is a leaf the board decides: who got drafted, `capital`, a grade, `n_resolved`. Only
+readouts are attributable to `vintage_changed` / `room_changed`, and only when the stamp actually
+moved. Ported from `mock_room_bars.py`, whose live season already sat under a top-level `readout_2026`
+its own docstring called *"an eyeball readout, never a gate"* — **a partition of the artifact, not an
+allowance bolted onto the comparator.**
+
+**the pinned control.** The second half of the same fix, and the half that carries the proof: re-run
+today's code on the committed sheet's **board** (`build_board(..., asof=)`) and its **room**, and
+require the old measurement back bit-for-bit. Classifying a moved leaf as *the board moved* is a
+hypothesis; the replay is the test of it. *A named bucket is not evidence.* Its first run paid for
+itself immediately — see the next entry.
+
+**the room is an input.** T41 was written on 2026-08-01 and named one input, the ADP board. MM-1a
+seated `fitted_manager` in `REALISTIC_ROOM` on 08-05, and VH.1's T33 divisor fix moved **20.7 % of
+picks at k=1** before that — so the 122 unclassified leaves had **three** causes and the interim rule
+("all the unclassified leaves are draft-outcome fields → re-baseline") would have waved all three
+through as one. **The instrument that can only say "the world moved" is the instrument that says it
+when the code moved too.**
+
+**constructed control vs sampled control** ([[T40]]). A control that requires each construction glyph
+to fire *somewhere in 40 sampled rows* is a control whose n can go to zero when the board refreshes —
+`handcuff` fired exactly once on the 07-30 board and never on 08-01, flipping B3 to FAIL with
+`mismatched: []`, i.e. every correctness claim intact. The repair is to **build** the case: the lead
+back and his handcuff are deterministic from board order within a backfield, so the fixture seats that
+pair and *requires* the glyph. The sampled tally stays in the sheet as a readout. Mirror image of K2's
+*a test that cannot fail* — here a control that fails on n = 1 produces a **false alarm** rather than a
+false pass, and both come from letting a sampled fixture decide whether the interesting case is there.
+
+**an inert guard** ([[T55]]). A guard that cannot fire on the path a human uses. 16.18's PIT gate
+degrades a `requires_profile` seat to `balanced` on a season the profile does not cover — but only if
+the constructor is *told* the season, and `app/engine.start_draft` never told it. Third instance in
+this repo after T22 and T35: *a guard that does not run on the path a human uses is not a guard.* Its
+test's first assertion is that a profile is loaded at all, because an unloaded profile degrades to the
+same `balanced` the gate produces — **an inert thing still passes**, for the sixth time.
