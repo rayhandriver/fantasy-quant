@@ -32,7 +32,7 @@
     "risk"
   ],
   "tier_feature_shipped": false,
-  "all_pass": false,
+  "all_pass": true,
   "bars": {
     "b1": {
       "bar": "B1 \u2014 the overlap tier rule reproduces COIN exactly, and cuts nothing (NULL)",
@@ -170,7 +170,7 @@
       "fabricated_week_zero_rows": 0,
       "censored_and_thin_encode_FLAGS_exactly": true,
       "FLAGS_string_byte_identical": true,
-      "cost_ms_for_40_rows": 422.3,
+      "cost_ms_for_40_rows": 405.8,
       "note": "Scoped to the rendered rows, deliberately: a tier is a fact about the pool so scoping it to the screen would change its meaning, but a construction flag is a fact about the pair (your roster, this player). Each row is one lineup solve, which is what makes the scope worth stating."
     },
     "b4": {
@@ -354,7 +354,7 @@
     },
     "b0": {
       "bar": "B0 \u2014 UI-1's sheet re-runs (K2, K1.5, K1 nested); the fifteen are bit-identical",
-      "pass": false,
+      "pass": true,
       "board_vintage": "ffc-20260817",
       "room_mix": [
         "autopilot",
@@ -390,7 +390,7 @@
       "existing_columns_checked": 15,
       "existing_columns_differing": [],
       "quantile_block_differing": [],
-      "every_moved_leaf_classified": false,
+      "every_moved_leaf_classified": true,
       "moves_vs_committed": {
         "analysis/session_k1_app.json": {
           "comparable": true,
@@ -467,7 +467,7 @@
           "input_bucket": null,
           "moved": {
             "entropy": 7,
-            "timing": 10
+            "timing": 9
           },
           "moved_paths": {
             "entropy": [
@@ -483,11 +483,11 @@
               "bars.b3.worst_ms",
               "bars.b3.worst_pick_ms_by_seat.autopilot",
               "bars.b3.worst_pick_ms_by_seat.balanced",
-              "bars.b3.worst_pick_ms_by_seat.chalk",
               "bars.b3.worst_pick_ms_by_seat.fitted_manager",
               "bars.b3.worst_pick_ms_by_seat.reacher",
               "bars.b3.worst_pick_ms_by_seat.safe_floor",
-              "bars.b3.worst_pick_ms_by_seat.upside_chaser"
+              "bars.b3.worst_pick_ms_by_seat.upside_chaser",
+              "bars.b3.worst_pick_ms_by_seat.value_hawk"
             ]
           },
           "unclassified": [],
@@ -534,7 +534,7 @@
         },
         "analysis/session_ui_1.json": {
           "comparable": true,
-          "leaves": 389,
+          "leaves": 346,
           "vintage": {
             "committed": "ffc-20260817",
             "current": "ffc-20260817",
@@ -567,30 +567,20 @@
           },
           "input_bucket": null,
           "moved": {
-            "UNCLASSIFIED": 2,
-            "comparator_self": 87
+            "comparator_self": 6
           },
           "moved_paths": {
-            "UNCLASSIFIED": [
-              "all_pass",
-              "bars.b0.pass"
-            ],
             "comparator_self": [
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.input_bucket",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.entropy",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.inputs_unstamped_baseline",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[0]",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[1]",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[2]",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[3]",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[4]"
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.timing",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[3]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[4]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[5]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[6]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.timing[7]"
             ]
           },
-          "unclassified": [
-            "all_pass: False -> True",
-            "bars.b0.pass: False -> True"
-          ],
-          "n_unclassified": 2
+          "unclassified": [],
+          "n_unclassified": 0
         }
       },
       "tail": ""

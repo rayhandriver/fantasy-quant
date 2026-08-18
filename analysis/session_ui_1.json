@@ -402,7 +402,7 @@
           "input_bucket": null,
           "moved": {
             "entropy": 7,
-            "timing": 10
+            "timing": 9
           },
           "moved_paths": {
             "entropy": [
@@ -418,11 +418,11 @@
               "bars.b3.worst_ms",
               "bars.b3.worst_pick_ms_by_seat.autopilot",
               "bars.b3.worst_pick_ms_by_seat.balanced",
-              "bars.b3.worst_pick_ms_by_seat.chalk",
               "bars.b3.worst_pick_ms_by_seat.fitted_manager",
               "bars.b3.worst_pick_ms_by_seat.reacher",
               "bars.b3.worst_pick_ms_by_seat.safe_floor",
-              "bars.b3.worst_pick_ms_by_seat.upside_chaser"
+              "bars.b3.worst_pick_ms_by_seat.upside_chaser",
+              "bars.b3.worst_pick_ms_by_seat.value_hawk"
             ]
           },
           "unclassified": [],
