@@ -21,13 +21,13 @@
       "n_drafts": 20,
       "distinct_openings": 20,
       "example_openings": [
-        "Bijan Robinson \u00b7 Jahmyr Gibbs \u00b7 Christian McCaffrey \u00b7 Puka Nacua \u00b7 Jaxon Smith-Njigba",
-        "Bijan Robinson \u00b7 Jahmyr Gibbs \u00b7 Ja'Marr Chase \u00b7 Amon-Ra St. Brown \u00b7 Puka Nacua",
-        "Bijan Robinson \u00b7 Jonathan Taylor \u00b7 Amon-Ra St. Brown \u00b7 Puka Nacua \u00b7 De'Von Achane"
+        "Bijan Robinson \u00b7 Christian McCaffrey \u00b7 Jahmyr Gibbs \u00b7 Jaxon Smith-Njigba \u00b7 CeeDee Lamb",
+        "Bijan Robinson \u00b7 De'Von Achane \u00b7 Jahmyr Gibbs \u00b7 Ja'Marr Chase \u00b7 Puka Nacua",
+        "Bijan Robinson \u00b7 Jahmyr Gibbs \u00b7 Amon-Ra St. Brown \u00b7 Ja'Marr Chase \u00b7 Puka Nacua"
       ],
       "locked_seeds_replay": true,
-      "replayed_seed": 216029,
-      "replayed_room_seed": 955681,
+      "replayed_seed": 325137,
+      "replayed_room_seed": 67124,
       "cli_first_five": [
         "Jahmyr Gibbs",
         "Ja'Marr Chase",
@@ -110,17 +110,17 @@
       "logs_identical": true,
       "n_picks": 150,
       "worst_pick_ms_by_seat": {
-        "autopilot": 4.7,
-        "balanced": 5.2,
-        "chalk": 4.7,
-        "fitted_manager": 5.9,
-        "reacher": 7.5,
-        "safe_floor": 5.9,
-        "upside_chaser": 5.3,
-        "value_hawk": 5.4
+        "autopilot": 5.3,
+        "balanced": 4.9,
+        "chalk": 5.8,
+        "fitted_manager": 4.9,
+        "reacher": 5.8,
+        "safe_floor": 6.4,
+        "upside_chaser": 5.7,
+        "value_hawk": 6.0
       },
-      "worst_seat": "reacher",
-      "worst_ms": 7.5,
+      "worst_seat": "safe_floor",
+      "worst_ms": 6.4,
       "clock_floor_s": 1,
       "note": "\u2605 The pre-registered worry does not survive the measurement: 14.M expected `value_hawk`'s Phase-9 greedy to be too slow for a 5s clock, and the slowest single pick in a full draft is ~10 ms. The floor stays as a floor \u2014 it is what stops the NEXT slow seat overrunning silently \u2014 and the app reports actual tick cost so the constant cannot go stale unnoticed."
     },
@@ -163,8 +163,8 @@
       "bar": "FLOW \u2014 a human can start a draft and make a pick by clicking",
       "pass": true,
       "start_button_started_a_draft": true,
-      "randomized_seed": 225568,
-      "randomized_room_seed": 776073,
+      "randomized_seed": 614915,
+      "randomized_room_seed": 161872,
       "quick_pick_buttons": 6,
       "clicked": "Jahmyr Gibbs",
       "your_picks": [

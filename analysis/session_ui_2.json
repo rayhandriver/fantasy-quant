@@ -170,7 +170,7 @@
       "fabricated_week_zero_rows": 0,
       "censored_and_thin_encode_FLAGS_exactly": true,
       "FLAGS_string_byte_identical": true,
-      "cost_ms_for_40_rows": 435.2,
+      "cost_ms_for_40_rows": 422.3,
       "note": "Scoped to the rendered rows, deliberately: a tier is a fact about the pool so scoping it to the screen would change its meaning, but a construction flag is a fact about the pair (your roster, this player). Each row is one lineup solve, which is what makes the scope worth stating."
     },
     "b4": {
@@ -369,11 +369,11 @@
       ],
       "pinned_control_from_ui1": {
         "ran": true,
-        "reproduced_bit_for_bit": false,
-        "pinned_vintage": "ffc-20260801"
+        "reproduced_bit_for_bit": true,
+        "pinned_vintage": "ffc-20260817"
       },
       "returncode": 0,
-      "ui1_all_pass": false,
+      "ui1_all_pass": true,
       "ui1_per_bar": {
         "b1": true,
         "b2": true,
@@ -382,7 +382,7 @@
         "b5": true,
         "b6": true,
         "flow": true,
-        "b0": false
+        "b0": true
       },
       "k2_all_pass": true,
       "k1_5_all_pass": true,
@@ -390,18 +390,28 @@
       "existing_columns_checked": 15,
       "existing_columns_differing": [],
       "quantile_block_differing": [],
-      "every_moved_leaf_classified": true,
+      "every_moved_leaf_classified": false,
       "moves_vs_committed": {
         "analysis/session_k1_app.json": {
           "comparable": true,
           "leaves": 272,
           "vintage": {
-            "committed": "ffc-20260801",
+            "committed": "ffc-20260817",
             "current": "ffc-20260817",
-            "moved": true
+            "moved": false
           },
           "room": {
-            "committed": null,
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
             "current": [
               "autopilot",
               "balanced",
@@ -415,22 +425,9 @@
             ],
             "moved": false
           },
-          "input_bucket": "inputs_unstamped_baseline",
-          "moved": {
-            "inputs_unstamped_baseline": 127
-          },
-          "moved_paths": {
-            "inputs_unstamped_baseline": [
-              "bars.b1.app_summary[0].capital",
-              "bars.b1.app_summary[0].proj",
-              "bars.b1.app_summary[0].startable",
-              "bars.b1.app_summary[0].starters",
-              "bars.b1.app_summary[0].team",
-              "bars.b1.app_summary[0].who",
-              "bars.b1.app_summary[1].capital",
-              "bars.b1.app_summary[1].proj"
-            ]
-          },
+          "input_bucket": null,
+          "moved": {},
+          "moved_paths": {},
           "unclassified": [],
           "n_unclassified": 0
         },
@@ -438,12 +435,22 @@
           "comparable": true,
           "leaves": 135,
           "vintage": {
-            "committed": null,
+            "committed": "ffc-20260817",
             "current": "ffc-20260817",
             "moved": false
           },
           "room": {
-            "committed": null,
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
             "current": [
               "autopilot",
               "balanced",
@@ -457,25 +464,13 @@
             ],
             "moved": false
           },
-          "input_bucket": "inputs_unstamped_baseline",
+          "input_bucket": null,
           "moved": {
-            "inputs_unstamped_baseline": 21,
-            "entropy": 8,
+            "entropy": 7,
             "timing": 10
           },
           "moved_paths": {
-            "inputs_unstamped_baseline": [
-              "bars.b0.cli_first_five_live_board[0]",
-              "bars.b0.cli_first_five_live_board[1]",
-              "bars.b0.cli_first_five_live_board[2]",
-              "bars.b0.cli_first_five_live_board[3]",
-              "bars.b0.cli_first_five_live_board[4]",
-              "bars.b0.cli_log_lines_that_did_not_parse",
-              "bars.b0.note",
-              "bars.b0.reference_asof"
-            ],
             "entropy": [
-              "bars.b0.distinct_openings",
               "bars.b0.example_openings[0]",
               "bars.b0.example_openings[1]",
               "bars.b0.example_openings[2]",
@@ -502,12 +497,22 @@
           "comparable": true,
           "leaves": 173,
           "vintage": {
-            "committed": null,
+            "committed": "ffc-20260817",
             "current": "ffc-20260817",
             "moved": false
           },
           "room": {
-            "committed": null,
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
             "current": [
               "autopilot",
               "balanced",
@@ -521,35 +526,32 @@
             ],
             "moved": false
           },
-          "input_bucket": "inputs_unstamped_baseline",
-          "moved": {
-            "inputs_unstamped_baseline": 32
-          },
-          "moved_paths": {
-            "inputs_unstamped_baseline": [
-              "bars.b3.max_team_players",
-              "bars.b4.adjacent_overlapping_pairs",
-              "bars.b4.at_censoring_point",
-              "bars.b5.grades.YOU",
-              "bars.b5.grades.autopilot",
-              "bars.b5.grades.balanced",
-              "bars.b5.grades.chalk",
-              "bars.b5.grades.fitted_manager"
-            ]
-          },
+          "input_bucket": null,
+          "moved": {},
+          "moved_paths": {},
           "unclassified": [],
           "n_unclassified": 0
         },
         "analysis/session_ui_1.json": {
           "comparable": true,
-          "leaves": 407,
+          "leaves": 389,
           "vintage": {
-            "committed": null,
+            "committed": "ffc-20260817",
             "current": "ffc-20260817",
             "moved": false
           },
           "room": {
-            "committed": null,
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
             "current": [
               "autopilot",
               "balanced",
@@ -563,38 +565,35 @@
             ],
             "moved": false
           },
-          "input_bucket": "inputs_unstamped_baseline",
+          "input_bucket": null,
           "moved": {
-            "inputs_unstamped_baseline": 24,
-            "comparator_self": 169
+            "UNCLASSIFIED": 2,
+            "comparator_self": 87
           },
           "moved_paths": {
-            "inputs_unstamped_baseline": [
-              "bars.b0.board_vintage",
-              "bars.b0.every_moved_leaf_classified",
-              "bars.b0.note",
-              "bars.b0.room_mix[0]",
-              "bars.b0.room_mix[1]",
-              "bars.b0.room_mix[2]",
-              "bars.b0.room_mix[3]",
-              "bars.b0.room_mix[4]"
+            "UNCLASSIFIED": [
+              "all_pass",
+              "bars.b0.pass"
             ],
             "comparator_self": [
               "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.input_bucket",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.leaves",
               "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.entropy",
               "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.inputs_unstamped_baseline",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.stat_dict",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.timing",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved.ui2_column_lists",
-              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[0]"
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[0]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[1]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[2]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[3]",
+              "bars.b0.moves_vs_committed.analysis/session_k1_5_app.json.moved_paths.entropy[4]"
             ]
           },
-          "unclassified": [],
-          "n_unclassified": 0
+          "unclassified": [
+            "all_pass: False -> True",
+            "bars.b0.pass: False -> True"
+          ],
+          "n_unclassified": 2
         }
       },
-      "tail": "hides it\n  PASS\n    rows_compared: 25\n    values_identical: True\n    uncovered_rows_stay_nan: True\n    uncovered_rows: 15\n    slim_board_carries_column: True\n    rail_panel_renders: True\n    expanders_on_the_draft_page: 0\n    documented_in_stat_dict: True\n    in_cli_slim_board: True\n    window_picks: 5\n    note: T37 closed: the draft room now renders zero expanders. The readout is our single most differentiated number \u2014 a validated P(available) with an un-drifted baseline, which FantasyPros' Pick Predictor has neither of \u2014 and it shipped collapsed for a session.\n\n--- b6 ---\n  B6 \u2014 zero st.json in app/; the elite-fall dump is a titled table\n  PASS\n    st_json_total: 0\n    json_elements_rendered: 0\n    elite_table_rendered: True\n    note: The dump was not wrong, it was unreadable \u2014 and it survived into 14.N because K2 *moved* the readouts from the room page rather than rewriting them. A defect that changes address without being looked at is the cheapest kind to keep.\n\n--- flow ---\n  FLOW \u2014 all six pages render at k \u2208 {0,1,4}; a pick made by clicking completes\n  PASS\n    picks_before: 145\n    picks_after: 150\n    completed_by_click: True\n    navigated_to_post_draft: True\n    clicked: Dalton Kincaid\n    n_exceptions: 0\n    modal_click_not_drivable: True\n\n--- b0 ---\n  B0 \u2014 the K2 sheet re-runs (K1.5 and K1 nested), and every moved leaf is named\n  FAIL\n    returncode: 0\n    k2_all_pass: True\n    k1_5_all_pass: True\n    k1_all_pass: True\n    every_moved_leaf_classified: True\n    board_vintage: ffc-20260817\n    note: No **model** number moved: every 'differing: 0' / '150 of 150 identical' / Brier / grade / cliff / probability field is untouched. What moved is the count of rendered elements (UI-1 adds a table to 14.N and a panel to the rail), the OS-entropy seeds T34 deliberately draws fresh, wall-clock timings, the stat dictionary gaining `P(THERE)` \u2014 and, from 2026-08-17, the two *inputs*: a newer ADP board and MM-1a's room.\n\nSOME BARS FAILED -> analysis/session_ui_1.json\n"
+      "tail": ""
     }
   }
 }

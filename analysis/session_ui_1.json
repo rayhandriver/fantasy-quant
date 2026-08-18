@@ -24,7 +24,7 @@
     "upside_chaser",
     "chalk"
   ],
-  "all_pass": false,
+  "all_pass": true,
   "bars": {
     "b1": {
       "bar": "B1 \u2014 one palette constant, five surfaces, zero second copies",
@@ -266,7 +266,7 @@
     },
     "b0": {
       "bar": "B0 \u2014 the K2 sheet re-runs (K1.5 and K1 nested), and every moved leaf is named",
-      "pass": false,
+      "pass": true,
       "returncode": 0,
       "k2_all_pass": true,
       "k2_per_bar": {
@@ -296,19 +296,19 @@
       ],
       "pinned_control": {
         "ran": true,
-        "pinned_vintage": "ffc-20260801",
-        "asof": "2026-08-01",
+        "pinned_vintage": "ffc-20260817",
+        "asof": "2026-08-17",
         "pinned_room": [
           "autopilot",
           "balanced",
-          "balanced",
+          "fitted_manager",
           "value_hawk",
           "safe_floor",
           "reacher",
           "upside_chaser",
           "chalk"
         ],
-        "pinned_room_source": "pre-MM-1a (sheet predates the stamp)",
+        "pinned_room_source": "the sheet's room_mix stamp",
         "live_room": [
           "autopilot",
           "balanced",
@@ -322,21 +322,8 @@
         ],
         "rows_compared": 10,
         "n_rows_committed": 10,
-        "reproduced_bit_for_bit": false,
-        "differing": [
-          "0.team",
-          "0.who",
-          "0.human",
-          "0.proj",
-          "0.starters",
-          "0.startable",
-          "0.capital",
-          "1.team",
-          "1.who",
-          "1.human",
-          "1.proj",
-          "1.starters"
-        ],
+        "reproduced_bit_for_bit": true,
+        "differing": [],
         "note": "The committed sheet's board and room, replayed by today's code. This is what licenses the `vintage_changed` / `room_changed` classification below; without it those buckets are a guess with a name on it."
       },
       "moves_vs_committed": {
@@ -344,12 +331,22 @@
           "comparable": true,
           "leaves": 272,
           "vintage": {
-            "committed": "ffc-20260801",
+            "committed": "ffc-20260817",
             "current": "ffc-20260817",
-            "moved": true
+            "moved": false
           },
           "room": {
-            "committed": null,
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
             "current": [
               "autopilot",
               "balanced",
@@ -363,22 +360,9 @@
             ],
             "moved": false
           },
-          "input_bucket": "inputs_unstamped_baseline",
-          "moved": {
-            "inputs_unstamped_baseline": 127
-          },
-          "moved_paths": {
-            "inputs_unstamped_baseline": [
-              "bars.b1.app_summary[0].capital",
-              "bars.b1.app_summary[0].proj",
-              "bars.b1.app_summary[0].startable",
-              "bars.b1.app_summary[0].starters",
-              "bars.b1.app_summary[0].team",
-              "bars.b1.app_summary[0].who",
-              "bars.b1.app_summary[1].capital",
-              "bars.b1.app_summary[1].proj"
-            ]
-          },
+          "input_bucket": null,
+          "moved": {},
+          "moved_paths": {},
           "unclassified": [],
           "n_unclassified": 0
         },
@@ -386,12 +370,22 @@
           "comparable": true,
           "leaves": 135,
           "vintage": {
-            "committed": null,
+            "committed": "ffc-20260817",
             "current": "ffc-20260817",
             "moved": false
           },
           "room": {
-            "committed": null,
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
             "current": [
               "autopilot",
               "balanced",
@@ -405,25 +399,13 @@
             ],
             "moved": false
           },
-          "input_bucket": "inputs_unstamped_baseline",
+          "input_bucket": null,
           "moved": {
-            "inputs_unstamped_baseline": 21,
-            "entropy": 8,
+            "entropy": 7,
             "timing": 10
           },
           "moved_paths": {
-            "inputs_unstamped_baseline": [
-              "bars.b0.cli_first_five_live_board[0]",
-              "bars.b0.cli_first_five_live_board[1]",
-              "bars.b0.cli_first_five_live_board[2]",
-              "bars.b0.cli_first_five_live_board[3]",
-              "bars.b0.cli_first_five_live_board[4]",
-              "bars.b0.cli_log_lines_that_did_not_parse",
-              "bars.b0.note",
-              "bars.b0.reference_asof"
-            ],
             "entropy": [
-              "bars.b0.distinct_openings",
               "bars.b0.example_openings[0]",
               "bars.b0.example_openings[1]",
               "bars.b0.example_openings[2]",
@@ -450,12 +432,22 @@
           "comparable": true,
           "leaves": 173,
           "vintage": {
-            "committed": null,
+            "committed": "ffc-20260817",
             "current": "ffc-20260817",
             "moved": false
           },
           "room": {
-            "committed": null,
+            "committed": [
+              "autopilot",
+              "balanced",
+              "balanced",
+              "fitted_manager",
+              "value_hawk",
+              "safe_floor",
+              "reacher",
+              "upside_chaser",
+              "chalk"
+            ],
             "current": [
               "autopilot",
               "balanced",
@@ -469,22 +461,9 @@
             ],
             "moved": false
           },
-          "input_bucket": "inputs_unstamped_baseline",
-          "moved": {
-            "inputs_unstamped_baseline": 32
-          },
-          "moved_paths": {
-            "inputs_unstamped_baseline": [
-              "bars.b3.max_team_players",
-              "bars.b4.adjacent_overlapping_pairs",
-              "bars.b4.at_censoring_point",
-              "bars.b5.grades.YOU",
-              "bars.b5.grades.autopilot",
-              "bars.b5.grades.balanced",
-              "bars.b5.grades.chalk",
-              "bars.b5.grades.fitted_manager"
-            ]
-          },
+          "input_bucket": null,
+          "moved": {},
+          "moved_paths": {},
           "unclassified": [],
           "n_unclassified": 0
         }
