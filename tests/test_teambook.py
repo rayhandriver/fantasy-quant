@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from fantasy_quant.config import DUCKDB_PATH
 from fantasy_quant.data import db
 from fantasy_quant.teambook import build as B
 from fantasy_quant.teambook import export as E
@@ -24,7 +23,7 @@ from fantasy_quant.teambook import metrics as M
 from fantasy_quant.teambook import pbp_family as pf
 from fantasy_quant.teambook import schema as S
 
-needs_db = pytest.mark.skipif(not DUCKDB_PATH.exists(), reason="project DuckDB store not present")
+needs_db = pytest.mark.needs_db
 
 
 # --- registry ---------------------------------------------------------------------------------

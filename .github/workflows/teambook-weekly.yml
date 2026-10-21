@@ -1,0 +1,70 @@
+# Rebuild the live season's team books from the nflverse releases and redeploy the site.
+#
+# nflverse refreshes play-by-play nightly; Monday night's game lands overnight, so the job runs
+# Tuesday and again Wednesday (a stat correction or a late upload). The export needs no DuckDB
+# store — it reads the releases plus the committed league and carry files (steps/teambook_export.py).
+# A run that changes nothing but the index timestamp commits nothing.
+name: Team Book weekly
+
+on:
+  schedule:
+    - cron: "0 14 * * 2"
+    - cron: "0 14 * * 3"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["site/**"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: teambook-pages
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --extra data
+      - name: Rebuild the live season
+        run: uv run python steps/teambook_export.py --live
+      - name: Commit if the data moved
+        run: |
+          git add site/data
+          if git diff --cached --quiet -- site/data ':!site/data/index.json'; then
+            echo "No new games or corrections; nothing to commit."
+            git reset -q
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            WEEK=$(python3 -c "import json; s=json.load(open('site/data/index.json'))['seasons'][0]; print(s['season'], 'through week', s['through_week'])")
+            git commit -q -m "Team Book: $WEEK"
+            git push
+          fi
+
+  deploy:
+    needs: refresh
+    if: always() && (needs.refresh.result == 'success' || needs.refresh.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

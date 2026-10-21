@@ -1,0 +1,27 @@
+# Lint + the test suite on every push. Tests that read the local DuckDB store (765 MB, gitignored,
+# built by the pipeline) carry the `needs_db` marker and are deselected here; they run locally.
+name: CI
+
+on:
+  push:
+    branches: [main, teambook]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install (Python 3.12 + locked deps)
+        run: uv sync --locked --extra data
+      - name: Lint
+        run: uv run ruff check .
+      - name: Tests (store-free)
+        run: uv run python -m pytest -q -m "not needs_db"

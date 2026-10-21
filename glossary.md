@@ -3247,3 +3247,6 @@ download (roster construction, team meta), written by the last store-backed expo
 football never produces that; a re-encoded upstream does (pressure 1.0, singleback 0.0). The book's
 guard refuses one rather than ranking 32 teams tied for first.
 
+**`needs_db`.** The pytest marker for a test that reads the local DuckDB store. Skipped when the
+store is absent and deselected in CI (`-m "not needs_db"`), so the public suite is store-free.
+

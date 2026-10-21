@@ -7317,3 +7317,19 @@ Pages, seasons 2018–2025 plus a partial, weekly-refreshed 2026, steps 1–2 st
   exercised. Two defects caught that way: nested section arrays rendered as
   `[object HTMLDivElement]` (the DOM helper flattened one level), and strip plots stretched their
   tick labels under `preserveAspectRatio="none"`.
+
+### Step 5 — CI and the weekly job (`.github/workflows/`)
+
+- **`ci.yml`**: uv + Python 3.12 from the lockfile (`--locked --extra data`), `ruff check .`,
+  `pytest -m "not needs_db"` on every push and PR. `tests/conftest.py` registers the `needs_db`
+  marker and skips marked tests when the store is absent.
+- **Verified the way CI will see it**: a `git worktree` of the branch with no store and no
+  gitignored data — **928 passed, 11 skipped, 0 failed**. The first attempt failed at collection,
+  because `data/sources/nflverse.py` imports `nfl_data_py` at module level and the teambook's
+  in-season path reuses two of its helpers; hence `--extra data` in both workflows.
+- **`teambook-weekly.yml`**: Tuesday and Wednesday 14:00 UTC (+ manual dispatch) — `steps/
+  teambook_export.py --live`, commit `site/data` only if something other than the index timestamp
+  moved, then deploy `site/` to GitHub Pages; a push touching `site/**` on `main` redeploys without
+  rebuilding. Run in the clean worktree, the live export took 18 s and reproduced the committed
+  2026 files **byte for byte** (the commit gate correctly reported "index only"), which is also
+  a check that the store-free path is deterministic.

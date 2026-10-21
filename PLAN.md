@@ -3576,3 +3576,14 @@ User approved steps 3 and 4 together, then a stop.
 - **Not done:** a per-chart texture fill for print/forced-colors (forced-colors falls back to
   system colours instead); a logo set.
 
+### Step 5 — CI + weekly automation (2026-10-21)
+User approved steps 5 and 6 together.
+- **Judgment calls:** only `test_teambook.py` moves to the `needs_db` marker; the other fifteen
+  store-reading files already skip themselves at module level, and re-marking them would also mark
+  their store-free tests · CI installs `--extra data` rather than making `teambook.inseason`
+  independent of `nflverse.py` (one rename table and one crosswalk helper; copying them would make
+  two definitions) · the weekly job commits only when the data moved, so the history is one commit
+  per real week · Tuesday **and** Wednesday, because nflverse corrections land after Monday night.
+- **Pages deploys from the workflow** (`actions/deploy-pages`), not from a branch — `site/` stays a
+  plain directory on `main`.
+

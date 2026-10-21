@@ -86,3 +86,6 @@ testpaths = ["tests"]
 # "." puts the top-level `app` package on the path: the app is a renderer over the
 # engine, deliberately outside the installed library, and its tests import it.
 pythonpath = ["src", "."]
+markers = [
+  "needs_db: reads the local DuckDB store; skipped when it is absent, deselected in CI",
+]
