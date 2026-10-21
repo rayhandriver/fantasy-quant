@@ -11,8 +11,8 @@
 
 const TABS = [
   ["overview", "Overview"], ["offense", "Offense"], ["defense", "Defense"],
-  ["special", "Special teams & roster"], ["players", "Players"],
-  ["coaching", "Coaching & comps"], ["trends", "Trends"], ["notes", "Data notes"],
+  ["special", "Special teams and roster"], ["players", "Players"],
+  ["coaching", "Coaching and comps"], ["trends", "Trends"], ["notes", "Data notes"],
 ];
 const TREND_PICKS = {
   offense: ["epa_per_play", "pass_rate_neutral", "pass_oe_mean", "shotgun_rate", "share_p11",
@@ -91,17 +91,17 @@ function rankBadge(m, cell) {
   let cls = "b-mid";
   if (m.polarity !== 0) cls = cell.rank <= 8 ? "b-good" : cell.rank > cell.n - 8 ? "b-bad" : "b-mid";
   const [a, b] = rankText(m, cell.rank, cell.n);
-  const title = m.polarity !== 0 ? "1st = best for the team" : "A tendency: neither good nor bad";
+  const title = m.polarity !== 0 ? "Ranked so that 1st is the best in the league" : "This is a tendency, so a high or low rank is not good or bad";
   return h("span", { class: `badge ${cls}`, title }, a, b ? h("span", { class: "of" }, b) : null);
 }
 
 function whyMissing(m, season, status) {
-  if (season < m.floor) return m.source === "ftn" ? `FTN charting starts in ${m.floor}` : `Charted from ${m.floor}`;
-  if (m.ceiling != null && season > m.ceiling) return `Not recorded after ${m.ceiling}: the formation labels changed in ${m.ceiling + 1}`;
+  if (season < m.floor) return m.source === "ftn" ? `FTN started charting this in ${m.floor}.` : `This was first charted in ${m.floor}.`;
+  if (m.ceiling != null && season > m.ceiling) return `The data stopped using this formation label after ${m.ceiling}.`;
   if (status.unavailable[m.source]) {
-    return m.source === "participation" ? "Arrives after the season (participation file)" : status.unavailable[m.source];
+    return m.source === "participation" ? "These stats will be added once nflverse publishes this season's participation data." : status.unavailable[m.source];
   }
-  return "Not available for this team-season";
+  return "There is no data for this team in this season.";
 }
 
 // --- tooltip -----------------------------------------------------------------------------------
@@ -146,7 +146,7 @@ function strip(m, league, team) {
     for (const tv of teams) if (Math.abs(tv[1] - vx) < Math.abs(best[1] - vx)) best = tv;
     const rank = c.rank[best[0]];
     showTip(ev, [tipRow(fmt(m, best[1]), `${best[0]}${best[0] === team ? " (this team)" : ""}`),
-                 h("div", null, `${ord(rank)} of ${c.n} · median ${fmt(m, c.median)}`)]);
+                 h("div", null, `Ranked ${ord(rank)} of ${c.n}, league median ${fmt(m, c.median)}`)]);
   });
   hit.addEventListener("pointerleave", hideTip);
   svg.append(hit);
@@ -185,7 +185,7 @@ function seasonLine(m, rows, { small = false, live = null } = {}) {
   }
   const last = rows[rows.length - 1];
   if (!small && live && last[0] === live.season && !live.complete) {
-    svg.append(s("text", { x: x(last[0]), y: y(last[1]) - 10, class: "lab", "text-anchor": "end" }, `thru wk ${live.through_week}`));
+    svg.append(s("text", { x: x(last[0]), y: y(last[1]) - 10, class: "lab", "text-anchor": "end" }, `through week ${live.through_week}`));
   }
   const xh = s("line", { y1: T, y2: H - B, class: "xhair", visibility: "hidden" });
   svg.append(xh);
@@ -197,8 +197,8 @@ function seasonLine(m, rows, { small = false, live = null } = {}) {
     for (const r of rows) if (Math.abs(x(r[0]) - px) < Math.abs(x(best[0]) - px)) best = r;
     xh.setAttribute("x1", x(best[0])); xh.setAttribute("x2", x(best[0])); xh.setAttribute("visibility", "visible");
     const isLive = live && best[0] === live.season && !live.complete;
-    showTip(ev, [h("div", null, `${best[0]}${isLive ? ` · through week ${live.through_week}` : ""}`),
-      tipRow(fmt(m, best[1]), `this team · ${ord(best[3])} of ${best[4]}`, "var(--accent)"),
+    showTip(ev, [h("div", null, `${best[0]}${isLive ? ` through week ${live.through_week}` : ""}`),
+      tipRow(fmt(m, best[1]), `${ord(best[3])} of ${best[4]}`, "var(--accent)"),
       tipRow(fmt(m, best[2]), "league median", "var(--median)")]);
   });
   hit.addEventListener("pointerleave", () => { xh.setAttribute("visibility", "hidden"); hideTip(); });
@@ -246,10 +246,10 @@ function weeklyChart(book) {
     g.append(s("rect", { x: x(w.week) - band / 2, y: T, width: band, height: H - T - B, class: "hit" }));
     const res = margin > 0 ? "W" : margin < 0 ? "L" : "T";
     const show = ev => showTip(ev, [
-      h("div", null, `Week ${w.week} · ${w.home ? "vs" : "at"} ${w.opponent}`),
+      h("div", null, `Week ${w.week} ${w.home ? "vs" : "at"} ${w.opponent}`),
       tipRow(`${res} ${w.pf}–${w.pa}`, ""),
-      h("div", null, `EPA/play ${num(w.epa_per_play, 3)} · allowed ${num(w.def_epa_per_play, 3)}`),
-      h("div", null, `Pass rate ${pct(w.pass_rate)} · neutral ${pct(w.pass_rate_neutral)}`)]);
+      h("div", null, `EPA per play ${num(w.epa_per_play, 3)}, allowed ${num(w.def_epa_per_play, 3)}`),
+      h("div", null, `Pass rate ${pct(w.pass_rate)}, ${pct(w.pass_rate_neutral)} in neutral situations`)]);
     g.addEventListener("pointermove", show); g.addEventListener("focus", show);
     g.addEventListener("pointerleave", hideTip); g.addEventListener("blur", hideTip);
     svg.append(g);
@@ -258,7 +258,7 @@ function weeklyChart(book) {
 }
 
 function tableView(head, rows) {
-  return h("details", { class: "note" }, h("summary", null, "Table view"),
+  return h("details", { class: "note" }, h("summary", null, "Show as a table"),
     h("div", { class: "tw" }, h("table", null,
       h("thead", null, h("tr", null, head.map(c => h("th", null, c)))),
       h("tbody", null, rows.map(r => h("tr", null, r.map(c => h("td", null, c))))))));
@@ -288,16 +288,12 @@ function renderHome() {
   const season = defaultSeason();
   app.replaceChildren(
     h("section", { class: "hero" },
-      h("h1", null, "Every NFL team's scheme, on one page each."),
-      h("p", null, "Personnel groupings, formations, coverage shells, man/zone, pressure, play design and the players who carry the snaps — ranked against the league for every team from 2018 on, with the five most similar team-seasons and their play-callers."),
+      h("h1", null, "NFL Team Book"),
+      h("p", null, "This site breaks down how every NFL team has played since 2018. Each team has a page for every season with its personnel groupings, formations, play calling tendencies, coverage and pressure numbers, and the players who were on the field the most. Every number is ranked against the rest of the league, and each page lists the five team seasons from other franchises that played the most similar style."),
       h("p", null, live && !live.complete
-        ? `${live.season} is live: refreshed weekly, through week ${live.through_week}. Personnel and coverage data for a season arrive after it ends; the live books carry everything play-by-play and charting can.`
-        : "Regular season only. Built from nflverse play-by-play and FTN charting."),
-      h("div", { class: "facts" },
-        h("span", null, h("b", null, "32"), " teams"),
-        h("span", null, h("b", null, String(state.index.seasons.length)), " seasons"),
-        h("span", null, h("b", null, String(state.reg.length)), " metrics per book"),
-        h("span", null, "updated ", h("b", null, state.index.generated_at.slice(0, 10))))),
+        ? `The ${live.season} season updates every week and currently runs through week ${live.through_week}. Personnel and coverage data are released after the season ends, so the ${live.season} pages only show what can be measured from play by play and FTN charting until then.`
+        : "All numbers are from the regular season and come from nflverse play by play data and FTN charting."),
+      h("p", { class: "muted" }, `Last updated ${new Date(state.index.generated_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`)),
     h("div", { class: "divs" }, Object.keys(byDiv).sort().map(div =>
       h("div", { class: "div" }, h("h3", null, div),
         byDiv[div].sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([abbr, t]) =>
@@ -314,20 +310,20 @@ function masthead(book, info) {
   return h("header", { class: "mast" },
     h("div", { class: "stripe", style: `background:linear-gradient(${m.color},${m.color} 70%,${m.color2} 70%)` }),
     h("div", null,
-      h("div", { class: "eyebrow" }, `${m.conference} · ${m.division} · ${info.complete ? "regular season" : `through week ${info.through_week}`}`),
+      h("div", { class: "eyebrow" }, m.division),
       h("h1", null, m.name, " ", h("span", { class: "yr" }, String(book.season))),
       h("div", { class: "mastgrid" },
         rec && h("span", null, "Record ", h("b", null, `${rec.w}–${rec.l}${rec.t ? "–" + rec.t : ""}`)),
-        h("span", null, "PF / PA ", h("b", null, `${num(m.points_for)} / ${num(m.points_against)}`)),
-        m.bye_weeks.length ? h("span", null, "Bye ", h("b", null, `wk ${m.bye_weeks.join(", ")}`)) : null,
-        callers.length ? h("span", null, "Play-callers ", h("b", null, callers.join(" · "))) : null)));
+        h("span", null, "Points ", h("b", null, `${num(m.points_for)} for, ${num(m.points_against)} against`)),
+        m.bye_weeks.length ? h("span", null, "Bye ", h("b", null, `week ${m.bye_weeks.join(", ")}`)) : null,
+        callers.length ? h("span", null, "Play callers ", h("b", null, callers.join(", "))) : null)));
 }
 
 function liveBanner(info) {
   if (info.complete) return null;
-  return h("div", { class: "banner" }, h("b", null, `Live season, through week ${info.through_week}.`),
-    " Rebuilt from nflverse every week. Personnel groupings, formations, coverage shells, man/zone and pressure come from the participation file, which nflverse publishes after the season",
-    info.participation_published ? " — it has now landed and a full rebuild is pending." : "; those rows say so rather than showing a number.");
+  return h("div", { class: "banner" }, h("b", null, `Through week ${info.through_week}`), h("br"),
+    `This page is updated every week during the season. Personnel groupings, formations, coverage and pressure numbers come from nflverse's participation data, which is released a few months after the season ends, so those sections are empty for now.`,
+    info.participation_published ? " That data has now been released and these pages will be rebuilt with it soon." : "");
 }
 
 function tabs(team, season, active) {
@@ -341,11 +337,11 @@ function metricTable(book, league, keys) {
   const reasons = new Set(keys.map(k => book.metrics[k] ? null : whyMissing(state.byKey[k], book.season, status)));
   if (reasons.size === 1 && !reasons.has(null)) {
     // a whole group missing for one reason is one sentence, not a column of dashes
-    return h("div", { class: "note flag" }, h("b", null, `${keys.map(k => state.byKey[k].label).join(", ")}. `), [...reasons][0], ".");
+    return h("div", { class: "note flag" }, [...reasons][0]);
   }
   return h("div", { class: "mtable", role: "table" },
     h("div", { class: "mhead", role: "row" }, h("div", null, "Metric"), h("div", null, book.team),
-      h("div", null, "Rank"), h("div", null, "League — every dot a team, ", book.team, " in blue")),
+      h("div", null, "Rank"), h("div", null, `League spread with ${book.team} in blue`)),
     keys.map(k => {
       const m = state.byKey[k], cell = book.metrics[k];
       const label = h("div", { class: "mlab" }, m.label, m.note ? h("span", { class: "mnote" }, m.note) : null);
@@ -370,33 +366,46 @@ function sideSections(book, league, side) {
   return groups.map(g => [h("h3", null, g.name), metricTable(book, league, g.keys)]);
 }
 
+function traitSentence(t) {
+  const m = state.byKey[t.key];
+  let place;
+  if (m.polarity !== 0) {
+    const good = t.rank <= t.n / 2, r = good ? t.rank : t.n - t.rank + 1;
+    place = `${r === 1 ? "the" : `the ${ord(r)}`} ${good ? "best" : "worst"} in the league`;
+  } else {
+    const high = t.z >= 0, r = high ? t.rank : t.n - t.rank + 1;
+    place = `${r === 1 ? "the" : `the ${ord(r)}`} ${high ? "highest" : "lowest"} in the league`;
+  }
+  return `${fmt(m, t.value)}, which was ${place}. The league median was ${fmt(m, t.median)}.`;
+}
+
 function overview(book, league, info) {
   const M = k => book.metrics[k];
   const tile = (label, value, sub) => h("div", { class: "tile" }, h("div", { class: "tlab" }, label),
     h("div", { class: "tval" }, value), h("div", { class: "tsub" }, sub || " "));
   const rk = k => M(k) ? `${ord(M(k).rank)} of ${M(k).n}` : "";
   const g = book.meta.games || 1;
-  const sides = { offense: "Offense", defense: "Defense", special: "Teams" };
+  const sides = { offense: "Offense", defense: "Defense", special: "Special teams" };
   return [
     h("div", { class: "tiles" },
       tile("Record", book.meta.record ? `${book.meta.record.w}–${book.meta.record.l}${book.meta.record.t ? "–" + book.meta.record.t : ""}` : "—",
-           info.complete ? "regular season" : `${book.meta.games} games`),
-      tile("Points / game", num(book.meta.points_for / g, 1), `allowed ${num(book.meta.points_against / g, 1)}`),
-      tile("EPA / play", M("epa_per_play") ? fmt(state.byKey.epa_per_play, M("epa_per_play").v) : "—", rk("epa_per_play")),
-      tile("EPA / play allowed", M("def_epa_per_play") ? fmt(state.byKey.def_epa_per_play, M("def_epa_per_play").v) : "—", rk("def_epa_per_play")),
+           info.complete ? "Regular season" : `${book.meta.games} games played`),
+      tile("Points per game", num(book.meta.points_for / g, 1), `${num(book.meta.points_against / g, 1)} allowed`),
+      tile("EPA per play", M("epa_per_play") ? fmt(state.byKey.epa_per_play, M("epa_per_play").v) : "—", rk("epa_per_play")),
+      tile("EPA per play allowed", M("def_epa_per_play") ? fmt(state.byKey.def_epa_per_play, M("def_epa_per_play").v) : "—", rk("def_epa_per_play")),
       tile("Pass rate over expected", M("pass_oe_mean") ? fmt(state.byKey.pass_oe_mean, M("pass_oe_mean").v) : "—",
            M("pass_oe_mean") ? rankText(state.byKey.pass_oe_mean, M("pass_oe_mean").rank, M("pass_oe_mean").n).join("") : ""),
-      tile("Snaps / game", M("snaps_per_game") ? fmt(state.byKey.snaps_per_game, M("snaps_per_game").v) : "—",
+      tile("Snaps per game", M("snaps_per_game") ? fmt(state.byKey.snaps_per_game, M("snaps_per_game").v) : "—",
            M("snaps_per_game") ? rankText(state.byKey.snaps_per_game, M("snaps_per_game").rank, M("snaps_per_game").n).join("") : "")),
-    h("h2", null, "What stands out"),
-    h("p", { class: "lede" }, "The metrics where this team sat furthest from the rest of the league — top or bottom three, or 1.5 standard deviations from the mean. Generated from ranks, not written by hand."),
+    h("h2", null, "Biggest outliers"),
+    h("p", { class: "lede" }, "These are the stats where this team was furthest from the rest of the league. A stat shows up here if the team ranked in the top or bottom three, or if it was more than one and a half standard deviations from the league average."),
     book.traits.length
       ? h("div", { class: "traits" }, book.traits.map(t => h("div", { class: "trait" },
-          h("span", { class: "side" }, sides[t.side] || t.side), h("span", { class: "tx" }, t.text),
-          h("span", { class: "v" }, `${fmt(state.byKey[t.key], t.value)} · league median ${fmt(state.byKey[t.key], t.median)}`))))
-      : h("p", { class: "muted" }, "Nothing extreme this season."),
-    h("figure", { class: "fg" }, h("figcaption", null, h("span", { class: "fgt" }, "Game by game"),
-      h("span", { class: "fgs" }, "Point margin per game. Above the line is a win. Hover a game for its efficiency and pass rate.")),
+          h("span", { class: "side" }, sides[t.side] || t.side), h("b", { class: "tx" }, state.byKey[t.key].label),
+          h("span", { class: "v" }, traitSentence(t)))))
+      : h("p", { class: "muted" }, "This team was close to the league average across the board this season."),
+    h("figure", { class: "fg" }, h("figcaption", null, h("span", { class: "fgt" }, "Results by week"),
+      h("span", { class: "fgs" }, "Each bar is the final point margin of one game, with wins above the line and losses below it. Hover over a game to see the opponent, the score and how efficient the offense and defense were.")),
       h("div", { class: "legend" }, h("span", null, h("span", { class: "lk", style: "background:var(--pos)" }), "Win"),
         h("span", null, h("span", { class: "lk", style: "background:var(--neg)" }), "Loss")),
       h("div", { class: "scrollx" }, weeklyChart(book)),
@@ -410,7 +419,7 @@ const OFF_COLS = [
   ["name", "Player", "l"], ["position", "Pos", "l"], ["games", "G"], ["snap_share", "Snap %", "bar"],
   ["targets", "Tgt"], ["target_share", "Tgt %", "pct"], ["receptions", "Rec"], ["rec_yds", "Rec yds"],
   ["adot", "aDOT", "1"], ["carries", "Car"], ["carry_share", "Car %", "pct"], ["rush_yds", "Rush yds"],
-  ["td", "Scrim TD"], ["pass_td", "Pass TD"], ["ints", "INT"], ["rz_targets", "RZ tgt"], ["rz_carries", "RZ car"], ["pass_yds", "Pass yds"],
+  ["td", "TD"], ["pass_td", "Pass TD"], ["ints", "INT"], ["rz_targets", "RZ tgt"], ["rz_carries", "RZ car"], ["pass_yds", "Pass yds"],
   ["ppr_points", "PPR", "1"], ["ppr_per_game", "PPR/G", "1"],
   ["tgt_share_p11", "Tgt % 11", "pct"], ["tgt_share_p12", "Tgt % 12", "pct"], ["tgt_share_p13", "Tgt % 13", "pct"],
 ];
@@ -460,8 +469,8 @@ function players(book) {
     wrap.replaceChildren(seg, table);
   };
   draw();
-  return [h("h2", null, "Players"),
-    h("p", { class: "lede" }, "The players who carried the snaps, regular season. Offense: snap share, target and carry shares, aDOT, red-zone usage and full-PPR points; target share by personnel grouping where the participation file exists. Defense: snaps, splash plays and share of the team's base / nickel / dime snaps. Click a column to sort."),
+  return [h("h2", null, "Player usage"),
+    h("p", { class: "lede" }, "These tables list the players who played the most snaps for the team. The offensive table shows how often each player was on the field, how much of the team's passing and rushing work went to them, and their full PPR fantasy points. When personnel data is available it also shows each player's share of targets in 11, 12 and 13 personnel. The defensive table shows snaps, sacks and other big plays, along with how often each player was on the field in base, nickel and dime packages. Click any column header to sort by it."),
     wrap];
 }
 
@@ -471,25 +480,25 @@ function coaching(book) {
     x ? h("dl", { class: "coach" },
       h("dt", null, "Head coach"), h("dd", null, x.head_coach || "—"),
       h("dt", null, "Coordinator"), h("dd", null, x.coordinator || "—"),
-      h("dt", null, "Play-caller"), h("dd", null, x.play_caller || "—", x.hc_calls ? " (head coach)" : ""),
+      h("dt", null, "Play caller"), h("dd", null, x.play_caller || "—", x.hc_calls ? " (head coach)" : ""),
       x.notes ? [h("dt", null, "Note"), h("dd", null, x.notes)] : null)
-      : h("p", { class: "muted" }, "Not in the coaching table for this season. The table covers every 2026 staff and the earlier tenures of its play-callers."));
+      : h("p", { class: "muted" }, "This staff is not in the coaching data yet. The data covers every 2026 staff and the earlier jobs of their play callers, so some older seasons are missing."));
   const lineage = (c.lineage || []);
   const compList = (rows, side) => rows.length
     ? h("div", { class: "comps" }, rows.map((r, i) => h("a", { class: "comp", href: `#/${r.team}/${r.season}/${side}` },
         h("span", { class: "rank" }, i + 1),
         chip(r.team),
         h("span", null, h("div", { class: "who" }, `${teamName(r.team)} ${r.season}`),
-          h("div", { class: "pc" }, r.play_caller ? `Play-caller: ${r.play_caller}` : "Play-caller not in the table")),
-        h("span", { class: "dist" }, `distance ${num(r.distance, 2)}`, h("br"), `${r.shared} metrics`))))
-    : h("p", { class: "muted" }, "No comparable team-season with enough shared metrics.");
+          h("div", { class: "pc" }, r.play_caller ? `Play caller ${r.play_caller}` : "Play caller unknown")),
+        h("span", { class: "dist" }, `Distance ${num(r.distance, 2)}`, h("br"), `${r.shared} stats compared`))))
+    : h("p", { class: "muted" }, "No other team season had enough of the same stats available to compare against.");
   return [
-    h("h2", null, "Who called it"),
+    h("h2", null, "Coaches and play callers"),
     h("div", { class: "cols2" }, coachCard("Offense", c.offense), coachCard("Defense", c.defense)),
-    lineage.length ? h("div", { class: "note" }, h("b", null, "First-time play-caller lineage. "),
-      lineage.map(l => `${l.play_caller} (${l.side}) came up under ${l.mentor}${l.learned_at ? ` at ${l.learned_at}` : ""}${l.seasons ? `, ${l.seasons}` : ""}.`).join(" ")) : null,
-    h("h2", null, "Most similar team-seasons"),
-    h("p", { class: "lede" }, "Nearest other franchises' seasons by scheme alone — personnel, formation, tendencies and play design on offense; fronts, coverage and pressure on defense — measured as distance between league-relative z-scores, on the metrics both seasons have. Efficiency is deliberately left out: this is how a team played, not how well. Drawn from completed seasons only."),
+    lineage.length ? h("div", { class: "note" },
+      lineage.map(l => `This is ${l.play_caller}'s first year calling the ${l.side}. ${l.play_caller} previously worked under ${l.mentor}${l.learned_at ? ` in ${l.learned_at}` : ""}${l.seasons ? ` from ${l.seasons}` : ""}.`).join(" ")) : null,
+    h("h2", null, "Most similar team seasons"),
+    h("p", { class: "lede" }, "These are the seasons from other franchises that were closest in style. On offense the comparison uses personnel, formations, pass rate and play design, and on defense it uses fronts, coverage and pressure. Each stat is first compared to the league average for its own year, so seasons from different years can be matched fairly. Efficiency stats like EPA are left out on purpose, so a match means the two teams played a similar way, not that they were equally good. Only completed seasons are used, and a lower distance means a closer match."),
     h("div", { class: "cols2" },
       h("div", null, h("h3", null, "Offense"), compList(book.comps?.offense || [], "offense")),
       h("div", null, h("h3", null, "Defense"), compList(book.comps?.defense || [], "defense"))),
@@ -509,11 +518,11 @@ async function trends(book) {
         state.reg.filter(x => x.side === side && series[x.key]).map(x => h("option", { value: x.key, selected: x.key === view.key || null }, x.label)))));
     main.replaceChildren(h("figure", { class: "fg" },
       h("figcaption", null, h("span", { class: "fgt" }, `${m.label}, by season`),
-        h("span", { class: "fgs" }, m.note || "Regular season. Hover for rank.")),
+        h("span", { class: "fgs" }, m.note || "Hover over a season to see the exact value and where it ranked.")),
       h("div", { style: "margin:0 0 10px" }, sel),
       h("div", { class: "legend" }, h("span", null, h("span", { class: "lk line", style: "background:var(--accent)" }), book.team),
         h("span", null, h("span", { class: "lk line", style: "background:var(--median)" }), "League median"),
-        live && !live.complete ? h("span", null, h("span", { class: "lk", style: "border:2px solid var(--accent);border-radius:50%;width:9px;height:9px" }), `${live.season}, in progress`) : null),
+        live && !live.complete ? h("span", null, h("span", { class: "lk", style: "border:2px solid var(--accent);border-radius:50%;width:9px;height:9px" }), `${live.season} so far`) : null),
       h("div", { class: "scrollx" }, seasonLine(m, rows, { live })),
       tableView(["Season", book.team, "Median", "Rank"], rows.map(r => [r[0], fmt(m, r[1]), fmt(m, r[2]), `${ord(r[3])} of ${r[4]}`]))));
   };
@@ -521,16 +530,16 @@ async function trends(book) {
   const smalls = Object.entries(TREND_PICKS).map(([side, picks]) => {
     const have = picks.filter(k => series[k] && series[k].length > 1);
     if (!have.length) return null;
-    return [h("h3", null, side === "special" ? "Special teams & roster" : side[0].toUpperCase() + side.slice(1)),
+    return [h("h3", null, side === "special" ? "Special teams and roster" : side[0].toUpperCase() + side.slice(1)),
       h("div", { class: "smalls" }, have.map(k => {
         const m = state.byKey[k], rows = series[k], last = rows[rows.length - 1];
         return h("div", { class: "small" }, h("div", { class: "t" }, m.label),
-          h("div", { class: "s" }, `${last[0]}: ${fmt(m, last[1])} · ${ord(last[3])} of ${last[4]}`),
+          h("div", { class: "s" }, `${fmt(m, last[1])} in ${last[0]}, ${ord(last[3])} of ${last[4]}`),
           seasonLine(m, rows, { small: true, live }));
       }))];
   });
-  return [h("h2", null, `${teamName(book.team)}, 2018 to now`),
-    h("p", { class: "lede" }, "Every season the book covers, this team against the league median. Pick any metric, or scan the small multiples below. A metric appears from the season its source starts."),
+  return [h("h2", null, "Trends since 2018"),
+    h("p", { class: "lede" }, `The blue line follows the ${teamName(book.team)} from season to season and the gray line is the league median. Use the menu to pick any stat, or look through the smaller charts below. Some stats start later than 2018 because the data behind them was not collected before then.`),
     main, smalls];
 }
 
@@ -539,36 +548,28 @@ function notes(book) {
   const bySrc = { pbp: [], ftn: [], participation: [], construction: [] };
   for (const m of state.reg) bySrc[m.source].push(m);
   const srcRow = (src, what, when) => [state.index.sources[src], what, when, `${bySrc[src].length}`];
-  const bounded = state.reg.filter(m => m.ceiling != null || (m.source === "participation" && m.floor > 2016));
+  const note = (title, text) => h("div", { class: "note flag" }, h("b", { class: "nt" }, title), h("p", null, text));
+  const missing = Object.values(info.unavailable);
   return [
-    h("h2", null, "Where every number comes from"),
-    h("p", { class: "lede" }, "Each metric belongs to one source family, and the family decides which seasons it exists for. Outside its seasons a metric is shown as unavailable with the reason — never as zero."),
+    h("h2", null, "Where the data comes from"),
+    h("p", { class: "lede" }, "Every stat on this site comes from one of four public data sources, and each source covers a different range of seasons. If a stat is not available for a season, the page says why instead of showing a zero."),
     h("div", { class: "tw" }, h("table", null,
-      h("thead", null, h("tr", null, ["Source", "What it gives", "Seasons", "Metrics"].map((c, i) => h("th", { class: i < 3 ? "l" : null }, c)))),
+      h("thead", null, h("tr", null, ["Source", "What it covers", "Seasons", "Stats"].map((c, i) => h("th", { class: i < 3 ? "l" : null }, c)))),
       h("tbody", null, [
-        srcRow("pbp", "Volume, efficiency, pass rate and PROE, shotgun, no-huddle, 4th downs, kicking, results allowed", "every season, refreshed nightly"),
-        srcRow("ftn", "Motion, play-action, RPO, screens, backfield, charted blitz and box", "2022 on, refreshed in-season"),
-        srcRow("participation", "Personnel, formation, defensive fronts, coverage shells, man/zone, pressure", "2016 on (coverage 2018); published after each season"),
-        srcRow("construction", "Cap allocation, snap-weighted age, continuity, draft capital", "season grain"),
+        srcRow("pbp", "Efficiency, pass rate, shotgun and no huddle rates, fourth downs, kicking and results allowed", "Every season, updated nightly"),
+        srcRow("ftn", "Motion, play action, RPOs, screens, backfield counts and charted blitzes and box counts", "2022 onward, updated during the season"),
+        srcRow("participation", "Personnel groupings, formations, defensive fronts, coverage and pressure", "2016 onward with coverage from 2018, released after each season"),
+        srcRow("construction", "Salary cap allocation, age, roster continuity and draft capital", "One value per season"),
       ].map(r => h("tr", null, r.map((c, i) => h("td", { class: i < 3 ? "l" : null, style: i === 0 ? "white-space:normal;min-width:180px" : i < 3 ? "white-space:normal;min-width:220px" : null }, c))))))),
-    h("h3", null, "This season"),
-    h("div", { class: "note" }, Object.keys(info.unavailable).length
-      ? Object.entries(info.unavailable).map(([k, v]) => h("div", null, h("b", null, `${k}: `), v))
-      : `${book.season} has every source family.`),
-    h("h3", null, "Things worth knowing"),
-    h("div", { class: "note flag" }, h("b", null, "Rates are ratios of season totals. "),
-      "A season rate is the season's numerator over its own denominator — not an average of weekly rates. For a rate over a subset of plays (neutral-script pass rate, play-action share of dropbacks) the two differ by up to 3.9 points."),
-    h("div", { class: "note flag" }, h("b", null, "The formation labels changed in 2023. "),
-      "Through 2022 the participation file names singleback, I-form, empty, jumbo and wildcat; from 2023 those collapse into one \"under center\" value. Each formation share is shown only for the seasons its label existed: ",
-      bounded.filter(m => m.group === "Formation").map(m => `${m.label} (${m.floor}–${m.ceiling ?? "now"})`).join(", "),
-      ". FTN's charted under-center rate covers 2022 on."),
-    h("div", { class: "note flag" }, h("b", null, "Pressure is computed on dropbacks. "),
-      "From 2023 the participation file marks non-pass plays as \"no pressure\" instead of leaving them blank. Pressure rate here counts dropbacks only, which is what keeps it on one scale across that change (league median 29.1% in 2022, 29.4% in 2023)."),
-    h("div", { class: "note flag" }, h("b", null, "Two blitz rates, never mixed. "),
-      "Participation's blitz rate and FTN's charted blitz rate come from different charting and are shown as separate rows; they never share a trend line."),
-    h("div", { class: "note flag" }, h("b", null, "Ranks. "),
-      "For a metric that is good or bad for the team (EPA, success rate, sacks) 1st means best — EPA allowed ranks 1st at the lowest. For a tendency (12 personnel, Cover 3) the rank only says where the team sits: \"3rd highest\", neither good nor bad."),
-    h("p", { class: "muted" }, "Regular season only: weeks 1–17 through 2020, 1–18 after."),
+    h("h3", null, `Gaps in ${book.season}`),
+    h("div", { class: "note" }, missing.length ? missing.join(" ") : `Every data source is available for ${book.season}.`),
+    h("h3", null, "Things to know"),
+    note("How rates are calculated", "Season rates are calculated from season totals. For example, the neutral script pass rate is the number of neutral script passes divided by the number of neutral script plays over the whole season. Averaging the weekly rates instead can be off by as much as four percentage points for stats like this one, which only count some of a team's plays."),
+    note("Formation labels changed in 2023", "Up to 2022 the participation data recorded singleback, I formation, empty, jumbo and wildcat as separate formations. Starting in 2023 it groups all of them as under center. Because of that, the singleback, I formation and empty rates only appear through 2022, and the under center rate only appears from 2023 on. FTN's charted under center rate covers 2022 onward and can be used to compare across the change."),
+    note("Pressure rate", "Starting in 2023 the participation data marks running plays as having no pressure instead of leaving them blank. The pressure rate here only counts dropbacks, which keeps it consistent across that change. The league median was 29.1 percent in 2022 and 29.4 percent in 2023."),
+    note("Two different blitz rates", "The participation data and FTN chart blitzes separately and do not always agree, so their blitz rates are shown as two different stats and are never combined."),
+    note("How ranks work", "For stats where higher or lower is clearly better, like EPA or success rate, 1st is always the best team in the league. That means the defense allowing the lowest EPA ranks 1st. For tendencies like 12 personnel or Cover 3 rate, there is no good or bad, so the rank just says whether the team was among the highest or lowest in the league."),
+    note("Regular season only", "Playoff games are not included. Seasons through 2020 had 17 weeks and seasons since 2021 have had 18."),
   ];
 }
 
@@ -584,7 +585,7 @@ function fillPickers(team, season) {
         .map(([abbr, t]) => h("option", { value: abbr }, t.name))));
     }
     for (const x of state.index.seasons) {
-      sp.append(h("option", { value: x.season }, x.complete ? String(x.season) : `${x.season} · thru wk ${x.through_week}`));
+      sp.append(h("option", { value: x.season }, x.complete ? String(x.season) : `${x.season} (through week ${x.through_week})`));
     }
     tp.addEventListener("change", () => {
       const [, , s2, tab] = location.hash.split("/");
@@ -616,12 +617,12 @@ async function route() {
     app.replaceChildren(h("p", { class: "loading" }, `Could not load ${team} ${season}.`));
     return;
   }
-  document.title = `${book.meta.name} ${season} · Team Book`;
+  document.title = `${book.meta.name} ${season} Team Book`;
   const body = {
     overview: () => overview(book, league, info),
-    offense: () => [h("h2", null, "Offense"), h("p", { class: "lede" }, "How the offense lined up and what it called, ranked against the other 31. Tendencies are coloured neutral; only efficiency is good or bad."), sideSections(book, league, "offense")],
-    defense: () => [h("h2", null, "Defense"), h("p", { class: "lede" }, "Results allowed, then the scheme behind them: fronts and packages, coverage shells and man/zone, pressure and box counts."), sideSections(book, league, "defense")],
-    special: () => [h("h2", null, "Special teams & decisions"), sideSections(book, league, "special"), h("h2", null, "Roster construction"), h("p", { class: "lede" }, "Where the cap went, how old the snaps were, and how much of the roster returned."), sideSections(book, league, "construction")],
+    offense: () => [h("h2", null, "Offensive scheme"), h("p", { class: "lede" }, "This tab covers how the offense lined up and what kinds of plays it called, with each stat ranked against the other 31 teams. Efficiency stats are marked green or red depending on whether the rank is good or bad. Tendencies like pass rate or 12 personnel usage are shown in gray because there is no right answer for them."), sideSections(book, league, "offense")],
+    defense: () => [h("h2", null, "Defensive scheme"), h("p", { class: "lede" }, "The first table shows how well the defense played. The rest show how it played, including which packages it used, how often it played each coverage, how often it blitzed and how many defenders it put in the box."), sideSections(book, league, "defense")],
+    special: () => [h("h2", null, "Special teams and decisions"), h("p", { class: "lede" }, "These stats cover fourth down and two point decisions, red zone finishing and kicking."), sideSections(book, league, "special"), h("h2", null, "Roster construction"), h("p", { class: "lede" }, "These stats show how the team split its salary cap between positions, how old its starters were, how many of last year's players returned and how much draft capital it had invested on each side of the ball."), sideSections(book, league, "construction")],
     players: () => players(book),
     coaching: () => coaching(book),
     trends: () => trends(book),
@@ -648,7 +649,7 @@ async function main() {
   }
   state.reg = state.index.registry;
   for (const m of state.reg) state.byKey[m.key] = m;
-  $("#gen").textContent = `Data generated ${state.index.generated_at}.`;
+  $("#gen").textContent = `The data was last updated on ${new Date(state.index.generated_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.`;
   window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
   route();
 }

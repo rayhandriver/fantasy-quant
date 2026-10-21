@@ -79,7 +79,7 @@ def test_traits_pick_the_extremes_and_phrase_them_label_first():
     top = B.traits("T31", ctx)
     texts = {t["key"]: t["text"] for t in top}
     assert texts["pass_rate"] == "Pass rate: highest in the league"
-    assert texts["def_epa_per_play"] == "EPA / play allowed: worst in the league"
+    assert texts["def_epa_per_play"] == "EPA per play allowed: worst in the league"
     assert all(t["side"] in B.TRAITS_PER_SIDE for t in top)
     assert B.traits("T15", ctx) == []  # the middle of the league is not a trait
 

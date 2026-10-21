@@ -3,161 +3,221 @@
 [![CI](https://github.com/rayhandriver/fantasy-quant/actions/workflows/ci.yml/badge.svg)](https://github.com/rayhandriver/fantasy-quant/actions/workflows/ci.yml)
 [![Team Book](https://github.com/rayhandriver/fantasy-quant/actions/workflows/teambook-weekly.yml/badge.svg)](https://github.com/rayhandriver/fantasy-quant/actions/workflows/teambook-weekly.yml)
 
-An NFL analytics platform built on the methods of quantitative portfolio management: point-in-time
-data, walk-forward evaluation, calibrated distributions, and a held-out test set spent exactly once.
-It has two public faces:
+fantasy-quant is an NFL analytics project that applies methods from quantitative portfolio
+management to football data. It started as a fantasy football draft model and grew into two
+things people can use. The first is the [NFL Team Book](https://rayhandriver.github.io/fantasy-quant/),
+a website that breaks down how every team has played since 2018. The second is a fantasy draft
+engine and app that builds the roster a user wants and shows how much each of their preferences
+costs compared to the consensus best team.
 
-- **[Team Book](https://rayhandriver.github.io/fantasy-quant/)** — every NFL team's offensive and
-  defensive scheme, players and play-callers, ranked against the league for every season from 2018
-  to the one being played. 32 teams × 9 seasons, ~90 metrics per book, refreshed weekly by a GitHub
-  Actions job with no database behind it.
-- **A fantasy draft engine and app** — builds the roster a user actually wants under their own
-  constraints, and prices what each preference costs against the consensus-optimal team.
+[![The Team Book page for the 2025 Chicago Bears offense](docs/img/teambook-offense.png)](https://rayhandriver.github.io/fantasy-quant/#/CHI/2025/offense)
 
-[![Team Book — Chicago Bears 2025, offense](docs/img/teambook-offense.png)](https://rayhandriver.github.io/fantasy-quant/#/CHI/2025/offense)
+The project has about 32,000 lines of Python and more than 1,000 tests, written between June and
+October 2026.
 
-**~32k lines of Python · 1,000+ tests · June–October 2026.**
+## NFL Team Book
 
----
+The Team Book has a page for every team in every season from 2018 to the current one. Each page
+covers the offense's personnel groupings, formations and play calling tendencies, the defense's
+packages, coverage and pressure, the players who were on the field the most, and who called the
+plays on each side. Every stat is ranked against the rest of the league, and each page lists the
+five seasons from other franchises that played the most similar style. The 2025 Bears offense,
+for example, comes out closest to the 2023 and 2024 Lions, when Ben Johnson was calling plays in
+Detroit before taking the Chicago job.
 
-## How it got here
+The site is plain HTML and JavaScript that reads JSON files, so it runs on GitHub Pages without a
+server. A GitHub Actions job rebuilds the current season every Tuesday and Wednesday straight from
+the nflverse data releases, which means the weekly update does not depend on the local database.
 
-The project began as one question and changed shape every time the data answered it.
+## Project timeline
 
-**Jun 29 – Jul 3 · The foundation.** A DuckDB store of point-in-time tables (play-by-play, weekly
-stats, rosters, ADP snapshots, betting lines, injuries), a league scoring engine, a draft simulator,
-and a walk-forward backtest harness with block-bootstrap confidence intervals. Every feature is
-filtered *at the read* to what was known on its as-of date, so a look-ahead leak is a query that
-cannot be written rather than a bug to find later.
+### Data and backtesting
 
-**Jul 4 · The pivot.** The first models went through the harness and the harness gave an honest
-answer: a projection model scored **−59 points/season against consensus ADP, 95% CI [−162, +33]**.
-A power calculation on those standard errors showed that detecting even a large edge would need
-~27 seasons of history; there are ~10. Rather than keep fighting an unwinnable inference problem,
-the objective changed to one that *can* be checked inside a single draft — the
-[direct-indexing](docs/REFRAME-2026-07-04.md) idea from asset management: take the market's
-consensus for value, personalize the portfolio, and report the cost of every deviation.
+From June 29 to July 3 I built the foundation. This was a DuckDB database of play by play data,
+weekly stats, rosters, ADP snapshots, betting lines and injuries, along with a fantasy scoring
+engine, a draft simulator and a backtesting harness that tests a method on past seasons and
+reports bootstrap confidence intervals. Every query filters data by the date it was known, so a
+model built for a given point in time cannot see anything that happened later.
 
-**Jul 5 – 12 · The engine.** Value from consensus projections; a per-player distributional layer
-(quantiles, injury and games-played risk); a covariance model so roster construction sees
-correlated outcomes; a Monte Carlo season and playoff simulator; a draft policy with positional
-scarcity and lookahead; and an in-season co-pilot — a Kalman-filter re-projection that beat static
-preseason projections in **6 of 6** seasons out of sample, and a start/sit optimizer worth
-**+2.1 points per lineup-week**.
+### Changing the goal
 
-**Jul 10 – 19 · Audit, then the lockbox.** A full-codebase audit opened a technical-debt register
-that is still the project's backbone (now 57 entries, each with a cause, a fix and a verification).
-A Monte Carlo tree search draft engine was built, beat the greedy policy on its own objective, failed
-to beat it on realized points (Δ +32, CI spans zero, at 100× the compute), and was **dropped on a
-bar set before it ran**. The full stack was then frozen, the evaluation pre-registered, and the
-2023–24 lockbox read **once**: championship-probability Brier **0.0884 vs a 0.09 baseline**, 80%
-prediction intervals covering **80.1%** of outcomes for players who play.
+On July 4 the first projection model went through the harness. It scored 59 fantasy points per
+season worse than just drafting by ADP, with a 95 percent confidence interval from 162 points worse
+to 33 points better. Based on the standard errors from that test, detecting even a large edge over
+ADP would take about 27 seasons of data, and only about 10 exist. Instead of trying to beat
+consensus, I changed the goal to something that can be checked within a single draft. The idea
+comes from [direct indexing](docs/REFRAME-2026-07-04.md) in asset management, where you start
+from the market's consensus, customize the portfolio to the client, and report what each
+customization costs.
 
-**Jul 23 – 30 · Modelling the other nine drafters.** A crawler over Sleeper's public API grew a
-corpus of real human drafts from **149 to 7,699 (1.2M picks)** — after finding that the "exhausted"
-crawl had simply never been reseeded. At that scale a hardcoded format label turned out to have
-mixed dynasty, superflex and IDP rooms into one PPR board (82% of drafts); every downstream result
-was re-derived on the clean corpus, and two plausible "behavioural findings" disappeared. The
-behavioural opponent model beats ADP on log-loss by **+0.174** over 70,614 real picks, and the
-simulated mock-draft room is validated against 1,144 real drafts.
+### Building the engine
 
-**Jul 30 – Aug 17 · The product and the scheme layer.** A Streamlit draft app (live board, draft
-room, preference tags, cost report, post-draft grades), support for any league format (superflex,
-custom scoring, keepers), and a scheme data layer built on nflverse's 22-man participation data:
-personnel groupings, formations, coverage shells, man/zone and pressure for every play since 2016,
-attributed to offensive *and* defensive play-callers.
+From July 5 to 12 I built the main pieces. These were player values from consensus projections, a
+distribution for each player's season that accounts for injuries and missed games, a covariance
+model so the draft logic understands which players' outcomes move together, a Monte Carlo
+simulation of the regular season and playoffs, and a draft strategy that plans around positional
+scarcity. I also built in-season tools. A Kalman filter that updates projections each week beat
+the preseason projections in all six seasons it was tested on, and a start/sit optimizer added
+about 2.1 points per lineup per week.
 
-**Oct · The Team Book.** A one-off hand-built report on the 2025 Bears, generalized into a pipeline
-and a static site for every team and season, plus a store-free path that rebuilds the live season
-from nflverse each week. Building it surfaced three metrics in the scheme layer that were encoding
-artifacts rather than football — a pressure rate of exactly 1.0 for every team from 2023, and
-formation shares zeroed by a vocabulary change in the source — which the book's guard now refuses
-structurally.
+### Audit and final test
 
-## How the work is done
+From July 10 to 19 I audited the whole codebase and started a register of known problems. It now
+has 57 entries, each with the cause, the fix and how the fix was checked. I also built a Monte
+Carlo tree search drafter. It did better than the simpler greedy drafter on the model's own
+objective, but it did not score more real fantasy points and took about 100 times longer per pick,
+so I dropped it based on a bar I had set before running it. After that I froze the model, wrote
+down exactly how it would be evaluated, and tested it once on the 2023 and 2024 seasons, which had
+been held out of all development. Its championship probabilities scored a Brier score of 0.0884
+against a 0.09 baseline, and its 80 percent prediction ranges contained 80.1 percent of actual
+results for players who stayed healthy.
 
-- **Point-in-time at the read.** Nothing dated after an as-of date can reach a feature built for it.
-- **Pre-registered bars that can fail.** Every step ships with a done-bar written before the result
-  is read, plus a control showing the bar is capable of failing. Nulls are reported as nulls: several
-  research tracks ended that way and are written up as such.
-- **One held-out test, spent once.** Development used 2014–2022; 2023–24 was read a single time
-  against a committed pre-registration.
-- **Determinism is tested, not assumed.** Monte Carlo results that wobbled between processes were
-  traced to DuckDB's parallel floating-point aggregation, not to the random-number code every
-  hypothesis pointed at; reads that feed a simulation are now single-threaded and bit-reproducible.
-- **Missing is never zero.** A metric outside the seasons its source covers is NULL with a stated
-  reason, end to end — in the store, in the JSON, and on the page.
-- **Two kinds of agreement.** A re-implementation is checked for *code parity* exactly (same data,
-  identical output) and for *data vintage* within a bound (the upstream restates history), so a code
-  bug cannot hide inside a data revision.
-- **A written record.** [`findings.md`](findings.md) logs what every step produced and taught,
-  [`PLAN.md`](PLAN.md) the decisions and dead ends, [`docs/TECH-DEBT.md`](docs/TECH-DEBT.md) every
-  known defect with its fix.
+### Modeling real drafters
+
+From July 23 to 30 I worked on predicting what the other people in a draft will do. A crawler over
+Sleeper's public API grew the set of real drafts from 149 to 7,699, about 1.2 million picks, once I
+found out the earlier crawl had stopped early instead of running out of drafts. At that size a
+hardcoded label turned out to be mixing dynasty, superflex and IDP leagues in with standard PPR
+drafts, which affected 82 percent of them. I re-ran everything that depended on the drafts after
+fixing it, and two results I had believed turned out to be caused by the mix-up. The final
+opponent model predicts real picks better than ADP alone, and the simulated draft room was checked
+against 1,144 real drafts.
+
+### App and scheme data
+
+From July 30 to August 17 I built a Streamlit app for running drafts, with a live board, a draft
+room, tags for players a user likes or wants to avoid, a report on what those preferences cost,
+and grades after the draft. I also added support for other league formats like superflex, custom
+scoring and keepers. The last piece was a scheme database built from nflverse's participation
+data, which records all 22 players on the field for every play since 2016. That made it possible
+to measure personnel groupings, formations, coverage and pressure, and to connect them to the
+offensive and defensive play callers.
+
+### The Team Book
+
+In October I turned a one-off report I had built on the 2025 Bears into the Team Book, covering
+every team and season, with the current season updating each week. While building it I found
+three stats in the scheme database that were caused by changes in how the source data was
+recorded rather than by anything on the field. Pressure rate was exactly 1.0 for every team
+starting in 2023, and a change in formation labels zeroed out several formation rates. The site
+now checks for this and refuses to publish any stat that is identical for all 32 teams.
+
+## How I work
+
+### Only past data
+
+Every feature is filtered by date when it is read from the database, so a model can only see
+information that existed at the time it is supposed to represent.
+
+### Bars set in advance
+
+Each step has a pass or fail bar written before the results are looked at, along with a check that
+the bar is actually able to fail. Several ideas did not work out, and they are written up the same
+way as the ones that did.
+
+### One final test
+
+All development used the 2014 to 2022 seasons. The 2023 and 2024 seasons were used once, at the
+end, following a plan that was committed before the test ran.
+
+### Reproducible results
+
+Simulation results that changed slightly from run to run turned out to come from DuckDB adding
+numbers in a different order on different threads, not from the random number code. Reads that
+feed a simulation now run on a single thread and give the same answer every time.
+
+### Missing is not zero
+
+When a stat does not exist for a season, it is stored and shown as missing with a reason. It is
+never filled in with a zero.
+
+### A written record
+
+[`findings.md`](findings.md) records what each step produced and what it showed,
+[`PLAN.md`](PLAN.md) records decisions and dead ends, and [`docs/TECH-DEBT.md`](docs/TECH-DEBT.md)
+lists every known problem and its fix.
 
 ## Architecture
 
 ```
-nflverse releases ─┐                                   ┌─► draft engine ─► Streamlit app (app/)
-Sleeper API ───────┼─► ingest + gates ─► DuckDB store ─┤
-FantasyPros / FFC ─┘   (data/)          (PIT tables)   └─► teambook/ ─► site/data/*.json ─► GitHub Pages
-                                                             ▲
-nflverse releases ── teambook/inseason.py (in-memory, no store) ── weekly Actions job
+nflverse, Sleeper, FantasyPros, FFC  ->  ingest and checks  ->  DuckDB  ->  draft engine  ->  Streamlit app
+                                                                       ->  teambook       ->  site/data JSON  ->  GitHub Pages
+nflverse (current season only)  ->  teambook/inseason.py, no database  ->  weekly Actions job
 ```
 
-| Package | What it does |
+| Package | Purpose |
 |---|---|
-| `data/` | Ingest from nflverse, Sleeper, FantasyPros and FFC; point-in-time tables; validation and encoding-break gates |
-| `projections/`, `covariance/`, `valuation/` | Consensus value, per-player distributions, correlation, VBD and utility |
-| `draft/`, `simulation/` | Draft simulator, behavioural opponent model, optimizer, season and playoff Monte Carlo |
-| `inseason/` | Kalman re-projection, start/sit, waivers/FAAB, streaming, trade finder |
-| `situation/` | The scheme layer: participation, coverage, play-caller regimes, scheme fingerprints |
-| `teambook/` | Metric registry, book builder, store-free live path, output guard, site export |
-| `backtest/` | Walk-forward harness, PAR metrics, block-bootstrap significance |
+| `data/` | Downloads from nflverse, Sleeper, FantasyPros and FFC, builds the dated tables and checks them |
+| `projections/`, `covariance/`, `valuation/` | Player values, outcome distributions, correlations and draft value |
+| `draft/`, `simulation/` | Draft simulator, opponent model, draft strategy and season simulation |
+| `inseason/` | Weekly projection updates, start/sit, waivers, streaming and trades |
+| `situation/` | Scheme data from the participation file, coverage, play callers and scheme profiles |
+| `teambook/` | Builds each team page, the weekly update and the website data |
+| `backtest/` | Tests methods on past seasons with confidence intervals |
 
-## Run it
+## Running it
 
 ```bash
-uv sync --extra data                       # Python 3.12, pinned via uv
-uv run python -m pytest -m "not needs_db"  # the suite that runs without the local store
-uv run python -m http.server -d site       # browse the Team Book at localhost:8000
-uv run python steps/teambook_export.py --live   # rebuild the live season from nflverse
+uv sync --extra data                       # installs Python 3.12 and the locked dependencies
+uv run python -m pytest -m "not needs_db"  # runs the tests that do not need the local database
+uv run python -m http.server -d site       # serves the Team Book at localhost:8000
+uv run python steps/teambook_export.py --live   # rebuilds the current season from nflverse
 ```
 
-The full pipeline (`steps/`) rebuilds the 765 MB DuckDB store from public sources; tests that need
-it are marked `needs_db` and run locally. The draft app runs with
-`uv sync --extra ui && uv run streamlit run app/main.py` once the store exists.
+The scripts in `steps/` rebuild the full 765 MB database from public sources. Tests that need it
+are marked `needs_db` and run locally. Once the database exists, the draft app runs with
+`uv sync --extra ui && uv run streamlit run app/main.py`.
 
-## Data and attribution
+## Data sources
 
-Play-by-play, participation, rosters, contracts, snap counts and schedules from
-[nflverse](https://github.com/nflverse) (CC-BY 4.0). Play-design and charted blitz/box fields from
-[FTN Data](https://ftnfantasy.com) via nflverse (CC-BY-SA 4.0). Draft data from Sleeper's public API;
-ADP from Fantasy Football Calculator; consensus rankings from FantasyPros. Regular season only. Not
+Play by play, participation, roster, contract, snap count and schedule data come from
+[nflverse](https://github.com/nflverse) under the CC-BY 4.0 license. Play design, blitz and box
+count charting comes from [FTN Data](https://ftnfantasy.com) through nflverse under the CC-BY-SA
+4.0 license. Draft data comes from Sleeper's public API, ADP from Fantasy Football Calculator, and
+consensus rankings from FantasyPros. All stats are from the regular season. This project is not
 affiliated with the NFL or any team.
 
-## What's next
+## Next steps
 
-- **League import** for the draft app — Sleeper first, then ESPN — so a user's real settings and
-  league-mates load in one step.
-- **The full 2026 book** when nflverse publishes the season's participation file (expected February):
-  personnel, coverage and pressure for the live season, through the same store-backed export.
-- **Matchup view** in the Team Book: an offense's tendencies laid against the opposing defense's,
-  week by week.
-- **Fix the scheme panel at the source** (register entries T56 and T57) and add a league-constant
-  check to the standing data gates, so the next encoding change fails ingest rather than export.
-- **Close the attrition gap**: unconditional interval coverage is 72% against 80% for players who
-  play; a role and depth-chart survival model is the planned fix.
-- **A hosted draft app**, which needs a slimmed, read-only extract of the store.
+### League import
+
+The draft app will be able to load a user's league settings directly from Sleeper and then ESPN,
+so they do not have to be entered by hand.
+
+### Full 2026 pages
+
+nflverse usually publishes the season's participation data in February. Once it is out, the 2026
+pages will get personnel, coverage and pressure numbers like the earlier seasons have.
+
+### Matchup view
+
+The Team Book will compare an offense's tendencies against the defense it faces each week.
+
+### Fixing the source data
+
+The pressure and formation problems are currently worked around in the Team Book. They should be
+fixed in the scheme database itself, with a check that catches the next change of this kind when
+the data is first loaded.
+
+### Injury and role risk
+
+The 80 percent prediction ranges hit 80 percent for players who stay healthy but only 72 percent
+overall, because the model underestimates how often a projected starter loses their role or misses
+the season. A model of depth chart and role changes is the planned fix.
+
+### Hosted draft app
+
+Putting the draft app online needs a smaller, read only copy of the database.
 
 ## Repository guide
 
-| File | Role |
+| File | Contents |
 |---|---|
-| [`docs/STRATEGY.md`](docs/STRATEGY.md) | Why: feasibility, the finance parallels, the factor taxonomy |
-| [`docs/REFRAME-2026-07-04.md`](docs/REFRAME-2026-07-04.md) | The pivot to personalization, and the numbers behind it |
-| [`PROJECT.md`](PROJECT.md) · [`ROADMAP.md`](ROADMAP.md) | Scope, phase plan and status |
-| [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) | Step-by-step execution manual with every done-bar |
-| [`findings.md`](findings.md) · [`PLAN.md`](PLAN.md) | What each step found; decisions and dead ends |
-| [`docs/TECH-DEBT.md`](docs/TECH-DEBT.md) | The defect register |
-| [`glossary.md`](glossary.md) | Fantasy and quant terms as this repo uses them |
+| [`docs/STRATEGY.md`](docs/STRATEGY.md) | Why the project is set up this way and how it relates to quant finance |
+| [`docs/REFRAME-2026-07-04.md`](docs/REFRAME-2026-07-04.md) | The July 4 change of goal and the numbers behind it |
+| [`PROJECT.md`](PROJECT.md), [`ROADMAP.md`](ROADMAP.md) | Scope, phase plan and status |
+| [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) | The step by step build plan with each step's pass or fail bar |
+| [`findings.md`](findings.md), [`PLAN.md`](PLAN.md) | What each step found, and the decisions and dead ends along the way |
+| [`docs/TECH-DEBT.md`](docs/TECH-DEBT.md) | The register of known problems |
+| [`glossary.md`](glossary.md) | Fantasy and quant terms as this project uses them |
 | [`CLAUDE.md`](CLAUDE.md) | Working rules for anyone changing the code |

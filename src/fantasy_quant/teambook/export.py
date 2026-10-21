@@ -154,10 +154,10 @@ def write_index(out: Path, *, participation_published: bool | None = None) -> di
         "seasons": seasons,
         "registry": M.registry_records(),
         "sources": {
-            M.PBP: "nflverse play-by-play (CC-BY 4.0)",
-            M.FTN: "FTN charting via nflverse (CC-BY-SA 4.0)",
-            M.PARTICIPATION: "nflverse pbp_participation (CC-BY 4.0)",
-            M.CONSTRUCTION: "nflverse rosters, contracts and draft picks (CC-BY 4.0)",
+            M.PBP: "nflverse play by play",
+            M.FTN: "FTN charting through nflverse",
+            M.PARTICIPATION: "nflverse participation data",
+            M.CONSTRUCTION: "nflverse rosters, contracts and draft picks",
         },
     }
     write_json(out / "index.json", index)

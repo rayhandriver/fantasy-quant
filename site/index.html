@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NFL Team Book</title>
-<meta name="description" content="Every NFL team's scheme, players and coaching, 2018 to the live season — personnel, formations, coverage shells, pressure, and the most similar team-seasons. Built from nflverse play-by-play.">
+<meta name="description" content="A breakdown of how every NFL team has played since 2018, including personnel, formations, coverage, pressure, player usage and play callers, built from nflverse play by play data.">
 <link rel="stylesheet" href="style.css">
 <script>
   // apply a remembered theme before first paint; storage can be unavailable, so never depend on it
@@ -14,7 +14,7 @@
 <body>
 <div class="topbar">
   <div class="wrap">
-    <a class="brand" href="#/"><span class="dot"></span><b>Team Book</b><span>· fantasy-quant</span></a>
+    <a class="brand" href="#/"><span class="dot"></span><b>NFL Team Book</b></a>
     <select id="pick-team" aria-label="Team"></select>
     <select id="pick-season" aria-label="Season"></select>
     <button class="btn" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button>
@@ -24,12 +24,12 @@
 <div id="tip" role="status" aria-live="polite"></div>
 <div class="wrap">
   <footer>
-    <p>Data: play-by-play, participation, rosters, contracts and snap counts from
-      <a href="https://github.com/nflverse">nflverse</a> (CC-BY 4.0); play-design and charted
-      blitz/box fields from <a href="https://ftnfantasy.com">FTN Data</a> via nflverse (CC-BY-SA 4.0).
-      Regular season only. Not affiliated with the NFL or any team.</p>
+    <p>Play by play, participation, roster, contract and snap count data come from
+      <a href="https://github.com/nflverse">nflverse</a> under the CC-BY 4.0 license. Play design,
+      blitz and box count charting comes from <a href="https://ftnfantasy.com">FTN Data</a> through
+      nflverse under the CC-BY-SA 4.0 license. This site is not affiliated with the NFL or any team.</p>
     <p id="gen"></p>
-    <p>Source and method: <a href="https://github.com/rayhandriver/fantasy-quant">github.com/rayhandriver/fantasy-quant</a></p>
+    <p>The code behind this site is on <a href="https://github.com/rayhandriver/fantasy-quant">GitHub</a>.</p>
   </footer>
 </div>
 <script src="app.js"></script>

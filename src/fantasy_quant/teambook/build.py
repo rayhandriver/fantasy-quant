@@ -302,9 +302,9 @@ def unavailable_reasons(season: int, participation: bool, has_construction: bool
     if season < M.BY_KEY["motion_rate"].floor:
         out[M.FTN] = f"FTN charting begins in {M.BY_KEY['motion_rate'].floor}."
     if not participation:
-        out[M.PARTICIPATION] = ("Personnel groupings, defensive fronts, coverage shells, man/zone "
-                                "and pressure come from nflverse's participation file, which is "
-                                "published after the season ends.")
+        out[M.PARTICIPATION] = ("Personnel groupings, formations, defensive fronts, coverage and "
+                                "pressure come from nflverse's participation data, which is "
+                                "published a few months after the season ends.")
     if not has_construction:
         out[M.CONSTRUCTION] = "Roster construction is not built for this season yet."
     return out
