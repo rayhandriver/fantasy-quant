@@ -40,6 +40,7 @@ from fantasy_quant.config import PROJECT_ROOT
 from fantasy_quant.teambook import build as B
 from fantasy_quant.teambook import inseason as I
 from fantasy_quant.teambook import metrics as M
+from fantasy_quant.teambook import overview as O
 from fantasy_quant.teambook import schema as S
 
 SITE_DATA = PROJECT_ROOT / "site" / "data"
@@ -115,13 +116,22 @@ def read_contexts(out: Path, seasons) -> B.Contexts:
 
 
 # --- books -------------------------------------------------------------------------------------
-def write_books(out: Path, result: dict, found_comps: dict) -> dict[str, int]:
-    """Guard and write one season's books; return each book's size in bytes."""
+def write_books(out: Path, result: dict, found_comps: dict, *, prev_books: dict,
+                trends: dict, teams: dict) -> dict[str, int]:
+    """Guard and write one season's books, each with its written tab overviews; return sizes.
+
+    ``prev_books`` is the previous season's books by team (for "last year" comparisons) and
+    ``trends`` the per-team series from :func:`build.team_trends`, cut at this season.
+    """
     S.assert_season_sane(result["books"])
+    season = result["season"]
     sizes = {}
     for team, book in result["books"].items():
-        book = {**book, "comps": found_comps.get((result["season"], team), {})}
+        book = {**book, "comps": found_comps.get((season, team), {})}
         book.pop("trends", None)
+        mine = {k: [r for r in v if r[0] <= season] for k, v in trends.get(team, {}).items()}
+        book["overview"] = O.overviews(compact(book), prev_books.get(team), mine, teams)
+        O.assert_overview_sane(team, season, book["overview"])
         sizes[team] = write_json(out / str(result["season"]) / f"{team}.json", compact(book))
     worst = max(sizes, key=sizes.get)
     if sizes[worst] > MAX_BOOK_BYTES:
@@ -174,10 +184,12 @@ def export_history(con, seasons=HISTORY, out: Path = SITE_DATA) -> dict:
     contexts = {s: r["context"] for s, r in results.items()}
     found = B.comps(contexts, {s: list(r["books"]) for s, r in results.items()},
                     pool=set(seasons))
+    trends = B.team_trends(contexts)
     sizes = {}
     for s, r in results.items():
         write_json(out / "league" / f"{s}.json", league_record(r))
-        sizes[s] = write_books(out, r, found)
+        prev = results[s - 1]["books"] if s - 1 in results else {}
+        sizes[s] = write_books(out, r, found, prev_books=prev, trends=trends, teams=meta)
     construction = B.construction_frame(con, LIVE_SEASON)
     write_json(out / "carry" / f"{LIVE_SEASON}.json", compact({
         "season": LIVE_SEASON, "meta": meta,
@@ -204,7 +216,9 @@ def export_live(season: int = LIVE_SEASON, out: Path = SITE_DATA, *, con=None,
     contexts = {**history, season: result["context"]}
     found = B.comps(contexts, {season: list(result["books"])}, pool=set(history))
     write_json(out / "league" / f"{season}.json", league_record(result))
-    sizes = write_books(out, result, found)
+    prev = {p.stem: read_json(p) for p in (out / str(season - 1)).glob("*.json")}
+    sizes = write_books(out, result, found, prev_books=prev, trends=B.team_trends(contexts),
+                        teams=carry["meta"])
     write_trends(out)
     published = I.participation_published(season) if refresh else None
     write_index(out, participation_published=published)

@@ -7341,3 +7341,23 @@ June→October timeline drawn from the git log and this file, how the work is do
 sketch, how to run it, data attribution, and what is next. The old docs table moved to a
 "Repository guide" section; the root docs stay where `CLAUDE.md` links them. Screenshot at
 `docs/img/teambook-offense.png`.
+
+### Written tab overviews (2026-10-21)
+
+- `teambook/overview.py` writes two to four plain sentences at the top of every tab, for all
+  288 books (2,304 overviews), from the book's own metrics, players, comps and trends. **Rule
+  based by the user's choice** over a Claude API writer: free, reproducible, and the weekly job
+  regenerates 2026's text with no key. Phrasing varies per team through a stable hash, and every
+  sentence is skipped rather than guessed when its facts are missing.
+- **The user's worked example checks out against the data**: DET 2026 ranks 27th or worse in all
+  five main defensive efficiency measures, 4th in sack rate, with Hutchinson (14.5 sacks in 2025)
+  the expected rusher and Wonnum (5 sacks, 55% of snaps, not on the 2025 defense) the surprise. The
+  generator now writes that paragraph itself.
+- **Three defects the draft output had, each fixed with a test:** the "surprise" rusher was
+  chosen as the second-best sack total rather than against last season's production, which named
+  McNeill over Wonnum; a newcomer who led the team was called "as productive as expected"; and
+  "first season with the team" was asserted for anyone outside last season's top 24 by snaps, which
+  is false for a backup who barely played (now "not a regular on this defense last season").
+- `assert_overview_sane` refuses empty slots, doubled phrases and sentence counts outside 1–4
+  (counting by a regex that ignores initials like C.J. and names like St. Brown). A store-free
+  test checks every committed book has 2–4 sentences on every tab.

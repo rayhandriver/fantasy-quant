@@ -20,6 +20,7 @@ from fantasy_quant.teambook import build as B
 from fantasy_quant.teambook import export as E
 from fantasy_quant.teambook import inseason as I
 from fantasy_quant.teambook import metrics as M
+from fantasy_quant.teambook import overview as O
 from fantasy_quant.teambook import pbp_family as pf
 from fantasy_quant.teambook import schema as S
 
@@ -446,3 +447,58 @@ def test_the_store_free_live_export_writes_a_season_beside_the_history(con, tmp_
     index = E.read_json(tmp_path / "index.json")
     assert [s["season"] for s in index["seasons"]] == [2025, 2024, 2023]
     assert "logo" not in index["teams"]["CHI"] and index["teams"]["CHI"]["color"]
+
+
+# --- the written tab overviews ------------------------------------------------------------------
+def test_sentence_counting_ignores_initials_and_abbreviated_names():
+    text = "C.J. Anderson ran. Amon-Ra St. Brown drew 30% of targets. Chris Rodriguez Jr. led."
+    assert len(O.SENTENCE_END.findall(text)) == 3
+
+
+def test_articles_follow_the_sound_not_the_letter():
+    assert O.a("eight man box rate") == "an eight man box rate"
+    assert O.a("11 personnel usage") == "an 11 personnel usage"
+    assert O.a("Cover 3 rate") == "a Cover 3 rate"
+
+
+def _defense_book(players, prev_players):
+    def cell(rank):
+        return {"v": 0.1, "rank": rank, "n": 32, "pct": 0.5, "z": 0.0, "median": 0.1}
+    metrics = {k: cell(30) for k in O.DEF_KEY}
+    metrics["def_sack_rate"] = cell(3)
+    book = {"team": "DET", "season": 2026, "status": {"complete": False, "through_week": 6},
+            "meta": {"nick": "Lions"}, "metrics": metrics,
+            "players": {"offense": [], "defense": players}}
+    prev = {"players": {"defense": prev_players}}
+    return O.Writer(book, prev, {}, {}, live=True)
+
+
+def test_the_defense_overview_names_the_expected_star_and_the_surprise():
+    star = {"gsis_id": "a", "name": "Star Rusher", "sacks": 4, "snap_share": 0.9}
+    new = {"gsis_id": "b", "name": "New Guy", "sacks": 5, "snap_share": 0.5}
+    w = _defense_book([new, star], [{"gsis_id": "a", "sacks": 14.5}])
+    text = O.defense_tab(w)
+    assert "all five main efficiency measures" in text
+    assert "bright spot has been the pass rush" in text
+    assert "Star Rusher has been as productive as expected" in text
+    assert "surprise is New Guy, who has 5 sacks while playing only 50% of the snaps" in text
+
+
+def test_a_newcomer_leader_is_never_called_expected():
+    lead = {"gsis_id": "a", "name": "New Leader", "sacks": 8, "snap_share": 0.9}
+    other = {"gsis_id": "b", "name": "Part Timer", "sacks": 4, "snap_share": 0.4}
+    text = O.defense_tab(_defense_book([lead, other], []))
+    assert "as productive as expected" not in text
+    assert "New Leader leads the team with 8 sacks" in text
+
+
+def test_every_committed_book_has_a_sane_overview_for_every_tab():
+    from fantasy_quant.config import PROJECT_ROOT
+    books = sorted((PROJECT_ROOT / "site" / "data").glob("20*/*.json"))
+    assert len(books) >= 256
+    for path in books:
+        book = json.loads(path.read_text())
+        assert set(book["overview"]) == set(O.TABS), path
+        O.assert_overview_sane(book["team"], book["season"], book["overview"])
+        for tab, text in book["overview"].items():
+            assert 2 <= len(O.SENTENCE_END.findall(text)) <= 4, (path.name, tab, text)

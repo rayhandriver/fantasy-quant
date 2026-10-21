@@ -387,6 +387,7 @@ function overview(book, league, info) {
   const g = book.meta.games || 1;
   const sides = { offense: "Offense", defense: "Defense", special: "Special teams" };
   return [
+    h("h2", null, info.complete ? "Season summary" : "Season so far"),
     h("div", { class: "tiles" },
       tile("Record", book.meta.record ? `${book.meta.record.w}–${book.meta.record.l}${book.meta.record.t ? "–" + book.meta.record.t : ""}` : "—",
            info.complete ? "Regular season" : `${book.meta.games} games played`),
@@ -628,7 +629,13 @@ async function route() {
     trends: () => trends(book),
     notes: () => notes(book),
   }[tab] || (() => overview(book, league, info));
-  const content = await body();
+  let content = [await body()].flat(Infinity);
+  // the written overview for this tab sits directly under the tab's title
+  const text = book.overview?.[tab in (book.overview || {}) ? tab : "overview"];
+  if (text) {
+    const at = content[0]?.tagName === "H2" ? 1 : 0;
+    content.splice(at, 0, h("p", { class: "overview" }, text));
+  }
   app.replaceChildren(masthead(book, info), liveBanner(info) || "", tabs(team, season, tab), h("main", null, content));
 }
 

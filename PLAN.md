@@ -3587,3 +3587,11 @@ User approved steps 5 and 6 together.
 - **Pages deploys from the workflow** (`actions/deploy-pages`), not from a branch — `site/` stays a
   plain directory on `main`.
 
+### Tab overviews and copy (2026-10-21)
+- User asked for normal, non-AI-sounding copy (short unpunctuated titles, full sentences) across
+  the site and README, then for a 2–4 sentence overview atop every tab. **Decision (user): rule
+  based generator**, chosen over the Claude API (cost, a CI secret, and the repo's no-LLM rule).
+- Judgment calls: the overview sits directly under each tab's title and the tab's "how to read
+  this" text moves below it in smaller muted type · player pronouns are avoided in generated text
+  (names are repeated instead) · the coaching notes in `reference/coaches.csv` were left verbatim.
+

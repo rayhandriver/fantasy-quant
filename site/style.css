@@ -102,7 +102,8 @@ nav.tabs { position: sticky; top: 53px; z-index: 30; background: var(--bg); bord
 h2 { font-size: 19px; margin: 30px 0 4px; letter-spacing: -.012em; font-weight: 640; text-wrap: balance; }
 h2:first-child { margin-top: 0; }
 h3 { font-size: 15px; margin: 22px 0 8px; font-weight: 620; }
-.lede { color: var(--text-2); max-width: 72ch; margin: 0 0 16px; }
+.lede { color: var(--text-3); max-width: 72ch; margin: 0 0 16px; font-size: 13.5px; }
+.overview { color: var(--text); max-width: 74ch; margin: 6px 0 14px; font-size: 16.5px; line-height: 1.6; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); margin: 0 0 18px; }
 .cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 16px; }
 .note { font-size: 13px; line-height: 1.5; padding: 10px 13px; border-radius: 8px; margin: 0 0 14px;
