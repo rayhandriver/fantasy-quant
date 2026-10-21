@@ -69,6 +69,28 @@ backtest shows is unwinnable on ~10 seasons). Team strength is a **tracked bench
 > **T3 (coverage) + T4 (sim level bias) are ☑ done (2026-07-11).** Remaining hard gate before the lockbox
 > eval: **T5** pre-registration (freeze the stack — incl. the T3/T4 params — and report metrics once).
 
+> **★★★ Next-session pointer (2026-10-21 — ✅ TEAM BOOK COMPLETE, steps 1–6. READ THIS FIRST.)**
+>
+> **What exists now:** `src/fantasy_quant/teambook/` (metric registry, builder, store-free live path,
+> guard, export), `site/` (static, vanilla JS, served by GitHub Pages at
+> rayhandriver.github.io/fantasy-quant), `.github/workflows/{ci,teambook-weekly}.yml`, a portfolio
+> `README.md`. Write-ups: `findings.md` §"TEAM BOOK", `PLAN.md` §2026-10-20, register **T56** · **T57**.
+> Plan of record: `~/.claude/plans/1-static-site-lively-umbrella.md`.
+>
+> **Run it:** `uv run python steps/teambook_export.py --history` (needs the store, writes 2018–2025 +
+> `site/data/carry/2026.json`) · `--live` (no store; what the weekly job runs) ·
+> `uv run python -m http.server -d site`. Done-bar for the live path: `steps/teambook_inseason.py`.
+>
+> **⚠ Do not "fix":** the book recomputes the pbp/FTN family itself for every season (T56) and
+> pressure on dropbacks (T57) — never read those from `team_scheme_season`. Comps are drawn from
+> **completed seasons only** with an 80 % shared-metric rule. A metric constant across the league is
+> refused by the guard **on purpose** (it is an encoding seam). Formation shares are bounded by
+> `metrics.SEASON_BOUNDS` around the 2023 vocabulary change.
+>
+> **★ NEXT:** when nflverse publishes 2026 `pbp_participation` (~Feb; the weekly job's index shows
+> `participation_published: true`), ingest it into the store and run `--history` with 2026 included
+> for the full book. Otherwise unchanged from the UI-3 pointer below: Session K3 (league import).
+
 > **★★★ Next-session pointer (2026-08-17 — ✅ SESSION UI-3 COMPLETE: preferences are first-class.
 > All 7 bars PASS. READ THIS FIRST.)**
 >

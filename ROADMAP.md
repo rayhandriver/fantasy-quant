@@ -8,6 +8,11 @@ Legend: ☐ todo · ◐ in progress · ☑ done · ✗ dropped · ◔ deprioriti
 > valid. Below: promotions (5, 8, 10 → core/earlier), reframes (4, 6, 7, 11), **CFR dropped**, **MCTS
 > deprioritized**, **NLP + all in-app AI deferred**, and a new **Personalization spine** (bottom).
 
+> **★ TEAM BOOK ☑ (2026-10-20/21)** — the hand-built Bears 2025 book generalized: `src/fantasy_quant/teambook/`
+> (registry · builder · store-free live path · guard · export) → `site/` on GitHub Pages, 32 teams × 2018–2025 + live
+> 2026, rebuilt Tue/Wed by `.github/workflows/teambook-weekly.yml`; CI in `ci.yml`. Six steps, one commit each; register
+> **T56** · **T57** opened. Portfolio `README.md` rewritten. ☐ owed: the full 2026 book when participation lands (~Feb).
+
 - ☑ **Setup** — env scaffold (uv + Python 3.12, repo, docs, git). *2026-06-29.*
 
 **Phase 0 — Data foundation** ✅ **COMPLETE** — ☑ 0.2 nflverse *(8 tables, weekly↔snaps 0.24% unmatched)* · ☑ 0.3 PFR *(advanced 2018+, reconciles 0.00%)* · ☑ 0.4 ADP *(FFC 2010–2024; top-150 gsis-matched; PIT ✓; homonym-dedup; Underdog deferred)* · ☑ **0.5 Vegas markets** *(game_lines 2014–25 free; de-vig + implied totals ✓; props key-gated)* · ☑ 0.6 news ingest *(injuries/depth 2014+ native-gsis; news_raw RSS pipe; PIT ✓)* · ☑ 0.7 PIT panel *(weekly+preseason grains; leak-assert ✓; 41-col join)* · ☑ 0.8 validation *(9 hard gates PASS; data_health.json; caught+fixed a 0.4 homonym bug)*

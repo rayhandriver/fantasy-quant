@@ -7333,3 +7333,11 @@ Pages, seasons 2018–2025 plus a partial, weekly-refreshed 2026, steps 1–2 st
   rebuilding. Run in the clean worktree, the live export took 18 s and reproduced the committed
   2026 files **byte for byte** (the commit gate correctly reported "index only"), which is also
   a check that the store-free path is deterministic.
+
+### Step 6 — the README
+
+`README.md` rewritten as the project's front page: what it is (Team Book + the draft engine), a
+June→October timeline drawn from the git log and this file, how the work is done, an architecture
+sketch, how to run it, data attribution, and what is next. The old docs table moved to a
+"Repository guide" section; the root docs stay where `CLAUDE.md` links them. Screenshot at
+`docs/img/teambook-offense.png`.
