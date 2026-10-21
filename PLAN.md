@@ -3566,3 +3566,13 @@ User approved steps 3 and 4 together, then a stop.
   `pressure_rate` and formation shares are read by the 0.13.8 fingerprints, so fixing them there
   needs those bars re-run. The book recomputes pressure itself and bounds the formation shares.
 
+### Step 4 — the site (2026-10-21)
+- **Judgment calls:** an eighth tab, *Special teams & roster* (special teams and construction
+  had no home in the planned seven) · the default season is the newest **complete** one, with the
+  live season one click away in the picker and on the home page · "this team" is a single accent
+  colour on every team's page, not the team's own colour — team colours fail contrast as marks
+  (CHI navy on a dark surface, NO gold on light) · charts wider than a phone scroll horizontally
+  rather than shrinking their labels below legibility.
+- **Not done:** a per-chart texture fill for print/forced-colors (forced-colors falls back to
+  system colours instead); a logo set.
+

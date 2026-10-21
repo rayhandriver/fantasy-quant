@@ -186,8 +186,7 @@ DEFENSE: tuple[Metric, ...] = (
     _m("rushers_mean", "Pass rushers / dropback", "defense", "Pressure & box", PARTICIPATION,
        "num2", scheme=True),
     _m("pressure_rate", "Pressure rate", "defense", "Pressure & box", PARTICIPATION, "pct", +1,
-       note="Share of dropbacks with a charted pressure. Recomputed from the play file rather "
-            "than read from the panel, whose 2023+ value is 1.0 for every team (T57)."),
+       note="Share of dropbacks with a charted pressure."),  # recomputed on dropbacks: T57
     _m("box_mean", "Defenders in the box", "defense", "Pressure & box", PARTICIPATION, "num2",
        scheme=True),
     _m("share_box_8plus", "8+ man box", "defense", "Pressure & box", PARTICIPATION, "pct",

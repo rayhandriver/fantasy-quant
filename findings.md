@@ -7289,3 +7289,31 @@ Pages, seasons 2018–2025 plus a partial, weekly-refreshed 2026, steps 1–2 st
 - 7 new tests (37 in the file), including the CI path end to end offline: history for 2023–24
   from the store, then a "live" 2025 built through the in-memory store, comps restricted to the
   completed seasons, trends spanning all three.
+
+### Step 4 — the site (`site/`)
+
+- **Vanilla HTML/CSS/JS, no build step** (`index.html`, `style.css`, `app.js`, ~700 lines of JS).
+  Hash routing (`#/CHI/2025/defense`), so every team × season × tab has a link. Eight tabs:
+  Overview · Offense · Defense · Special teams & roster · Players · Coaching & comps · Trends ·
+  Data notes. The Offense/Defense/Special tabs render **whatever the registry says** — a metric
+  added in `teambook/metrics.py` appears with no JS change.
+- **Every metric row is value · rank · a league strip** (all 32 teams as dots, median tick, this
+  team in blue, hover any dot for that team). Polar metrics get good/bad badges (top/bottom 8);
+  tendencies get a neutral "3rd highest" — a 12-personnel rate is not good or bad.
+- **Unavailable is a sentence, never a zero.** A row outside its seasons says why ("FTN charting
+  starts in 2022", "not recorded after 2022: the formation labels changed in 2023"); a whole group
+  missing for one reason collapses to one line — on a live 2026 book, coverage/fronts/pressure
+  read *arrives after the season* and the charted-live FTN group sits right below them.
+- Charts follow the dataviz method: weekly point-margin columns on the documented blue/red
+  diverging pair (4 px rounded data end, square at the baseline); season lines of team vs league
+  median with a crosshair tooltip and the live season as a hollow point labelled *thru wk N*;
+  small multiples per side; a table view under each chart. Light and dark are both selected
+  tokens (`prefers-color-scheme` + a remembered toggle); team colours appear only as identity
+  (masthead stripe, chips with ink chosen by luminance), never as a data mark. No third-party
+  logos; FTN's CC-BY-SA and nflverse's CC-BY attribution in the footer.
+- **Verified by driving it**, headless Chromium against `python -m http.server`: 13 views in both
+  themes and at 390 px, no console errors, no horizontal overflow; tooltips on bars, strips and
+  lines, the team and season pickers, column sorting, the metric picker and the theme toggle all
+  exercised. Two defects caught that way: nested section arrays rendered as
+  `[object HTMLDivElement]` (the DOM helper flattened one level), and strip plots stretched their
+  tick labels under `preserveAspectRatio="none"`.
