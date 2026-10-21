@@ -2,7 +2,8 @@
 
 ``assert_book_sane`` runs on every book before it is written. It fails on an impossible value
 rather than letting the site draw one: a share above 1, a rank outside 1..n, a metric reported
-below its own floor, or a family the status block says is missing that nonetheless has numbers.
+outside its own seasons, a metric every team shares exactly, or a family the status block says
+is missing that nonetheless has numbers.
 """
 
 from __future__ import annotations
@@ -39,6 +40,8 @@ def assert_book_sane(book: dict) -> None:
             _fail(book, f"{key} carries a non-finite value; absent metrics are omitted, not NaN")
         if season < m.floor:
             _fail(book, f"{key} reported in {season}, below its {m.floor} floor")
+        if m.ceiling is not None and season > m.ceiling:
+            _fail(book, f"{key} reported in {season}, after its {m.ceiling} vocabulary seam")
         if m.source in missing:
             _fail(book, f"{key} reported although {m.source} is marked unavailable")
         if m.fmt == "pct" and not (-1e-9 <= v <= 1 + 1e-9):
@@ -66,3 +69,12 @@ def assert_season_sane(books: dict[str, dict]) -> None:
         raise BookError(f"teams disagree on which families are available: {statuses}")
     for book in books.values():
         assert_book_sane(book)
+    # ★ A metric every team shares exactly is not a measurement — it is an encoding seam (T57:
+    # pressure 1.0 league-wide, singleback 0.0 league-wide). Refuse it rather than rank it.
+    values: dict[str, set] = {}
+    for book in books.values():
+        for key, cell in book["metrics"].items():
+            values.setdefault(key, set()).add(round(cell["v"], 12))
+    flat = sorted(k for k, v in values.items() if len(v) == 1)
+    if flat:
+        raise BookError(f"constant across the league (an encoding seam, not a metric): {flat}")

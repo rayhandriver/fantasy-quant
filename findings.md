@@ -7252,3 +7252,40 @@ Pages, seasons 2018–2025 plus a partial, weekly-refreshed 2026, steps 1–2 st
 - `read_release` caches an asset **forever**; the live path defaults to `refresh=True`. A cached
   `games.parquet` from earlier in the session reported no 2026 scores at all.
 - 7 new tests (30 in the file). Full suite **1019 passed** after step 1, before step 2's tests.
+
+### Step 3 — the export (`site/data/`)
+
+- `teambook/export.py` + `steps/teambook_export.py`. **Two writers, one layout:** `--history` reads
+  the store and writes 2018–2025; `--live` needs **no store** — it rebuilds 2026 from the releases,
+  reads the committed league files and a `carry/2026.json` (roster construction + team meta, the
+  two things the releases do not have), and rewrites only 2026, the trends and the index.
+  Files: `index.json` · `{season}/{TEAM}.json` (288 books) · `league/{season}.json` (every team's
+  value and rank per metric, for strip plots and comps) · `trends/{TEAM}.json` · `carry/`.
+- **Size:** median book **27 KB** uncompressed (budget 80 KB, guarded at write time), 9 MB for
+  the whole tree; both writers together take ~25 s.
+- **Comps are drawn from completed seasons only**, so a 2024 book's neighbours do not churn as 2026
+  gains a week. **Trends are a function of the league files**, so a 2019 book's Trends tab still
+  shows the live point and both writers produce them identically.
+- **★ A candidate comp must share ≥ 80 % of the team's own scheme metrics.** The first export put
+  DEN 2021 ahead of DET 2023 as CHI 2025's nearest offense — compared on 15 metrics instead of 22.
+  RMS over fewer dimensions is noisier, and *the minimum of noisier distances is systematically
+  smaller*, so pre-FTN seasons crowd out like-for-like ones. With the rule, DET 2023/2024 (Ben
+  Johnson) are first and second again, then DAL 2022 (Kellen Moore).
+- **★★ The export found T57 — three panel metrics that are encoding seams, not measurements.**
+  Laying every season's league side by side showed metrics with **zero variance across 32 teams**:
+  1. **`pressure_rate` = 1.0 for every team, 2023–2025.** The break map registers
+     `was_pressure = False` as the 2023+ non-pass sentinel and the panel drops it on every row —
+     but on a dropback False is the true negative, so only the pressured plays survive. The book
+     recomputes it on dropbacks from the play file: median **0.291 (2022) → 0.294 (2023)**, i.e.
+     flat across the seam, which is the check that the fix is right.
+  2. **The formation vocabulary changed in 2023.** SINGLEBACK / I_FORM / EMPTY / JUMBO / WILDCAT
+     collapse into one `UNDER CENTER` value, so `share_singleback`/`share_i_form`/`share_empty` read
+     **0.0 for every team from 2023** and `share_under_center` **0.0 for every team before**. Each
+     is now bounded to its own seasons (`metrics.SEASON_BOUNDS`, a `ceiling` beside the `floor`).
+  3. **`share_empty` is not broken** — step 1 dropped it because `EMPTY` never occurs, which is
+     true only from 2023; through 2022 it is 3,000+ plays a season. It is back, ending at 2022.
+  The guard now refuses a metric every team shares exactly (`assert_season_sane`), so the next
+  seam fails the export instead of ranking 32 teams tied for first.
+- 7 new tests (37 in the file), including the CI path end to end offline: history for 2023–24
+  from the store, then a "live" 2025 built through the in-memory store, comps restricted to the
+  completed seasons, trends spanning all three.

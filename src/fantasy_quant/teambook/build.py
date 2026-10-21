@@ -38,9 +38,13 @@ TRAIT_Z = 1.5
 TRAIT_EDGE = 3
 TRAITS_PER_SIDE = {"offense": 5, "defense": 5, "special": 2}
 
-#: Similarity: how many comps, and the fewest shared scheme metrics a comparison may rest on.
+#: Similarity: how many comps, the fewest shared scheme metrics a comparison may rest on, and the
+#: share of the team's *own* metrics a candidate must also have. Without the share a candidate
+#: from before FTN charting is compared on fewer, noisier dimensions — and the minimum of noisier
+#: distances is systematically smaller, so pre-2022 seasons would crowd out the like-for-like.
 N_COMPS = 5
 MIN_SHARED = {"offense": 8, "defense": 4}
+MIN_SHARED_FRAC = 0.8
 
 PARTICIPATION_KEYS = M.keys(M.PARTICIPATION)
 CONSTRUCTION_KEYS = M.keys(M.CONSTRUCTION)
@@ -53,10 +57,31 @@ def reg_weeks(con, season: int) -> int:
     ).fetchone()[0])
 
 
+def pressure_rate(con, season: int) -> pd.DataFrame:
+    """Pressure on dropbacks, straight from the play file.
+
+    ⚠ The panel's ``pressure_rate`` is **1.0 for every team from 2023** (T57). The break map
+    registered ``was_pressure = False`` as the 2023+ non-pass sentinel and the panel drops it on
+    every row — but on a *dropback* False is the real answer, so excluding it leaves only the
+    pressured plays. The dropback filter is what separates a sentinel from a negative here.
+    """
+    return con.execute(f"""
+        select {pf.canon('b.defteam')} as team,
+               avg(case when p.was_pressure then 1.0 else 0.0 end) as pressure_rate
+        from participation p
+        join {pf.reg_pbp(season)} b using (game_id, play_id)
+        where b.qb_dropback = 1 and b.play_type in ('pass', 'run') and b.defteam is not null
+          and p.was_pressure is not null
+        group by 1
+    """).df()
+
+
 def participation_frame(con, season: int) -> pd.DataFrame:
     """The participation family for one season, regular season only, from the frozen panel."""
     where = f"season = {int(season)} and week <= {reg_weeks(con, season)}"
     agg = con.execute(weekly_aggregate_sql(where)).df()
+    agg = agg.drop(columns="pressure_rate").merge(pressure_rate(con, season), on="team",
+                                                  how="left")
     return agg[["team", *[k for k in PARTICIPATION_KEYS if k in agg.columns]]]
 
 
@@ -89,8 +114,8 @@ def season_frame(con, season: int, *, participation: bool = True,
     for key in M.BY_KEY:
         if key not in frame.columns:
             frame[key] = np.nan
-        elif season < M.BY_KEY[key].floor:
-            frame[key] = np.nan  # below its floor a metric does not exist (never 0)
+        elif season < M.BY_KEY[key].floor or season > (M.BY_KEY[key].ceiling or season):
+            frame[key] = np.nan  # outside its seasons a metric does not exist (never 0)
     frame.insert(0, "season", int(season))
     return frame.sort_values("team").reset_index(drop=True)
 
@@ -339,57 +364,83 @@ def build_season_books(con, season: int, *, participation: bool = True,
 
 
 # --- cross-season: comps and trends --------------------------------------------------------------
-def _z_matrix(seasons: dict[int, dict], side: str) -> pd.DataFrame:
+#: A context per season is all the cross-season pieces need, so the live export can rebuild them
+#: from the committed league files without the store.
+Contexts = dict[int, dict[str, dict]]
+
+
+def z_matrix(contexts: Contexts, side: str) -> pd.DataFrame:
     keys = [m.key for m in M.REGISTRY if m.scheme and m.side == side]
     rows = []
-    for season, s in seasons.items():
-        for team in s["books"]:
+    for season, ctx in contexts.items():
+        teams = sorted({t for c in ctx.values() for t in c["values"]})
+        for team in teams:
             rows.append({"season": season, "team": team,
-                         **{k: s["context"].get(k, {}).get("z", {}).get(team) for k in keys}})
+                         **{k: ctx.get(k, {}).get("z", {}).get(team) for k in keys}})
     return pd.DataFrame(rows).set_index(["season", "team"]).astype(float)
 
 
 def similar(zmat: pd.DataFrame, season: int, team: str, side: str,
-            n: int = N_COMPS) -> list[dict]:
-    """Nearest other-team seasons by RMS z-distance over the scheme metrics both have."""
+            n: int = N_COMPS, pool: set[int] | None = None) -> list[dict]:
+    """Nearest other-team seasons by RMS z-distance over the scheme metrics both have.
+
+    ``pool`` restricts the candidates to those seasons — the export draws comps from completed
+    seasons only, so a book's comps do not churn as the live season gains a week.
+    """
     if (season, team) not in zmat.index:
         return []
     me = zmat.loc[(season, team)]
-    others = zmat.drop(index=[i for i in zmat.index if i[1] == team])
+    others = zmat.drop(index=[i for i in zmat.index
+                              if i[1] == team or (pool is not None and i[0] not in pool)])
     both = others.notna() & me.notna().values
     shared = both.sum(axis=1)
     diff2 = ((others - me.values) ** 2).where(both)
     dist = np.sqrt(diff2.sum(axis=1) / shared.replace(0, np.nan))
-    ok = shared >= MIN_SHARED[side]
+    ok = (shared >= MIN_SHARED[side]) & (shared >= MIN_SHARED_FRAC * me.notna().sum())
     best = dist[ok].sort_values().head(n)
     return [{"season": int(s), "team": t, "distance": float(d), "shared": int(shared[(s, t)])}
             for (s, t), d in best.items()]
 
 
-def attach_cross_season(seasons: dict[int, dict]) -> None:
-    """Add ``comps`` and ``trends`` to every book, in place."""
-    zmats = {side: _z_matrix(seasons, side) for side in ("offense", "defense")}
+def comps(contexts: Contexts, targets: dict[int, list[str]],
+          pool: set[int] | None = None) -> dict[tuple[int, str], dict]:
+    """``{(season, team): {"offense": [...], "defense": [...]}}`` for every target team-season."""
+    zmats = {side: z_matrix(contexts, side) for side in ("offense", "defense")}
     callers = {}
-    for season in seasons:
+    for season in contexts:
         for team, c in coaching_table(season).items():
             callers[(season, team)] = {side: c.get(side, {}).get("play_caller")
                                        for side in ("offense", "defense")}
-    for season, s in seasons.items():
-        for team, book in s["books"].items():
-            comps = {}
+    out = {}
+    for season, teams in targets.items():
+        for team in teams:
+            book_comps = {}
             for side, zm in zmats.items():
-                rows = similar(zm, season, team, side)
+                rows = similar(zm, season, team, side, pool=pool)
                 for r in rows:
                     r["play_caller"] = callers.get((r["season"], r["team"]), {}).get(side)
-                comps[side] = rows
-            book["comps"] = comps
-            trends = {}
-            for key in M.BY_KEY:
-                series = []
-                for s2 in sorted(seasons):
-                    c = seasons[s2]["context"].get(key)
-                    if c and team in c["values"]:
-                        series.append([s2, c["values"][team], c["median"], int(c["rank"][team])])
-                if series:
-                    trends[key] = series
-            book["trends"] = trends
+                book_comps[side] = rows
+            out[(season, team)] = book_comps
+    return out
+
+
+def team_trends(contexts: Contexts) -> dict[str, dict[str, list]]:
+    """``{team: {metric: [[season, value, league median, rank, n], ...]}}``, seasons ascending."""
+    out: dict[str, dict[str, list]] = {}
+    for season in sorted(contexts):
+        for key, c in contexts[season].items():
+            for team, v in c["values"].items():
+                out.setdefault(team, {}).setdefault(key, []).append(
+                    [season, v, c["median"], int(c["rank"][team]), c["n"]])
+    return out
+
+
+def attach_cross_season(seasons: dict[int, dict], pool: set[int] | None = None) -> None:
+    """Add ``comps`` and ``trends`` to every book, in place."""
+    contexts = {s: v["context"] for s, v in seasons.items()}
+    found = comps(contexts, {s: list(v["books"]) for s, v in seasons.items()}, pool=pool)
+    trends = team_trends(contexts)
+    for season, s in seasons.items():
+        for team, book in s["books"].items():
+            book["comps"] = found[(season, team)]
+            book["trends"] = trends.get(team, {})

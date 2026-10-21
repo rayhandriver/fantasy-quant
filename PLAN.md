@@ -3548,5 +3548,21 @@ in-season path · export · site · CI + weekly job · README).
 ### Dead ends and things deliberately not done
 - T56 (the panel's mean-of-ratios season aggregation) is **registered, not fixed** — it moves frozen
   panel values the 0.13.8 fingerprints read. The book does not depend on it.
-- `share_empty` is not in the registry (the formation value never occurs).
+- ~~`share_empty` is not in the registry (the formation value never occurs).~~ **Wrong — corrected in
+  step 3:** `EMPTY` stops occurring at the 2023 vocabulary seam (T57); it is registered through 2022.
 - No LLM prose: traits are templated from ranks and z-scores.
+
+### Step 3 — the export (2026-10-21)
+User approved steps 3 and 4 together, then a stop.
+- **Judgment calls:** comps from **completed seasons only** (stable neighbours; a six-week sample
+  is not a season to be compared *to*) · **trends as their own per-team file**, derived from the
+  league files, rather than embedded per book (smaller books; every season's Trends tab gets the
+  live point) · **no third-party logos** on the site — `team_logo_espn` is dropped at export, team
+  colours carry the identity · construction for 2026 is **carried** from the store in
+  `carry/2026.json` (continuity is NULL until 2026 snaps reach the store).
+- **The 80 % shared-metric rule for comps** — added after the first export ranked a 15-metric
+  pre-FTN comparison above 22-metric ones (see findings).
+- **T57 registered and worked around, not fixed in the panel** — same reasoning as T56: the panel's
+  `pressure_rate` and formation shares are read by the 0.13.8 fingerprints, so fixing them there
+  needs those bars re-run. The book recomputes pressure itself and bounds the formation shares.
+

@@ -8,6 +8,7 @@ Everything else builds its own data.
 from __future__ import annotations
 
 import copy
+import json
 
 import duckdb
 import numpy as np
@@ -17,6 +18,7 @@ import pytest
 from fantasy_quant.config import DUCKDB_PATH
 from fantasy_quant.data import db
 from fantasy_quant.teambook import build as B
+from fantasy_quant.teambook import export as E
 from fantasy_quant.teambook import inseason as I
 from fantasy_quant.teambook import metrics as M
 from fantasy_quant.teambook import pbp_family as pf
@@ -40,9 +42,13 @@ def test_floors_follow_the_source_family():
     assert M.BY_KEY["pass_rate"].floor <= M.FIRST_SEASON
 
 
-def test_the_broken_empty_formation_column_is_not_registered():
-    # offense_formation never takes the value 'EMPTY', so share_empty is 0 for every team-season
-    assert "share_empty" not in M.BY_KEY
+def test_formation_shares_are_bounded_by_the_2023_vocabulary_seam():
+    # through 2022 the file says SINGLEBACK / I_FORM / EMPTY; from 2023 they are all UNDER CENTER
+    for key in ("share_singleback", "share_i_form", "share_empty"):
+        assert M.BY_KEY[key].ceiling == M.FORMATION_SEAM - 1
+    assert M.BY_KEY["share_under_center"].floor == M.FORMATION_SEAM
+    assert M.BY_KEY["share_under_center"].ceiling is None
+    assert M.BY_KEY["pass_rate"].ceiling is None
 
 
 # --- league context ----------------------------------------------------------------------------
@@ -94,6 +100,22 @@ def test_similar_uses_only_shared_metrics_and_skips_the_same_franchise():
     out = B.similar(zm, 2025, "AAA", "defense")
     assert [r["team"] for r in out] == ["BBB", "DDD"]  # CCC has too few shared metrics
     assert out[0]["shared"] == len(keys)
+    assert [r["team"] for r in B.similar(zm, 2025, "AAA", "defense", pool={2023})] == []
+
+
+def test_a_candidate_must_share_most_of_the_teams_own_metrics():
+    # a pre-FTN season is compared on fewer, noisier dimensions; the min of noisier distances is
+    # smaller, so without the share rule it crowds out the like-for-like candidates
+    keys = [m.key for m in M.REGISTRY if m.scheme and m.side == "offense"]
+    few = int(len(keys) * B.MIN_SHARED_FRAC) - 1
+    rows = {
+        (2025, "AAA"): dict.fromkeys(keys, 1.0),
+        (2021, "BBB"): {k: (1.0 if i < few else np.nan) for i, k in enumerate(keys)},  # exact
+        (2024, "CCC"): dict.fromkeys(keys, 1.3),
+    }
+    zm = pd.DataFrame.from_dict(rows, orient="index")
+    zm.index = pd.MultiIndex.from_tuples(zm.index)
+    assert [r["team"] for r in B.similar(zm, 2025, "AAA", "offense")] == ["CCC"]
 
 
 def test_a_live_season_with_missing_families_still_finds_comps_on_what_it_has():
@@ -129,6 +151,9 @@ def test_the_guard_passes_a_sane_book():
     (lambda b: b["metrics"].update(play_action_rate={"v": 0.3, "rank": 1, "n": 32, "pct": 1.0,
                                                      "z": 1, "median": 0.2})
      or b.update(season=2019), "below its 2022 floor"),
+    (lambda b: b["metrics"].update(share_singleback={"v": 0.2, "rank": 1, "n": 32, "pct": 1.0,
+                                                     "z": 1, "median": 0.2}),
+     "after its 2022 vocabulary seam"),
     (lambda b: b["status"]["unavailable"].update(pbp="x"), "marked unavailable"),
     (lambda b: b["meta"].update(games=16), "record"),
     (lambda b: b["metrics"].update(bogus={"v": 1, "rank": 1, "n": 1, "pct": 1, "z": 0,
@@ -139,6 +164,22 @@ def test_the_guard_refuses_impossible_books(mutate, message):
     mutate(book)
     with pytest.raises(S.BookError, match=message):
         S.assert_book_sane(book)
+
+
+def _season(value_of) -> dict[str, dict]:
+    books = {}
+    for i in range(S.N_TEAMS):
+        b = copy.deepcopy(_book())
+        b["team"] = f"T{i:02d}"
+        b["metrics"]["pass_rate"]["v"] = value_of(i)
+        books[b["team"]] = b
+    return books
+
+
+def test_the_guard_refuses_a_metric_every_team_shares_exactly():
+    S.assert_season_sane(_season(lambda i: 0.5 + i / 1000))
+    with pytest.raises(S.BookError, match="constant across the league"):
+        S.assert_season_sane(_season(lambda i: 1.0))  # T57: pressure read 1.0 for all 32
 
 
 # --- the pbp family on a synthetic store --------------------------------------------------------
@@ -272,7 +313,18 @@ def test_participation_floors_agree_with_the_column_register(con):
                          where "table" = 'team_scheme_season'""").df()
     first = dict(zip(reg["column"], reg["observed_first_season"], strict=True))
     for key in M.keys(M.PARTICIPATION):
+        if key in M.SEASON_BOUNDS:
+            continue  # the register sees a zero as observed; the vocabulary seam says otherwise
         assert M.BY_KEY[key].floor == first[key], key
+
+
+@needs_db
+def test_pressure_is_recomputed_on_dropbacks_and_is_stable_across_the_2023_seam(con):
+    # the panel reads 1.0 for every team from 2023 (T57); the dropback filter is the fix
+    by_season = {s: B.pressure_rate(con, s)["pressure_rate"] for s in (2021, 2022, 2023, 2025)}
+    for s, rates in by_season.items():
+        assert len(rates) == 32 and rates.between(0.15, 0.5).all(), s
+    assert abs(by_season[2023].median() - by_season[2022].median()) < 0.03
 
 
 @needs_db
@@ -288,6 +340,9 @@ def test_every_historical_season_builds_and_passes_the_guard(con):
     chi = seasons[2025]["books"]["CHI"]
     assert len(chi["trends"]["pass_rate"]) == 8
     assert all(c["team"] != "CHI" for c in chi["comps"]["offense"])
+    assert "share_singleback" in seasons[2022]["books"]["CHI"]["metrics"]
+    assert "share_singleback" not in chi["metrics"]                   # the 2023 seam
+    assert "share_under_center" not in seasons[2022]["books"]["CHI"]["metrics"]
 
 
 # --- step 2: the in-season path -----------------------------------------------------------------
@@ -353,3 +408,42 @@ def test_a_season_replayed_through_week_six_reads_as_live(con):
     assert "share_p12" not in chi["metrics"] and "pass_rate" in chi["metrics"]
     assert "participation" in chi["status"]["unavailable"]
     assert {w["week"] for w in chi["weekly"]} == {1, 2, 3, 4, 6}
+
+
+# --- step 3: the export ------------------------------------------------------------------------
+def test_compact_rounds_floats_and_nulls_non_finite_values():
+    out = E.compact({"a": 0.123456789, "b": [np.float64(1234.5678), np.nan], "c": np.int64(3),
+                     "d": np.inf, "e": "x", "f": True})
+    assert out == {"a": 0.1235, "b": [1235.0, None], "c": 3, "d": None, "e": "x", "f": True}
+
+
+def test_a_league_file_round_trips_the_context_the_comps_need():
+    frame = _frame(pass_rate=np.linspace(0.5, 0.6, 32))
+    ctx = B.league_context(frame)
+    rec = E.league_record({"season": 2025, "context": ctx,
+                           "books": {"T00": {"status": {"complete": True}}}})
+    back = E.context_from_league(json.loads(json.dumps(rec)))
+    for team, z in ctx["pass_rate"]["z"].items():
+        assert back["pass_rate"]["z"][team] == pytest.approx(z, abs=1e-4)
+    assert back["pass_rate"]["rank"] == ctx["pass_rate"]["rank"]
+
+
+@needs_db
+def test_the_store_free_live_export_writes_a_season_beside_the_history(con, tmp_path):
+    # the CI path end to end, offline: history from the store, then a "live" season built from
+    # an in-memory store the way the release download would build it
+    E.export_history(con, seasons=(2023, 2024), out=tmp_path)
+    carry = tmp_path / "carry"
+    (carry / "2025.json").write_text((carry / f"{E.LIVE_SEASON}.json").read_text())
+    out = E.export_live(2025, out=tmp_path, con=I.frames_store(I.store_frames(con, 2025)),
+                        refresh=False)
+    assert out["books"] == 32 and out["max_book_bytes"] <= E.MAX_BOOK_BYTES
+    book = E.read_json(tmp_path / "2025" / "CHI.json")
+    pool = {c["season"] for side in book["comps"].values() for c in side}
+    assert pool <= {2023, 2024} and pool                            # comps: completed seasons only
+    assert "share_p12" not in book["metrics"] and "pass_rate" in book["metrics"]
+    trend = E.read_json(tmp_path / "trends" / "CHI.json")["pass_rate"]
+    assert [row[0] for row in trend] == [2023, 2024, 2025]
+    index = E.read_json(tmp_path / "index.json")
+    assert [s["season"] for s in index["seasons"]] == [2025, 2024, 2023]
+    assert "logo" not in index["teams"]["CHI"] and index["teams"]["CHI"]["color"]

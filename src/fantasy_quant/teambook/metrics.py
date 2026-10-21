@@ -42,6 +42,20 @@ SOURCES = (PBP, FTN, PARTICIPATION, CONSTRUCTION)
 #: participation starts with the panel in 2016, i.e. before the book does.
 CHARTED_COVERAGE_FLOOR = 2018
 
+#: ★ **The formation vocabulary changed in 2023 (T57).** Through 2022 the participation file names
+#: SINGLEBACK / I_FORM / EMPTY / JUMBO / WILDCAT; from 2023 those all collapse into one value,
+#: ``UNDER CENTER``. The panel's shares read **0 on the far side of the seam** — every team "ran no
+#: singleback" in 2024 and "never lined up under center" in 2020 — so each share is bounded to the
+#: seasons whose vocabulary it was written against: ``(first, last)``, ``None`` = unbounded.
+#: Under-center *before* 2023 is not lost entirely: FTN's ``qb_under_center_ftn`` covers 2022+.
+FORMATION_SEAM = 2023
+SEASON_BOUNDS: dict[str, tuple[int | None, int | None]] = {
+    "share_under_center": (FORMATION_SEAM, None),
+    "share_singleback": (None, FORMATION_SEAM - 1),
+    "share_i_form": (None, FORMATION_SEAM - 1),
+    "share_empty": (None, FORMATION_SEAM - 1),
+}
+
 
 @dataclass(frozen=True)
 class Metric:
@@ -57,12 +71,20 @@ class Metric:
 
     @property
     def floor(self) -> int:
+        first = SEASON_BOUNDS.get(self.key, (None, None))[0]
+        if first is not None:
+            return first
         if self.source == FTN:
             return SEASON_FLOORS["ftn_charting"]
         if self.source == PARTICIPATION and (self.key.startswith("share_cover_")
                                              or self.key in ("man_share", "share_2_man")):
             return CHARTED_COVERAGE_FLOOR
         return 2016
+
+    @property
+    def ceiling(self) -> int | None:
+        """The last season the metric means what its label says (``None``: still does)."""
+        return SEASON_BOUNDS.get(self.key, (None, None))[1]
 
 
 def _m(*args, **kw) -> Metric:
@@ -96,6 +118,8 @@ OFFENSE: tuple[Metric, ...] = (
     _m("share_singleback", "Singleback formation", "offense", "Formation", PARTICIPATION, "pct",
        scheme=True),
     _m("share_i_form", "I-formation", "offense", "Formation", PARTICIPATION, "pct", scheme=True),
+    _m("share_empty", "Empty formation", "offense", "Formation", PARTICIPATION, "pct",
+       scheme=True),
     _m("share_pistol", "Pistol", "offense", "Formation", PARTICIPATION, "pct", scheme=True),
     _m("share_p11", "11 personnel", "offense", "Personnel", PARTICIPATION, "pct", scheme=True,
        note="1 RB · 1 TE · 3 WR."),
@@ -161,7 +185,9 @@ DEFENSE: tuple[Metric, ...] = (
        scheme=True, note="5+ pass rushers, share of dropbacks."),
     _m("rushers_mean", "Pass rushers / dropback", "defense", "Pressure & box", PARTICIPATION,
        "num2", scheme=True),
-    _m("pressure_rate", "Pressure rate", "defense", "Pressure & box", PARTICIPATION, "pct", +1),
+    _m("pressure_rate", "Pressure rate", "defense", "Pressure & box", PARTICIPATION, "pct", +1,
+       note="Share of dropbacks with a charted pressure. Recomputed from the play file rather "
+            "than read from the panel, whose 2023+ value is 1.0 for every team (T57)."),
     _m("box_mean", "Defenders in the box", "defense", "Pressure & box", PARTICIPATION, "num2",
        scheme=True),
     _m("share_box_8plus", "8+ man box", "defense", "Pressure & box", PARTICIPATION, "pct",
@@ -228,4 +254,4 @@ def registry_records() -> list[dict]:
     """The registry as plain dicts, for the site's metadata file."""
     return [{"key": m.key, "label": m.label, "side": m.side, "group": m.group,
              "source": m.source, "fmt": m.fmt, "polarity": m.polarity, "scheme": m.scheme,
-             "floor": m.floor, "note": m.note} for m in REGISTRY]
+             "floor": m.floor, "ceiling": m.ceiling, "note": m.note} for m in REGISTRY]

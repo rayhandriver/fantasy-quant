@@ -3234,3 +3234,16 @@ exactly and bound the second; a single tolerance over both hides a code bug insi
 **comps.** The five other-franchise team-seasons nearest a team-season by RMS z-distance over
 **scheme** metrics only (never efficiency), on the metrics both have. CHI 2025's nearest offenses
 are DET 2023 and 2024 — Ben Johnson calling plays in all three.
+
+**ceiling (of a metric).** The last season a metric means what its label says — the mirror of its
+floor. Needed when an upstream *renames* a value rather than starting or stopping one: after the
+2023 formation vocabulary change, "singleback share" is 0 for everyone, which is not a scheme
+fact. Outside `[floor, ceiling]` a metric is NULL, never 0. **T57.**
+
+**carry file.** `site/data/carry/{season}.json` — what the store-free live export needs but cannot
+download (roster construction, team meta), written by the last store-backed export.
+
+**encoding seam (league-constant metric).** A metric on which all 32 teams are exactly equal. Real
+football never produces that; a re-encoded upstream does (pressure 1.0, singleback 0.0). The book's
+guard refuses one rather than ranking 32 teams tied for first.
+
