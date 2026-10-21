@@ -17,6 +17,7 @@ import pytest
 from fantasy_quant.config import DUCKDB_PATH
 from fantasy_quant.data import db
 from fantasy_quant.teambook import build as B
+from fantasy_quant.teambook import inseason as I
 from fantasy_quant.teambook import metrics as M
 from fantasy_quant.teambook import pbp_family as pf
 from fantasy_quant.teambook import schema as S
@@ -288,3 +289,67 @@ def test_every_historical_season_builds_and_passes_the_guard(con):
     assert len(chi["trends"]["pass_rate"]) == 8
     assert all(c["team"] != "CHI" for c in chi["comps"]["offense"])
 
+
+# --- step 2: the in-season path -----------------------------------------------------------------
+def test_conform_ftn_renames_the_release_play_keys():
+    out = I.conform_ftn(pd.DataFrame({"nflverse_game_id": ["g"], "nflverse_play_id": [1]}))
+    assert list(out.columns) == ["game_id", "play_id"]
+
+
+def test_conform_weekly_maps_the_new_stats_release_onto_the_store_names():
+    raw = pd.DataFrame({"player_id": ["00-1"], "team": ["CHI"], "passing_interceptions": [2],
+                        "fantasy_points_ppr": [20.5], "unrelated": [0]})
+    out = I.conform_weekly(raw)
+    assert list(out.columns) == list(I.WEEKLY_COLS)
+    row = out.iloc[0]
+    assert (row["gsis_id"], row["recent_team"], row["interceptions"]) == ("00-1", "CHI", 2)
+    assert pd.isna(row["targets"])  # absent upstream → NULL, never invented
+
+
+def test_conform_snaps_attaches_gsis_through_the_pfr_crosswalk():
+    snaps = pd.DataFrame({"pfr_player_id": ["SwifDa00", "NoMatch99"], "offense_snaps": [40, 3]})
+    players = pd.DataFrame({"pfr_id": ["SwifDa00", None], "gsis_id": ["00-0036", "00-9"]})
+    out = I.conform_snaps(snaps, players)
+    assert out["gsis_id"].tolist()[0] == "00-0036" and pd.isna(out["gsis_id"].tolist()[1])
+
+
+def test_participation_published_reads_the_release_index(monkeypatch):
+    monkeypatch.setattr(I.nr, "available_seasons", lambda *a, **k: [2024, 2025])
+    assert I.participation_published(2025) and not I.participation_published(2026)
+
+
+def test_an_index_outage_never_reads_as_published(monkeypatch):
+    def boom(*a, **k):
+        raise ConnectionError("rate limited")
+    monkeypatch.setattr(I.nr, "available_seasons", boom)
+    assert I.participation_published(2025) is False
+
+
+@needs_db
+def test_the_inseason_path_reproduces_the_store_path_exactly(con, chi_2025):
+    ref = B.build_season_books(con, 2025, participation=False, construction=None, meta={})
+    own = I.build_live_season(2025, con=I.frames_store(I.store_frames(con, 2025)))
+    for team, book in ref["books"].items():
+        mine = own["books"][team]
+        assert mine["metrics"] == book["metrics"], team
+        for sec in ("players", "weekly", "meta", "traits", "coaching", "status"):
+            assert mine[sec] == book[sec], (team, sec)
+
+
+@needs_db
+def test_a_season_replayed_through_week_six_reads_as_live(con):
+    frames = I.store_frames(con, 2025)
+    for name in ("pbp", "weekly", "snaps", "ftn_charting"):
+        frames[name] = frames[name][frames[name]["week"] <= 6]
+    sched = frames["schedules"].copy()
+    later = sched["week"] > 6
+    sched.loc[later, ["home_score", "away_score"]] = np.nan
+    frames["schedules"] = sched
+    live = I.build_live_season(2025, con=I.frames_store(frames))
+    S.assert_season_sane(live["books"])
+    chi = live["books"]["CHI"]
+    assert chi["status"]["through_week"] == 6 and chi["status"]["complete"] is False
+    assert chi["meta"]["games"] == 5 and chi["meta"]["bye_weeks"] == [5]  # bye from the schedule
+    assert "share_p12" not in chi["metrics"] and "pass_rate" in chi["metrics"]
+    assert "participation" in chi["status"]["unavailable"]
+    assert {w["week"] for w in chi["weekly"]} == {1, 2, 3, 4, 6}

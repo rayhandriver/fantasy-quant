@@ -3210,3 +3210,27 @@ this session). B1 first read `0/4` tagged players on the Cost page while the `TA
 screen inside an Arrow payload; K2's `text` had the same blind spot for `st.html` once the grade's
 contributions became bars. Both instruments were widened and **neither claim moved** — which is how
 you tell an instrument bug from a regression.
+
+## Team Book terms (2026-10-20)
+
+**team book.** One team-season on one page — offense, defense, special teams, roster construction,
+players, coaching, comps, trends — produced by `src/fantasy_quant/teambook/` for every team from
+2018 to the live season. The generalization of the hand-built Bears 2025 book.
+
+**source family.** Which upstream a metric needs, which decides what a live season can carry:
+`pbp` (every season, nightly), `ftn` (2022+, in-season), `participation` (published **after** the
+season), `construction` (season grain). A book records which families it is missing and why.
+
+**ratio of sums vs mean of ratios.** A season rate is the season's numerator over the season's own
+denominator. Averaging weekly rates — even weighted by snaps — is only the same thing when the
+rate's denominator *is* the weight. For a filtered denominator (neutral-script plays, charted
+dropbacks) it is an approximation, up to 3.9 pp here. **T56.**
+
+**code parity vs vintage.** Two different claims a re-implementation can make. *Code parity*: run on
+the same data, the two paths agree exactly. *Vintage*: run on today's upstream, the numbers move
+because the upstream restated them (nflverse re-ran EPA on 2025 after our pull). Test the first
+exactly and bound the second; a single tolerance over both hides a code bug inside a data revision.
+
+**comps.** The five other-franchise team-seasons nearest a team-season by RMS z-distance over
+**scheme** metrics only (never efficiency), on the metrics both have. CHI 2025's nearest offenses
+are DET 2023 and 2024 — Ben Johnson calling plays in all three.

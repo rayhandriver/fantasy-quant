@@ -3513,3 +3513,40 @@ still checked*. `clicked`, `picks_before` and `picks_after` were left unexcused 
 `why` search into the dialog · B7 first-run state · C2 mock history · C3 room scouting), whose only
 ordering constraint is that **B2 lands after K3** (league import). K3, VH's two open decisions and
 MM-1/MM-2 are all still independent and unblocked.
+
+## 2026-10-20 — Team Book: every team, every season, one static site (steps 1–2)
+
+The hand-built Bears 2025 book (2026-08-05), generalized into a pipeline for a portfolio-facing
+static site. Plan of record: `~/.claude/plans/1-static-site-lively-umbrella.md` (6 steps: builder ·
+in-season path · export · site · CI + weekly job · README).
+
+### Decisions, asked before anything was written
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | delivery | **static site on GitHub Pages** (vanilla HTML/JS, no build step) — not a Streamlit page, which cannot deploy without the 765 MB store |
+| 2 | seasons | **2018–2025** (charted coverage exists for all of them) **+ 2026 live, refreshed weekly** |
+| 3 | 2026's participation gap | **partial book, auto-weekly**; participation-only tabs say *published after the season* and fill when it lands |
+| 4 | repo visibility | public (it already was) |
+| 5 | cadence | **straight through with a commit per step; steps 1–2, then stop for review before step 3** |
+
+### Judgment calls taken without asking
+- **The pbp + FTN family is recomputed from pbp for every season**, not read from the panel. The
+  plan said "mirror the predicates"; doing it for *all* seasons rather than only the live one means
+  a trend line never changes source at the season participation stops. This is also what found T56.
+- **Regular season via `schedules.game_type = 'REG'`** (17 weeks 2018–20, 18 after), never a
+  hard-coded `week <= 18`.
+- **Two refactors, both bit-identical:** `scheme_panel.weekly_aggregate_sql(where=)` and
+  `special_teams.st_team_season_sql(pbp=)`. The book reuses the frozen definitions instead of
+  copying them; the frozen tables are unchanged (asserted).
+- **Comps exclude the same franchise** and compare only metrics both team-seasons have.
+- **Defensive blitz/box from FTN are separate registry entries** (`ftn_blitz_rate` …), never
+  merged with participation's — a different charting vendor, so they never share a trend line.
+- **The step-2 parity check is two checks, not one.** Exact code parity on the store's own tables,
+  plus a *bounded* vintage comparison against today's releases — because nflverse re-ran its EPA
+  model after the store's 2026-06-30 pull (39,743 of 48,771 2025 plays restated).
+
+### Dead ends and things deliberately not done
+- T56 (the panel's mean-of-ratios season aggregation) is **registered, not fixed** — it moves frozen
+  panel values the 0.13.8 fingerprints read. The book does not depend on it.
+- `share_empty` is not in the registry (the formation value never occurs).
+- No LLM prose: traits are templated from ranks and z-scores.

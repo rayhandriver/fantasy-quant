@@ -7176,3 +7176,79 @@ eight bars were re-checked value-by-value against a literal control list held in
 - **The strip carries tag controls**, which §3's sketch did not ask for. A1's premise is that a
   preference forms while you are looking at a player and the strip is now that surface; recorded as a
   deliberate addition rather than left to be discovered.
+
+---
+
+## TEAM BOOK (2026-10-20) — every team, every season, one page
+
+The Chicago Bears 2025 position & matchup book was built by hand once (2026-08-05). This session turns
+it into a pipeline: `src/fantasy_quant/teambook/` produces the same book for all 32 teams in every
+season from 2018 to the live one, for a static site. Decisions taken up front: static site on GitHub
+Pages, seasons 2018–2025 plus a partial, weekly-refreshed 2026, steps 1–2 straight through then a stop.
+
+### Step 1 — the book builder (historical, from the store)
+
+- **A metric registry is the contract** (`teambook/metrics.py`): 89 metrics (28 pbp · 10 FTN · 31 participation · 20 construction), each with a side, a
+  source family (`pbp` · `ftn` · `participation` · `construction`), a floor, a polarity and a
+  `scheme` flag. The site renders whatever the registry says, so a metric is added in one place.
+- **Regular season only.** `team_scheme_season` includes playoffs (CHI 2025: 66.05 snaps/g with,
+  **64.47** without) — the book reads `team_scheme_week` through the season aggregator with a
+  regular-season week filter. To reuse rather than copy that aggregator, `scheme_panel` gained
+  `weekly_aggregate_sql(where=)` and `special_teams` gained `st_team_season_sql(pbp=)`; both
+  reproduce their frozen tables **exactly** (320×69 and 384×30, asserted under
+  `db.deterministic_reads`).
+- **★ The pbp + FTN family is recomputed from pbp for every season**, not read from the panel —
+  because the panel is `FROM participation`, and a live season has no participation file. One
+  definition for 2018 and 2026, so a trend line never changes source where the file stops.
+- **★ That recomputation found T56.** Against the panel it matches **exactly** on every rate over
+  all snaps (pass rate, shotgun, no-huddle, motion, RPO, snap counts; EPA within 1e-4) and
+  disagrees on every rate over a *filtered* denominator — neutral-script pass rate by up to
+  **3.9 pp**, play-action by **2.3 pp**. The panel's season table weights weekly rates by total
+  snaps, a mean of ratios; the book divides the season's numerator by its own denominator. The
+  hand-built Bears book inherited the approximation (neutral pass rate **52.1 % → 52.9 %**).
+- **The golden test passes.** The pipeline's CHI 2025 book reproduces the artifact: 11–6, 441/415,
+  bye week 5, 64.47 snaps/g (2nd), pass rate 54.7 % (24th), PROE −3.9 (22nd), EPA/play 0.0795 (8th;
+  the artifact printed 0.080), 12-personnel 35.6 % (4th), under-center 47.5 % (5th), 13-personnel
+  8.2 % (5th), play-action 2nd.
+- **Comps pass a face-validity check nobody set up.** The nearest offensive team-seasons to CHI 2025,
+  by RMS z-distance over scheme metrics only, are **DET 2023 and DET 2024 — Ben Johnson calling
+  plays** in both. Comparisons use only metrics *both* seasons have (≥8 offense / ≥4 defense), so a
+  2026 defense with no coverage shells yet is matched on its FTN metrics rather than on zeros.
+- `teambook/schema.py` guards every book (shares in [0,1], ranks in 1..n, nothing below its floor,
+  nothing from a family marked unavailable, record sums to games). All 256 historical books pass.
+- 23 new tests in `tests/test_teambook.py`; the store-backed ones skip without the DuckDB file.
+
+### Step 2 — the in-season path (no store required)
+
+- `teambook/inseason.py` downloads one season of `pbp`, `ftn_charting`, `stats_player`,
+  `snap_counts`, `players` and the schedule from the nflverse releases into an **in-memory DuckDB**
+  whose tables carry the store's names, so `pbp_family` runs on it unchanged. The three
+  conformations (FTN's `nflverse_*_id` keys, Phase 0.9's `stats_player` rename, the PFR→gsis snap
+  crosswalk) are pure functions with offline tests. This is what lets a CI job rebuild 2026 weekly.
+- **2026 upstream, checked 2026-10-20:** pbp / FTN / player stats / snap counts all current through
+  **week 6**; **`pbp_participation` has no 2026 asset** (2025's landed 2026-02-10). The live books
+  carry the 38 pbp/FTN metrics and mark `participation` (and `construction`) unavailable with the
+  reason. `participation_published()` asks the release index and treats an index outage as *not*
+  published.
+- **Done-bar** (`steps/teambook_inseason.py` → `analysis/teambook_inseason.json`), all PASS:
+
+  | check | result |
+  |---|---|
+  | code parity — the in-season path on the store's own 2025 tables | **0.0** max diff over 38 metrics; players, weekly, meta, traits, coaching identical |
+  | vintage — 2025 from today's releases vs the store | worst rate **0.0027**, worst per-game count **0.059** (one play) |
+  | live 2026 | 32 sane books, `through_week` 6, `complete: false`, participation unpublished |
+
+- **★ The vintage difference is upstream, and it is large in count and small in effect.** Same
+  48,771 plays in both, but nflverse re-ran EPA after the store's 2026-06-30 pull (**39,743 plays
+  restated**) and reclassified 31 play types; Caleb Williams' 2025 PPR moved 318.18 → 318.68 with
+  stat corrections. Hence two checks rather than one tolerance — *code parity* exactly, *vintage*
+  bounded. A single loose tolerance over both would have hidden the next bullet.
+- **★ Code parity caught a real bug on its first run:** defenders tied on snaps had no tiebreaker,
+  so the top-24 cut kept a different player depending on scan order (BAL, DET, PIT). Both player
+  queries now order by `gsis_id` last. The vintage comparison could never have seen it.
+- A **replay test** truncates the store's 2025 at week 6 and requires the live shape: through week 6,
+  `complete` false, 5 games played, the week-5 bye still read from the full schedule, no
+  participation metric, no week-5 row.
+- `read_release` caches an asset **forever**; the live path defaults to `refresh=True`. A cached
+  `games.parquet` from earlier in the session reported no 2026 scores at all.
+- 7 new tests (30 in the file). Full suite **1019 passed** after step 1, before step 2's tests.

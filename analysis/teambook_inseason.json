@@ -1,0 +1,73 @@
+{
+  "step": "teambook 2 \u2014 the in-season path",
+  "code_parity": {
+    "season": 2025,
+    "metrics": 38,
+    "max_abs_diff": 0.0,
+    "sections_equal": true,
+    "PASS": true
+  },
+  "vintage": {
+    "season": 2025,
+    "seconds": 2.9,
+    "worst_rate_diff": 0.002734237257381502,
+    "worst_count_diff": 0.05882352941176805,
+    "by_metric": {
+      "snaps_per_game": 0.05882352941176805,
+      "dropbacks_per_game": 0.05882352941176805,
+      "pass_oe_mean": 0.002908017401796692,
+      "def_rush_epa": 0.002734237257381502,
+      "rush_epa": 0.002581092266001131,
+      "pass_epa": 0.0025743014005416495,
+      "def_pass_epa": 0.0020441931341891456,
+      "epa_per_play": 0.0015569306902949512,
+      "def_epa_per_play": 0.0012970311621204877,
+      "backfield_mean": 0.0011050929634290885,
+      "ftn_box_mean": 0.0009966435388566453,
+      "shotgun_rate": 0.0008982079706557622,
+      "rpo_rate": 0.0008877110591616472,
+      "ftn_rushers_mean": 0.0007721643590157257,
+      "pass_rate_neutral": 0.0006918086624135844,
+      "no_huddle_rate": 0.0006297900073318763,
+      "ftn_blitz_rate": 0.0005805968653663784,
+      "def_success_rate": 0.0005766578127191502,
+      "opp_pass_rate": 0.000567608476286563,
+      "motion_rate": 0.0005643127364438616,
+      "pass_rate": 0.0005609170404603514,
+      "success_rate": 0.0005556356283591413,
+      "qb_under_center_ftn": 0.000457578646329837,
+      "play_action_rate": 0.0004533373077973968,
+      "screen_rate": 0.0002299555419285615,
+      "explosive_rate": 0.00011903932362436476,
+      "def_explosive_rate": 0.00010884248559617227,
+      "def_sack_rate": 0.00010315172734935707,
+      "ftn_box_8plus": 6.713648644250669e-05,
+      "early_down_pass_rate": 0.0,
+      "takeaways_per_game": 0.0,
+      "fourth_go_rate": 0.0,
+      "two_point_rate": 0.0,
+      "rz_stall_rate": 0.0,
+      "fg_pct": 0.0,
+      "fg_pct_long": 0.0,
+      "fg_dist_mean": 0.0,
+      "punt_dist_mean": 0.0
+    },
+    "PASS": true,
+    "note": "store pulled 2026-06-30; nflverse has since re-run EPA and reclassified play types, so the difference is upstream, not code"
+  },
+  "live": {
+    "season": 2026,
+    "seconds": 9.6,
+    "teams": 32,
+    "through_week": 6,
+    "complete": false,
+    "metrics_per_book": 38,
+    "unavailable": [
+      "construction",
+      "participation"
+    ],
+    "participation_published": false,
+    "PASS": true
+  },
+  "all_pass": true
+}
