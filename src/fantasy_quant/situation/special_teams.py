@@ -46,15 +46,14 @@ GO_MAX_YARDLINE = 70       # inside our own 30 the choice is not really open
 NEUTRAL_SCORE_MARGIN = 14  # outside two scores, aggression is a function of the scoreboard
 
 
-def build_st_team_season(con) -> dict:
-    """One row per (season, team): the coach's decisions, and the kicking profile.
+def st_team_season_sql(pbp: str = "pbp") -> str:
+    """The ``select`` behind :data:`ST_TABLE`, over any relation shaped like ``pbp``.
 
-    ``head_coach`` comes from ``pbp``'s own ``home_coach``/``away_coach``, taking the coach of
-    record for the majority of games — the same scaffold ``situation/coaches.py`` uses for its
-    audit, reused rather than re-derived.
+    :func:`build_st_team_season` runs it on the whole of ``pbp`` (postseason included, as the
+    frozen table always has); the team book passes a regular-season subquery, and the in-season
+    path an in-memory frame of the current season. One definition of "a 4th-down opportunity".
     """
-    con.execute(f"""
-        create or replace table {ST_TABLE} as
+    return f"""
         with hc as (
             -- the head coach of record per team-season, majority of games. ⚠ from 2024 pbp emits
             -- a SEASON-level coach of record rather than the game-day coach, so a mid-season
@@ -66,10 +65,10 @@ def build_st_team_season(con) -> dict:
                                           order by count(distinct game_id) desc, coach) as rn
                 from (
                     select season, {canon('home_team')} as team, home_coach as coach, game_id
-                      from pbp where home_coach is not null
+                      from {pbp} where home_coach is not null
                     union all
                     select season, {canon('away_team')} as team, away_coach as coach, game_id
-                      from pbp where away_coach is not null
+                      from {pbp} where away_coach is not null
                 )
                 group by 1, 2, 3
             ) where rn = 1
@@ -81,7 +80,7 @@ def build_st_team_season(con) -> dict:
                    count(*) filter (where play_type in ('pass', 'run'))    as fourth_go,
                    count(*) filter (where play_type = 'punt')              as fourth_punt,
                    count(*) filter (where play_type = 'field_goal')        as fourth_fg
-            from pbp
+            from {pbp}
             where down = 4 and ydstogo <= {GO_MAX_DISTANCE}
               and yardline_100 between {GO_MIN_YARDLINE} and {GO_MAX_YARDLINE}
               and abs(score_differential) <= {NEUTRAL_SCORE_MARGIN}
@@ -95,7 +94,7 @@ def build_st_team_season(con) -> dict:
                    count(*)                                             as pat_opportunities,
                    count(*) filter (where two_point_attempt = 1)        as two_point_attempts,
                    count(*) filter (where two_point_conv_result = 'success') as two_point_made
-            from pbp
+            from {pbp}
             where (extra_point_attempt = 1 or two_point_attempt = 1) and posteam is not null
             group by 1, 2
         ),
@@ -118,7 +117,7 @@ def build_st_team_season(con) -> dict:
                    avg(kick_distance) filter (where field_goal_attempt = 1)    as fg_dist_mean,
                    count(*) filter (where punt_attempt = 1)                    as punts,
                    avg(kick_distance) filter (where punt_attempt = 1)          as punt_dist_mean
-            from pbp where posteam is not null
+            from {pbp} where posteam is not null
             group by 1, 2
         ),
         redzone as (
@@ -136,7 +135,7 @@ def build_st_team_season(con) -> dict:
                 select distinct season, {canon('posteam')} as team, game_id, fixed_drive,
                        first_value(fixed_drive_result) over (
                            partition by game_id, fixed_drive order by play_id) as result
-                from pbp
+                from {pbp}
                 where posteam is not null and yardline_100 <= 20 and fixed_drive is not null
             )
             group by 1, 2
@@ -158,7 +157,17 @@ def build_st_team_season(con) -> dict:
         left join twopt   t on t.season = hc.season and t.team = hc.team
         left join kicks   k on k.season = hc.season and k.team = hc.team
         left join redzone r on r.season = hc.season and r.team = hc.team
-    """)
+    """
+
+
+def build_st_team_season(con) -> dict:
+    """One row per (season, team): the coach's decisions, and the kicking profile.
+
+    ``head_coach`` comes from ``pbp``'s own ``home_coach``/``away_coach``, taking the coach of
+    record for the majority of games — the same scaffold ``situation/coaches.py`` uses for its
+    audit, reused rather than re-derived.
+    """
+    con.execute(f"create or replace table {ST_TABLE} as {st_team_season_sql()}")
     n, teams, seasons, coaches = con.execute(f"""
         select count(*), count(distinct team), count(distinct season), count(distinct head_coach)
         from {ST_TABLE}""").fetchone()

@@ -177,18 +177,15 @@ def build_team_scheme_week(con) -> dict:
             "n_seasons": int(seasons), "n_metric_columns": ncols}
 
 
-def build_team_scheme_season(con) -> dict:
-    """One row per (season, team): the weekly panel aggregated, plus the season-grain tables.
+def weekly_aggregate_sql(where: str | None = None) -> str:
+    """The season aggregate of :data:`WEEK_TABLE`, as a ``select`` over an optional week filter.
 
-    ⚠ **Rates are re-derived from their own denominators, never averaged over weeks.** A team's
-    season blitz rate is total blitzes over total dropbacks, not the mean of seventeen weekly
-    rates — those differ whenever the weekly denominators differ, which they always do, and the
-    mean-of-ratios is the wrong one. Where a stored rate has a stored denominator the pair is
-    re-multiplied; where it does not, the aggregate is snap-weighted and the column is named so.
+    :func:`build_team_scheme_season` materializes it over **every** week (playoffs included, which
+    is what the frozen panel has always been). The team book reads it with a regular-season
+    ``where`` instead, so the two can never disagree about how a rate is re-weighted, only about
+    which weeks go in.
     """
-    con.execute(f"""
-        create or replace table {SEASON_TABLE} as
-        with weekly as (
+    return f"""
             select season, team,
                    count(*)                            as weeks,
                    sum(off_off_snaps)                  as off_snaps,
@@ -248,7 +245,24 @@ def build_team_scheme_season(con) -> dict:
                    sum(off_ftn_snaps)                                       as ftn_snaps,
                    sum(off_rz_snaps)                                        as rz_snaps
             from {WEEK_TABLE}
+            {"where " + where if where else ""}
             group by 1, 2
+    """
+
+
+def build_team_scheme_season(con) -> dict:
+    """One row per (season, team): the weekly panel aggregated, plus the season-grain tables.
+
+    ⚠ **Rates are re-derived from their own denominators, never averaged over weeks.** A team's
+    season blitz rate is total blitzes over total dropbacks, not the mean of seventeen weekly
+    rates — those differ whenever the weekly denominators differ, which they always do, and the
+    mean-of-ratios is the wrong one. Where a stored rate has a stored denominator the pair is
+    re-multiplied; where it does not, the aggregate is snap-weighted and the column is named so.
+    """
+    con.execute(f"""
+        create or replace table {SEASON_TABLE} as
+        with weekly as (
+            {weekly_aggregate_sql()}
         )
         select w.*,
                {", ".join(f"s.{c}" for c in
